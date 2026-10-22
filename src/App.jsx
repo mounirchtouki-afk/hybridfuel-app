@@ -7,30 +7,31 @@ const INK = "#17130E", INK2 = "#231C15", EMBER = "#FF5A1F", EMBER_SOFT = "#FF7A4
   PAPER = "#F7F2E9", MUTED = "#9A8F7E", LINE = "#34291F", SAGE = "#7FA35C";
 
 const ACTIVITY = [
-  { id: "light", label: "Light (1–2 sessions/wk)" },
-  { id: "moderate", label: "Moderate (3–4/wk)" },
-  { id: "high", label: "High (5–6/wk)" },
-  { id: "athlete", label: "Athlete (2x/day)" },
+  { id: "light", label: "Licht (1–2 sessies/wk)" },
+  { id: "moderate", label: "Gemiddeld (3–4/wk)" },
+  { id: "high", label: "Hoog (5–6/wk)" },
+  { id: "athlete", label: "Atleet (2x/dag)" },
 ];
-const GOALS = [{ id: "cut", label: "Lose fat" }, { id: "maintain", label: "Maintain" }, { id: "gain", label: "Build muscle" }];
-const DIETS = ["No restriction", "High-protein", "Vegetarian", "Vegan", "Pescatarian"];
-const CUISINES = ["Mediterranean", "Asian", "Italian", "Mexican", "Middle Eastern", "Dutch"];
-const PROTEINS = ["Chicken", "Beef", "Fish", "Eggs", "Tofu", "Quark/Skyr", "Beans"];
-const VARIETY = [{ id: 1, label: "Same daily" }, { id: 2, label: "2 days" }, { id: 3, label: "3 days" }, { id: 7, label: "All diff." }];
-const WD = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-const SHOP_ORDER = ["Produce", "Protein", "Dairy", "Grains & Carbs", "Pantry", "Other"];
+const GOALS = [{ id: "cut", label: "Afvallen" }, { id: "maintain", label: "Onderhouden" }, { id: "gain", label: "Spier opbouwen" }];
+const DIETS = ["Geen beperking", "Eiwitrijk", "Vegetarisch", "Veganistisch", "Pescotarisch"];
+const CUISINES = ["Mediterraans", "Aziatisch", "Italiaans", "Mexicaans", "Midden-Oosters", "Nederlands"];
+const PROTEINS = ["Kip", "Rund", "Vis", "Eieren", "Tofu", "Kwark/Skyr", "Bonen"];
+const VARIETY = [{ id: 1, label: "Elke dag gelijk" }, { id: 2, label: "2 dagen" }, { id: 3, label: "3 dagen" }, { id: 7, label: "Alles anders" }];
+const WD = ["Ma", "Di", "Wo", "Do", "Vr", "Za", "Zo"];
+const SHOP_ORDER = ["Groente & Fruit", "Vlees & Vis", "Zuivel", "Granen & Koolhydraten", "Voorraadkast", "Overig"];
 const fonts = `@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap');`;
 
 const num = (v, d = 0) => { const n = parseFloat(v); return isNaN(n) ? d : n; };
 
 function categorize(name) {
   const n = (name || "").toLowerCase();
-  if (/chicken|beef|turkey|pork|steak|mince|egg|tofu|tempeh|salmon|tuna|fish|shrimp|prawn|cod|lentil|bean|chickpea|ham|bacon/.test(n)) return "Protein";
-  if (/milk|yog|yoghurt|yogurt|quark|skyr|cheese|cottage|cream|butter|whey/.test(n)) return "Dairy";
-  if (/rice|pasta|bread|oat|potato|quinoa|couscous|noodle|tortilla|wrap|flour|cereal|bulgur|cracker/.test(n)) return "Grains & Carbs";
-  if (/oil|sauce|spice|salt|pepper|honey|vinegar|stock|broth|seed|nut|peanut|almond|cashew|tahini|syrup|powder|jam|herb/.test(n)) return "Pantry";
-  if (/apple|banana|berry|berries|spinach|broccoli|pepper|onion|garlic|tomato|carrot|courgette|zucchini|cucumber|lettuce|avocado|lemon|lime|mushroom|kale|veg|fruit|leek|cabbage|sprout|pea|orange|mango|grape/.test(n)) return "Produce";
-  return "Other";
+  // Herkent zowel Engelse als Nederlandse ingrediëntnamen.
+  if (/chicken|beef|turkey|pork|steak|mince|egg|tofu|tempeh|salmon|tuna|fish|shrimp|prawn|cod|lentil|bean|chickpea|ham|bacon|kip|rund|gehakt|biefstuk|ei|eieren|zalm|tonijn|vis|garnaal|garnalen|kabeljauw|linz|boon|bonen|kikkererwt|worst|kalkoen/.test(n)) return "Vlees & Vis";
+  if (/milk|yog|yoghurt|yogurt|quark|skyr|cheese|cottage|cream|butter|whey|melk|kwark|kaas|room|boter|hüttenkäse|huttenkase/.test(n)) return "Zuivel";
+  if (/rice|pasta|bread|oat|potato|quinoa|couscous|noodle|tortilla|wrap|flour|cereal|bulgur|cracker|rijst|brood|havermout|aardappel|noedel|meel|ontbijtgran|cracker|cous/.test(n)) return "Granen & Koolhydraten";
+  if (/oil|sauce|spice|salt|pepper|honey|vinegar|stock|broth|seed|nut|peanut|almond|cashew|tahini|syrup|powder|jam|herb|olie|saus|kruid|zout|peper|honing|azijn|bouillon|zaden|noot|noten|pinda|amandel|stroop|poeder|specerij/.test(n)) return "Voorraadkast";
+  if (/apple|banana|berry|berries|spinach|broccoli|pepper|onion|garlic|tomato|carrot|courgette|zucchini|cucumber|lettuce|avocado|lemon|lime|mushroom|kale|veg|fruit|leek|cabbage|sprout|pea|orange|mango|grape|appel|banaan|bes|bessen|spinazie|broccoli|paprika|ui|knoflook|tomaat|wortel|komkommer|sla|avocado|citroen|limoen|champignon|boerenkool|groente|prei|kool|erwt|sinaasappel|druif|peer|spruit/.test(n)) return "Groente & Fruit";
+  return "Overig";
 }
 
 // Roept de backend aan voor één groep dagen.
@@ -52,7 +53,7 @@ export default function App() {
   const [weight, setWeight] = useState("87");
   const [activity, setActivity] = useState("moderate");
   const [goal, setGoal] = useState("maintain");
-  const [diet, setDiet] = useState("High-protein");
+  const [diet, setDiet] = useState("Eiwitrijk");
   const [avoid, setAvoid] = useState("");
   const [likes, setLikes] = useState("");
   const [cuisines, setCuisines] = useState([]);
@@ -136,7 +137,7 @@ export default function App() {
 
       <div style={{ maxWidth: 1080, margin: "0 auto", padding: 16, display: "grid", gridTemplateColumns: "minmax(0,1fr)", gap: 18 }}>
         <div style={{ background: INK2, border: `1px solid ${LINE}`, borderRadius: 14, padding: 18 }}>
-          <div style={{ ...disp, fontSize: 15, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 16, color: EMBER }}>Your stats</div>
+          <div style={{ ...disp, fontSize: 15, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 16, color: EMBER }}>Jouw gegevens</div>
 
           <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
             {["male", "female"].map((s) => (
@@ -149,42 +150,42 @@ export default function App() {
             <div><label style={label}>Weight</label><input style={input} value={weight} onChange={(e) => setWeight(e.target.value)} inputMode="numeric" /></div>
           </div>
           <div style={{ marginBottom: 14 }}>
-            <label style={label}>Training load</label>
+            <label style={label}>Trainingsbelasting</label>
             <select style={input} value={activity} onChange={(e) => setActivity(e.target.value)}>
               {ACTIVITY.map((a) => <option key={a.id} value={a.id}>{a.label}</option>)}
             </select>
           </div>
           <div style={{ marginBottom: 14 }}>
-            <label style={label}>Goal</label>
+            <label style={label}>Doel</label>
             <div style={{ display: "flex", gap: 8 }}>
               {GOALS.map((g) => <div key={g.id} onClick={() => setGoal(g.id)} style={segS(goal === g.id)}>{g.label}</div>)}
             </div>
           </div>
           <div style={{ marginBottom: 14 }}>
-            <label style={label}>Diet</label>
+            <label style={label}>Dieet</label>
             <select style={input} value={diet} onChange={(e) => setDiet(e.target.value)}>
               {DIETS.map((d) => <option key={d} value={d}>{d}</option>)}
             </select>
           </div>
           <div style={{ marginBottom: 16 }}>
-            <label style={label}>Avoid / allergies</label>
-            <input style={input} value={avoid} onChange={(e) => setAvoid(e.target.value)} placeholder="e.g. peanuts, shellfish" />
+            <label style={label}>Vermijden / allergieën</label>
+            <input style={input} value={avoid} onChange={(e) => setAvoid(e.target.value)} placeholder="bijv. pinda's, schaaldieren" />
           </div>
 
           <div style={{ height: 1, background: LINE, margin: "2px 0 16px" }} />
-          <div style={{ ...disp, fontSize: 15, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 14, color: EMBER }}>What you love</div>
+          <div style={{ ...disp, fontSize: 15, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 14, color: EMBER }}>Wat je lekker vindt</div>
           <div style={{ marginBottom: 14 }}>
-            <label style={label}>Favourite foods</label>
-            <input style={input} value={likes} onChange={(e) => setLikes(e.target.value)} placeholder="e.g. chicken, rice, quark" />
+            <label style={label}>Favoriete gerechten</label>
+            <input style={input} value={likes} onChange={(e) => setLikes(e.target.value)} placeholder="bijv. kip, rijst, kwark" />
           </div>
           <div style={{ marginBottom: 14 }}>
-            <label style={label}>Go-to proteins</label>
+            <label style={label}>Vaste eiwitbronnen</label>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
               {PROTEINS.map((p) => <div key={p} onClick={() => toggle(p, proteins, setProteins)} style={chipS(proteins.includes(p))}>{p}</div>)}
             </div>
           </div>
           <div style={{ marginBottom: 16 }}>
-            <label style={label}>Cuisine vibe</label>
+            <label style={label}>Keukenstijl</label>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
               {CUISINES.map((c) => <div key={c} onClick={() => toggle(c, cuisines, setCuisines)} style={chipS(cuisines.includes(c))}>{c}</div>)}
             </div>
@@ -192,21 +193,21 @@ export default function App() {
 
           <div style={{ height: 1, background: LINE, margin: "2px 0 16px" }} />
           <div style={{ marginBottom: 18 }}>
-            <label style={label}>How varied? (different days)</label>
+            <label style={label}>Hoeveel variatie? (verschillende dagen)</label>
             <div style={{ display: "flex", gap: 6 }}>
               {VARIETY.map((v) => <div key={v.id} onClick={() => setVariety(v.id)} style={{ ...segS(variety === v.id), fontSize: 11.5, padding: "9px 2px" }}>{v.label}</div>)}
             </div>
           </div>
 
           <button onClick={handleBuild} disabled={loading} style={{ width: "100%", background: EMBER, color: INK, border: "none", padding: "14px 0", borderRadius: 10, ...disp, fontWeight: 700, fontSize: 16, letterSpacing: 1, textTransform: "uppercase", cursor: loading ? "default" : "pointer", opacity: loading ? 0.7 : 1 }}>
-            {loading ? "Building…" : "Build my plan"}
+            {loading ? "Bezig…" : "Maak mijn plan"}
           </button>
         </div>
 
         <div>
           {!started && (
             <div style={{ border: `1px dashed ${LINE}`, borderRadius: 14, padding: "48px 24px", textAlign: "center", color: MUTED }}>
-              <div style={{ ...disp, fontSize: 24, fontWeight: 600, color: PAPER, marginBottom: 8 }}>Fuel the work.</div>
+              <div style={{ ...disp, fontSize: 24, fontWeight: 600, color: PAPER, marginBottom: 8 }}>Fuel the work.</div>{/* merkslogan — bewust Engels */}
               <div style={{ fontSize: 13.5, lineHeight: 1.6 }}>Vul je gegevens in. We berekenen je macro's en bouwen een plan met gewichten.</div>
             </div>
           )}
@@ -216,7 +217,7 @@ export default function App() {
               {targets && (
                 <div style={{ background: INK2, border: `1px solid ${LINE}`, borderRadius: 14, padding: 16, marginBottom: 16 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 12 }}>
-                    <div style={{ ...label, marginBottom: 0 }}>Daily targets</div>
+                    <div style={{ ...label, marginBottom: 0 }}>Dagdoelen</div>
                     <div style={{ ...disp, fontSize: 28, fontWeight: 700 }}>{targets.kcal}<span style={{ fontSize: 12, color: MUTED, fontWeight: 400, marginLeft: 5 }}>kcal</span></div>
                   </div>
                   {targets.maintenance != null && (
@@ -225,7 +226,7 @@ export default function App() {
                     </div>
                   )}
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
-                    {[["Protein", targets.protein, EMBER], ["Carbs", targets.carbs, EMBER_SOFT], ["Fat", targets.fat, SAGE]].map(([n, v, c]) => (
+                    {[["Eiwit", targets.protein, EMBER], ["Koolhydr.", targets.carbs, EMBER_SOFT], ["Vet", targets.fat, SAGE]].map(([n, v, c]) => (
                       <div key={n} style={{ background: INK, borderRadius: 10, padding: "10px 12px", borderLeft: `3px solid ${c}` }}>
                         <div style={{ fontSize: 10, letterSpacing: 1, textTransform: "uppercase", color: MUTED, fontWeight: 600 }}>{n}</div>
                         <div style={{ ...disp, fontSize: 20, fontWeight: 600 }}>{v}<span style={{ fontSize: 10, color: MUTED, marginLeft: 3 }}>g</span></div>
@@ -237,18 +238,18 @@ export default function App() {
 
               {week && !loading && (
                 <div style={{ display: "inline-flex", gap: 4, marginBottom: 14, background: INK2, border: `1px solid ${LINE}`, borderRadius: 10, padding: 4 }}>
-                  {[["plan", "Plan"], ["shop", "Shopping list"]].map(([id, lbl]) => (
+                  {[["plan", "Plan"], ["shop", "Boodschappen"]].map(([id, lbl]) => (
                     <div key={id} onClick={() => setView(id)} style={{ padding: "8px 16px", borderRadius: 7, background: view === id ? EMBER : "transparent", color: view === id ? INK : PAPER, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.5, cursor: "pointer" }}>{lbl}</div>
                   ))}
                 </div>
               )}
 
-              {loading && <div style={{ textAlign: "center", padding: "40px 0", color: EMBER, ...disp, fontSize: 17, letterSpacing: 1 }}><span className="dot">COOKING UP YOUR PLAN…</span></div>}
+              {loading && <div style={{ textAlign: "center", padding: "40px 0", color: EMBER, ...disp, fontSize: 17, letterSpacing: 1 }}><span className="dot">JE PLAN WORDT KLAARGEMAAKT…</span></div>}
 
               {error && !loading && (
                 <div style={{ background: "rgba(255,90,31,0.1)", border: `1px solid ${EMBER}`, borderRadius: 12, padding: 16, textAlign: "center" }}>
                   <div style={{ marginBottom: 12, color: PAPER, fontSize: 13, wordBreak: "break-word" }}>{error}</div>
-                  <button onClick={handleBuild} style={{ background: EMBER, color: INK, border: "none", padding: "9px 22px", borderRadius: 8, fontWeight: 700, cursor: "pointer", ...disp, letterSpacing: 1 }}>RETRY</button>
+                  <button onClick={handleBuild} style={{ background: EMBER, color: INK, border: "none", padding: "9px 22px", borderRadius: 8, fontWeight: 700, cursor: "pointer", ...disp, letterSpacing: 1 }}>OPNIEUW</button>
                 </div>
               )}
 
