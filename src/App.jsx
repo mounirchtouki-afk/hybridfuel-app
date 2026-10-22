@@ -99,6 +99,20 @@ const TXT = {
   noDays: { nl: "Geen dagen ontvangen", en: "No days received" },
   unknownErr: { nl: "Onbekende fout", en: "Unknown error" },
   footer: { nl: "Schattingen, geen medisch advies. Drink voldoende water en raadpleeg een professional bij twijfel.", en: "Estimates, not medical advice. Drink enough water and consult a professional if in doubt." },
+  download: { nl: "⬇ Download als Excel", en: "⬇ Download as Excel" },
+  downloadHint: { nl: "Open 'm in Google Sheets om in Drive bij te houden en af te strepen.", en: "Open it in Google Sheets to track and tick off in Drive." },
+  // Kolomkoppen in het Excel-bestand
+  xDay: { nl: "Dag", en: "Day" },
+  xMeal: { nl: "Maaltijd", en: "Meal" },
+  xDish: { nl: "Gerecht", en: "Dish" },
+  xIng: { nl: "Ingrediënten", en: "Ingredients" },
+  xEaten: { nl: "Gegeten?", en: "Eaten?" },
+  xNotes: { nl: "Notities", en: "Notes" },
+  xItem: { nl: "Product", en: "Item" },
+  xQty: { nl: "Hoeveelheid", en: "Quantity" },
+  xGot: { nl: "In huis?", en: "Got it?" },
+  xSheetPlan: { nl: "Weekplan", en: "Week plan" },
+  xSheetShop: { nl: "Boodschappen", en: "Shopping" },
 };
 
 const fonts = `@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap');`;
@@ -212,6 +226,39 @@ export default function App() {
     Object.entries(agg).forEach(([name, v]) => { (byCat[v.ci] = byCat[v.ci] || []).push({ name, g: Math.round(v.g) }); });
     return SHOP_CATS.map((c, i) => ({ n: c[lang], items: byCat[i] })).filter((c) => c.items)
       .map((c) => ({ n: c.n, items: c.items.sort((a, b) => b.g - a.g) }));
+  }
+
+  // Exporteert het plan naar een .xlsx met afstreep- en notitiekolommen.
+  function exportExcel() {
+    const XLSX = window.XLSX;
+    if (!XLSX || !week) return;
+
+    // Tabblad 1: Weekplan
+    const planRows = [[T("xDay"), T("xMeal"), T("xDish"), T("xIng"), T("xEaten"), T("xNotes")]];
+    week.days.forEach((day) => {
+      day.m.forEach((m, i) => {
+        const ing = (m.ing || []).map((x) => Math.round(num(x.g)) + "g " + x.n).join(", ");
+        planRows.push([i === 0 ? day.d : "", m.t, m.n, ing, "", ""]);
+      });
+      planRows.push(["", "", "", "", "", ""]); // lege regel tussen dagen
+    });
+    const ws1 = XLSX.utils.aoa_to_sheet(planRows);
+    ws1["!cols"] = [{ wch: 6 }, { wch: 10 }, { wch: 26 }, { wch: 40 }, { wch: 9 }, { wch: 24 }];
+
+    // Tabblad 2: Boodschappen
+    const shopRows = [[T("xItem"), T("xQty"), T("xGot")]];
+    shoppingFor(week).forEach((cat) => {
+      shopRows.push([cat.n.toUpperCase(), "", ""]);
+      cat.items.forEach((it) => shopRows.push([it.name, it.g >= 1000 ? (it.g / 1000).toFixed(1) + " kg" : it.g + " g", ""]));
+      shopRows.push(["", "", ""]);
+    });
+    const ws2 = XLSX.utils.aoa_to_sheet(shopRows);
+    ws2["!cols"] = [{ wch: 28 }, { wch: 14 }, { wch: 9 }];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws1, T("xSheetPlan"));
+    XLSX.utils.book_append_sheet(wb, ws2, T("xSheetShop"));
+    XLSX.writeFile(wb, "HybridFuelCo-" + (lang === "nl" ? "Weekplan" : "Mealplan") + ".xlsx");
   }
 
   const label = { fontFamily: "Inter, sans-serif", fontSize: 11, letterSpacing: 1, textTransform: "uppercase", color: MUTED, marginBottom: 6, display: "block", fontWeight: 600 };
@@ -339,11 +386,17 @@ export default function App() {
               )}
 
               {week && !loading && (
-                <div style={{ display: "inline-flex", gap: 4, marginBottom: 14, background: INK2, border: `1px solid ${LINE}`, borderRadius: 10, padding: 4 }}>
-                  {[["plan", T("tabPlan")], ["shop", T("tabShop")]].map(([id, lbl]) => (
-                    <div key={id} onClick={() => setView(id)} style={{ padding: "8px 16px", borderRadius: 7, background: view === id ? EMBER : "transparent", color: view === id ? INK : PAPER, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.5, cursor: "pointer" }}>{lbl}</div>
-                  ))}
-                </div>
+                <>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 8, flexWrap: "wrap" }}>
+                    <div style={{ display: "inline-flex", gap: 4, background: INK2, border: `1px solid ${LINE}`, borderRadius: 10, padding: 4 }}>
+                      {[["plan", T("tabPlan")], ["shop", T("tabShop")]].map(([id, lbl]) => (
+                        <div key={id} onClick={() => setView(id)} style={{ padding: "8px 16px", borderRadius: 7, background: view === id ? EMBER : "transparent", color: view === id ? INK : PAPER, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.5, cursor: "pointer" }}>{lbl}</div>
+                      ))}
+                    </div>
+                    <div onClick={exportExcel} style={{ padding: "9px 16px", borderRadius: 8, border: `1px solid ${EMBER}`, color: EMBER, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.5, cursor: "pointer" }}>{T("download")}</div>
+                  </div>
+                  <div style={{ fontSize: 11.5, color: MUTED, marginBottom: 14, lineHeight: 1.5 }}>{T("downloadHint")}</div>
+                </>
               )}
 
               {loading && <div style={{ textAlign: "center", padding: "40px 0", color: EMBER, ...disp, fontSize: 17, letterSpacing: 1 }}><span className="dot">{T("cooking")}</span></div>}
