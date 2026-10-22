@@ -64,11 +64,28 @@ function buildPrompt(b, t) {
   const labels = Array.isArray(b.labels) ? b.labels.slice(0, 4).map((x) => cleanStr(x, 6)) : ["D1"];
   const week = clampNum(b.weekIndex, 0, 5, 0);
 
+  const lang = b.lang === "en" ? "en" : "nl";
+
   const prefs = [];
   if (likes) prefs.push(`Loves / wants included: ${likes}`);
   if (proteins) prefs.push(`Preferred proteins: ${proteins}`);
   if (cuisines) prefs.push(`Cuisine leaning: ${cuisines}`);
   const prefText = prefs.length ? prefs.join(". ") + "." : "No strong preferences.";
+
+  // Taalafhankelijke instructie + voorbeeld.
+  const L = lang === "en"
+    ? {
+        rule1: "- Write ALL meal names, ingredient names and meal types in ENGLISH.",
+        rule2: '- 4 meals/day. Use exactly these meal types for "t": Breakfast, Lunch, Dinner, Snack.',
+        ruleN: "- Lean into the preferred foods, proteins and cuisines. Short ingredient names.",
+        example: '{"days":[{"d":"' + labels[0] + '","m":[{"t":"Breakfast","n":"Oats with quark","kcal":0,"p":0,"c":0,"f":0,"ing":[{"n":"Oats","g":60}]}]}]}',
+      }
+    : {
+        rule1: "- Write ALL meal names, ingredient names and meal types in DUTCH (Nederlands).",
+        rule2: '- 4 meals/day. Use exactly these Dutch meal types for "t": Ontbijt, Lunch, Diner, Snack.',
+        ruleN: "- Lean into the preferred foods, proteins and cuisines. Short Dutch ingredient names.",
+        example: '{"days":[{"d":"' + labels[0] + '","m":[{"t":"Ontbijt","n":"Havermout met kwark","kcal":0,"p":0,"c":0,"f":0,"ing":[{"n":"Havermout","g":60}]}]}]}',
+      };
 
   return `You are a sports nutrition coach. Build distinct meal-days labelled: ${labels.join(", ")}.
 
@@ -78,15 +95,15 @@ Preferences: ${prefText}
 Week ${week + 1}. Make the labelled days differ from each other.
 
 Rules:
-- Write ALL meal names, ingredient names and meal types in DUTCH (Nederlands).
-- 4 meals/day. Use exactly these Dutch meal types for "t": Ontbijt, Lunch, Diner, Snack.
+${L.rule1}
+${L.rule2}
 - For EACH meal list 2-4 main ingredients with weights in grams.
 - Each meal's kcal and p/c/f MUST match the listed ingredient weights.
 - Each day's meals should sum close to the daily targets.
-- Lean into the preferred foods, proteins and cuisines. Short Dutch ingredient names.
+${L.ruleN}
 
-Return ONLY valid JSON, no markdown, exactly this shape (keep the keys in English, values in Dutch):
-{"days":[{"d":"${labels[0]}","m":[{"t":"Ontbijt","n":"Havermout met kwark","kcal":0,"p":0,"c":0,"f":0,"ing":[{"n":"Havermout","g":60}]}]}]}`;
+Return ONLY valid JSON, no markdown, exactly this shape (keep the JSON keys in English):
+${L.example}`;
 }
 
 export default async function handler(req, res) {
