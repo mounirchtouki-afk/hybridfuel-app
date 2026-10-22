@@ -78,14 +78,15 @@ Preferences: ${prefText}
 Week ${week + 1}. Make the labelled days differ from each other.
 
 Rules:
-- 4 meals/day: Breakfast, Lunch, Dinner, Snack.
+- Write ALL meal names, ingredient names and meal types in DUTCH (Nederlands).
+- 4 meals/day. Use exactly these Dutch meal types for "t": Ontbijt, Lunch, Diner, Snack.
 - For EACH meal list 2-4 main ingredients with weights in grams.
 - Each meal's kcal and p/c/f MUST match the listed ingredient weights.
 - Each day's meals should sum close to the daily targets.
-- Lean into the preferred foods, proteins and cuisines. Short ingredient names.
+- Lean into the preferred foods, proteins and cuisines. Short Dutch ingredient names.
 
-Return ONLY valid JSON, no markdown, exactly this shape:
-{"days":[{"d":"${labels[0]}","m":[{"t":"Breakfast","n":"Name","kcal":0,"p":0,"c":0,"f":0,"ing":[{"n":"Oats","g":60}]}]}]}`;
+Return ONLY valid JSON, no markdown, exactly this shape (keep the keys in English, values in Dutch):
+{"days":[{"d":"${labels[0]}","m":[{"t":"Ontbijt","n":"Havermout met kwark","kcal":0,"p":0,"c":0,"f":0,"ing":[{"n":"Havermout","g":60}]}]}]}`;
 }
 
 export default async function handler(req, res) {
