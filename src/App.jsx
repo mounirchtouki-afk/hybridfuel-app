@@ -140,14 +140,14 @@ export default function App() {
           <div style={{ ...disp, fontSize: 15, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 16, color: EMBER }}>Jouw gegevens</div>
 
           <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
-            {["male", "female"].map((s) => (
-              <div key={s} onClick={() => setSex(s)} style={{ ...segS(sex === s), textTransform: "capitalize", padding: "10px 0" }}>{s}</div>
+            {[["male", "Man"], ["female", "Vrouw"]].map(([id, lbl]) => (
+              <div key={id} onClick={() => setSex(id)} style={{ ...segS(sex === id), padding: "10px 0" }}>{lbl}</div>
             ))}
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 14 }}>
-            <div><label style={label}>Age</label><input style={input} value={age} onChange={(e) => setAge(e.target.value)} inputMode="numeric" /></div>
-            <div><label style={label}>Height</label><input style={input} value={height} onChange={(e) => setHeight(e.target.value)} inputMode="numeric" /></div>
-            <div><label style={label}>Weight</label><input style={input} value={weight} onChange={(e) => setWeight(e.target.value)} inputMode="numeric" /></div>
+            <div><label style={label}>Leeftijd</label><input style={input} value={age} onChange={(e) => setAge(e.target.value)} inputMode="numeric" /></div>
+            <div><label style={label}>Lengte</label><input style={input} value={height} onChange={(e) => setHeight(e.target.value)} inputMode="numeric" /></div>
+            <div><label style={label}>Gewicht</label><input style={input} value={weight} onChange={(e) => setWeight(e.target.value)} inputMode="numeric" /></div>
           </div>
           <div style={{ marginBottom: 14 }}>
             <label style={label}>Trainingsbelasting</label>
