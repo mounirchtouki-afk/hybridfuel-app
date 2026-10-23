@@ -83,7 +83,7 @@ const TXT = {
   build: { nl: "Maak mijn plan", en: "Build my plan" },
   building: { nl: "Bezig…", en: "Building…" },
   emptyTitle: { nl: "Fuel the work.", en: "Fuel the work." },
-  emptyBody: { nl: "Vul je gegevens in. We berekenen je macro's en bouwen een plan met gewichten, afgestemd op je trainingsdagen.", en: "Enter your stats. We calculate your macros and build a plan with weights, tuned to your training days." },
+  emptyBody: { nl: "Vul je gegevens in. Je krijgt gratis je persoonlijke macro's en trainings/rust-verdeling. Het volledige maaltijdplan ontgrendel je daarna.", en: "Enter your stats. You'll get your personal macros and training/rest split for free. Unlock the full meal plan after that." },
   dailyTargets: { nl: "Dagdoelen (weekgemiddelde)", en: "Daily targets (weekly average)" },
   maintenance: { nl: "Onderhoud", en: "Maintenance" },
   below: { nl: "onder", en: "below" },
@@ -111,9 +111,9 @@ const TXT = {
   downloadHint: { nl: "Open 'm in Google Sheets om in Drive bij te houden en af te strepen.", en: "Open it in Google Sheets to track and tick off in Drive." },
   // Paywall
   freeSample: { nl: "Gratis voorbeelddag", en: "Free sample day" },
-  lockTitle: { nl: "Je volledige weekplan staat klaar", en: "Your full 7-day plan is ready" },
-  lockSub: { nl: "Dag 1 is gratis. Ontgrendel de hele week, de boodschappenlijst en de tracker.", en: "Day 1 is free. Unlock the full week, the shopping list and the tracker." },
-  lb1: { nl: "Alle 7 dagen met trainings-/rustcycling", en: "All 7 days with training/rest cycling" },
+  lockTitle: { nl: "Je persoonlijke weekplan", en: "Your personal week plan" },
+  lockSub: { nl: "Je cijfers staan hierboven. Ontgrendel je volledige 7-daagse maaltijdplan met exacte gewichten, afgestemd op je trainingsdagen.", en: "Your numbers are above. Unlock your full 7-day meal plan with exact weights, tuned to your training days." },
+  lb1: { nl: "7-daags maaltijdplan met exacte gewichten", en: "7-day meal plan with exact weights" },
   lb2: { nl: "Volledige boodschappenlijst", en: "Full shopping list" },
   lb3: { nl: "Excel + Google Sheets tracker", en: "Excel + Google Sheets tracker" },
   lbBundle: { nl: "+ Hyrox-voedingsgids (bundel)", en: "+ Hyrox nutrition guide (bundle)" },
@@ -560,40 +560,24 @@ export default function App() {
                 </>
               )}
 
-              {/* VERGRENDELD: dag 1 gratis + betaalmuur */}
-              {week && !loading && !unlocked && (
-                <div style={{ display: "grid", gap: 14 }}>
-                  <DayCard day={week.days[0]} di={0} sample />
-
-                  <div style={{ position: "relative" }}>
-                    <div style={{ display: "grid", gap: 8, filter: "blur(5px)", opacity: 0.5, pointerEvents: "none", maxHeight: 150, overflow: "hidden" }} aria-hidden="true">
-                      {week.days.slice(1, 3).map((day, di) => (
-                        <div key={di} style={{ background: INK2, border: `1px solid ${LINE}`, borderRadius: 12, padding: 14 }}>
-                          <div style={{ ...disp, fontWeight: 600, fontSize: 15 }}>{day.d}</div>
-                          <div style={{ fontSize: 12, color: MUTED, marginTop: 6 }}>{(day.m[0] && day.m[0].n) || ""} · {(day.m[1] && day.m[1].n) || ""}…</div>
-                        </div>
-                      ))}
-                    </div>
-                    <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", color: MUTED, fontSize: 12, fontWeight: 700, ...disp, letterSpacing: 1, textTransform: "uppercase" }}>+{lockedCount} {T("lockedDays")}</div>
-                  </div>
-
-                  <div style={{ border: `1px solid ${EMBER}`, borderRadius: 14, padding: 20, background: "linear-gradient(180deg, rgba(232,50,30,0.09), transparent 60%)" }}>
-                    <div style={{ ...disp, fontSize: 20, fontWeight: 700, letterSpacing: 0.3, marginBottom: 6 }}>{T("lockTitle")}</div>
-                    <div style={{ fontSize: 12.5, color: MUTED, marginBottom: 16, lineHeight: 1.5 }}>{T("lockSub")}</div>
-                    <div style={{ display: "grid", gap: 9, marginBottom: 18 }}>
-                      {[T("lb1"), T("lb2"), T("lb3")].map((t, i) => (
-                        <div key={i} style={{ display: "flex", gap: 9, alignItems: "flex-start", fontSize: 13.5 }}>
-                          <span style={{ color: EMBER, fontWeight: 800 }}>✓</span><span>{t}</span>
-                        </div>
-                      ))}
-                      <div style={{ display: "flex", gap: 9, alignItems: "flex-start", fontSize: 13.5, color: MUTED }}>
-                        <span style={{ color: EMBER_SOFT, fontWeight: 800 }}>+</span><span>{T("lbBundle")}</span>
+              {/* VERGRENDELD (Optie A): je cijfers staan hierboven, de maaltijden zitten achter betaling */}
+              {targets && !loading && !error && !unlocked && (
+                <div style={{ border: `1px solid ${EMBER}`, borderRadius: 14, padding: 20, background: "linear-gradient(180deg, rgba(232,50,30,0.09), transparent 60%)" }}>
+                  <div style={{ ...disp, fontSize: 20, fontWeight: 700, letterSpacing: 0.3, marginBottom: 6 }}>{T("lockTitle")}</div>
+                  <div style={{ fontSize: 12.5, color: MUTED, marginBottom: 16, lineHeight: 1.5 }}>{T("lockSub")}</div>
+                  <div style={{ display: "grid", gap: 9, marginBottom: 18 }}>
+                    {[T("lb1"), T("lb2"), T("lb3")].map((t, i) => (
+                      <div key={i} style={{ display: "flex", gap: 9, alignItems: "flex-start", fontSize: 13.5 }}>
+                        <span style={{ color: EMBER, fontWeight: 800 }}>✓</span><span>{t}</span>
                       </div>
+                    ))}
+                    <div style={{ display: "flex", gap: 9, alignItems: "flex-start", fontSize: 13.5, color: MUTED }}>
+                      <span style={{ color: EMBER_SOFT, fontWeight: 800 }}>+</span><span>{T("lbBundle")}</span>
                     </div>
-                    <a href={STRIPE_WEEK_LINK} style={{ display: "block", textAlign: "center", background: EMBER, color: INK, textDecoration: "none", padding: "14px 0", borderRadius: 10, ...disp, fontWeight: 700, fontSize: 15.5, letterSpacing: 0.5, marginBottom: 9 }}>{T("unlockWeek")}</a>
-                    <a href={STRIPE_BUNDLE_LINK} style={{ display: "block", textAlign: "center", background: "transparent", color: PAPER, textDecoration: "none", padding: "12px 0", borderRadius: 10, border: `1px solid ${LINE}`, ...disp, fontWeight: 700, fontSize: 14, letterSpacing: 0.5 }}>{T("unlockBundle")}</a>
-                    <div style={{ fontSize: 11, color: MUTED, marginTop: 12, textAlign: "center" }}>{T("lockFoot")}</div>
                   </div>
+                  <a href={STRIPE_WEEK_LINK} style={{ display: "block", textAlign: "center", background: EMBER, color: INK, textDecoration: "none", padding: "14px 0", borderRadius: 10, ...disp, fontWeight: 700, fontSize: 15.5, letterSpacing: 0.5, marginBottom: 9 }}>{T("unlockWeek")}</a>
+                  <a href={STRIPE_BUNDLE_LINK} style={{ display: "block", textAlign: "center", background: "transparent", color: PAPER, textDecoration: "none", padding: "12px 0", borderRadius: 10, border: `1px solid ${LINE}`, ...disp, fontWeight: 700, fontSize: 14, letterSpacing: 0.5 }}>{T("unlockBundle")}</a>
+                  <div style={{ fontSize: 11, color: MUTED, marginTop: 12, textAlign: "center" }}>{T("lockFoot")}</div>
                 </div>
               )}
             </>
