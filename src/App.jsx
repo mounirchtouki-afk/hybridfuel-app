@@ -109,6 +109,10 @@ const TXT = {
   footer: { nl: "Schattingen, geen medisch advies. Drink voldoende water en raadpleeg een professional bij twijfel.", en: "Estimates, not medical advice. Drink enough water and consult a professional if in doubt." },
   download: { nl: "⬇ Download als Excel", en: "⬇ Download as Excel" },
   downloadHint: { nl: "Open 'm in Google Sheets om in Drive bij te houden en af te strepen.", en: "Open it in Google Sheets to track and tick off in Drive." },
+  dlTitle: { nl: "Jouw downloads", en: "Your downloads" },
+  dlTracker: { nl: "⬇ Voortgangstracker (Excel / Sheets)", en: "⬇ Progress tracker (Excel / Sheets)" },
+  dlGuide: { nl: "⬇ Hyrox-voedingsgids (PDF)", en: "⬇ Hyrox nutrition guide (PDF)" },
+  dlHint: { nl: "De tracker open je ook in Google Sheets: upload 'm naar je Drive.", en: "Open the tracker in Google Sheets too: upload it to your Drive." },
   // Paywall
   freeSample: { nl: "Gratis voorbeelddag", en: "Free sample day" },
   lockTitle: { nl: "Je persoonlijke weekplan", en: "Your personal week plan" },
@@ -186,6 +190,7 @@ export default function App() {
   const [error, setError] = useState("");
   const [started, setStarted] = useState(false);
   const [unlocked, setUnlocked] = useState(false);
+  const [tier, setTier] = useState("week"); // "week" of "bundle" (bepaalt of de Hyrox-gids erbij komt)
 
   // Bij laden: taal herstellen + ontgrendeling checken (terugkomst van Stripe of eerder betaald).
   useEffect(() => {
@@ -209,8 +214,9 @@ export default function App() {
         .then((r) => r.json())
         .then((j) => {
           if (j && j.ok && j.token) {
-            try { localStorage.setItem("hf_token", j.token); localStorage.setItem("hf_unlocked", "1"); } catch (e) {}
-            setUnlocked(true); showOrGenerate();
+            const t = j.tier === "bundle" ? "bundle" : "week";
+            try { localStorage.setItem("hf_token", j.token); localStorage.setItem("hf_unlocked", "1"); localStorage.setItem("hf_tier", t); } catch (e) {}
+            setTier(t); setUnlocked(true); showOrGenerate();
           }
         })
         .catch(() => {});
@@ -221,7 +227,11 @@ export default function App() {
     let u = false;
     try { if (localStorage.getItem("hf_unlocked") === "1") u = true; } catch (e) {}
     if (params && params.get("paid") === "1") u = true;
-    if (u) { setUnlocked(true); try { localStorage.setItem("hf_unlocked", "1"); } catch (e) {} showOrGenerate(); }
+    if (u) {
+      setUnlocked(true);
+      try { localStorage.setItem("hf_unlocked", "1"); const t = localStorage.getItem("hf_tier"); if (t === "bundle" || t === "week") setTier(t); } catch (e) {}
+      showOrGenerate();
+    }
   }, []);
 
   const toggle = (val, list, setList) =>
@@ -545,6 +555,14 @@ export default function App() {
               {/* ONTGRENDELD: volledige weergave met tabs + download */}
               {week && !loading && unlocked && (
                 <>
+                  <div style={{ background: INK2, border: `1px solid ${LINE}`, borderRadius: 14, padding: 16, marginBottom: 16 }}>
+                    <div style={{ ...label, marginBottom: 10 }}>{T("dlTitle")}</div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+                      <a href={`https://www.hybridfuelco.com/tracker-${lang}.xlsx`} target="_blank" rel="noopener" style={{ textDecoration: "none", padding: "10px 16px", borderRadius: 8, border: `1px solid ${EMBER}`, color: EMBER, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.3 }}>{T("dlTracker")}</a>
+                      {tier === "bundle" && <a href={`https://www.hybridfuelco.com/hyrox-guide-${lang}.pdf`} target="_blank" rel="noopener" style={{ textDecoration: "none", padding: "10px 16px", borderRadius: 8, border: `1px solid ${EMBER}`, color: EMBER, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.3 }}>{T("dlGuide")}</a>}
+                    </div>
+                    <div style={{ fontSize: 11.5, color: MUTED, marginTop: 10, lineHeight: 1.5 }}>{T("dlHint")}</div>
+                  </div>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 8, flexWrap: "wrap" }}>
                     <div style={{ display: "inline-flex", gap: 4, background: INK2, border: `1px solid ${LINE}`, borderRadius: 10, padding: 4 }}>
                       {[["plan", T("tabPlan")], ["shop", T("tabShop")]].map(([id, lbl]) => (
