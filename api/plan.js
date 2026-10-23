@@ -2,8 +2,27 @@
 // De API-key zit in een environment variable (ANTHROPIC_API_KEY), NOOIT in de frontend.
 // De frontend stuurt alleen ingevulde velden; deze functie bouwt de prompt zelf.
 
+import crypto from "crypto";
+
 const ACTIVITY = { light: 1.375, moderate: 1.55, high: 1.725, athlete: 1.9 };
 const GOAL_ADJ = { cut: -0.2, maintain: 0, gain: 0.12 };
+
+// Controleert het token uit /api/verify. Is UNLOCK_SECRET niet gezet, dan is het
+// slot nog niet geactiveerd en gedraagt de app zich zoals nu (paid-vlag volstaat).
+function validToken(token) {
+  const secret = process.env.UNLOCK_SECRET;
+  if (!secret) return true; // slot niet actief
+  if (typeof token !== "string" || token.indexOf(".") < 0) return false;
+  const i = token.lastIndexOf(".");
+  const sid = token.slice(0, i);
+  const sig = token.slice(i + 1);
+  const exp = crypto.createHmac("sha256", secret).update(sid).digest("hex");
+  try {
+    return sig.length === exp.length && crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(exp));
+  } catch (e) {
+    return false;
+  }
+}
 
 // --- Simpele rate-limit (per IP, per dag) --------------------------------
 const MAX_PER_DAY = 15;
@@ -163,10 +182,12 @@ export default async function handler(req, res) {
       train: cyc.train, rest: cyc.rest, trainingCount: cyc.trainingCount,
     };
 
-    // GRATIS: alleen de (formule-)targets. Geen AI, geen kosten, niets om te stapelen
-    // tot een maaltijdplan. De AI-maaltijden draaien pas bij een betaalde aanvraag.
+    // GRATIS: alleen de (formule-)targets. Geen AI, geen kosten, niets om te stapelen.
+    // Betaald telt alleen als er een geldig token uit /api/verify meekomt (zodra het
+    // slot actief is via UNLOCK_SECRET). Zonder die env var volstaat de paid-vlag.
     const isPaid = body.paid === true;
-    if (!trusted && !isPaid) {
+    const paidVerified = isPaid && (trusted || validToken(body.token));
+    if (!trusted && !paidVerified) {
       return res.status(200).json({ targets, plan: null, locked: true });
     }
 
