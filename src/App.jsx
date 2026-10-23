@@ -196,10 +196,14 @@ export default function App() {
     if (u) {
       setUnlocked(true);
       try { localStorage.setItem("hf_unlocked", "1"); } catch (e) {}
-      try {
-        const saved = JSON.parse(localStorage.getItem("hf_lastplan") || "null");
-        if (saved && saved.week && saved.week.days) { setTargets(saved.targets); setWeek(saved.week); setStarted(true); }
-      } catch (e) {}
+      let saved = null, intake = null;
+      try { saved = JSON.parse(localStorage.getItem("hf_lastplan") || "null"); } catch (e) {}
+      try { intake = JSON.parse(localStorage.getItem("hf_intake") || "null"); } catch (e) {}
+      if (saved && saved.week && saved.week.days) {
+        setTargets(saved.targets); setWeek(saved.week); setStarted(true);
+      } else if (intake) {
+        setStarted(true); generatePaid(intake); // net betaald: genereer nu het volledige plan
+      }
     }
   }, []);
 
@@ -222,32 +226,55 @@ export default function App() {
     };
   }
 
-  async function handleBuild() {
-    setError(""); setStarted(true); setView("plan"); setChecked({});
-    setLoading(true); setWeek(null); setTargets(null);
-    try {
-      const nTrain = trainingDays.length;
-      let request;
-      if (nTrain === 0 || nTrain === 7) request = [{ label: "D1", level: "base" }];
-      else request = [{ label: "TR", level: "train" }, { label: "RS", level: "rest" }];
+  function currentIntake() {
+    return { ...common(), trainingDays: [...trainingDays] };
+  }
 
-      const data = await fetchChunk({ ...common(), trainingCount: nTrain, request });
-      const tgt = data.targets;
+  async function handleBuild() {
+    setError(""); setStarted(true); setView("plan"); setChecked({}); setWeek(null);
+    const intake = currentIntake();
+    try { localStorage.setItem("hf_intake", JSON.stringify(intake)); } catch (e) {}
+    if (unlocked) await generatePaid(intake);
+    else await computeFree(intake);
+  }
+
+  // GRATIS: alleen je persoonlijke macro's + trainings/rust-split. Geen AI, geen kosten.
+  async function computeFree(intake) {
+    setLoading(true); setTargets(null);
+    try {
+      const nTrain = (intake.trainingDays || []).length;
+      const data = await fetchChunk({ ...intake, trainingCount: nTrain, paid: false });
+      setTargets(data.targets);
+    } catch (e) {
+      setError(e && e.message ? e.message : T("unknownErr"));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // BETAALD: het volledige AI-maaltijdplan (7 dagen, met cycling).
+  async function generatePaid(intake) {
+    setLoading(true); setError("");
+    try {
+      const nTrain = (intake.trainingDays || []).length;
+      const request = (nTrain === 0 || nTrain === 7)
+        ? [{ label: "D1", level: "base" }]
+        : [{ label: "TR", level: "train" }, { label: "RS", level: "rest" }];
+      const data = await fetchChunk({ ...intake, trainingCount: nTrain, request, paid: true });
+      setTargets(data.targets);
       const got = (data.plan && data.plan.days) || [];
       if (!got.length) throw new Error(T("noDays"));
-
       const byLevel = {};
       request.forEach((r, idx) => { byLevel[r.level] = got.find((x) => x && x.d === r.label) || got[idx] || got[0]; });
-
-      const wd = WD[lang];
+      const td = intake.trainingDays || [];
+      const wd = WD[intake.lang === "nl" ? "nl" : "en"];
       const days = wd.map((d, i) => {
-        const isTrain = nTrain === 7 ? true : nTrain === 0 ? false : trainingDays.includes(i);
+        const isTrain = nTrain === 7 ? true : nTrain === 0 ? false : td.includes(i);
         const tmpl = (nTrain === 0 || nTrain === 7) ? byLevel["base"] : (isTrain ? byLevel["train"] : byLevel["rest"]);
         return { d, train: isTrain, m: (tmpl && tmpl.m) || [] };
       });
-      setTargets(tgt);
       setWeek({ days });
-      try { localStorage.setItem("hf_lastplan", JSON.stringify({ targets: tgt, week: { days } })); } catch (e) {}
+      try { localStorage.setItem("hf_lastplan", JSON.stringify({ targets: data.targets, week: { days } })); } catch (e) {}
     } catch (e) {
       setError(e && e.message ? e.message : T("unknownErr"));
     } finally {
