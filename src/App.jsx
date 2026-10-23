@@ -303,8 +303,8 @@ export default function App() {
   const label = { fontFamily: "Inter, sans-serif", fontSize: 11, letterSpacing: 1, textTransform: "uppercase", color: MUTED, marginBottom: 6, display: "block", fontWeight: 600 };
   const input = { width: "100%", background: INK, border: `1px solid ${LINE}`, color: PAPER, padding: "11px 12px", fontFamily: "Inter, sans-serif", fontSize: 14, borderRadius: 8, outline: "none", boxSizing: "border-box" };
   const disp = { fontFamily: "Oswald, sans-serif" };
-  const chipS = (on) => ({ padding: "7px 12px", borderRadius: 20, border: `1px solid ${on ? EMBER : LINE}`, background: on ? "rgba(255,90,31,0.14)" : "transparent", fontSize: 12.5, fontWeight: 600, cursor: "pointer" });
-  const segS = (on) => ({ flex: 1, textAlign: "center", padding: "9px 4px", borderRadius: 8, border: `1px solid ${on ? EMBER : LINE}`, background: on ? "rgba(255,90,31,0.12)" : "transparent", fontSize: 12, fontWeight: 600, cursor: "pointer" });
+  const chipS = (on) => ({ padding: "7px 12px", borderRadius: 20, border: `1px solid ${on ? EMBER : LINE}`, background: on ? "rgba(232,50,30,0.14)" : "transparent", fontSize: 12.5, fontWeight: 600, cursor: "pointer" });
+  const segS = (on) => ({ flex: 1, textAlign: "center", padding: "9px 4px", borderRadius: 8, border: `1px solid ${on ? EMBER : LINE}`, background: on ? "rgba(232,50,30,0.12)" : "transparent", fontSize: 12, fontWeight: 600, cursor: "pointer" });
   const dayChip = (on) => ({ flex: 1, textAlign: "center", padding: "9px 2px", borderRadius: 8, border: `1px solid ${on ? EMBER : LINE}`, background: on ? "rgba(232,50,30,0.16)" : "transparent", color: on ? PAPER : MUTED, fontSize: 12, fontWeight: 700, cursor: "pointer", ...disp, letterSpacing: 0.5 });
   const flagBtn = (on) => ({ display: "flex", alignItems: "center", cursor: "pointer", padding: "5px 7px", borderRadius: 7, border: `1px solid ${on ? EMBER : LINE}`, background: on ? "rgba(232,50,30,0.14)" : "transparent", opacity: on ? 1 : 0.5, transition: "opacity .15s, border-color .15s" });
   const FlagNL = <svg width="22" height="15" viewBox="0 0 9 6" style={{ borderRadius: 2, display: "block" }}><rect width="9" height="6" fill="#fff" /><rect width="9" height="2" fill="#AE1C28" /><rect y="4" width="9" height="2" fill="#21468B" /></svg>;
@@ -486,7 +486,7 @@ export default function App() {
               {loading && <div style={{ textAlign: "center", padding: "40px 0", color: EMBER, ...disp, fontSize: 17, letterSpacing: 1 }}><span className="dot">{T("cooking")}</span></div>}
 
               {error && !loading && (
-                <div style={{ background: "rgba(255,90,31,0.1)", border: `1px solid ${EMBER}`, borderRadius: 12, padding: 16, textAlign: "center" }}>
+                <div style={{ background: "rgba(232,50,30,0.1)", border: `1px solid ${EMBER}`, borderRadius: 12, padding: 16, textAlign: "center" }}>
                   <div style={{ marginBottom: 12, color: PAPER, fontSize: 13, wordBreak: "break-word" }}>{error}</div>
                   <button onClick={handleBuild} style={{ background: EMBER, color: INK, border: "none", padding: "9px 22px", borderRadius: 8, fontWeight: 700, cursor: "pointer", ...disp, letterSpacing: 1 }}>{T("retry")}</button>
                 </div>
