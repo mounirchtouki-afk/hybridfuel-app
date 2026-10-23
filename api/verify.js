@@ -37,9 +37,11 @@ export default async function handler(req, res) {
     if (!paid) {
       return res.status(200).json({ ok: false, error: "not paid" });
     }
+    // Bundel (incl. Hyrox-gids) vanaf ~€17; anders week. Bedrag is in centen.
+    const tier = (s.amount_total || 0) >= 1600 ? "bundle" : "week";
     const sig = crypto.createHmac("sha256", unlockSecret).update(sid).digest("hex");
     const token = sid + "." + sig;
-    return res.status(200).json({ ok: true, token });
+    return res.status(200).json({ ok: true, token, tier });
   } catch (e) {
     return res.status(500).json({ ok: false, error: String(e).slice(0, 120) });
   }
