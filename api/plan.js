@@ -6,8 +6,6 @@ const ACTIVITY = { light: 1.375, moderate: 1.55, high: 1.725, athlete: 1.9 };
 const GOAL_ADJ = { cut: -0.2, maintain: 0, gain: 0.12 };
 
 // --- Simpele rate-limit (per IP, per dag) --------------------------------
-// In-memory: reset bij elke nieuwe serverstart. Genoeg om misbruik af te remmen.
-// Voor echt zware bescherming later Upstash/Redis, maar dit + de spend-cap volstaat om te starten.
 const MAX_PER_DAY = 15;
 const hits = new Map(); // ip -> { day, count }
 
@@ -36,7 +34,8 @@ function cleanStr(v, max) {
   return typeof v === "string" ? v.slice(0, max).replace(/[<>]/g, "") : "";
 }
 
-function computeTargets(b) {
+// Basis-dagdoelen (gemiddelde dag, vóór trainings-/rustcycling).
+function computeBase(b) {
   const kg = clampNum(b.weight, 35, 300, 80);
   const cm = clampNum(b.height, 120, 230, 180);
   const age = clampNum(b.age, 14, 100, 35);
@@ -55,14 +54,44 @@ function computeTargets(b) {
   return { kcal, protein, carbs, fat, maintenance, kg };
 }
 
-function buildPrompt(b, t) {
+// Houd eiwit en vet gelijk; de calorie-swing gaat naar koolhydraten (carb cycling).
+function dayMacros(kcal, base) {
+  const protein = base.protein;
+  const fat = base.fat;
+  const carbs = Math.max(40, Math.round((kcal - protein * 4 - fat * 9) / 4));
+  return { kcal, protein, carbs, fat };
+}
+
+// Verdeel de week: trainingsdagen omhoog, rustdagen omlaag, weekgemiddelde = basis.
+function computeCycle(base, nTrainRaw) {
+  const nTrain = Math.max(0, Math.min(7, parseInt(nTrainRaw, 10) || 0));
+  const nRest = 7 - nTrain;
+  const baseDay = dayMacros(base.kcal, base);
+  if (nTrain === 0 || nTrain === 7) {
+    return { base: baseDay, train: baseDay, rest: baseDay, trainingCount: nTrain };
+  }
+  let restKcal = Math.round((base.kcal * 0.88) / 10) * 10;             // ~12% onder basis
+  let trainKcal = Math.round(((7 * base.kcal - nRest * restKcal) / nTrain) / 10) * 10;
+  const cap = Math.round((base.kcal * 1.35) / 10) * 10;
+  const floor = Math.round((base.kcal * 0.8) / 10) * 10;
+  if (trainKcal > cap) {
+    trainKcal = cap;
+    restKcal = Math.round(((7 * base.kcal - nTrain * trainKcal) / nRest) / 10) * 10;
+  }
+  if (restKcal < floor) restKcal = floor;
+  return { base: baseDay, train: dayMacros(trainKcal, base), rest: dayMacros(restKcal, base), trainingCount: nTrain };
+}
+
+function buildPrompt(b, cyc) {
   const diet = cleanStr(b.diet, 40) || "No restriction";
   const avoid = cleanStr(b.avoid, 200) || "nothing specific";
   const likes = cleanStr(b.likes, 200);
   const proteins = Array.isArray(b.proteins) ? b.proteins.slice(0, 10).map((x) => cleanStr(x, 30)).join(", ") : "";
   const cuisines = Array.isArray(b.cuisines) ? b.cuisines.slice(0, 10).map((x) => cleanStr(x, 30)).join(", ") : "";
-  const labels = Array.isArray(b.labels) ? b.labels.slice(0, 4).map((x) => cleanStr(x, 6)) : ["D1"];
-  const week = clampNum(b.weekIndex, 0, 5, 0);
+
+  // Welke dag-templates moeten we bouwen? [{label, level}] met level train/rest/base.
+  let reqs = Array.isArray(b.request) ? b.request.slice(0, 3) : [{ label: "D1", level: "base" }];
+  reqs = reqs.map((r) => ({ label: cleanStr(r.label, 8) || "D1", level: pick(r.level, ["train", "rest", "base"], "base") }));
 
   const lang = b.lang === "en" ? "en" : "nl";
 
@@ -72,49 +101,63 @@ function buildPrompt(b, t) {
   if (cuisines) prefs.push(`Cuisine leaning: ${cuisines}`);
   const prefText = prefs.length ? prefs.join(". ") + "." : "No strong preferences.";
 
-  // Taalafhankelijke instructie + voorbeeld.
+  const tgtFor = (lvl) => (lvl === "train" ? cyc.train : lvl === "rest" ? cyc.rest : cyc.base);
+  const dayLines = reqs.map((r) => {
+    const t = tgtFor(r.level);
+    const tag = r.level === "train"
+      ? "TRAINING DAY — higher carbs to fuel training"
+      : r.level === "rest"
+        ? "REST DAY — lower carbs, protein stays high"
+        : "DAY";
+    return `- "${r.label}" = ${tag}: ${t.kcal} kcal, ${t.protein}g protein, ${t.carbs}g carbs, ${t.fat}g fat`;
+  }).join("\n");
+
   const L = lang === "en"
     ? {
         rule1: "- Write ALL meal names, ingredient names and meal types in ENGLISH.",
         rule2: '- 4 meals/day. Use exactly these meal types for "t": Breakfast, Lunch, Dinner, Snack.',
         ruleN: "- Lean into the preferred foods, proteins and cuisines. Short ingredient names.",
-        example: '{"days":[{"d":"' + labels[0] + '","m":[{"t":"Breakfast","n":"Oats with quark","kcal":0,"p":0,"c":0,"f":0,"ing":[{"n":"Oats","g":60}]}]}]}',
+        example: '{"days":[{"d":"' + reqs[0].label + '","m":[{"t":"Breakfast","n":"Oats with quark","kcal":0,"p":0,"c":0,"f":0,"ing":[{"n":"Oats","g":60}]}]}]}',
       }
     : {
         rule1: "- Write ALL meal names, ingredient names and meal types in DUTCH (Nederlands).",
         rule2: '- 4 meals/day. Use exactly these Dutch meal types for "t": Ontbijt, Lunch, Diner, Snack.',
         ruleN: "- Lean into the preferred foods, proteins and cuisines. Short Dutch ingredient names.",
-        example: '{"days":[{"d":"' + labels[0] + '","m":[{"t":"Ontbijt","n":"Havermout met kwark","kcal":0,"p":0,"c":0,"f":0,"ing":[{"n":"Havermout","g":60}]}]}]}',
+        example: '{"days":[{"d":"' + reqs[0].label + '","m":[{"t":"Ontbijt","n":"Havermout met kwark","kcal":0,"p":0,"c":0,"f":0,"ing":[{"n":"Havermout","g":60}]}]}]}',
       };
 
-  return `You are a sports nutrition coach. Build distinct meal-days labelled: ${labels.join(", ")}.
+  return `You are a sports nutrition coach. Build these meal-days, each hitting ITS OWN targets:
+${dayLines}
 
-Daily targets per day: ${t.kcal} kcal, ${t.protein}g protein, ${t.carbs}g carbs, ${t.fat}g fat.
 Diet: ${diet}. Avoid: ${avoid}.
 Preferences: ${prefText}
-Week ${week + 1}. Make the labelled days differ from each other.
+Keep protein high and roughly equal on every day; put the calorie difference between training and rest days mainly into carbohydrates (rice, oats, potato, fruit). Make the days distinct and realistic to cook.
 
 Rules:
 ${L.rule1}
 ${L.rule2}
 - For EACH meal list 2-4 main ingredients with weights in grams.
 - Each meal's kcal and p/c/f MUST match the listed ingredient weights.
-- Each day's meals should sum close to the daily targets.
+- Each day's meals should sum close to THAT day's targets above.
 ${L.ruleN}
 
-Return ONLY valid JSON, no markdown, exactly this shape (keep the JSON keys in English):
+Return ONLY valid JSON, no markdown, exactly this shape (keep the JSON keys in English, set "d" to each day's label above):
 ${L.example}`;
 }
 
 export default async function handler(req, res) {
-  // CORS niet nodig: frontend en backend draaien op hetzelfde Vercel-domein.
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const ip = (req.headers["x-forwarded-for"] || "unknown").split(",")[0].trim();
-  if (rateLimited(ip)) {
-    return res.status(429).json({ error: "Dagelijkse limiet bereikt. Probeer morgen opnieuw." });
+  const autoSecret = process.env.AUTOMATION_SECRET;
+  const trusted = autoSecret && req.headers["x-automation-secret"] === autoSecret;
+
+  if (!trusted) {
+    const ip = (req.headers["x-forwarded-for"] || "unknown").split(",")[0].trim();
+    if (rateLimited(ip)) {
+      return res.status(429).json({ error: "Dagelijkse limiet bereikt. Probeer morgen opnieuw." });
+    }
   }
 
   const key = process.env.ANTHROPIC_API_KEY;
@@ -124,8 +167,9 @@ export default async function handler(req, res) {
 
   try {
     const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body || {};
-    const targets = computeTargets(body);
-    const prompt = buildPrompt(body, targets);
+    const base = computeBase(body);
+    const cyc = computeCycle(base, body.trainingCount);
+    const prompt = buildPrompt(body, cyc);
 
     const r = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -136,7 +180,7 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         model: "claude-sonnet-4-6",
-        max_tokens: 1200,
+        max_tokens: 1600,
         messages: [{ role: "user", content: prompt }],
       }),
     });
@@ -157,7 +201,11 @@ export default async function handler(req, res) {
       return res.status(502).json({ error: "Antwoord onleesbaar (mogelijk afgekapt).", detail: text.slice(0, 120) });
     }
 
-    // Stuur plan + de serverzijdig berekende targets terug.
+    const targets = {
+      kcal: base.kcal, protein: base.protein, carbs: base.carbs, fat: base.fat,
+      maintenance: base.maintenance,
+      train: cyc.train, rest: cyc.rest, trainingCount: cyc.trainingCount,
+    };
     return res.status(200).json({ targets, plan });
   } catch (e) {
     return res.status(500).json({ error: "Serverfout", detail: String(e).slice(0, 200) });
