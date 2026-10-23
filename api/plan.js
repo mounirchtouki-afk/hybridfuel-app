@@ -3,6 +3,7 @@
 // De frontend stuurt alleen ingevulde velden; deze functie bouwt de prompt zelf.
 
 import crypto from "crypto";
+import { RECIPES } from "../src/recipes.js";
 
 const ACTIVITY = { light: 1.375, moderate: 1.55, high: 1.725, athlete: 1.9 };
 const GOAL_ADJ = { cut: -0.2, maintain: 0, gain: 0.12 };
@@ -120,6 +121,12 @@ function buildPrompt(b, cyc) {
   if (cuisines) prefs.push(`Cuisine leaning: ${cuisines}`);
   const prefText = prefs.length ? prefs.join(". ") + "." : "No strong preferences.";
 
+  // Vaste kok-recepten als voorkeur meegeven; de AI gebruikt ze waar ze passen.
+  const recipeLines = RECIPES.map((r) => {
+    const ings = r.ing.map((x) => `${x.g}g ${x[lang] || x.en}`).join(", ");
+    return `- ${r.name[lang] || r.name.en} [${r.type}, ${r.macros.kcal}kcal ${r.macros.p}P/${r.macros.c}C/${r.macros.f}F]: ${ings}`;
+  }).join("\n");
+
   const tgtFor = (lvl) => (lvl === "train" ? cyc.train : lvl === "rest" ? cyc.rest : cyc.base);
   const dayLines = reqs.map((r) => {
     const t = tgtFor(r.level);
@@ -150,6 +157,10 @@ ${dayLines}
 
 Diet: ${diet}. Avoid: ${avoid}.
 Preferences: ${prefText}
+
+Preferred recipes — use any of these that fit the day's targets, the diet and the avoid-list; scale portions up or down to hit the numbers. Where none fit, make your own meal in the same style:
+${recipeLines}
+
 Keep protein high and roughly equal on every day; put the calorie difference between training and rest days mainly into carbohydrates (rice, oats, potato, fruit). Make the days distinct and realistic to cook.
 
 Rules:
