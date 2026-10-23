@@ -190,21 +190,38 @@ export default function App() {
   // Bij laden: taal herstellen + ontgrendeling checken (terugkomst van Stripe of eerder betaald).
   useEffect(() => {
     try { const l = localStorage.getItem("hf_lang"); if (l === "nl" || l === "en") setLangState(l); } catch (e) {}
-    let u = false;
-    try { const p = new URLSearchParams(window.location.search); if (p.get("paid") === "1") u = true; } catch (e) {}
-    try { if (localStorage.getItem("hf_unlocked") === "1") u = true; } catch (e) {}
-    if (u) {
-      setUnlocked(true);
-      try { localStorage.setItem("hf_unlocked", "1"); } catch (e) {}
+
+    function showOrGenerate() {
       let saved = null, intake = null;
       try { saved = JSON.parse(localStorage.getItem("hf_lastplan") || "null"); } catch (e) {}
       try { intake = JSON.parse(localStorage.getItem("hf_intake") || "null"); } catch (e) {}
-      if (saved && saved.week && saved.week.days) {
-        setTargets(saved.targets); setWeek(saved.week); setStarted(true);
-      } else if (intake) {
-        setStarted(true); generatePaid(intake); // net betaald: genereer nu het volledige plan
-      }
+      if (saved && saved.week && saved.week.days) { setTargets(saved.targets); setWeek(saved.week); setStarted(true); }
+      else if (intake) { setStarted(true); generatePaid(intake); }
     }
+
+    let params = null;
+    try { params = new URLSearchParams(window.location.search); } catch (e) {}
+    const sid = params && params.get("session_id");
+
+    if (sid) {
+      // Echt slot: betaling verifiëren bij de server. Pas bij "ok" ontgrendelen.
+      fetch("/api/verify?session_id=" + encodeURIComponent(sid))
+        .then((r) => r.json())
+        .then((j) => {
+          if (j && j.ok && j.token) {
+            try { localStorage.setItem("hf_token", j.token); localStorage.setItem("hf_unlocked", "1"); } catch (e) {}
+            setUnlocked(true); showOrGenerate();
+          }
+        })
+        .catch(() => {});
+      return;
+    }
+
+    // Terugkerende betaalde bezoeker, of dev-bypass (?paid=1, werkt tot het slot actief is).
+    let u = false;
+    try { if (localStorage.getItem("hf_unlocked") === "1") u = true; } catch (e) {}
+    if (params && params.get("paid") === "1") u = true;
+    if (u) { setUnlocked(true); try { localStorage.setItem("hf_unlocked", "1"); } catch (e) {} showOrGenerate(); }
   }, []);
 
   const toggle = (val, list, setList) =>
@@ -260,8 +277,14 @@ export default function App() {
       const request = (nTrain === 0 || nTrain === 7)
         ? [{ label: "D1", level: "base" }]
         : [{ label: "TR", level: "train" }, { label: "RS", level: "rest" }];
-      const data = await fetchChunk({ ...intake, trainingCount: nTrain, request, paid: true });
+      const token = (() => { try { return localStorage.getItem("hf_token") || ""; } catch (e) { return ""; } })();
+      const data = await fetchChunk({ ...intake, trainingCount: nTrain, request, paid: true, token });
       setTargets(data.targets);
+      if (data.locked || !data.plan) { // betaling niet geverifieerd → terug naar de betaalmuur
+        setUnlocked(false); setWeek(null);
+        try { localStorage.removeItem("hf_unlocked"); } catch (e) {}
+        return;
+      }
       const got = (data.plan && data.plan.days) || [];
       if (!got.length) throw new Error(T("noDays"));
       const byLevel = {};
