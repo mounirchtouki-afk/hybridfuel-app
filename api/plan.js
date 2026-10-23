@@ -153,22 +153,36 @@ export default async function handler(req, res) {
   const autoSecret = process.env.AUTOMATION_SECRET;
   const trusted = autoSecret && req.headers["x-automation-secret"] === autoSecret;
 
-  if (!trusted) {
-    const ip = (req.headers["x-forwarded-for"] || "unknown").split(",")[0].trim();
-    if (rateLimited(ip)) {
-      return res.status(429).json({ error: "Dagelijkse limiet bereikt. Probeer morgen opnieuw." });
-    }
-  }
-
-  const key = process.env.ANTHROPIC_API_KEY;
-  if (!key) {
-    return res.status(500).json({ error: "Server mist API-key (ANTHROPIC_API_KEY)." });
-  }
-
   try {
     const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body || {};
     const base = computeBase(body);
     const cyc = computeCycle(base, body.trainingCount);
+    const targets = {
+      kcal: base.kcal, protein: base.protein, carbs: base.carbs, fat: base.fat,
+      maintenance: base.maintenance,
+      train: cyc.train, rest: cyc.rest, trainingCount: cyc.trainingCount,
+    };
+
+    // GRATIS: alleen de (formule-)targets. Geen AI, geen kosten, niets om te stapelen
+    // tot een maaltijdplan. De AI-maaltijden draaien pas bij een betaalde aanvraag.
+    const isPaid = body.paid === true;
+    if (!trusted && !isPaid) {
+      return res.status(200).json({ targets, plan: null, locked: true });
+    }
+
+    // BETAALD (of vertrouwde automatisering): AI-generatie, met rate-limit als backstop.
+    if (!trusted) {
+      const ip = (req.headers["x-forwarded-for"] || "unknown").split(",")[0].trim();
+      if (rateLimited(ip)) {
+        return res.status(429).json({ error: "Dagelijkse limiet bereikt. Probeer morgen opnieuw." });
+      }
+    }
+
+    const key = process.env.ANTHROPIC_API_KEY;
+    if (!key) {
+      return res.status(500).json({ error: "Server mist API-key (ANTHROPIC_API_KEY)." });
+    }
+
     const prompt = buildPrompt(body, cyc);
 
     const r = await fetch("https://api.anthropic.com/v1/messages", {
@@ -201,11 +215,6 @@ export default async function handler(req, res) {
       return res.status(502).json({ error: "Antwoord onleesbaar (mogelijk afgekapt).", detail: text.slice(0, 120) });
     }
 
-    const targets = {
-      kcal: base.kcal, protein: base.protein, carbs: base.carbs, fat: base.fat,
-      maintenance: base.maintenance,
-      train: cyc.train, rest: cyc.rest, trainingCount: cyc.trainingCount,
-    };
     return res.status(200).json({ targets, plan });
   } catch (e) {
     return res.status(500).json({ error: "Serverfout", detail: String(e).slice(0, 200) });
