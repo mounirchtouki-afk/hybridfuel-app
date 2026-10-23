@@ -8,8 +8,8 @@ const INK = "#0A0A0A", INK2 = "#161616", EMBER = "#E8321E", EMBER_SOFT = "#FF4B3
   PAPER = "#F4F4F4", MUTED = "#8C8C8C", LINE = "#242424", SAGE = "#B5B5B5";
 
 // >>> Vul hier je Stripe-betaallinks in zodra je ze hebt aangemaakt <<<
-const STRIPE_WEEK_LINK = "[JOUW STRIPE WEEK-LINK]";
-const STRIPE_BUNDLE_LINK = "[JOUW STRIPE BUNDEL-LINK]";
+const STRIPE_WEEK_LINK = "https://buy.stripe.com/fZu4gBdvz1oQgru0Sd1wY00";
+const STRIPE_BUNDLE_LINK = "https://buy.stripe.com/7sYbJ3gHL2sU7UY30l1wY01";
 
 // id = vaste waarde (nooit vertalen, backend rekent erop) · nl/en = wat je ziet
 const ACTIVITY = [
