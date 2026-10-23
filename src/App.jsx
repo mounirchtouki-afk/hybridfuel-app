@@ -3,8 +3,9 @@ import React, { useState } from "react";
 // Roept GEEN Claude aan vanuit de browser — alles via /api/plan (key zit op de server).
 // Tweetalig: NL/EN via een vlagschakelaar. De gekozen taal gaat mee naar de backend.
 
-const INK = "#17130E", INK2 = "#231C15", EMBER = "#FF5A1F", EMBER_SOFT = "#FF7A47",
-  PAPER = "#F7F2E9", MUTED = "#9A8F7E", LINE = "#34291F", SAGE = "#7FA35C";
+// Huisstijl gelijk aan de website: zwart / wit / één rood accent.
+const INK = "#0A0A0A", INK2 = "#161616", EMBER = "#E8321E", EMBER_SOFT = "#FF4B37",
+  PAPER = "#F4F4F4", MUTED = "#8C8C8C", LINE = "#242424", SAGE = "#B5B5B5";
 
 // id = vaste waarde (nooit vertalen, backend rekent erop) · nl/en = wat je ziet
 const ACTIVITY = [
