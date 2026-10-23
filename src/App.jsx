@@ -267,7 +267,9 @@ export default function App() {
   const disp = { fontFamily: "Oswald, sans-serif" };
   const chipS = (on) => ({ padding: "7px 12px", borderRadius: 20, border: `1px solid ${on ? EMBER : LINE}`, background: on ? "rgba(255,90,31,0.14)" : "transparent", fontSize: 12.5, fontWeight: 600, cursor: "pointer" });
   const segS = (on) => ({ flex: 1, textAlign: "center", padding: "9px 4px", borderRadius: 8, border: `1px solid ${on ? EMBER : LINE}`, background: on ? "rgba(255,90,31,0.12)" : "transparent", fontSize: 12, fontWeight: 600, cursor: "pointer" });
-  const flagBtn = (on) => ({ fontSize: 20, lineHeight: 1, cursor: "pointer", padding: "4px 6px", borderRadius: 7, border: `1px solid ${on ? EMBER : LINE}`, background: on ? "rgba(255,90,31,0.14)" : "transparent", opacity: on ? 1 : 0.55 });
+  const flagBtn = (on) => ({ display: "flex", alignItems: "center", cursor: "pointer", padding: "5px 7px", borderRadius: 7, border: `1px solid ${on ? EMBER : LINE}`, background: on ? "rgba(232,50,30,0.14)" : "transparent", opacity: on ? 1 : 0.5, transition: "opacity .15s, border-color .15s" });
+  const FlagNL = <svg width="22" height="15" viewBox="0 0 9 6" style={{ borderRadius: 2, display: "block" }}><rect width="9" height="6" fill="#fff" /><rect width="9" height="2" fill="#AE1C28" /><rect y="4" width="9" height="2" fill="#21468B" /></svg>;
+  const FlagGB = <svg width="22" height="15" viewBox="0 0 60 30" style={{ borderRadius: 2, display: "block" }}><clipPath id="gbc"><rect width="60" height="30" /></clipPath><g clipPath="url(#gbc)"><rect width="60" height="30" fill="#012169" /><path d="M0,0 60,30 M60,0 0,30" stroke="#fff" strokeWidth="6" /><path d="M0,0 60,30 M60,0 0,30" stroke="#C8102E" strokeWidth="4" /><path d="M30,0 V30 M0,15 H60" stroke="#fff" strokeWidth="10" /><path d="M30,0 V30 M0,15 H60" stroke="#C8102E" strokeWidth="6" /></g></svg>;
 
   return (
     <div style={{ minHeight: "100vh", background: INK, color: PAPER, fontFamily: "Inter, sans-serif" }}>
@@ -280,8 +282,8 @@ export default function App() {
           <div style={{ fontSize: 10.5, color: MUTED, letterSpacing: 1, textTransform: "uppercase", marginTop: 3 }}>{T("tagline")}</div>
         </div>
         <div style={{ display: "flex", gap: 6 }}>
-          <div onClick={() => setLang("nl")} style={flagBtn(lang === "nl")} title="Nederlands">🇳🇱</div>
-          <div onClick={() => setLang("en")} style={flagBtn(lang === "en")} title="English">🇬🇧</div>
+          <div onClick={() => setLang("nl")} style={flagBtn(lang === "nl")} title="Nederlands">{FlagNL}</div>
+          <div onClick={() => setLang("en")} style={flagBtn(lang === "en")} title="English">{FlagGB}</div>
         </div>
       </div>
 
