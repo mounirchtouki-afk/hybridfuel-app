@@ -142,7 +142,7 @@ async function fetchChunk(payload) {
 }
 
 export default function App() {
-  const [lang, setLang] = useState("nl");
+  const [lang, setLang] = useState("en");
   const T = (k) => TXT[k][lang];
 
   const [sex, setSex] = useState("male");
