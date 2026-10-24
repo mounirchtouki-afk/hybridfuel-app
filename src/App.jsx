@@ -111,9 +111,10 @@ const TXT = {
   downloadHint: { nl: "Open 'm in Google Sheets om in Drive bij te houden en af te strepen.", en: "Open it in Google Sheets to track and tick off in Drive." },
   dlTitle: { nl: "Jouw downloads", en: "Your downloads" },
   dlPlan: { nl: "⬇ Weekplan (Excel)", en: "⬇ Meal plan (Excel)" },
-  dlTracker: { nl: "⬇ Voortgangstracker (Excel)", en: "⬇ Progress tracker (Excel)" },
+  dlTracker: { nl: "⬇ Download jouw tracker (Excel)", en: "⬇ Download your tracker (Excel)" },
+  dlPreparing: { nl: "Tracker wordt gemaakt…", en: "Building your tracker…" },
   dlGuide: { nl: "⬇ Hyrox-voedingsgids (PDF)", en: "⬇ Hyrox nutrition guide (PDF)" },
-  dlHint: { nl: "Elk Excel-bestand open je ook in Google Sheets — upload 'm naar je Drive om bij te houden en af te strepen.", en: "Open any Excel file in Google Sheets — upload it to your Drive to track and tick off." },
+  dlHint: { nl: "Eén Excel met alles: dashboard, grafiek, jouw weekplan, boodschappenlijst en recepten. Open 'm ook in Google Sheets om bij te houden.", en: "One Excel with everything: dashboard, chart, your week plan, shopping list and recipes. Open it in Google Sheets too to track and tick off." },
   // Paywall
   freeSample: { nl: "Gratis voorbeelddag", en: "Free sample day" },
   lockTitle: { nl: "Je persoonlijke weekplan", en: "Your personal week plan" },
@@ -226,6 +227,7 @@ export default function App() {
   const [tier, setTier] = useState("week"); // "week" of "bundle" (bepaalt of de Hyrox-gids erbij komt)
   const [email, setEmail] = useState("");
   const [leadStatus, setLeadStatus] = useState("idle"); // idle | sending | ok | err | bad
+  const [trackerBusy, setTrackerBusy] = useState(false);
 
   // Bij laden: taal herstellen + ontgrendeling checken (terugkomst van Stripe of eerder betaald).
   useEffect(() => {
@@ -415,6 +417,32 @@ export default function App() {
     XLSX.utils.book_append_sheet(wb, ws1, T("xSheetPlan"));
     XLSX.utils.book_append_sheet(wb, ws2, T("xSheetShop"));
     XLSX.writeFile(wb, "HybridFuelCo-" + (lang === "nl" ? "Weekplan" : "Mealplan") + ".xlsx");
+  }
+
+  // Haalt de VOLLEDIGE tracker (dashboard, grafiek, weekplan, boodschappen, recepten)
+  // met het plan van de klant erin, via /api/tracker. Valt terug op het kale
+  // client-export als de server onverhoopt niet reageert.
+  async function downloadTracker() {
+    if (!week || trackerBusy) return;
+    setTrackerBusy(true);
+    try {
+      const res = await fetch("/api/tracker", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ week, shopping: shoppingFor(week), lang }),
+      });
+      if (!res.ok) throw new Error("fail");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = "HybridFuelCo-Tracker-" + (lang === "nl" ? "NL" : "EN") + ".xlsx";
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => { try { URL.revokeObjectURL(url); } catch (e) {} }, 2000);
+    } catch (e) {
+      exportExcel(); // terugval: kaal weekplan client-side
+    } finally {
+      setTrackerBusy(false);
+    }
   }
 
   const label = { fontFamily: "Inter, sans-serif", fontSize: 11, letterSpacing: 1, textTransform: "uppercase", color: MUTED, marginBottom: 6, display: "block", fontWeight: 600 };
@@ -615,8 +643,7 @@ export default function App() {
                   <div style={{ background: INK2, border: `1px solid ${LINE}`, borderRadius: 14, padding: 16, marginBottom: 16 }}>
                     <div style={{ ...label, marginBottom: 10 }}>{T("dlTitle")}</div>
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-                      <div onClick={exportExcel} style={{ cursor: "pointer", padding: "10px 16px", borderRadius: 8, border: "none", background: EMBER, color: INK, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.3 }}>{T("dlPlan")}</div>
-                      <a href={`https://www.hybridfuelco.com/tracker-${lang}.xlsx`} target="_blank" rel="noopener" style={{ textDecoration: "none", padding: "10px 16px", borderRadius: 8, border: `1px solid ${EMBER}`, color: EMBER, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.3 }}>{T("dlTracker")}</a>
+                      <div onClick={downloadTracker} style={{ cursor: trackerBusy ? "default" : "pointer", opacity: trackerBusy ? 0.7 : 1, padding: "10px 16px", borderRadius: 8, border: "none", background: EMBER, color: INK, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.3 }}>{trackerBusy ? T("dlPreparing") : T("dlTracker")}</div>
                       {tier === "bundle" && <a href={`https://www.hybridfuelco.com/hyrox-guide-${lang}.pdf`} target="_blank" rel="noopener" style={{ textDecoration: "none", padding: "10px 16px", borderRadius: 8, border: `1px solid ${EMBER}`, color: EMBER, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.3 }}>{T("dlGuide")}</a>}
                     </div>
                     <div style={{ fontSize: 11.5, color: MUTED, marginTop: 10, lineHeight: 1.5 }}>{T("dlHint")}</div>
