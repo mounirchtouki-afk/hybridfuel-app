@@ -126,6 +126,17 @@ const TXT = {
   unlockBundle: { nl: "Week + Hyrox-gids — €17,95", en: "Week + Hyrox guide — €17.95" },
   lockFoot: { nl: "Direct beschikbaar na betaling.", en: "Available instantly after payment." },
   lockedDays: { nl: "dagen vergrendeld", en: "days locked" },
+  // Lead capture — gratis starter in ruil voor e-mail (vangt wie nog niet koopt)
+  leadTitle: { nl: "Nog niet klaar om te kopen?", en: "Not ready to buy yet?" },
+  leadSub: { nl: "Pak de gratis starter: 5 Hyrox-voedingsregels (40+) die 90% van de fouten oplossen. Direct in je inbox.", en: "Grab the free starter: 5 Hyrox fueling rules (40+) that fix 90% of mistakes. Straight to your inbox." },
+  leadPh: { nl: "jouw@email.com", en: "your@email.com" },
+  leadBtn: { nl: "Stuur mij de gratis gids", en: "Send me the free guide" },
+  leadSending: { nl: "Versturen…", en: "Sending…" },
+  leadOkTitle: { nl: "Check je inbox ✓", en: "Check your inbox ✓" },
+  leadOkBody: { nl: "Je gratis starter staat hieronder — en komt ook in je mail.", en: "Your free starter is below — and it's on its way to your inbox too." },
+  leadDownload: { nl: "⬇ Download de gratis starter (PDF)", en: "⬇ Download the free starter (PDF)" },
+  leadErr: { nl: "Er ging iets mis. Probeer het opnieuw.", en: "Something went wrong. Please try again." },
+  leadBad: { nl: "Vul een geldig e-mailadres in.", en: "Enter a valid email address." },
   // Kolomkoppen in het Excel-bestand
   xDay: { nl: "Dag", en: "Day" },
   xType: { nl: "Type", en: "Type" },
@@ -213,6 +224,8 @@ export default function App() {
   const [started, setStarted] = useState(false);
   const [unlocked, setUnlocked] = useState(false);
   const [tier, setTier] = useState("week"); // "week" of "bundle" (bepaalt of de Hyrox-gids erbij komt)
+  const [email, setEmail] = useState("");
+  const [leadStatus, setLeadStatus] = useState("idle"); // idle | sending | ok | err | bad
 
   // Bij laden: taal herstellen + ontgrendeling checken (terugkomst van Stripe of eerder betaald).
   useEffect(() => {
@@ -301,6 +314,22 @@ export default function App() {
     } finally {
       setLoading(false);
     }
+  }
+
+  // E-MAIL CAPTURE: stuurt het adres naar /api/subscribe (server houdt de lijst bij).
+  async function subscribe() {
+    const e = (email || "").trim();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) { setLeadStatus("bad"); return; }
+    setLeadStatus("sending");
+    try {
+      const res = await fetch("/api/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: e, lang }),
+      });
+      if (!res.ok) throw new Error("fail");
+      setLeadStatus("ok");
+    } catch (_) { setLeadStatus("err"); }
   }
 
   // BETAALD: het volledige AI-maaltijdplan (7 dagen, met cycling).
@@ -646,6 +675,32 @@ export default function App() {
                   <a href={STRIPE_WEEK_LINK} style={{ display: "block", textAlign: "center", background: EMBER, color: INK, textDecoration: "none", padding: "14px 0", borderRadius: 10, ...disp, fontWeight: 700, fontSize: 15.5, letterSpacing: 0.5, marginBottom: 9 }}>{T("unlockWeek")}</a>
                   <a href={STRIPE_BUNDLE_LINK} style={{ display: "block", textAlign: "center", background: "transparent", color: PAPER, textDecoration: "none", padding: "12px 0", borderRadius: 10, border: `1px solid ${LINE}`, ...disp, fontWeight: 700, fontSize: 14, letterSpacing: 0.5 }}>{T("unlockBundle")}</a>
                   <div style={{ fontSize: 11, color: MUTED, marginTop: 12, textAlign: "center" }}>{T("lockFoot")}</div>
+                </div>
+              )}
+
+              {/* LEAD CAPTURE: vangt wie (nog) niet koopt — gratis starter in ruil voor e-mail */}
+              {targets && !loading && !error && !unlocked && (
+                <div style={{ marginTop: 16, border: `1px solid ${LINE}`, borderRadius: 14, padding: 18, background: INK2 }}>
+                  {leadStatus === "ok" ? (
+                    <div>
+                      <div style={{ ...disp, fontSize: 16, fontWeight: 700, marginBottom: 4 }}>{T("leadOkTitle")}</div>
+                      <div style={{ fontSize: 12.5, color: MUTED, marginBottom: 14, lineHeight: 1.5 }}>{T("leadOkBody")}</div>
+                      <a href={`https://www.hybridfuelco.com/hyrox-starter-${lang}.pdf`} target="_blank" rel="noopener" style={{ display: "inline-block", textDecoration: "none", padding: "11px 18px", borderRadius: 8, background: EMBER, color: INK, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.3 }}>{T("leadDownload")}</a>
+                    </div>
+                  ) : (
+                    <div>
+                      <div style={{ ...disp, fontSize: 16, fontWeight: 700, marginBottom: 4 }}>{T("leadTitle")}</div>
+                      <div style={{ fontSize: 12.5, color: MUTED, marginBottom: 12, lineHeight: 1.5 }}>{T("leadSub")}</div>
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                        <input style={{ ...input, flex: 1, minWidth: 180 }} type="email" value={email} onChange={(ev) => { setEmail(ev.target.value); if (leadStatus !== "idle") setLeadStatus("idle"); }} placeholder={T("leadPh")} />
+                        <button onClick={subscribe} disabled={leadStatus === "sending"} style={{ background: "transparent", color: EMBER, border: `1px solid ${EMBER}`, padding: "11px 18px", borderRadius: 8, ...disp, fontWeight: 700, fontSize: 13, letterSpacing: 0.3, cursor: leadStatus === "sending" ? "default" : "pointer", whiteSpace: "nowrap" }}>
+                          {leadStatus === "sending" ? T("leadSending") : T("leadBtn")}
+                        </button>
+                      </div>
+                      {leadStatus === "bad" && <div style={{ fontSize: 11.5, color: EMBER_SOFT, marginTop: 8 }}>{T("leadBad")}</div>}
+                      {leadStatus === "err" && <div style={{ fontSize: 11.5, color: EMBER_SOFT, marginTop: 8 }}>{T("leadErr")}</div>}
+                    </div>
+                  )}
                 </div>
               )}
             </>
