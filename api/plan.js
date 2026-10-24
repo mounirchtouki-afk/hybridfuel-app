@@ -121,8 +121,21 @@ function buildPrompt(b, cyc) {
   if (cuisines) prefs.push(`Cuisine leaning: ${cuisines}`);
   const prefText = prefs.length ? prefs.join(". ") + "." : "No strong preferences.";
 
-  // Vaste kok-recepten als voorkeur meegeven; de AI gebruikt ze waar ze passen.
-  const recipeLines = RECIPES.map((r) => {
+  // Kok-recepten als optionele inspiratie. "Trend"-recepten (matcha, ashwagandha,
+  // chia/lupine) komen ALLEEN mee als de voorkeuren dat ingrediënt noemen — anders
+  // bouwt de AI gewone maaltijden rond de voorkeuren, geen opgedrongen trends.
+  const prefBlob = `${likes} ${proteins} ${cuisines} ${diet}`.toLowerCase();
+  const TREND = {
+    3: ["matcha", "overnight oats", "green tea", "groene thee"],
+    6: ["ashwagandha", "adaptogen", "shake", "smoothie"],
+    9: ["chia", "lupine", "lupin", "pudding"],
+  };
+  const chosenRecipes = RECIPES.filter((r) => {
+    const kws = TREND[r.id];
+    if (!kws) return true; // staple: altijd beschikbaar als inspiratie
+    return kws.some((k) => prefBlob.includes(k)); // trend: alleen bij matchende voorkeur
+  });
+  const recipeLines = chosenRecipes.map((r) => {
     const ings = r.ing.map((x) => `${x.g}g ${x[lang] || x.en}`).join(", ");
     return `- ${r.name[lang] || r.name.en} [${r.type}, ${r.macros.kcal}kcal ${r.macros.p}P/${r.macros.c}C/${r.macros.f}F]: ${ings}`;
   }).join("\n");
@@ -158,7 +171,7 @@ ${dayLines}
 Diet: ${diet}. Avoid: ${avoid}.
 Preferences: ${prefText}
 
-Preferred recipes — use any of these that fit the day's targets, the diet and the avoid-list; scale portions up or down to hit the numbers. Where none fit, make your own meal in the same style:
+Optional recipe ideas that suit this person's taste — use any that fit the day's targets, the diet and the avoid-list, scaling portions to hit the numbers. Otherwise build your own simple, realistic meals around their stated preferences. Do NOT introduce novelty or "superfood" ingredients (matcha, ashwagandha, etc.) unless their preferences above mention them:
 ${recipeLines}
 
 Keep protein high and roughly equal on every day; put the calorie difference between training and rest days mainly into carbohydrates (rice, oats, potato, fruit). Make the days distinct and realistic to cook.
@@ -226,7 +239,7 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         model: "claude-sonnet-4-6",
-        max_tokens: 1600,
+        max_tokens: 3000,
         messages: [{ role: "user", content: prompt }],
       }),
     });
