@@ -110,9 +110,10 @@ const TXT = {
   download: { nl: "⬇ Download als Excel", en: "⬇ Download as Excel" },
   downloadHint: { nl: "Open 'm in Google Sheets om in Drive bij te houden en af te strepen.", en: "Open it in Google Sheets to track and tick off in Drive." },
   dlTitle: { nl: "Jouw downloads", en: "Your downloads" },
-  dlTracker: { nl: "⬇ Voortgangstracker (Excel / Sheets)", en: "⬇ Progress tracker (Excel / Sheets)" },
+  dlPlan: { nl: "⬇ Weekplan (Excel)", en: "⬇ Meal plan (Excel)" },
+  dlTracker: { nl: "⬇ Voortgangstracker (Excel)", en: "⬇ Progress tracker (Excel)" },
   dlGuide: { nl: "⬇ Hyrox-voedingsgids (PDF)", en: "⬇ Hyrox nutrition guide (PDF)" },
-  dlHint: { nl: "De tracker open je ook in Google Sheets: upload 'm naar je Drive.", en: "Open the tracker in Google Sheets too: upload it to your Drive." },
+  dlHint: { nl: "Elk Excel-bestand open je ook in Google Sheets — upload 'm naar je Drive om bij te houden en af te strepen.", en: "Open any Excel file in Google Sheets — upload it to your Drive to track and tick off." },
   // Paywall
   freeSample: { nl: "Gratis voorbeelddag", en: "Free sample day" },
   lockTitle: { nl: "Je persoonlijke weekplan", en: "Your personal week plan" },
@@ -142,6 +143,27 @@ const TXT = {
 
 const fonts = `@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap');`;
 const num = (v, d = 0) => { const n = parseFloat(v); return isNaN(n) ? d : n; };
+
+// Schaalt de maaltijden van een dag naar het exacte dag-caloriedoel (de AI benadert
+// het maar raakt het niet precies). Porties en macro's schalen mee, dag telt op het doel.
+function scaleDayTo(tmpl, targetKcal) {
+  if (!tmpl || !tmpl.m || !tmpl.m.length || !targetKcal) return tmpl;
+  const actual = tmpl.m.reduce((a, m) => a + num(m.kcal), 0);
+  if (!actual) return tmpl;
+  const f = targetKcal / actual;
+  if (Math.abs(f - 1) < 0.04) return tmpl; // al dichtbij genoeg
+  return {
+    ...tmpl,
+    m: tmpl.m.map((m) => ({
+      ...m,
+      kcal: Math.round(num(m.kcal) * f),
+      p: Math.round(num(m.p) * f),
+      c: Math.round(num(m.c) * f),
+      f: Math.round(num(m.f) * f),
+      ing: (m.ing || []).map((x) => ({ ...x, g: Math.round(num(x.g) * f) })),
+    })),
+  };
+}
 
 function categoryIndex(name) {
   const n = (name || "").toLowerCase();
@@ -216,6 +238,7 @@ export default function App() {
           if (j && j.ok && j.token) {
             const t = j.tier === "bundle" ? "bundle" : "week";
             try { localStorage.setItem("hf_token", j.token); localStorage.setItem("hf_unlocked", "1"); localStorage.setItem("hf_tier", t); } catch (e) {}
+            try { if (window.hfTrackPurchase) window.hfTrackPurchase(t === "bundle" ? 17.95 : 14.95, "EUR"); } catch (e) {}
             setTier(t); setUnlocked(true); showOrGenerate();
           }
         })
@@ -228,9 +251,10 @@ export default function App() {
     try { if (localStorage.getItem("hf_unlocked") === "1") u = true; } catch (e) {}
     if (params && params.get("paid") === "1") u = true;
     if (u) {
+      // Ontgrendeling onthouden, maar NIET automatisch het oude plan tonen:
+      // bij openen zie je het startscherm, niet meteen een vorig plan.
       setUnlocked(true);
-      try { localStorage.setItem("hf_unlocked", "1"); const t = localStorage.getItem("hf_tier"); if (t === "bundle" || t === "week") setTier(t); } catch (e) {}
-      showOrGenerate();
+      try { const t = localStorage.getItem("hf_tier"); if (t === "bundle" || t === "week") setTier(t); } catch (e) {}
     }
   }, []);
 
@@ -299,11 +323,15 @@ export default function App() {
       if (!got.length) throw new Error(T("noDays"));
       const byLevel = {};
       request.forEach((r, idx) => { byLevel[r.level] = got.find((x) => x && x.d === r.label) || got[idx] || got[0]; });
+      const tg = data.targets || {};
+      const sTrain = scaleDayTo(byLevel["train"], tg.train && tg.train.kcal);
+      const sRest = scaleDayTo(byLevel["rest"], tg.rest && tg.rest.kcal);
+      const sBase = scaleDayTo(byLevel["base"], tg.kcal);
       const td = intake.trainingDays || [];
       const wd = WD[intake.lang === "nl" ? "nl" : "en"];
       const days = wd.map((d, i) => {
         const isTrain = nTrain === 7 ? true : nTrain === 0 ? false : td.includes(i);
-        const tmpl = (nTrain === 0 || nTrain === 7) ? byLevel["base"] : (isTrain ? byLevel["train"] : byLevel["rest"]);
+        const tmpl = (nTrain === 0 || nTrain === 7) ? sBase : (isTrain ? sTrain : sRest);
         return { d, train: isTrain, m: (tmpl && tmpl.m) || [] };
       });
       setWeek({ days });
@@ -558,20 +586,19 @@ export default function App() {
                   <div style={{ background: INK2, border: `1px solid ${LINE}`, borderRadius: 14, padding: 16, marginBottom: 16 }}>
                     <div style={{ ...label, marginBottom: 10 }}>{T("dlTitle")}</div>
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+                      <div onClick={exportExcel} style={{ cursor: "pointer", padding: "10px 16px", borderRadius: 8, border: "none", background: EMBER, color: INK, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.3 }}>{T("dlPlan")}</div>
                       <a href={`https://www.hybridfuelco.com/tracker-${lang}.xlsx`} target="_blank" rel="noopener" style={{ textDecoration: "none", padding: "10px 16px", borderRadius: 8, border: `1px solid ${EMBER}`, color: EMBER, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.3 }}>{T("dlTracker")}</a>
                       {tier === "bundle" && <a href={`https://www.hybridfuelco.com/hyrox-guide-${lang}.pdf`} target="_blank" rel="noopener" style={{ textDecoration: "none", padding: "10px 16px", borderRadius: 8, border: `1px solid ${EMBER}`, color: EMBER, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.3 }}>{T("dlGuide")}</a>}
                     </div>
                     <div style={{ fontSize: 11.5, color: MUTED, marginTop: 10, lineHeight: 1.5 }}>{T("dlHint")}</div>
                   </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 8, flexWrap: "wrap" }}>
+                  <div style={{ marginBottom: 14 }}>
                     <div style={{ display: "inline-flex", gap: 4, background: INK2, border: `1px solid ${LINE}`, borderRadius: 10, padding: 4 }}>
                       {[["plan", T("tabPlan")], ["shop", T("tabShop")]].map(([id, lbl]) => (
                         <div key={id} onClick={() => setView(id)} style={{ padding: "8px 16px", borderRadius: 7, background: view === id ? EMBER : "transparent", color: view === id ? INK : PAPER, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.5, cursor: "pointer" }}>{lbl}</div>
                       ))}
                     </div>
-                    <div onClick={exportExcel} style={{ padding: "9px 16px", borderRadius: 8, border: `1px solid ${EMBER}`, color: EMBER, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.5, cursor: "pointer" }}>{T("download")}</div>
                   </div>
-                  <div style={{ fontSize: 11.5, color: MUTED, marginBottom: 14, lineHeight: 1.5 }}>{T("downloadHint")}</div>
 
                   {view === "plan" && (
                     <div style={{ display: "grid", gap: 12 }}>
