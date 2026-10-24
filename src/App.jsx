@@ -416,7 +416,7 @@ export default function App() {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws1, T("xSheetPlan"));
     XLSX.utils.book_append_sheet(wb, ws2, T("xSheetShop"));
-    XLSX.writeFile(wb, "HybridFuelCo-" + (lang === "nl" ? "Weekplan" : "Mealplan") + ".xlsx");
+    XLSX.writeFile(wb, "HybridFuelCo_MealPlan.xlsx");
   }
 
   // Haalt de VOLLEDIGE tracker (dashboard, grafiek, weekplan, boodschappen, recepten)
@@ -435,7 +435,7 @@ export default function App() {
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
-      a.href = url; a.download = "HybridFuelCo-Tracker-" + (lang === "nl" ? "NL" : "EN") + ".xlsx";
+      a.href = url; a.download = "HybridFuelCo_MealPlan.xlsx";
       document.body.appendChild(a); a.click(); a.remove();
       setTimeout(() => { try { URL.revokeObjectURL(url); } catch (e) {} }, 2000);
     } catch (e) {
