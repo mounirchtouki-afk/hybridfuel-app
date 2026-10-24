@@ -82,7 +82,7 @@ export default async function handler(req, res) {
     const out = await fillTracker(buf, lang, week, Array.isArray(body.shopping) ? body.shopping : []);
 
     res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-    res.setHeader("Content-Disposition", `attachment; filename="HybridFuelCo-Tracker-${lang.toUpperCase()}.xlsx"`);
+    res.setHeader("Content-Disposition", `attachment; filename="HybridFuelCo_MealPlan.xlsx"`);
     return res.status(200).send(Buffer.from(out));
   } catch (e) {
     return res.status(500).json({ error: "Tracker build failed", detail: String(e).slice(0, 200) });
