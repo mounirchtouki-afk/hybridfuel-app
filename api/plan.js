@@ -26,7 +26,7 @@ function validToken(token) {
 }
 
 // --- Simpele rate-limit (per IP, per dag) --------------------------------
-const MAX_PER_DAY = 15;
+const MAX_PER_DAY = 3;
 const hits = new Map(); // ip -> { day, count }
 
 function rateLimited(ip) {
