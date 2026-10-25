@@ -115,11 +115,14 @@ export default function Auth({ lang, session, tier, onClose }) {
   };
 
   const shell = (children) => (
-    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 60, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ background: INK, borderTop: `1px solid ${LINE}`, borderRadius: "18px 18px 0 0", width: "100%", maxWidth: 480, maxHeight: "88vh", overflowY: "auto", padding: 20, boxShadow: "0 -10px 40px rgba(0,0,0,.5)" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-          <div style={sectionTitle}>{t("account")}</div>
-          <div onClick={onClose} style={{ cursor: "pointer", color: MUTED, fontSize: 22, lineHeight: 1 }}>×</div>
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ position: "relative", background: INK, border: `1px solid ${LINE}`, borderRadius: 20, width: "100%", maxWidth: 420, maxHeight: "90vh", overflowY: "auto", padding: 22, boxShadow: "0 24px 70px rgba(0,0,0,.65)", backgroundImage: "radial-gradient(130% 70% at 92% -10%, rgba(225,29,72,0.13), transparent 58%)" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ width: 28, height: 28, borderRadius: 8, background: EMBER, display: "flex", alignItems: "center", justifyContent: "center", ...disp, fontWeight: 700, color: PAPER, fontSize: 16 }}>H</div>
+            <div style={sectionTitle}>{t("account")}</div>
+          </div>
+          <div onClick={onClose} style={{ cursor: "pointer", color: MUTED, fontSize: 17, lineHeight: 1, width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 9, border: `1px solid ${LINE}` }}>×</div>
         </div>
         {children}
       </div>
@@ -145,7 +148,7 @@ export default function Auth({ lang, session, tier, onClose }) {
             <div style={sectionTitle}>{t("upgradeTitle")}</div>
             <div style={{ display: "inline-flex", gap: 4, background: INK2, border: `1px solid ${LINE}`, borderRadius: 10, padding: 4, margin: "12px 0 14px" }}>
               {[["month", t("month")], ["year", t("year")]].map(([id, lbl]) => (
-                <div key={id} onClick={() => setBillInterval(id)} style={{ padding: "7px 16px", borderRadius: 7, background: billInterval === id ? EMBER : "transparent", color: billInterval === id ? INK : PAPER, fontSize: 12.5, fontWeight: 700, ...disp, letterSpacing: 0.5, cursor: "pointer" }}>{lbl}</div>
+                <div key={id} onClick={() => setBillInterval(id)} style={{ padding: "7px 16px", borderRadius: 7, background: billInterval === id ? EMBER : "transparent", color: PAPER, fontSize: 12.5, fontWeight: 700, ...disp, letterSpacing: 0.5, cursor: "pointer" }}>{lbl}</div>
               ))}
               {billInterval === "year" && <div style={{ alignSelf: "center", fontSize: 10.5, color: EMBER_SOFT, fontWeight: 700, padding: "0 8px", ...disp, letterSpacing: 0.3 }}>{t("freeMonths")}</div>}
             </div>
@@ -167,7 +170,7 @@ export default function Auth({ lang, session, tier, onClose }) {
       <div style={{ fontSize: 12.5, color: MUTED, lineHeight: 1.5, marginBottom: 14 }}>{t("intro")}</div>
       <div style={{ display: "inline-flex", gap: 4, background: INK2, border: `1px solid ${LINE}`, borderRadius: 10, padding: 4, marginBottom: 14 }}>
         {[["login", t("login")], ["signup", t("signup")]].map(([id, lbl]) => (
-          <div key={id} onClick={() => { setMode(id); setErr(""); setMsg(""); }} style={{ padding: "8px 18px", borderRadius: 7, background: mode === id ? EMBER : "transparent", color: mode === id ? INK : PAPER, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.5, cursor: "pointer" }}>{lbl}</div>
+          <div key={id} onClick={() => { setMode(id); setErr(""); setMsg(""); }} style={{ padding: "8px 18px", borderRadius: 7, background: mode === id ? EMBER : "transparent", color: PAPER, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.5, cursor: "pointer" }}>{lbl}</div>
         ))}
       </div>
       <div style={{ marginBottom: 10 }}>

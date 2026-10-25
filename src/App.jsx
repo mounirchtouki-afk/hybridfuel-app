@@ -510,10 +510,10 @@ export default function App() {
   const label = { fontFamily: "Inter, sans-serif", fontSize: 11, letterSpacing: 1, textTransform: "uppercase", color: MUTED, marginBottom: 6, display: "block", fontWeight: 600 };
   const input = { width: "100%", background: INK, border: `1px solid ${LINE}`, color: PAPER, padding: "11px 12px", fontFamily: "Inter, sans-serif", fontSize: 14, borderRadius: 8, outline: "none", boxSizing: "border-box" };
   const disp = { fontFamily: "Oswald, sans-serif" };
-  const chipS = (on) => ({ padding: "7px 12px", borderRadius: 20, border: `1px solid ${on ? EMBER : LINE}`, background: on ? "rgba(232,50,30,0.14)" : "transparent", fontSize: 12.5, fontWeight: 600, cursor: "pointer" });
-  const segS = (on) => ({ flex: 1, textAlign: "center", padding: "9px 4px", borderRadius: 8, border: `1px solid ${on ? EMBER : LINE}`, background: on ? "rgba(232,50,30,0.12)" : "transparent", fontSize: 12, fontWeight: 600, cursor: "pointer" });
-  const dayChip = (on) => ({ flex: 1, textAlign: "center", padding: "9px 2px", borderRadius: 8, border: `1px solid ${on ? EMBER : LINE}`, background: on ? "rgba(232,50,30,0.16)" : "transparent", color: on ? PAPER : MUTED, fontSize: 12, fontWeight: 700, cursor: "pointer", ...disp, letterSpacing: 0.5 });
-  const flagBtn = (on) => ({ display: "flex", alignItems: "center", cursor: "pointer", padding: "5px 7px", borderRadius: 7, border: `1px solid ${on ? EMBER : LINE}`, background: on ? "rgba(232,50,30,0.14)" : "transparent", opacity: on ? 1 : 0.5, transition: "opacity .15s, border-color .15s" });
+  const chipS = (on) => ({ padding: "7px 12px", borderRadius: 20, border: `1px solid ${on ? EMBER : LINE}`, background: on ? "rgba(225,29,72,0.14)" : "transparent", fontSize: 12.5, fontWeight: 600, cursor: "pointer" });
+  const segS = (on) => ({ flex: 1, textAlign: "center", padding: "9px 4px", borderRadius: 8, border: `1px solid ${on ? EMBER : LINE}`, background: on ? "rgba(225,29,72,0.12)" : "transparent", fontSize: 12, fontWeight: 600, cursor: "pointer" });
+  const dayChip = (on) => ({ flex: 1, textAlign: "center", padding: "9px 2px", borderRadius: 8, border: `1px solid ${on ? EMBER : LINE}`, background: on ? "rgba(225,29,72,0.16)" : "transparent", color: on ? PAPER : MUTED, fontSize: 12, fontWeight: 700, cursor: "pointer", ...disp, letterSpacing: 0.5 });
+  const flagBtn = (on) => ({ display: "flex", alignItems: "center", cursor: "pointer", padding: "5px 7px", borderRadius: 7, border: `1px solid ${on ? EMBER : LINE}`, background: on ? "rgba(225,29,72,0.14)" : "transparent", opacity: on ? 1 : 0.5, transition: "opacity .15s, border-color .15s" });
   const FlagNL = <svg width="22" height="15" viewBox="0 0 9 6" style={{ borderRadius: 2, display: "block" }}><rect width="9" height="6" fill="#fff" /><rect width="9" height="2" fill="#AE1C28" /><rect y="4" width="9" height="2" fill="#21468B" /></svg>;
   const FlagGB = <svg width="22" height="15" viewBox="0 0 60 30" style={{ borderRadius: 2, display: "block" }}><clipPath id="gbc"><rect width="60" height="30" /></clipPath><g clipPath="url(#gbc)"><rect width="60" height="30" fill="#012169" /><path d="M0,0 60,30 M60,0 0,30" stroke="#fff" strokeWidth="6" /><path d="M0,0 60,30 M60,0 0,30" stroke="#C8102E" strokeWidth="4" /><path d="M30,0 V30 M0,15 H60" stroke="#fff" strokeWidth="10" /><path d="M30,0 V30 M0,15 H60" stroke="#C8102E" strokeWidth="6" /></g></svg>;
 
@@ -525,7 +525,7 @@ export default function App() {
           <div style={{ display: "flex", alignItems: "center", gap: 9, flexWrap: "wrap" }}>
             <div style={{ ...disp, fontWeight: 600, fontSize: 15, letterSpacing: 1, textTransform: "uppercase" }}>{day.d}</div>
             <div style={{ fontSize: 9.5, color: day.train ? EMBER : MUTED, border: `1px solid ${day.train ? EMBER : LINE}`, borderRadius: 5, padding: "2px 6px", letterSpacing: 1, fontWeight: 700 }}>{day.train ? T("trainTag") : T("restTag")}</div>
-            {sample && <div style={{ fontSize: 9.5, color: INK, background: EMBER, borderRadius: 5, padding: "2px 7px", letterSpacing: 0.5, fontWeight: 700, ...disp }}>{T("freeSample")}</div>}
+            {sample && <div style={{ fontSize: 9.5, color: PAPER, background: EMBER, borderRadius: 5, padding: "2px 7px", letterSpacing: 0.5, fontWeight: 700, ...disp }}>{T("freeSample")}</div>}
           </div>
           <div style={{ fontSize: 11.5, color: MUTED }}><span style={{ color: PAPER, fontWeight: 600 }}>{tot.kcal}</span> kcal · {tot.p}p/{tot.c}c/{tot.f}f</div>
         </div>
@@ -558,11 +558,11 @@ export default function App() {
   const NAV = [["plan", "navPlan"], ["today", "navToday"], ["tracker", "navTracker"], ["recipes", "navRecipes"]];
 
   return (
-    <div style={{ minHeight: "100vh", background: `radial-gradient(135% 95% at 90% -8%, rgba(232,50,30,0.22) 0%, rgba(150,30,18,0.07) 36%, ${INK} 66%), ${INK}`, backgroundAttachment: "fixed", backgroundRepeat: "no-repeat", color: PAPER, fontFamily: "Inter, sans-serif", paddingBottom: 76 + consentH }}>
+    <div style={{ minHeight: "100vh", background: `radial-gradient(135% 95% at 90% -8%, rgba(225,29,72,0.22) 0%, rgba(150,30,18,0.07) 36%, ${INK} 66%), ${INK}`, backgroundAttachment: "fixed", backgroundRepeat: "no-repeat", color: PAPER, fontFamily: "Inter, sans-serif", paddingBottom: 76 + consentH }}>
       <style dangerouslySetInnerHTML={{ __html: fonts + `*{box-sizing:border-box} select option{background:${INK2};color:${PAPER}} @keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}} .dot{animation:pulse 1s infinite} input[type=date],input[type=time]{color-scheme:dark}` }} />
 
       {/* HEADER */}
-      <div style={{ borderBottom: `1px solid ${LINE}`, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, position: "sticky", top: 0, background: `radial-gradient(130% 320% at 94% 0%, rgba(232,50,30,0.16), ${INK} 58%), ${INK}`, zIndex: 20 }}>
+      <div style={{ borderBottom: `1px solid ${LINE}`, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, position: "sticky", top: 0, background: `radial-gradient(130% 320% at 94% 0%, rgba(225,29,72,0.16), ${INK} 58%), ${INK}`, zIndex: 20 }}>
         <div style={{ width: 32, height: 32, borderRadius: 8, background: EMBER, display: "flex", alignItems: "center", justifyContent: "center", ...disp, fontWeight: 700, color: INK, fontSize: 19 }}>H</div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ ...disp, fontWeight: 700, fontSize: 19, letterSpacing: 0.5, lineHeight: 1 }}>HYBRIDFUEL<span style={{ color: EMBER }}>CO</span></div>
@@ -582,12 +582,12 @@ export default function App() {
 
       {/* INSTALL-BANNER */}
       {installEvt && !installDismissed && (
-        <div style={{ background: "rgba(232,50,30,0.1)", borderBottom: `1px solid ${LINE}`, padding: "10px 16px", display: "flex", alignItems: "center", gap: 12 }}>
+        <div style={{ background: "rgba(225,29,72,0.1)", borderBottom: `1px solid ${LINE}`, padding: "10px 16px", display: "flex", alignItems: "center", gap: 12 }}>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 13, fontWeight: 600 }}>{T("install")}</div>
             <div style={{ fontSize: 11, color: MUTED, marginTop: 1 }}>{T("installHint")}</div>
           </div>
-          <button onClick={doInstall} style={{ background: EMBER, color: INK, border: "none", padding: "8px 14px", borderRadius: 8, ...disp, fontWeight: 700, fontSize: 12.5, letterSpacing: 0.5, cursor: "pointer", whiteSpace: "nowrap" }}>{T("installBtn")}</button>
+          <button onClick={doInstall} style={{ background: EMBER, color: PAPER, border: "none", padding: "8px 14px", borderRadius: 8, ...disp, fontWeight: 700, fontSize: 12.5, letterSpacing: 0.5, cursor: "pointer", whiteSpace: "nowrap" }}>{T("installBtn")}</button>
           <div onClick={dismissInstall} style={{ cursor: "pointer", color: MUTED, fontSize: 20, lineHeight: 1, padding: "0 2px" }}>×</div>
         </div>
       )}
@@ -662,7 +662,7 @@ export default function App() {
                 <div style={{ fontSize: 11, color: MUTED, lineHeight: 1.5 }}>{T("trainingDaysHint")}</div>
               </div>
 
-              <button onClick={handleBuild} disabled={loading} style={{ width: "100%", background: EMBER, color: INK, border: "none", padding: "14px 0", borderRadius: 10, ...disp, fontWeight: 700, fontSize: 16, letterSpacing: 1, textTransform: "uppercase", cursor: loading ? "default" : "pointer", opacity: loading ? 0.7 : 1 }}>
+              <button onClick={handleBuild} disabled={loading} style={{ width: "100%", background: EMBER, color: PAPER, border: "none", padding: "14px 0", borderRadius: 10, ...disp, fontWeight: 700, fontSize: 16, letterSpacing: 1, textTransform: "uppercase", cursor: loading ? "default" : "pointer", opacity: loading ? 0.7 : 1 }}>
                 {loading ? T("building") : T("build")}
               </button>
             </div>
@@ -709,7 +709,7 @@ export default function App() {
                           </div>
                         </div>
                       )}
-                      <div style={lowBmi ? { marginTop: 12, border: `1px solid ${EMBER}`, background: "rgba(232,50,30,0.14)", borderRadius: 10, padding: "10px 12px" } : { marginTop: 12, borderLeft: `2px solid ${EMBER}`, padding: "2px 0 2px 12px" }}>
+                      <div style={lowBmi ? { marginTop: 12, border: `1px solid ${EMBER}`, background: "rgba(225,29,72,0.14)", borderRadius: 10, padding: "10px 12px" } : { marginTop: 12, borderLeft: `2px solid ${EMBER}`, padding: "2px 0 2px 12px" }}>
                         <span style={{ fontSize: 11, fontWeight: 700, color: PAPER, textTransform: "uppercase", letterSpacing: 0.5 }}>{lowBmi ? "⚠ " + T("lowBmiTitle") : T("safeTitle")}. </span>
                         <span style={{ fontSize: 11.5, color: lowBmi ? PAPER : MUTED, lineHeight: 1.5 }}>{safeText}</span>
                       </div>
@@ -719,9 +719,9 @@ export default function App() {
                   {loading && <div style={{ textAlign: "center", padding: "40px 0", color: EMBER, ...disp, fontSize: 17, letterSpacing: 1 }}><span className="dot">{T("cooking")}</span></div>}
 
                   {error && !loading && (
-                    <div style={{ background: "rgba(232,50,30,0.1)", border: `1px solid ${EMBER}`, borderRadius: 12, padding: 16, textAlign: "center" }}>
+                    <div style={{ background: "rgba(225,29,72,0.1)", border: `1px solid ${EMBER}`, borderRadius: 12, padding: 16, textAlign: "center" }}>
                       <div style={{ marginBottom: 12, color: PAPER, fontSize: 13, wordBreak: "break-word" }}>{error}</div>
-                      <button onClick={handleBuild} style={{ background: EMBER, color: INK, border: "none", padding: "9px 22px", borderRadius: 8, fontWeight: 700, cursor: "pointer", ...disp, letterSpacing: 1 }}>{T("retry")}</button>
+                      <button onClick={handleBuild} style={{ background: EMBER, color: PAPER, border: "none", padding: "9px 22px", borderRadius: 8, fontWeight: 700, cursor: "pointer", ...disp, letterSpacing: 1 }}>{T("retry")}</button>
                     </div>
                   )}
 
@@ -732,7 +732,7 @@ export default function App() {
                         {planEmail === "sent" && <div style={{ fontSize: 12, color: SAGE, marginBottom: 10, lineHeight: 1.5 }}>{T("emailedPlan")}</div>}
                         {planEmail === "sending" && <div style={{ fontSize: 12, color: MUTED, marginBottom: 10, lineHeight: 1.5 }}>{T("emailingPlan")}</div>}
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-                          <div onClick={downloadTracker} style={{ cursor: trackerBusy ? "default" : "pointer", opacity: trackerBusy ? 0.7 : 1, padding: "10px 16px", borderRadius: 8, border: "none", background: EMBER, color: INK, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.3 }}>{trackerBusy ? T("dlPreparing") : T("dlTracker")}</div>
+                          <div onClick={downloadTracker} style={{ cursor: trackerBusy ? "default" : "pointer", opacity: trackerBusy ? 0.7 : 1, padding: "10px 16px", borderRadius: 8, border: "none", background: EMBER, color: PAPER, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.3 }}>{trackerBusy ? T("dlPreparing") : T("dlTracker")}</div>
                           {tier === "bundle" && <a href={`https://www.hybridfuelco.com/hyrox-guide-${lang}.pdf`} target="_blank" rel="noopener" style={{ textDecoration: "none", padding: "10px 16px", borderRadius: 8, border: `1px solid ${EMBER}`, color: EMBER, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.3 }}>{T("dlGuide")}</a>}
                         </div>
                         <div style={{ fontSize: 11.5, color: MUTED, marginTop: 10, lineHeight: 1.5 }}>{T("dlHint")}</div>
@@ -770,7 +770,7 @@ export default function App() {
                   )}
 
                   {targets && !loading && !error && !unlocked && (
-                    <div style={{ border: `1px solid ${EMBER}`, borderRadius: 14, padding: 20, background: "linear-gradient(180deg, rgba(232,50,30,0.09), transparent 60%)" }}>
+                    <div style={{ border: `1px solid ${EMBER}`, borderRadius: 14, padding: 20, background: "linear-gradient(180deg, rgba(225,29,72,0.09), transparent 60%)" }}>
                       <div style={{ ...disp, fontSize: 20, fontWeight: 700, letterSpacing: 0.3, marginBottom: 6 }}>{lockReason === "no_credits" ? T("creditsOutTitle") : T("lockTitle")}</div>
                       <div style={{ fontSize: 12.5, color: MUTED, marginBottom: 16, lineHeight: 1.5 }}>{lockReason === "no_credits" ? T("creditsOutSub") : T("lockSub")}</div>
                       <div style={{ display: "grid", gap: 9, marginBottom: 18 }}>
@@ -779,7 +779,7 @@ export default function App() {
                         ))}
                         <div style={{ display: "flex", gap: 9, alignItems: "flex-start", fontSize: 13.5, color: MUTED }}><span style={{ color: EMBER_SOFT, fontWeight: 800 }}>+</span><span>{T("lbBundle")}</span></div>
                       </div>
-                      <a href={STRIPE_WEEK_LINK} style={{ display: "block", textAlign: "center", background: EMBER, color: INK, textDecoration: "none", padding: "14px 0", borderRadius: 10, ...disp, fontWeight: 700, fontSize: 15.5, letterSpacing: 0.5, marginBottom: 9 }}>{T("unlockWeek")}</a>
+                      <a href={STRIPE_WEEK_LINK} style={{ display: "block", textAlign: "center", background: EMBER, color: PAPER, textDecoration: "none", padding: "14px 0", borderRadius: 10, ...disp, fontWeight: 700, fontSize: 15.5, letterSpacing: 0.5, marginBottom: 9 }}>{T("unlockWeek")}</a>
                       <a href={STRIPE_BUNDLE_LINK} style={{ display: "block", textAlign: "center", background: "transparent", color: PAPER, textDecoration: "none", padding: "12px 0", borderRadius: 10, border: `1px solid ${LINE}`, ...disp, fontWeight: 700, fontSize: 14, letterSpacing: 0.5 }}>{T("unlockBundle")}</a>
                       <div style={{ fontSize: 11, color: MUTED, marginTop: 12, textAlign: "center" }}>{T("lockFoot")}</div>
                     </div>
