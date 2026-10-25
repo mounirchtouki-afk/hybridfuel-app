@@ -4,12 +4,20 @@
 
 import crypto from "crypto";
 import { RECIPES } from "../src/recipes.js";
+import { kv, kvConfigured } from "./_kv.js";
 
 const ACTIVITY = { light: 1.375, moderate: 1.55, high: 1.725, athlete: 1.9 };
 const GOAL_ADJ = { cut: -0.2, maintain: 0, gain: 0.12 };
 
 // Controleert het token uit /api/verify. Is UNLOCK_SECRET niet gezet, dan is het
 // slot nog niet geactiveerd en gedraagt de app zich zoals nu (paid-vlag volstaat).
+// Haalt de sessie-id (= Stripe session_id) uit het token "sid.handtekening".
+function tokenSid(token) {
+  if (typeof token !== "string") return "";
+  const i = token.lastIndexOf(".");
+  return i > 0 ? token.slice(0, i) : "";
+}
+
 function validToken(token) {
   const secret = process.env.UNLOCK_SECRET;
   if (!secret) return true; // slot niet actief
@@ -220,6 +228,20 @@ export default async function handler(req, res) {
       const ip = (req.headers["x-forwarded-for"] || "unknown").split(",")[0].trim();
       if (rateLimited(ip)) {
         return res.status(429).json({ error: "Dagelijkse limiet bereikt. Probeer morgen opnieuw." });
+      }
+    }
+
+    // OPTIE B: credits per betaling. Elke generatie telt er één af; bij 0 → opnieuw
+    // betalen. Alleen voor echte betaalde gebruikers (niet voor trusted automatisering),
+    // en alleen als er een credit-opslag gekoppeld is (anders verandert er niets).
+    if (!trusted && kvConfigured()) {
+      const sid = tokenSid(body.token);
+      const dec = sid ? await kv(["DECR", "cr:" + sid]) : { result: -1 };
+      const n = typeof dec.result === "number" ? dec.result : parseInt(dec.result, 10);
+      if (!(n >= 0)) {
+        // Geen credits meer (of geen geldig record) → klem op 0 en terug naar de betaalmuur.
+        if (sid) { try { await kv(["SET", "cr:" + sid, "0", "EX", "15552000"]); } catch (e) {} }
+        return res.status(200).json({ targets, plan: null, locked: true, reason: "no_credits" });
       }
     }
 
