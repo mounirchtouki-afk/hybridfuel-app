@@ -306,6 +306,30 @@ export default function App() {
     return () => { clearInterval(iv); document.removeEventListener("visibilitychange", onVis); };
   }, [lang]);
 
+  // Cookie-banner (consent.js) detecteren en de onderbalk er netjes bovenop zetten.
+  const [consentH, setConsentH] = useState(0);
+  useEffect(() => {
+    const measure = () => {
+      let h = 0;
+      try {
+        document.querySelectorAll("body > *").forEach((el) => {
+          if (el.id === "root") return;
+          const s = getComputedStyle(el);
+          if (s.position !== "fixed" || s.display === "none" || s.visibility === "hidden") return;
+          const r = el.getBoundingClientRect();
+          if (r.height > 0 && r.height < window.innerHeight * 0.5 && r.width > window.innerWidth * 0.55 && r.bottom >= window.innerHeight - 3) {
+            h = Math.max(h, Math.round(r.height));
+          }
+        });
+      } catch (e) {}
+      setConsentH(h);
+    };
+    measure();
+    const iv = setInterval(measure, 700);
+    window.addEventListener("resize", measure);
+    return () => { clearInterval(iv); window.removeEventListener("resize", measure); };
+  }, []);
+
   async function doInstall() { if (!installEvt) return; try { installEvt.prompt(); await installEvt.userChoice; } catch (e) {} setInstallEvt(null); }
   function dismissInstall() { setInstallDismissed(true); save("hf_install_dismissed", true); }
 
@@ -497,7 +521,7 @@ export default function App() {
   const NAV = [["plan", "navPlan"], ["today", "navToday"], ["tracker", "navTracker"], ["recipes", "navRecipes"]];
 
   return (
-    <div style={{ minHeight: "100vh", background: INK, color: PAPER, fontFamily: "Inter, sans-serif", paddingBottom: 76 }}>
+    <div style={{ minHeight: "100vh", background: INK, color: PAPER, fontFamily: "Inter, sans-serif", paddingBottom: 76 + consentH }}>
       <style dangerouslySetInnerHTML={{ __html: fonts + `*{box-sizing:border-box} select option{background:${INK2};color:${PAPER}} @keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}} .dot{animation:pulse 1s infinite} input[type=date],input[type=time]{color-scheme:dark}` }} />
 
       {/* HEADER */}
@@ -759,7 +783,7 @@ export default function App() {
       </div>
 
       {/* BOTTOM NAV */}
-      <div style={{ position: "fixed", left: 0, right: 0, bottom: 0, background: INK, borderTop: `1px solid ${LINE}`, display: "flex", zIndex: 30, paddingBottom: "env(safe-area-inset-bottom)" }}>
+      <div style={{ position: "fixed", left: 0, right: 0, bottom: consentH, background: INK, borderTop: `1px solid ${LINE}`, display: "flex", zIndex: 30, paddingBottom: "env(safe-area-inset-bottom)", transition: "bottom .2s" }}>
         {NAV.map(([id, key]) => {
           const on = tab === id;
           return (
