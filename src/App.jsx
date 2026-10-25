@@ -133,8 +133,8 @@ const TXT = {
   leadPh: { nl: "jouw@email.com", en: "your@email.com" },
   leadBtn: { nl: "Stuur mij de gratis gids", en: "Send me the free guide" },
   leadSending: { nl: "Versturen…", en: "Sending…" },
-  leadOkTitle: { nl: "Je gratis starter staat klaar ✓", en: "Your free starter is ready ✓" },
-  leadOkBody: { nl: "Klik hieronder om de gratis Hyrox-starter te downloaden.", en: "Click below to download your free Hyrox starter." },
+  leadOkTitle: { nl: "Check je inbox ✓", en: "Check your inbox ✓" },
+  leadOkBody: { nl: "We hebben de gratis Hyrox-starter naar je mail gestuurd. Kijk ook even in je spam.", en: "We've emailed you the free Hyrox starter. Check your spam folder too." },
   leadDownload: { nl: "⬇ Download de gratis starter (PDF)", en: "⬇ Download the free starter (PDF)" },
   leadErr: { nl: "Er ging iets mis. Probeer het opnieuw.", en: "Something went wrong. Please try again." },
   leadBad: { nl: "Vul een geldig e-mailadres in.", en: "Enter a valid email address." },
@@ -711,8 +711,7 @@ export default function App() {
                   {leadStatus === "ok" ? (
                     <div>
                       <div style={{ ...disp, fontSize: 16, fontWeight: 700, marginBottom: 4 }}>{T("leadOkTitle")}</div>
-                      <div style={{ fontSize: 12.5, color: MUTED, marginBottom: 14, lineHeight: 1.5 }}>{T("leadOkBody")}</div>
-                      <a href={`https://www.hybridfuelco.com/hyrox-starter-${lang}.pdf`} target="_blank" rel="noopener" style={{ display: "inline-block", textDecoration: "none", padding: "11px 18px", borderRadius: 8, background: EMBER, color: INK, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.3 }}>{T("leadDownload")}</a>
+                      <div style={{ fontSize: 12.5, color: MUTED, lineHeight: 1.5 }}>{T("leadOkBody")}</div>
                     </div>
                   ) : (
                     <div>
