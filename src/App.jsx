@@ -119,6 +119,8 @@ const TXT = {
   dlPreparing: { nl: "Tracker wordt gemaakt…", en: "Building your tracker…" },
   dlGuide: { nl: "⬇ Hyrox-voedingsgids (PDF)", en: "⬇ Hyrox nutrition guide (PDF)" },
   dlHint: { nl: "Eén Excel met alles: dashboard, grafiek, jouw weekplan, boodschappenlijst en recepten. Open 'm ook in Google Sheets om bij te houden.", en: "One Excel with everything: dashboard, chart, your week plan, shopping list and recipes. Open it in Google Sheets too to track and tick off." },
+  emailedPlan: { nl: "📧 Ook naar je mail (betaaladres) gestuurd — je kunt 'm hieronder ook downloaden.", en: "📧 Also sent to your email — you can download it below too." },
+  emailingPlan: { nl: "📧 Je plan wordt naar je mail gestuurd…", en: "📧 Sending your plan to your email…" },
   // Paywall
   freeSample: { nl: "Gratis voorbeelddag", en: "Free sample day" },
   lockTitle: { nl: "Je persoonlijke weekplan", en: "Your personal week plan" },
@@ -235,6 +237,7 @@ export default function App() {
   const [leadStatus, setLeadStatus] = useState("idle"); // idle | sending | ok | err | bad
   const [trackerBusy, setTrackerBusy] = useState(false);
   const [lockReason, setLockReason] = useState(""); // "" of "no_credits" (credits op)
+  const [planEmail, setPlanEmail] = useState(""); // "" | "sending" | "sent"
 
   // Bij laden: taal herstellen + ontgrendeling checken (terugkomst van Stripe of eerder betaald).
   useEffect(() => {
@@ -304,7 +307,7 @@ export default function App() {
   }
 
   async function handleBuild() {
-    setError(""); setStarted(true); setView("plan"); setChecked({}); setWeek(null); setLockReason("");
+    setError(""); setStarted(true); setView("plan"); setChecked({}); setWeek(null); setLockReason(""); setPlanEmail("");
     const intake = currentIntake();
     try { localStorage.setItem("hf_intake", JSON.stringify(intake)); } catch (e) {}
     if (unlocked) await generatePaid(intake);
@@ -374,6 +377,7 @@ export default function App() {
       });
       setWeek({ days });
       try { localStorage.setItem("hf_lastplan", JSON.stringify({ targets: data.targets, week: { days } })); } catch (e) {}
+      emailPlan({ days }); // vangnet: plan direct naar het betaaladres mailen
     } catch (e) {
       setError(e && e.message ? e.message : T("unknownErr"));
     } finally {
@@ -450,6 +454,23 @@ export default function App() {
     } finally {
       setTrackerBusy(false);
     }
+  }
+
+  // Mailt de tracker automatisch naar het betaaladres (via /api/email-plan). Vangnet
+  // zodat de klant z'n plan altijd in de inbox heeft, ook zonder te downloaden.
+  async function emailPlan(wk) {
+    if (!wk || !wk.days) return;
+    try {
+      const token = (() => { try { return localStorage.getItem("hf_token") || ""; } catch (e) { return ""; } })();
+      setPlanEmail("sending");
+      const res = await fetch("/api/email-plan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lang, week: wk, shopping: shoppingFor(wk), token }),
+      });
+      const j = await res.json().catch(() => ({}));
+      setPlanEmail(j && j.emailed ? "sent" : "");
+    } catch (e) { setPlanEmail(""); }
   }
 
   const label = { fontFamily: "Inter, sans-serif", fontSize: 11, letterSpacing: 1, textTransform: "uppercase", color: MUTED, marginBottom: 6, display: "block", fontWeight: 600 };
@@ -656,6 +677,8 @@ export default function App() {
                 <>
                   <div style={{ background: INK2, border: `1px solid ${LINE}`, borderRadius: 14, padding: 16, marginBottom: 16 }}>
                     <div style={{ ...label, marginBottom: 10 }}>{T("dlTitle")}</div>
+                    {planEmail === "sent" && <div style={{ fontSize: 12, color: SAGE, marginBottom: 10, lineHeight: 1.5 }}>{T("emailedPlan")}</div>}
+                    {planEmail === "sending" && <div style={{ fontSize: 12, color: MUTED, marginBottom: 10, lineHeight: 1.5 }}>{T("emailingPlan")}</div>}
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
                       <div onClick={downloadTracker} style={{ cursor: trackerBusy ? "default" : "pointer", opacity: trackerBusy ? 0.7 : 1, padding: "10px 16px", borderRadius: 8, border: "none", background: EMBER, color: INK, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.3 }}>{trackerBusy ? T("dlPreparing") : T("dlTracker")}</div>
                       {tier === "bundle" && <a href={`https://www.hybridfuelco.com/hyrox-guide-${lang}.pdf`} target="_blank" rel="noopener" style={{ textDecoration: "none", padding: "10px 16px", borderRadius: 8, border: `1px solid ${EMBER}`, color: EMBER, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.3 }}>{T("dlGuide")}</a>}
