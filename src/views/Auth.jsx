@@ -20,6 +20,26 @@ const T = {
   notReady: { nl: "De accountkoppeling is nog niet actief.", en: "Account connection is not active yet." },
   tier: { nl: "Abonnement", en: "Plan" },
   close: { nl: "Sluiten", en: "Close" },
+  upgradeTitle: { nl: "Kies je abonnement", en: "Choose your plan" },
+  month: { nl: "Maand", en: "Monthly" },
+  year: { nl: "Jaar", en: "Yearly" },
+  perMo: { nl: "/mnd", en: "/mo" },
+  perYr: { nl: "/jr", en: "/yr" },
+  freeMonths: { nl: "2 maanden gratis", en: "2 months free" },
+  basisName: { nl: "Basis", en: "Basic" },
+  proName: { nl: "Pro", en: "Pro" },
+  basisFeat: { nl: "Weekplan in de app · tracker · water · boodschappen", en: "Weekly plan in-app · tracker · water · shopping list" },
+  proFeat: { nl: "Alles van Basis + zelf aanpassen · eigen producten · barcode-scan", en: "Everything in Basic + customise · own products · barcode scan" },
+  choose: { nl: "Kiezen", en: "Choose" },
+  popular: { nl: "Populair", en: "Popular" },
+  manage: { nl: "Beheer abonnement", en: "Manage subscription" },
+  active: { nl: "Actief", en: "Active" },
+  notConfigured: { nl: "Afrekenen is nog niet actief. Probeer later opnieuw.", en: "Checkout isn't live yet. Try again later." },
+};
+
+const PRICE = {
+  basis: { month: "€9,95", year: "€99,50" },
+  pro: { month: "€14,95", year: "€149,50" },
 };
 
 export default function Auth({ lang, session, tier, onClose }) {
@@ -48,6 +68,52 @@ export default function Auth({ lang, session, tier, onClose }) {
   }
   async function logout() { try { await supabase.auth.signOut(); } catch (e) {} onClose(); }
 
+  const [billInterval, setBillInterval] = useState("month");
+  const [subBusy, setSubBusy] = useState("");
+
+  async function upgrade(plan) {
+    if (!session) return;
+    setErr(""); setSubBusy(plan);
+    try {
+      const r = await fetch("/api/create-subscription", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: session.user.id, email: session.user.email, tier: plan, interval: billInterval }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (d && d.url) { window.location.href = d.url; return; }
+      setErr(d && d.error === "not_configured" ? t("notConfigured") : (d && d.detail) || "error");
+    } catch (e) { setErr(t("notConfigured")); } finally { setSubBusy(""); }
+  }
+  async function portal() {
+    if (!session) return;
+    setErr(""); setSubBusy("portal");
+    try {
+      const r = await fetch("/api/billing-portal", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: session.user.id }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (d && d.url) { window.location.href = d.url; return; }
+      setErr(t("notConfigured"));
+    } catch (e) { setErr(t("notConfigured")); } finally { setSubBusy(""); }
+  }
+
+  const planCard = (plan) => {
+    const price = PRICE[plan][billInterval];
+    const popular = plan === "pro";
+    return (
+      <div style={{ position: "relative", background: INK2, border: `1px solid ${popular ? EMBER : LINE}`, borderRadius: 12, padding: 14, marginBottom: 10 }}>
+        {popular && <div style={{ position: "absolute", top: -9, right: 12, background: EMBER, color: INK, fontSize: 9.5, fontWeight: 700, ...disp, letterSpacing: 0.8, textTransform: "uppercase", padding: "2px 8px", borderRadius: 5 }}>{t("popular")}</div>}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
+          <div style={{ ...disp, fontSize: 16, fontWeight: 700, color: PAPER, textTransform: "uppercase", letterSpacing: 0.5 }}>{t(plan + "Name")}</div>
+          <div style={{ ...disp, fontSize: 19, fontWeight: 700, color: popular ? EMBER : PAPER }}>{price}<span style={{ fontSize: 11, color: MUTED, fontWeight: 500 }}>{billInterval === "year" ? t("perYr") : t("perMo")}</span></div>
+        </div>
+        <div style={{ fontSize: 11.5, color: MUTED, lineHeight: 1.5, marginBottom: 12 }}>{t(plan + "Feat")}</div>
+        <button onClick={() => upgrade(plan)} disabled={!!subBusy} style={{ ...(popular ? primaryBtn : ghostBtn), width: "100%", opacity: subBusy ? 0.7 : 1 }}>{subBusy === plan ? t("busy") : t("choose")}</button>
+      </div>
+    );
+  };
+
   const shell = (children) => (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 60, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
       <div onClick={(e) => e.stopPropagation()} style={{ background: INK, borderTop: `1px solid ${LINE}`, borderRadius: "18px 18px 0 0", width: "100%", maxWidth: 480, maxHeight: "88vh", overflowY: "auto", padding: 20, boxShadow: "0 -10px 40px rgba(0,0,0,.5)" }}>
@@ -71,8 +137,26 @@ export default function Auth({ lang, session, tier, onClose }) {
         <div style={{ ...disp, fontSize: 18, fontWeight: 600, marginTop: 2, marginBottom: 14, wordBreak: "break-all" }}>{session.user.email}</div>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px", background: INK2, border: `1px solid ${LINE}`, borderRadius: 10, marginBottom: 16 }}>
           <span style={{ fontSize: 12, color: MUTED }}>{t("tier")}</span>
-          <span style={{ ...disp, fontSize: 13, fontWeight: 700, color: tier && tier !== "free" ? EMBER : MUTED, textTransform: "uppercase", letterSpacing: 1 }}>{tier || "free"}</span>
+          <span style={{ ...disp, fontSize: 13, fontWeight: 700, color: tier && tier !== "free" ? EMBER : MUTED, textTransform: "uppercase", letterSpacing: 1 }}>{tier || "free"}{tier && tier !== "free" ? " · " + t("active") : ""}</span>
         </div>
+
+        {(!tier || tier === "free") ? (
+          <div style={{ marginBottom: 16 }}>
+            <div style={sectionTitle}>{t("upgradeTitle")}</div>
+            <div style={{ display: "inline-flex", gap: 4, background: INK2, border: `1px solid ${LINE}`, borderRadius: 10, padding: 4, margin: "12px 0 14px" }}>
+              {[["month", t("month")], ["year", t("year")]].map(([id, lbl]) => (
+                <div key={id} onClick={() => setBillInterval(id)} style={{ padding: "7px 16px", borderRadius: 7, background: billInterval === id ? EMBER : "transparent", color: billInterval === id ? INK : PAPER, fontSize: 12.5, fontWeight: 700, ...disp, letterSpacing: 0.5, cursor: "pointer" }}>{lbl}</div>
+              ))}
+              {billInterval === "year" && <div style={{ alignSelf: "center", fontSize: 10.5, color: EMBER_SOFT, fontWeight: 700, padding: "0 8px", ...disp, letterSpacing: 0.3 }}>{t("freeMonths")}</div>}
+            </div>
+            {planCard("basis")}
+            {planCard("pro")}
+          </div>
+        ) : (
+          <button onClick={portal} disabled={!!subBusy} style={{ ...ghostBtn, width: "100%", marginBottom: 12, opacity: subBusy ? 0.7 : 1 }}>{subBusy === "portal" ? t("busy") : t("manage")}</button>
+        )}
+
+        {err && <div style={{ fontSize: 12, color: EMBER_SOFT, marginBottom: 12, lineHeight: 1.4 }}>{err}</div>}
         <button onClick={logout} style={{ ...ghostBtn, width: "100%" }}>{t("logout")}</button>
       </div>
     );
