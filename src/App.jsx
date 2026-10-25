@@ -139,6 +139,12 @@ const TXT = {
   unlockWeek: { nl: "Ontgrendel de week — €14,95", en: "Unlock the week — €14.95" },
   unlockBundle: { nl: "Week + Hyrox-gids — €17,95", en: "Week + Hyrox guide — €17.95" },
   lockFoot: { nl: "Direct beschikbaar na betaling.", en: "Available instantly after payment." },
+  orSubscribe: { nl: "Of neem een abonnement — vanaf €9,95/mnd", en: "Or subscribe — from €9.95/mo" },
+  lockedTitle: { nl: "Zit in Basis", en: "Part of Basic" },
+  lockedSub: { nl: "Deze functie hoort bij een abonnement. Ontgrendel de volledige app.", en: "This feature is part of a subscription. Unlock the full app." },
+  lockedPro: { nl: "Zit in Pro", en: "Part of Pro" },
+  lockedProSub: { nl: "Zelf aanpassen, eigen producten en barcode-scan zitten in Pro.", en: "Customising, own products and barcode scan are in Pro." },
+  unlockBtn: { nl: "Bekijk abonnementen", en: "See plans" },
   creditsOutTitle: { nl: "Je plannen zijn op", en: "You've used your plans" },
   creditsOutSub: { nl: "Je hebt je gegenereerde plannen gebruikt. Ontgrendel een nieuwe week om verder te gaan.", en: "You've used your generated plans. Unlock another week to continue." },
   leadTitle: { nl: "Nog niet klaar om te kopen?", en: "Not ready to buy yet?" },
@@ -266,6 +272,10 @@ export default function App() {
   const [subTier, setSubTier] = useState("free");
   const [installEvt, setInstallEvt] = useState(null);
   const [installDismissed, setInstallDismissed] = useState(() => load("hf_install_dismissed", false));
+
+  // Toegang per laag. Eenmalig betaald (unlocked) = Basis-niveau app-toegang.
+  const hasBasis = unlocked || subTier === "basis" || subTier === "pro";
+  const hasPro = subTier === "pro";
 
   useEffect(() => {
     try { const l = localStorage.getItem("hf_lang"); if (l === "nl" || l === "en") setLangState(l); } catch (e) {}
@@ -396,7 +406,7 @@ export default function App() {
     setError(""); setStarted(true); setView("plan"); setChecked({}); setWeek(null); setLockReason(""); setPlanEmail("");
     const intake = currentIntake();
     try { localStorage.setItem("hf_intake", JSON.stringify(intake)); } catch (e) {}
-    if (unlocked) await generatePaid(intake); else await computeFree(intake);
+    if (hasBasis) await generatePaid(intake); else await computeFree(intake);
   }
 
   async function computeFree(intake) {
@@ -660,6 +670,19 @@ export default function App() {
     );
   }
 
+  function Locked({ pro }) {
+    return (
+      <div style={{ display: "grid", gap: 16 }}>
+        <div style={{ border: `1px solid ${EMBER}`, borderRadius: 14, padding: 24, background: "linear-gradient(180deg, rgba(225,29,72,0.09), transparent 60%)", textAlign: "center" }}>
+          <div style={{ fontSize: 30, marginBottom: 10 }}>🔒</div>
+          <div style={{ ...disp, fontSize: 19, fontWeight: 700, marginBottom: 6 }}>{pro ? T("lockedPro") : T("lockedTitle")}</div>
+          <div style={{ fontSize: 12.5, color: MUTED, lineHeight: 1.5, marginBottom: 18, maxWidth: 300, margin: "0 auto 18px" }}>{pro ? T("lockedProSub") : T("lockedSub")}</div>
+          <button onClick={() => setShowAuth(true)} style={{ background: EMBER, color: PAPER, border: "none", padding: "13px 26px", borderRadius: 10, ...disp, fontWeight: 700, fontSize: 14.5, letterSpacing: 0.8, textTransform: "uppercase", cursor: "pointer" }}>{T("unlockBtn")}</button>
+        </div>
+      </div>
+    );
+  }
+
   const lowBmi = !!(targets && targets.lowBmi);
   const safeText = lowBmi ? T("lowBmiWarn") : goal === "cut" ? T("safeCut") : goal === "gain" ? T("safeGain") : T("safeMaintain");
   const hasCycle = targets && targets.trainingCount > 0 && targets.trainingCount < 7 && targets.train && targets.rest;
@@ -834,7 +857,7 @@ export default function App() {
                     </div>
                   )}
 
-                  {week && !loading && unlocked && (
+                  {week && !loading && hasBasis && (
                     <>
                       <div style={{ background: INK2, border: `1px solid ${LINE}`, borderRadius: 14, padding: 16, marginBottom: 16 }}>
                         <div style={{ ...label, marginBottom: 10 }}>{T("dlTitle")}</div>
@@ -852,12 +875,14 @@ export default function App() {
                             <div key={id} onClick={() => setView(id)} style={{ padding: "8px 16px", borderRadius: 7, background: view === id ? EMBER : "transparent", color: PAPER, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.5, cursor: "pointer" }}>{lbl}</div>
                           ))}
                         </div>
-                        {view === "plan" && (
+                        {view === "plan" && (hasPro ? (
                           <div style={{ display: "flex", gap: 8 }}>
                             {planEdit && <div onClick={() => setShowProducts(true)} style={{ cursor: "pointer", padding: "8px 14px", borderRadius: 8, border: `1px solid ${LINE}`, color: EMBER, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.5 }}>{T("myProducts")}</div>}
                             <div onClick={toggleEdit} style={{ cursor: "pointer", padding: "8px 16px", borderRadius: 8, border: `1px solid ${planEdit ? EMBER : LINE}`, background: planEdit ? EMBER : "transparent", color: planEdit ? PAPER : EMBER, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.5 }}>{planEdit ? T("editDone") : T("editPlan")}</div>
                           </div>
-                        )}
+                        ) : (
+                          <div onClick={() => setShowAuth(true)} style={{ cursor: "pointer", padding: "8px 14px", borderRadius: 8, border: `1px solid ${LINE}`, color: MUTED, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.5 }}>🔒 {T("editPlan")} · Pro</div>
+                        ))}
                       </div>
 
                       {view === "plan" && planEdit && <div style={{ fontSize: 11.5, color: MUTED, marginBottom: 12, lineHeight: 1.5 }}>{T("editHint")}</div>}
@@ -885,7 +910,7 @@ export default function App() {
                     </>
                   )}
 
-                  {targets && !loading && !error && !unlocked && (
+                  {targets && !loading && !error && !hasBasis && (
                     <div style={{ border: `1px solid ${EMBER}`, borderRadius: 14, padding: 20, background: "linear-gradient(180deg, rgba(225,29,72,0.09), transparent 60%)" }}>
                       <div style={{ ...disp, fontSize: 20, fontWeight: 700, letterSpacing: 0.3, marginBottom: 6 }}>{lockReason === "no_credits" ? T("creditsOutTitle") : T("lockTitle")}</div>
                       <div style={{ fontSize: 12.5, color: MUTED, marginBottom: 16, lineHeight: 1.5 }}>{lockReason === "no_credits" ? T("creditsOutSub") : T("lockSub")}</div>
@@ -897,11 +922,12 @@ export default function App() {
                       </div>
                       <a href={STRIPE_WEEK_LINK} style={{ display: "block", textAlign: "center", background: EMBER, color: PAPER, textDecoration: "none", padding: "14px 0", borderRadius: 10, ...disp, fontWeight: 700, fontSize: 15.5, letterSpacing: 0.5, marginBottom: 9 }}>{T("unlockWeek")}</a>
                       <a href={STRIPE_BUNDLE_LINK} style={{ display: "block", textAlign: "center", background: "transparent", color: PAPER, textDecoration: "none", padding: "12px 0", borderRadius: 10, border: `1px solid ${LINE}`, ...disp, fontWeight: 700, fontSize: 14, letterSpacing: 0.5 }}>{T("unlockBundle")}</a>
-                      <div style={{ fontSize: 11, color: MUTED, marginTop: 12, textAlign: "center" }}>{T("lockFoot")}</div>
+                      <div onClick={() => setShowAuth(true)} style={{ cursor: "pointer", textAlign: "center", color: EMBER, padding: "12px 0 2px", marginTop: 4, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.3 }}>{T("orSubscribe")}</div>
+                      <div style={{ fontSize: 11, color: MUTED, marginTop: 10, textAlign: "center" }}>{T("lockFoot")}</div>
                     </div>
                   )}
 
-                  {targets && !loading && !error && !unlocked && (
+                  {targets && !loading && !error && !hasBasis && (
                     <div style={{ marginTop: 16, border: `1px solid ${LINE}`, borderRadius: 14, padding: 18, background: INK2 }}>
                       {leadStatus === "ok" ? (
                         <div>
@@ -933,9 +959,9 @@ export default function App() {
         )}
 
         {/* ====== OTHER TABS ====== */}
-        {tab === "today" && <Today lang={lang} week={week} onGoPlan={() => setTab("plan")} />}
-        {tab === "tracker" && <Tracker lang={lang} height={height} session={session} />}
-        {tab === "water" && <Water lang={lang} session={session} week={week} />}
+        {tab === "today" && (hasBasis ? <Today lang={lang} week={week} onGoPlan={() => setTab("plan")} /> : <Locked />)}
+        {tab === "tracker" && (hasBasis ? <Tracker lang={lang} height={height} session={session} /> : <Locked />)}
+        {tab === "water" && (hasBasis ? <Water lang={lang} session={session} week={week} /> : <Locked />)}
         {tab === "recipes" && <Recipes lang={lang} />}
       </div>
 
