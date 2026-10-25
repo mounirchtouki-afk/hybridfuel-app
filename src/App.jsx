@@ -142,7 +142,7 @@ const TXT = {
   creditsOutTitle: { nl: "Je plannen zijn op", en: "You've used your plans" },
   creditsOutSub: { nl: "Je hebt je gegenereerde plannen gebruikt. Ontgrendel een nieuwe week om verder te gaan.", en: "You've used your generated plans. Unlock another week to continue." },
   leadTitle: { nl: "Nog niet klaar om te kopen?", en: "Not ready to buy yet?" },
-  leadSub: { nl: "Pak de gratis starter: 5 Hyrox-voedingsregels (40+) die 90% van de fouten oplossen. Direct in je inbox.", en: "Grab the free starter: 5 Hyrox fueling rules (40+) that fix 90% of mistakes. Straight to your inbox." },
+  leadSub: { nl: "Pak de gratis starter: 5 Hyrox-voedingsregels die 90% van de fouten oplossen. Direct in je inbox.", en: "Grab the free starter: 5 Hyrox fueling rules that fix 90% of mistakes. Straight to your inbox." },
   leadPh: { nl: "jouw@email.com", en: "your@email.com" },
   leadBtn: { nl: "Stuur mij de gratis gids", en: "Send me the free guide" },
   leadSending: { nl: "Versturen…", en: "Sending…" },
