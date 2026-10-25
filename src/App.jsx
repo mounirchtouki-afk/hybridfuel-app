@@ -86,6 +86,8 @@ const TXT = {
   emptyBody: { nl: "Vul je gegevens in. Je krijgt gratis je persoonlijke macro's en trainings/rust-verdeling. Het volledige maaltijdplan ontgrendel je daarna.", en: "Enter your stats. You'll get your personal macros and training/rest split for free. Unlock the full meal plan after that." },
   dailyTargets: { nl: "Dagdoelen (weekgemiddelde)", en: "Daily targets (weekly average)" },
   maintenance: { nl: "Onderhoud", en: "Maintenance" },
+  statsHint: { nl: "Vul naar waarheid in — lengte in cm, gewicht in kg. Hierop baseren we je macro's en je BMI.", en: "Enter accurately — height in cm, weight in kg. Your macros and BMI are based on these." },
+  bmiNote: { nl: "BMI = gewicht ÷ lengte². Ruwe maat (spiermassa telt niet mee); we gebruiken 'm alleen als ondergrens tegen onverantwoord afvallen.", en: "BMI = weight ÷ height². A rough measure (muscle isn't counted); we only use it as a floor against unsafe fat loss." },
   below: { nl: "onder", en: "below" },
   above: { nl: "boven", en: "above" },
   protein: { nl: "Eiwit", en: "Protein" },
@@ -518,7 +520,8 @@ export default function App() {
 
       <div style={{ maxWidth: 1080, margin: "0 auto", padding: 16, display: "grid", gridTemplateColumns: "minmax(0,1fr)", gap: 18 }}>
         <div style={{ background: INK2, border: `1px solid ${LINE}`, borderRadius: 14, padding: 18 }}>
-          <div style={{ ...disp, fontSize: 15, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 16, color: EMBER }}>{T("yourStats")}</div>
+          <div style={{ ...disp, fontSize: 15, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 6, color: EMBER }}>{T("yourStats")}</div>
+          <div style={{ fontSize: 11, color: MUTED, lineHeight: 1.5, marginBottom: 14 }}>{T("statsHint")}</div>
 
           <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
             {[["male", T("man")], ["female", T("woman")]].map(([id, lbl]) => (
@@ -604,8 +607,11 @@ export default function App() {
                   </div>
                   {targets.maintenance != null && (
                     <div style={{ fontSize: 12, color: MUTED, marginBottom: 12 }}>
-                      {T("maintenance")} ≈ <span style={{ color: PAPER }}>{targets.maintenance} kcal</span>{targets.kcal !== targets.maintenance && <> · {targets.kcal < targets.maintenance ? (targets.maintenance - targets.kcal) + " " + T("below") : (targets.kcal - targets.maintenance) + " " + T("above")}</>}
+                      {T("maintenance")} ≈ <span style={{ color: PAPER }}>{targets.maintenance} kcal</span>{targets.kcal !== targets.maintenance && <> · {targets.kcal < targets.maintenance ? (targets.maintenance - targets.kcal) + " " + T("below") : (targets.kcal - targets.maintenance) + " " + T("above")}</>}{targets.bmi != null && <> · BMI <span style={{ color: PAPER }}>{targets.bmi}</span></>}
                     </div>
+                  )}
+                  {targets.bmi != null && (
+                    <div style={{ fontSize: 11, color: MUTED, marginBottom: 12, lineHeight: 1.5 }}>{T("bmiNote")}</div>
                   )}
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
                     {[[T("protein"), targets.protein, EMBER], [T("carbs"), targets.carbs, EMBER_SOFT], [T("fat"), targets.fat, SAGE]].map(([n, v, c]) => (
