@@ -106,6 +106,13 @@ const TXT = {
   lowBmiWarn: { nl: "Op basis van je lengte en gewicht zit je al in een laag bereik (BMI onder 18,5). Verder afvallen raden we af — je doel staat daarom op onderhoud. Twijfel je? Overleg met een arts of diëtist.", en: "Based on your height and weight you're already in a low range (BMI under 18.5). We don't recommend losing more — your target is set to maintenance. In doubt? Talk to a doctor or dietitian." },
   tabPlan: { nl: "Plan", en: "Plan" },
   tabShop: { nl: "Boodschappen", en: "Shopping list" },
+  editPlan: { nl: "Aanpassen", en: "Edit" },
+  editDone: { nl: "Klaar", en: "Done" },
+  addMeal: { nl: "+ Maaltijd", en: "+ Meal" },
+  addIngr: { nl: "+ Ingrediënt", en: "+ Ingredient" },
+  mealNamePh: { nl: "Naam maaltijd", en: "Meal name" },
+  ingrNamePh: { nl: "Ingrediënt", en: "Ingredient" },
+  editHint: { nl: "Pas porties, ingrediënten en maaltijden aan. −/+ schaalt de hele maaltijd (gewichten én macro's).", en: "Adjust portions, ingredients and meals. −/+ scales the whole meal (weights and macros)." },
   cooking: { nl: "JE PLAN WORDT KLAARGEMAAKT…", en: "COOKING UP YOUR PLAN…" },
   retry: { nl: "OPNIEUW", en: "RETRY" },
   shopHint: { nl: "Totalen voor de week, opgeteld uit je gewichten. Tik om af te vinken.", en: "Weekly totals, summed from your weights. Tap to check off." },
@@ -232,6 +239,7 @@ export default function App() {
 
   const [targets, setTargets] = useState(null);
   const [week, setWeek] = useState(null);
+  const [planEdit, setPlanEdit] = useState(false);
   const [view, setView] = useState("plan");
   const [checked, setChecked] = useState({});
   const [loading, setLoading] = useState(false);
@@ -520,6 +528,66 @@ export default function App() {
   const FlagNL = <svg width="22" height="15" viewBox="0 0 9 6" style={{ borderRadius: 2, display: "block" }}><rect width="9" height="6" fill="#fff" /><rect width="9" height="2" fill="#AE1C28" /><rect y="4" width="9" height="2" fill="#21468B" /></svg>;
   const FlagGB = <svg width="22" height="15" viewBox="0 0 60 30" style={{ borderRadius: 2, display: "block" }}><clipPath id="gbc"><rect width="60" height="30" /></clipPath><g clipPath="url(#gbc)"><rect width="60" height="30" fill="#012169" /><path d="M0,0 60,30 M60,0 0,30" stroke="#fff" strokeWidth="6" /><path d="M0,0 60,30 M60,0 0,30" stroke="#C8102E" strokeWidth="4" /><path d="M30,0 V30 M0,15 H60" stroke="#fff" strokeWidth="10" /><path d="M30,0 V30 M0,15 H60" stroke="#C8102E" strokeWidth="6" /></g></svg>;
 
+  // ====== DAG-EDITOR (Pro) ======
+  const R = (x) => Math.round(num(x));
+  function applyWeek(nw) { setWeek(nw); try { localStorage.setItem("hf_lastplan", JSON.stringify({ targets, week: nw })); } catch (e) {} }
+  function persistPlanCloud() { if (supabase && session && week && week.days) supabase.from("plans").insert({ user_id: session.user.id, targets, week, is_active: true }).then(() => {}, () => {}); }
+  function mutDay(di, fn) {
+    if (!week) return;
+    const nw = { ...week, days: week.days.map((d, i) => i === di ? fn({ ...d, m: d.m.map((mm) => ({ ...mm, ing: (mm.ing || []).map((g) => ({ ...g })) })) }) : d) };
+    applyWeek(nw);
+  }
+  const patchMeal = (di, mi, patch) => mutDay(di, (d) => { d.m = d.m.map((mm, j) => j === mi ? { ...mm, ...patch } : mm); return d; });
+  const scaleMeal = (di, mi, fac) => mutDay(di, (d) => { d.m = d.m.map((mm, j) => j === mi ? { ...mm, kcal: R(num(mm.kcal) * fac), p: R(num(mm.p) * fac), c: R(num(mm.c) * fac), f: R(num(mm.f) * fac), ing: (mm.ing || []).map((g) => ({ ...g, g: R(num(g.g) * fac) })) } : mm); return d; });
+  const patchIng = (di, mi, ii, patch) => mutDay(di, (d) => { d.m = d.m.map((mm, j) => j === mi ? { ...mm, ing: (mm.ing || []).map((g, k) => k === ii ? { ...g, ...patch } : g) } : mm); return d; });
+  const addIngr = (di, mi) => mutDay(di, (d) => { d.m = d.m.map((mm, j) => j === mi ? { ...mm, ing: [...(mm.ing || []), { n: "", g: 0 }] } : mm); return d; });
+  const removeIngr = (di, mi, ii) => mutDay(di, (d) => { d.m = d.m.map((mm, j) => j === mi ? { ...mm, ing: (mm.ing || []).filter((_, k) => k !== ii) } : mm); return d; });
+  const removeMeal = (di, mi) => mutDay(di, (d) => { d.m = d.m.filter((_, j) => j !== mi); return d; });
+  const addMealTo = (di) => mutDay(di, (d) => { d.m = [...d.m, { t: "EXTRA", n: "", kcal: 0, p: 0, c: 0, f: 0, ing: [] }]; return d; });
+  function toggleEdit() { if (planEdit) persistPlanCloud(); setPlanEdit(!planEdit); }
+
+  const sIn = { background: INK, border: `1px solid ${LINE}`, color: PAPER, padding: "6px 8px", fontFamily: "Inter, sans-serif", fontSize: 12.5, borderRadius: 7, outline: "none", boxSizing: "border-box" };
+
+  function EditDayCard({ day, di }) {
+    const tot = day.m.reduce((a, m) => ({ kcal: a.kcal + num(m.kcal), p: a.p + num(m.p), c: a.c + num(m.c), f: a.f + num(m.f) }), { kcal: 0, p: 0, c: 0, f: 0 });
+    return (
+      <div style={{ background: INK2, border: `1px solid ${LINE}`, borderRadius: 12, overflow: "hidden" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "11px 14px", background: INK, borderBottom: `1px solid ${LINE}` }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+            <div style={{ ...disp, fontWeight: 600, fontSize: 15, letterSpacing: 1, textTransform: "uppercase" }}>{day.d}</div>
+            <div onClick={() => mutDay(di, (d) => { d.train = !d.train; return d; })} style={{ cursor: "pointer", fontSize: 9.5, color: day.train ? EMBER : MUTED, border: `1px solid ${day.train ? EMBER : LINE}`, borderRadius: 5, padding: "2px 6px", letterSpacing: 1, fontWeight: 700 }}>{day.train ? T("trainTag") : T("restTag")}</div>
+          </div>
+          <div style={{ fontSize: 11.5, color: MUTED }}><span style={{ color: PAPER, fontWeight: 600 }}>{tot.kcal}</span> kcal · {tot.p}p/{tot.c}c/{tot.f}f</div>
+        </div>
+        <div style={{ padding: "4px 0" }}>
+          {day.m.map((m, mi) => (
+            <div key={mi} style={{ padding: "11px 14px", borderBottom: `1px solid ${LINE}` }}>
+              <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8 }}>
+                <input value={m.n} onChange={(e) => patchMeal(di, mi, { n: e.target.value })} placeholder={T("mealNamePh")} style={{ ...sIn, flex: 1 }} />
+                <div onClick={() => scaleMeal(di, mi, 0.9)} style={{ cursor: "pointer", width: 30, height: 30, borderRadius: 7, border: `1px solid ${LINE}`, color: EMBER, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 700, flexShrink: 0 }}>−</div>
+                <div onClick={() => scaleMeal(di, mi, 1.1)} style={{ cursor: "pointer", width: 30, height: 30, borderRadius: 7, border: `1px solid ${LINE}`, color: EMBER, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 700, flexShrink: 0 }}>+</div>
+                <div onClick={() => removeMeal(di, mi)} style={{ cursor: "pointer", width: 30, height: 30, borderRadius: 7, border: `1px solid ${LINE}`, color: MUTED, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>×</div>
+              </div>
+              {(m.ing || []).map((ing, ii) => (
+                <div key={ii} style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 6 }}>
+                  <input value={ing.n} onChange={(e) => patchIng(di, mi, ii, { n: e.target.value })} placeholder={T("ingrNamePh")} style={{ ...sIn, flex: 1 }} />
+                  <input value={ing.g} onChange={(e) => patchIng(di, mi, ii, { g: num(e.target.value) })} inputMode="numeric" style={{ ...sIn, width: 58, textAlign: "right" }} />
+                  <span style={{ fontSize: 11, color: MUTED }}>g</span>
+                  <div onClick={() => removeIngr(di, mi, ii)} style={{ cursor: "pointer", color: MUTED, fontSize: 15, padding: "0 2px" }}>×</div>
+                </div>
+              ))}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 6 }}>
+                <div onClick={() => addIngr(di, mi)} style={{ cursor: "pointer", fontSize: 11.5, color: EMBER, fontWeight: 600 }}>{T("addIngr")}</div>
+                <div style={{ fontSize: 10.5, color: MUTED }}>{m.kcal} kcal · {m.p}p/{m.c}c/{m.f}f</div>
+              </div>
+            </div>
+          ))}
+          <div onClick={() => addMealTo(di)} style={{ cursor: "pointer", textAlign: "center", padding: "10px 0", color: EMBER, fontSize: 12.5, fontWeight: 700, ...disp, letterSpacing: 0.5 }}>{T("addMeal")}</div>
+        </div>
+      </div>
+    );
+  }
+
   function DayCard({ day, sample }) {
     const tot = day.m.reduce((a, m) => ({ kcal: a.kcal + num(m.kcal), p: a.p + num(m.p), c: a.c + num(m.c), f: a.f + num(m.f) }), { kcal: 0, p: 0, c: 0, f: 0 });
     return (
@@ -740,15 +808,17 @@ export default function App() {
                         </div>
                         <div style={{ fontSize: 11.5, color: MUTED, marginTop: 10, lineHeight: 1.5 }}>{T("dlHint")}</div>
                       </div>
-                      <div style={{ marginBottom: 14 }}>
+                      <div style={{ marginBottom: 14, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                         <div style={{ display: "inline-flex", gap: 4, background: INK2, border: `1px solid ${LINE}`, borderRadius: 10, padding: 4 }}>
                           {[["plan", T("tabPlan")], ["shop", T("tabShop")]].map(([id, lbl]) => (
-                            <div key={id} onClick={() => setView(id)} style={{ padding: "8px 16px", borderRadius: 7, background: view === id ? EMBER : "transparent", color: view === id ? INK : PAPER, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.5, cursor: "pointer" }}>{lbl}</div>
+                            <div key={id} onClick={() => setView(id)} style={{ padding: "8px 16px", borderRadius: 7, background: view === id ? EMBER : "transparent", color: PAPER, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.5, cursor: "pointer" }}>{lbl}</div>
                           ))}
                         </div>
+                        {view === "plan" && <div onClick={toggleEdit} style={{ cursor: "pointer", padding: "8px 16px", borderRadius: 8, border: `1px solid ${planEdit ? EMBER : LINE}`, background: planEdit ? EMBER : "transparent", color: planEdit ? PAPER : EMBER, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.5 }}>{planEdit ? T("editDone") : T("editPlan")}</div>}
                       </div>
 
-                      {view === "plan" && (<div style={{ display: "grid", gap: 12 }}>{week.days.map((day, di) => <DayCard key={di} day={day} />)}</div>)}
+                      {view === "plan" && planEdit && <div style={{ fontSize: 11.5, color: MUTED, marginBottom: 12, lineHeight: 1.5 }}>{T("editHint")}</div>}
+                      {view === "plan" && (<div style={{ display: "grid", gap: 12 }}>{week.days.map((day, di) => planEdit ? <EditDayCard key={di} day={day} di={di} /> : <DayCard key={di} day={day} />)}</div>)}
                       {view === "shop" && (
                         <div style={{ display: "grid", gap: 12 }}>
                           <div style={{ fontSize: 12, color: MUTED }}>{T("shopHint")}</div>
