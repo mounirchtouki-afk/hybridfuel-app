@@ -4,6 +4,8 @@ import Today from "./views/Today.jsx";
 import Tracker from "./views/Tracker.jsx";
 import Recipes from "./views/Recipes.jsx";
 import Reminders, { checkReminders } from "./views/Reminders.jsx";
+import Auth from "./views/Auth.jsx";
+import { supabase } from "./supabaseClient.js";
 
 // Roept GEEN Claude aan vanuit de browser — alles via /api/plan (key zit op de server).
 // Tweetalig: NL/EN via een vlagschakelaar. De gekozen taal gaat mee naar de backend.
@@ -243,6 +245,9 @@ export default function App() {
   // App-navigatie + PWA
   const [tab, setTab] = useState("plan");
   const [showReminders, setShowReminders] = useState(false);
+  const [session, setSession] = useState(null);
+  const [showAuth, setShowAuth] = useState(false);
+  const [subTier, setSubTier] = useState("free");
   const [installEvt, setInstallEvt] = useState(null);
   const [installDismissed, setInstallDismissed] = useState(() => load("hf_install_dismissed", false));
 
@@ -297,6 +302,22 @@ export default function App() {
     return () => { window.removeEventListener("beforeinstallprompt", onBip); window.removeEventListener("appinstalled", onInstalled); };
   }, []);
 
+  // Supabase-sessie (login) volgen.
+  useEffect(() => {
+    if (!supabase) return;
+    supabase.auth.getSession().then(({ data }) => setSession((data && data.session) || null)).catch(() => {});
+    let sub;
+    try { sub = supabase.auth.onAuthStateChange((_e, s) => setSession(s || null)); } catch (e) {}
+    return () => { try { sub.data.subscription.unsubscribe(); } catch (e) {} };
+  }, []);
+
+  // Abonnement-laag ophalen zodra er een sessie is.
+  useEffect(() => {
+    if (!supabase || !session) { setSubTier("free"); return; }
+    supabase.from("subscriptions").select("tier").eq("user_id", session.user.id).single()
+      .then(({ data }) => { if (data && data.tier) setSubTier(data.tier); }).catch(() => {});
+  }, [session]);
+
   // Herinneringen best-effort checken (bij openen, elke minuut, bij terugkeren)
   useEffect(() => {
     checkReminders(lang);
@@ -305,6 +326,30 @@ export default function App() {
     document.addEventListener("visibilitychange", onVis);
     return () => { clearInterval(iv); document.removeEventListener("visibilitychange", onVis); };
   }, [lang]);
+
+  // Cookie-banner (consent.js) detecteren en de onderbalk er netjes bovenop zetten.
+  const [consentH, setConsentH] = useState(0);
+  useEffect(() => {
+    const measure = () => {
+      let h = 0;
+      try {
+        document.querySelectorAll("body > *").forEach((el) => {
+          if (el.id === "root") return;
+          const s = getComputedStyle(el);
+          if (s.position !== "fixed" || s.display === "none" || s.visibility === "hidden") return;
+          const r = el.getBoundingClientRect();
+          if (r.height > 0 && r.height < window.innerHeight * 0.5 && r.width > window.innerWidth * 0.55 && r.bottom >= window.innerHeight - 3) {
+            h = Math.max(h, Math.round(r.height));
+          }
+        });
+      } catch (e) {}
+      setConsentH(h);
+    };
+    measure();
+    const iv = setInterval(measure, 700);
+    window.addEventListener("resize", measure);
+    return () => { clearInterval(iv); window.removeEventListener("resize", measure); };
+  }, []);
 
   async function doInstall() { if (!installEvt) return; try { installEvt.prompt(); await installEvt.userChoice; } catch (e) {} setInstallEvt(null); }
   function dismissInstall() { setInstallDismissed(true); save("hf_install_dismissed", true); }
@@ -497,7 +542,7 @@ export default function App() {
   const NAV = [["plan", "navPlan"], ["today", "navToday"], ["tracker", "navTracker"], ["recipes", "navRecipes"]];
 
   return (
-    <div style={{ minHeight: "100vh", background: INK, color: PAPER, fontFamily: "Inter, sans-serif", paddingBottom: 76 }}>
+    <div style={{ minHeight: "100vh", background: INK, color: PAPER, fontFamily: "Inter, sans-serif", paddingBottom: 76 + consentH }}>
       <style dangerouslySetInnerHTML={{ __html: fonts + `*{box-sizing:border-box} select option{background:${INK2};color:${PAPER}} @keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}} .dot{animation:pulse 1s infinite} input[type=date],input[type=time]{color-scheme:dark}` }} />
 
       {/* HEADER */}
@@ -506,6 +551,9 @@ export default function App() {
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ ...disp, fontWeight: 700, fontSize: 19, letterSpacing: 0.5, lineHeight: 1 }}>HYBRIDFUEL<span style={{ color: EMBER }}>CO</span></div>
           <div style={{ fontSize: 10, color: MUTED, letterSpacing: 1, textTransform: "uppercase", marginTop: 3 }}>{T("tagline")}</div>
+        </div>
+        <div onClick={() => setShowAuth(true)} title="Account" style={{ cursor: "pointer", padding: 6, display: "flex", alignItems: "center" }}>
+          <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke={session ? EMBER : MUTED} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 4-6.5 8-6.5s8 2.5 8 6.5" /></svg>
         </div>
         <div onClick={() => setShowReminders(true)} title="Reminders" style={{ cursor: "pointer", padding: 6, display: "flex", alignItems: "center" }}>
           <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke={MUTED} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0" /></svg>
@@ -759,7 +807,7 @@ export default function App() {
       </div>
 
       {/* BOTTOM NAV */}
-      <div style={{ position: "fixed", left: 0, right: 0, bottom: 0, background: INK, borderTop: `1px solid ${LINE}`, display: "flex", zIndex: 30, paddingBottom: "env(safe-area-inset-bottom)" }}>
+      <div style={{ position: "fixed", left: 0, right: 0, bottom: consentH, background: INK, borderTop: `1px solid ${LINE}`, display: "flex", zIndex: 30, paddingBottom: "env(safe-area-inset-bottom)", transition: "bottom .2s" }}>
         {NAV.map(([id, key]) => {
           const on = tab === id;
           return (
@@ -772,6 +820,7 @@ export default function App() {
       </div>
 
       {showReminders && <Reminders lang={lang} onClose={() => setShowReminders(false)} />}
+      {showAuth && <Auth lang={lang} session={session} tier={subTier} onClose={() => setShowAuth(false)} />}
     </div>
   );
 }
