@@ -71,7 +71,12 @@ function computeBase(b) {
   const age = clampNum(b.age, 14, 100, 35);
   const sex = pick(b.sex, ["male", "female"], "male");
   const activity = pick(b.activity, Object.keys(ACTIVITY), "moderate");
-  const goal = pick(b.goal, Object.keys(GOAL_ADJ), "maintain");
+  let goal = pick(b.goal, Object.keys(GOAL_ADJ), "maintain");
+
+  // Verantwoord: wie al (bijna) ondergewicht heeft niet verder laten afvallen.
+  const bmi = cm > 0 ? kg / Math.pow(cm / 100, 2) : 22;
+  let lowBmi = false;
+  if (goal === "cut" && bmi < 18.5) { goal = "maintain"; lowBmi = true; }
 
   const bmr = sex === "male"
     ? 10 * kg + 6.25 * cm - 5 * age + 5
@@ -81,7 +86,7 @@ function computeBase(b) {
   const protein = Math.round(kg * 2.0);
   const fat = Math.round(kg * 0.9);
   const carbs = Math.max(40, Math.round((kcal - protein * 4 - fat * 9) / 4));
-  return { kcal, protein, carbs, fat, maintenance, kg };
+  return { kcal, protein, carbs, fat, maintenance, kg, bmi: Math.round(bmi * 10) / 10, lowBmi };
 }
 
 // Houd eiwit en vet gelijk; de calorie-swing gaat naar koolhydraten (carb cycling).
@@ -212,7 +217,7 @@ export default async function handler(req, res) {
     const cyc = computeCycle(base, body.trainingCount);
     const targets = {
       kcal: base.kcal, protein: base.protein, carbs: base.carbs, fat: base.fat,
-      maintenance: base.maintenance,
+      maintenance: base.maintenance, bmi: base.bmi, lowBmi: base.lowBmi,
       train: cyc.train, rest: cyc.rest, trainingCount: cyc.trainingCount,
     };
 
