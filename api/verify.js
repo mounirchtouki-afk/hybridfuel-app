@@ -9,6 +9,7 @@
 //   UNLOCK_SECRET     = een willekeurige lange geheime string (zelf verzinnen)
 
 import crypto from "crypto";
+import { kv } from "./_kv.js";
 
 export default async function handler(req, res) {
   const sid =
@@ -41,7 +42,14 @@ export default async function handler(req, res) {
     const tier = (s.amount_total || 0) >= 1600 ? "bundle" : "week";
     const sig = crypto.createHmac("sha256", unlockSecret).update(sid).digest("hex");
     const token = sid + "." + sig;
-    return res.status(200).json({ ok: true, token, tier });
+
+    // Optie B: ken credits toe aan deze betaling. NX = alleen zetten als er nog
+    // geen record is, zodat de teller niet reset als de klant de pagina herlaadt.
+    // (Doet niets als er geen credit-opslag is gekoppeld.)
+    const credits = parseInt(process.env.CREDITS_PER_PAYMENT || "3", 10);
+    try { await kv(["SET", "cr:" + sid, String(credits), "EX", "15552000", "NX"]); } catch (e) {}
+
+    return res.status(200).json({ ok: true, token, tier, credits });
   } catch (e) {
     return res.status(500).json({ ok: false, error: String(e).slice(0, 120) });
   }
