@@ -99,6 +99,8 @@ const TXT = {
   safeCut: { nl: "Mik op 0,5–1% van je gewicht per week afvallen. Gaat het sneller? Eet iets meer — snelheid kost spier en herstel.", en: "Aim to lose 0.5–1% of bodyweight per week. Going faster? Eat a bit more — speed costs muscle and recovery." },
   safeMaintain: { nl: "Onderhoud = binnen ±0,5% per week blijven, beide kanten op.", en: "Maintenance = stay within ±0.5% per week, either way." },
   safeGain: { nl: "Opbouwen: 0,25–0,5% per week. Sneller aankomen is vooral vet, geen kracht.", en: "Building: 0.25–0.5% per week. Faster gain is mostly fat, not strength." },
+  lowBmiTitle: { nl: "Belangrijk", en: "Important" },
+  lowBmiWarn: { nl: "Op basis van je lengte en gewicht zit je al in een laag bereik (BMI onder 18,5). Verder afvallen raden we af — je doel staat daarom op onderhoud. Twijfel je? Overleg met een arts of diëtist.", en: "Based on your height and weight you're already in a low range (BMI under 18.5). We don't recommend losing more — your target is set to maintenance. In doubt? Talk to a doctor or dietitian." },
   tabPlan: { nl: "Plan", en: "Plan" },
   tabShop: { nl: "Boodschappen", en: "Shopping list" },
   cooking: { nl: "JE PLAN WORDT KLAARGEMAAKT…", en: "COOKING UP YOUR PLAN…" },
@@ -493,7 +495,8 @@ export default function App() {
     );
   }
 
-  const safeText = goal === "cut" ? T("safeCut") : goal === "gain" ? T("safeGain") : T("safeMaintain");
+  const lowBmi = !!(targets && targets.lowBmi);
+  const safeText = lowBmi ? T("lowBmiWarn") : goal === "cut" ? T("safeCut") : goal === "gain" ? T("safeGain") : T("safeMaintain");
   const hasCycle = targets && targets.trainingCount > 0 && targets.trainingCount < 7 && targets.train && targets.rest;
   const lockedCount = week ? Math.max(0, week.days.length - 1) : 0;
 
@@ -624,9 +627,11 @@ export default function App() {
                       </div>
                     </div>
                   )}
-                  <div style={{ marginTop: 12, borderLeft: `2px solid ${EMBER}`, padding: "2px 0 2px 12px" }}>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: PAPER, textTransform: "uppercase", letterSpacing: 0.5 }}>{T("safeTitle")}. </span>
-                    <span style={{ fontSize: 11.5, color: MUTED, lineHeight: 1.5 }}>{safeText}</span>
+                  <div style={lowBmi
+                    ? { marginTop: 12, border: `1px solid ${EMBER}`, background: "rgba(232,50,30,0.14)", borderRadius: 10, padding: "10px 12px" }
+                    : { marginTop: 12, borderLeft: `2px solid ${EMBER}`, padding: "2px 0 2px 12px" }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: PAPER, textTransform: "uppercase", letterSpacing: 0.5 }}>{lowBmi ? "⚠ " + T("lowBmiTitle") : T("safeTitle")}. </span>
+                    <span style={{ fontSize: 11.5, color: lowBmi ? PAPER : MUTED, lineHeight: 1.5 }}>{safeText}</span>
                   </div>
                 </div>
               )}
