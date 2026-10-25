@@ -318,6 +318,19 @@ export default function App() {
       .then(({ data }) => { if (data && data.tier) setSubTier(data.tier); }).catch(() => {});
   }, [session]);
 
+  // Laatste plan uit de cloud laden zodra er een sessie is (volgt je over apparaten).
+  useEffect(() => {
+    if (!supabase || !session) return;
+    let active = true;
+    supabase.from("plans").select("targets,week").eq("user_id", session.user.id).order("created_at", { ascending: false }).limit(1)
+      .then(({ data }) => {
+        if (!active || !data || !data.length) return;
+        const p = data[0];
+        if (p.week && p.week.days) { setWeek(p.week); if (p.targets) setTargets(p.targets); }
+      }).catch(() => {});
+    return () => { active = false; };
+  }, [session]);
+
   // Herinneringen best-effort checken (bij openen, elke minuut, bij terugkeren)
   useEffect(() => {
     checkReminders(lang);
@@ -420,6 +433,9 @@ export default function App() {
       });
       setWeek({ days });
       try { localStorage.setItem("hf_lastplan", JSON.stringify({ targets: data.targets, week: { days } })); } catch (e) {}
+      if (supabase && session) {
+        supabase.from("plans").insert({ user_id: session.user.id, targets: data.targets, week: { days }, is_active: true }).then(() => {}, () => {});
+      }
       emailPlan({ days });
     } catch (e) { setError(e && e.message ? e.message : T("unknownErr")); } finally { setLoading(false); }
   }
