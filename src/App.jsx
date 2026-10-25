@@ -558,11 +558,11 @@ export default function App() {
   const NAV = [["plan", "navPlan"], ["today", "navToday"], ["tracker", "navTracker"], ["recipes", "navRecipes"]];
 
   return (
-    <div style={{ minHeight: "100vh", background: INK, color: PAPER, fontFamily: "Inter, sans-serif", paddingBottom: 76 + consentH }}>
+    <div style={{ minHeight: "100vh", background: `radial-gradient(135% 95% at 90% -8%, rgba(232,50,30,0.22) 0%, rgba(150,30,18,0.07) 36%, ${INK} 66%), ${INK}`, backgroundAttachment: "fixed", backgroundRepeat: "no-repeat", color: PAPER, fontFamily: "Inter, sans-serif", paddingBottom: 76 + consentH }}>
       <style dangerouslySetInnerHTML={{ __html: fonts + `*{box-sizing:border-box} select option{background:${INK2};color:${PAPER}} @keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}} .dot{animation:pulse 1s infinite} input[type=date],input[type=time]{color-scheme:dark}` }} />
 
       {/* HEADER */}
-      <div style={{ borderBottom: `1px solid ${LINE}`, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, position: "sticky", top: 0, background: INK, zIndex: 20 }}>
+      <div style={{ borderBottom: `1px solid ${LINE}`, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, position: "sticky", top: 0, background: `radial-gradient(130% 320% at 94% 0%, rgba(232,50,30,0.16), ${INK} 58%), ${INK}`, zIndex: 20 }}>
         <div style={{ width: 32, height: 32, borderRadius: 8, background: EMBER, display: "flex", alignItems: "center", justifyContent: "center", ...disp, fontWeight: 700, color: INK, fontSize: 19 }}>H</div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ ...disp, fontWeight: 700, fontSize: 19, letterSpacing: 0.5, lineHeight: 1 }}>HYBRIDFUEL<span style={{ color: EMBER }}>CO</span></div>
