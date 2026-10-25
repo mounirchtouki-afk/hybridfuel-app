@@ -16,7 +16,7 @@ const T = {
   empty: { nl: "Nog geen producten. Scan of voeg je eerste toe.", en: "No products yet. Scan or add your first." },
   pick: { nl: "Kies", en: "Pick" },
   namePh: { nl: "bijv. Skyr naturel", en: "e.g. plain skyr" },
-  scan: { nl: "📷 Scan barcode", en: "📷 Scan barcode" },
+  scan: { nl: "Scan barcode", en: "Scan barcode" },
   scanning: { nl: "Richt op de barcode…", en: "Point at the barcode…" },
   cancel: { nl: "Annuleren", en: "Cancel" },
   manual: { nl: "Of typ de barcode", en: "Or type the barcode" },
@@ -39,6 +39,13 @@ function loadZxing() {
     document.head.appendChild(s);
   });
 }
+
+const ScanIcon = ({ c = "#fff" }) => (
+  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2" />
+    <path d="M8 8.5v7M11 8.5v7M14 8.5v7M16.5 8.5v7" />
+  </svg>
+);
 
 export default function Products({ lang, session, onClose, onPick }) {
   const t = (k) => (T[k] ? T[k][lang] : k);
@@ -139,7 +146,7 @@ export default function Products({ lang, session, onClose, onPick }) {
             </div>
           ) : (
             <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-              <button onClick={startScan} style={{ ...primaryBtn, flex: 1 }}>{t("scan")}</button>
+              <button onClick={startScan} style={{ ...primaryBtn, flex: 1, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 9 }}><ScanIcon c={PAPER} />{t("scan")}</button>
             </div>
           )}
           {/* Handmatige barcode */}

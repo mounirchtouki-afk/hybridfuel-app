@@ -7,7 +7,7 @@ const T = {
   sub: { nl: "Je dagdoel op basis van je gewicht, met een extra op trainingsdagen.", en: "Your daily goal based on bodyweight, with a bump on training days." },
   goal: { nl: "Dagdoel", en: "Daily goal" },
   left: { nl: "nog te gaan", en: "to go" },
-  done: { nl: "Doel gehaald 💧", en: "Goal reached 💧" },
+  done: { nl: "Doel gehaald", en: "Goal reached" },
   add: { nl: "Snel toevoegen", en: "Quick add" },
   glass: { nl: "Glas", en: "Glass" },
   bottle: { nl: "Fles", en: "Bottle" },

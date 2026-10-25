@@ -228,6 +228,10 @@ const Icon = ({ name, on }) => {
   return null;
 };
 
+const LockIcon = ({ c, s = 24 }) => (
+  <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={{ display: "block" }}><rect x="5" y="11" width="14" height="9" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg>
+);
+
 export default function App() {
   const [lang, setLangState] = useState("en");
   const T = (k) => TXT[k][lang];
@@ -674,7 +678,7 @@ export default function App() {
     return (
       <div style={{ display: "grid", gap: 16 }}>
         <div style={{ border: `1px solid ${EMBER}`, borderRadius: 14, padding: 24, background: "linear-gradient(180deg, rgba(225,29,72,0.09), transparent 60%)", textAlign: "center" }}>
-          <div style={{ fontSize: 30, marginBottom: 10 }}>🔒</div>
+          <div style={{ marginBottom: 12, display: "flex", justifyContent: "center" }}><LockIcon c={EMBER} s={34} /></div>
           <div style={{ ...disp, fontSize: 19, fontWeight: 700, marginBottom: 6 }}>{pro ? T("lockedPro") : T("lockedTitle")}</div>
           <div style={{ fontSize: 12.5, color: MUTED, lineHeight: 1.5, marginBottom: 18, maxWidth: 300, margin: "0 auto 18px" }}>{pro ? T("lockedProSub") : T("lockedSub")}</div>
           <button onClick={() => setShowAuth(true)} style={{ background: EMBER, color: PAPER, border: "none", padding: "13px 26px", borderRadius: 10, ...disp, fontWeight: 700, fontSize: 14.5, letterSpacing: 0.8, textTransform: "uppercase", cursor: "pointer" }}>{T("unlockBtn")}</button>
@@ -881,7 +885,7 @@ export default function App() {
                             <div onClick={toggleEdit} style={{ cursor: "pointer", padding: "8px 16px", borderRadius: 8, border: `1px solid ${planEdit ? EMBER : LINE}`, background: planEdit ? EMBER : "transparent", color: planEdit ? PAPER : EMBER, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.5 }}>{planEdit ? T("editDone") : T("editPlan")}</div>
                           </div>
                         ) : (
-                          <div onClick={() => setShowAuth(true)} style={{ cursor: "pointer", padding: "8px 14px", borderRadius: 8, border: `1px solid ${LINE}`, color: MUTED, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.5 }}>🔒 {T("editPlan")} · Pro</div>
+                          <div onClick={() => setShowAuth(true)} style={{ cursor: "pointer", padding: "8px 14px", borderRadius: 8, border: `1px solid ${LINE}`, color: MUTED, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.5, display: "inline-flex", alignItems: "center", gap: 7 }}><LockIcon c={MUTED} s={15} />{T("editPlan")} · Pro</div>
                         ))}
                       </div>
 
