@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from "react";
+import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, SAGE, load, save } from "./shared.js";
+import Today from "./views/Today.jsx";
+import Tracker from "./views/Tracker.jsx";
+import Recipes from "./views/Recipes.jsx";
+import Reminders, { checkReminders } from "./views/Reminders.jsx";
 
 // Roept GEEN Claude aan vanuit de browser — alles via /api/plan (key zit op de server).
 // Tweetalig: NL/EN via een vlagschakelaar. De gekozen taal gaat mee naar de backend.
 
-// Huisstijl gelijk aan de website: zwart / wit / één rood accent.
-const INK = "#0A0A0A", INK2 = "#161616", EMBER = "#E8321E", EMBER_SOFT = "#FF4B37",
-  PAPER = "#F4F4F4", MUTED = "#8C8C8C", LINE = "#242424", SAGE = "#B5B5B5";
-
-// >>> Vul hier je Stripe-betaallinks in zodra je ze hebt aangemaakt <<<
+// >>> Stripe-betaallinks <<<
 const STRIPE_WEEK_LINK = "https://buy.stripe.com/fZu4gBdvz1oQgru0Sd1wY00";
 const STRIPE_BUNDLE_LINK = "https://buy.stripe.com/7sYbJ3gHL2sU7UY30l1wY01";
 
-// id = vaste waarde (nooit vertalen, backend rekent erop) · nl/en = wat je ziet
 const ACTIVITY = [
   { id: "light", nl: "Licht (1–2 sessies/wk)", en: "Light (1–2 sessions/wk)" },
   { id: "moderate", nl: "Gemiddeld (3–4/wk)", en: "Moderate (3–4/wk)" },
@@ -49,7 +49,6 @@ const PROTEINS = [
 ];
 const WD = { nl: ["Ma", "Di", "Wo", "Do", "Vr", "Za", "Zo"], en: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] };
 
-// Boodschappencategorieën per taal (zelfde volgorde = zelfde index)
 const SHOP_CATS = [
   { nl: "Groente & Fruit", en: "Produce" },
   { nl: "Vlees & Vis", en: "Protein" },
@@ -59,7 +58,6 @@ const SHOP_CATS = [
   { nl: "Overig", en: "Other" },
 ];
 
-// Alle losse UI-teksten
 const TXT = {
   tagline: { nl: "Persoonlijke voedingsschema's", en: "Personalized fuel plans" },
   yourStats: { nl: "Jouw gegevens", en: "Your stats" },
@@ -111,17 +109,13 @@ const TXT = {
   noDays: { nl: "Geen dagen ontvangen", en: "No days received" },
   unknownErr: { nl: "Onbekende fout", en: "Unknown error" },
   footer: { nl: "Schattingen, geen medisch advies. Drink voldoende water en raadpleeg een professional bij twijfel.", en: "Estimates, not medical advice. Drink enough water and consult a professional if in doubt." },
-  download: { nl: "⬇ Download als Excel", en: "⬇ Download as Excel" },
-  downloadHint: { nl: "Open 'm in Google Sheets om in Drive bij te houden en af te strepen.", en: "Open it in Google Sheets to track and tick off in Drive." },
   dlTitle: { nl: "Jouw downloads", en: "Your downloads" },
-  dlPlan: { nl: "⬇ Weekplan (Excel)", en: "⬇ Meal plan (Excel)" },
   dlTracker: { nl: "⬇ Download jouw tracker (Excel)", en: "⬇ Download your tracker (Excel)" },
   dlPreparing: { nl: "Tracker wordt gemaakt…", en: "Building your tracker…" },
   dlGuide: { nl: "⬇ Hyrox-voedingsgids (PDF)", en: "⬇ Hyrox nutrition guide (PDF)" },
   dlHint: { nl: "Eén Excel met alles: dashboard, grafiek, jouw weekplan, boodschappenlijst en recepten. Open 'm ook in Google Sheets om bij te houden.", en: "One Excel with everything: dashboard, chart, your week plan, shopping list and recipes. Open it in Google Sheets too to track and tick off." },
   emailedPlan: { nl: "📧 Ook naar je mail (betaaladres) gestuurd — je kunt 'm hieronder ook downloaden.", en: "📧 Also sent to your email — you can download it below too." },
   emailingPlan: { nl: "📧 Je plan wordt naar je mail gestuurd…", en: "📧 Sending your plan to your email…" },
-  // Paywall
   freeSample: { nl: "Gratis voorbeelddag", en: "Free sample day" },
   lockTitle: { nl: "Je persoonlijke weekplan", en: "Your personal week plan" },
   lockSub: { nl: "Je cijfers staan hierboven. Ontgrendel je volledige 7-daagse maaltijdplan met exacte gewichten, afgestemd op je trainingsdagen.", en: "Your numbers are above. Unlock your full 7-day meal plan with exact weights, tuned to your training days." },
@@ -132,10 +126,8 @@ const TXT = {
   unlockWeek: { nl: "Ontgrendel de week — €14,95", en: "Unlock the week — €14.95" },
   unlockBundle: { nl: "Week + Hyrox-gids — €17,95", en: "Week + Hyrox guide — €17.95" },
   lockFoot: { nl: "Direct beschikbaar na betaling.", en: "Available instantly after payment." },
-  lockedDays: { nl: "dagen vergrendeld", en: "days locked" },
   creditsOutTitle: { nl: "Je plannen zijn op", en: "You've used your plans" },
   creditsOutSub: { nl: "Je hebt je gegenereerde plannen gebruikt. Ontgrendel een nieuwe week om verder te gaan.", en: "You've used your generated plans. Unlock another week to continue." },
-  // Lead capture — gratis starter in ruil voor e-mail (vangt wie nog niet koopt)
   leadTitle: { nl: "Nog niet klaar om te kopen?", en: "Not ready to buy yet?" },
   leadSub: { nl: "Pak de gratis starter: 5 Hyrox-voedingsregels (40+) die 90% van de fouten oplossen. Direct in je inbox.", en: "Grab the free starter: 5 Hyrox fueling rules (40+) that fix 90% of mistakes. Straight to your inbox." },
   leadPh: { nl: "jouw@email.com", en: "your@email.com" },
@@ -143,10 +135,8 @@ const TXT = {
   leadSending: { nl: "Versturen…", en: "Sending…" },
   leadOkTitle: { nl: "Check je inbox ✓", en: "Check your inbox ✓" },
   leadOkBody: { nl: "We hebben de gratis Hyrox-starter naar je mail gestuurd. Kijk ook even in je spam.", en: "We've emailed you the free Hyrox starter. Check your spam folder too." },
-  leadDownload: { nl: "⬇ Download de gratis starter (PDF)", en: "⬇ Download the free starter (PDF)" },
   leadErr: { nl: "Er ging iets mis. Probeer het opnieuw.", en: "Something went wrong. Please try again." },
   leadBad: { nl: "Vul een geldig e-mailadres in.", en: "Enter a valid email address." },
-  // Kolomkoppen in het Excel-bestand
   xDay: { nl: "Dag", en: "Day" },
   xType: { nl: "Type", en: "Type" },
   xMeal: { nl: "Maaltijd", en: "Meal" },
@@ -159,27 +149,31 @@ const TXT = {
   xGot: { nl: "In huis?", en: "Got it?" },
   xSheetPlan: { nl: "Weekplan", en: "Week plan" },
   xSheetShop: { nl: "Boodschappen", en: "Shopping" },
+  // App-navigatie + PWA
+  navPlan: { nl: "Plan", en: "Plan" },
+  navToday: { nl: "Vandaag", en: "Today" },
+  navTracker: { nl: "Tracker", en: "Tracker" },
+  navRecipes: { nl: "Recepten", en: "Recipes" },
+  install: { nl: "Installeer de app", en: "Install the app" },
+  installHint: { nl: "Zet HybridFuelCo op je beginscherm — sneller, met herinneringen.", en: "Add HybridFuelCo to your home screen — faster, with reminders." },
+  installBtn: { nl: "Installeren", en: "Install" },
 };
 
 const fonts = `@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap');`;
 const num = (v, d = 0) => { const n = parseFloat(v); return isNaN(n) ? d : n; };
 
-// Schaalt de maaltijden van een dag naar het exacte dag-caloriedoel (de AI benadert
-// het maar raakt het niet precies). Porties en macro's schalen mee, dag telt op het doel.
 function scaleDayTo(tmpl, targetKcal) {
   if (!tmpl || !tmpl.m || !tmpl.m.length || !targetKcal) return tmpl;
   const actual = tmpl.m.reduce((a, m) => a + num(m.kcal), 0);
   if (!actual) return tmpl;
   const f = targetKcal / actual;
-  if (Math.abs(f - 1) < 0.04) return tmpl; // al dichtbij genoeg
+  if (Math.abs(f - 1) < 0.04) return tmpl;
   return {
     ...tmpl,
     m: tmpl.m.map((m) => ({
       ...m,
-      kcal: Math.round(num(m.kcal) * f),
-      p: Math.round(num(m.p) * f),
-      c: Math.round(num(m.c) * f),
-      f: Math.round(num(m.f) * f),
+      kcal: Math.round(num(m.kcal) * f), p: Math.round(num(m.p) * f),
+      c: Math.round(num(m.c) * f), f: Math.round(num(m.f) * f),
       ing: (m.ing || []).map((x) => ({ ...x, g: Math.round(num(x.g) * f) })),
     })),
   };
@@ -196,15 +190,22 @@ function categoryIndex(name) {
 }
 
 async function fetchChunk(payload) {
-  const res = await fetch("/api/plan", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
+  const res = await fetch("/api/plan", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || ("Fout " + res.status));
   return data;
 }
+
+// Onderbalk-iconen (lijn-stijl)
+const Icon = ({ name, on }) => {
+  const c = on ? EMBER : MUTED;
+  const p = { fill: "none", stroke: c, strokeWidth: 1.9, strokeLinecap: "round", strokeLinejoin: "round" };
+  if (name === "plan") return <svg width="23" height="23" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2" {...p} /><path d="M9 3.5h6v2.5H9z" {...p} /><path d="M8.5 10h7M8.5 14h7M8.5 18h4" {...p} /></svg>;
+  if (name === "today") return <svg width="23" height="23" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="16" rx="2" {...p} /><path d="M4 9h16M8 3v4M16 3v4" {...p} /><path d="M9 14l2 2 4-4" {...p} /></svg>;
+  if (name === "tracker") return <svg width="23" height="23" viewBox="0 0 24 24"><path d="M4 18l5-6 4 3 6-8" {...p} /><path d="M4 21h16" {...p} /></svg>;
+  if (name === "recipes") return <svg width="23" height="23" viewBox="0 0 24 24"><path d="M4 4v6a3 3 0 006 0V4M7 4v16" {...p} /><path d="M17 4c-1.5 0-2.5 2-2.5 5s1 4 2.5 4 2.5-1 2.5-4-1-5-2.5-5zM17 13v7" {...p} /></svg>;
+  return null;
+};
 
 export default function App() {
   const [lang, setLangState] = useState("en");
@@ -222,7 +223,7 @@ export default function App() {
   const [likes, setLikes] = useState("");
   const [cuisines, setCuisines] = useState([]);
   const [proteins, setProteins] = useState([]);
-  const [trainingDays, setTrainingDays] = useState([0, 2, 4]); // Ma/Wo/Vr standaard
+  const [trainingDays, setTrainingDays] = useState([0, 2, 4]);
 
   const [targets, setTargets] = useState(null);
   const [week, setWeek] = useState(null);
@@ -232,14 +233,19 @@ export default function App() {
   const [error, setError] = useState("");
   const [started, setStarted] = useState(false);
   const [unlocked, setUnlocked] = useState(false);
-  const [tier, setTier] = useState("week"); // "week" of "bundle" (bepaalt of de Hyrox-gids erbij komt)
+  const [tier, setTier] = useState("week");
   const [email, setEmail] = useState("");
-  const [leadStatus, setLeadStatus] = useState("idle"); // idle | sending | ok | err | bad
+  const [leadStatus, setLeadStatus] = useState("idle");
   const [trackerBusy, setTrackerBusy] = useState(false);
-  const [lockReason, setLockReason] = useState(""); // "" of "no_credits" (credits op)
-  const [planEmail, setPlanEmail] = useState(""); // "" | "sending" | "sent"
+  const [lockReason, setLockReason] = useState("");
+  const [planEmail, setPlanEmail] = useState("");
 
-  // Bij laden: taal herstellen + ontgrendeling checken (terugkomst van Stripe of eerder betaald).
+  // App-navigatie + PWA
+  const [tab, setTab] = useState("plan");
+  const [showReminders, setShowReminders] = useState(false);
+  const [installEvt, setInstallEvt] = useState(null);
+  const [installDismissed, setInstallDismissed] = useState(() => load("hf_install_dismissed", false));
+
   useEffect(() => {
     try { const l = localStorage.getItem("hf_lang"); if (l === "nl" || l === "en") setLangState(l); } catch (e) {}
 
@@ -256,7 +262,6 @@ export default function App() {
     const sid = params && params.get("session_id");
 
     if (sid) {
-      // Echt slot: betaling verifiëren bij de server. Pas bij "ok" ontgrendelen.
       fetch("/api/verify?session_id=" + encodeURIComponent(sid))
         .then((r) => r.json())
         .then((j) => {
@@ -271,91 +276,84 @@ export default function App() {
       return;
     }
 
-    // Terugkerende betaalde bezoeker, of dev-bypass (?paid=1, werkt tot het slot actief is).
     let u = false;
     try { if (localStorage.getItem("hf_unlocked") === "1") u = true; } catch (e) {}
     if (params && params.get("paid") === "1") u = true;
     if (u) {
-      // Ontgrendeling onthouden, maar NIET automatisch het oude plan tonen:
-      // bij openen zie je het startscherm, niet meteen een vorig plan.
       setUnlocked(true);
       try { const t = localStorage.getItem("hf_tier"); if (t === "bundle" || t === "week") setTier(t); } catch (e) {}
     }
+    // Opgeslagen plan laden voor de Vandaag-tab (zonder het startscherm van Plan te overschrijven).
+    const saved = load("hf_lastplan", null);
+    if (saved && saved.week && saved.week.days) { setWeek(saved.week); if (saved.targets) setTargets(saved.targets); }
   }, []);
 
-  const toggle = (val, list, setList) =>
-    setList(list.includes(val) ? list.filter((x) => x !== val) : [...list, val]);
+  // PWA install-prompt opvangen
+  useEffect(() => {
+    const onBip = (e) => { e.preventDefault(); setInstallEvt(e); };
+    const onInstalled = () => { setInstallEvt(null); };
+    window.addEventListener("beforeinstallprompt", onBip);
+    window.addEventListener("appinstalled", onInstalled);
+    return () => { window.removeEventListener("beforeinstallprompt", onBip); window.removeEventListener("appinstalled", onInstalled); };
+  }, []);
 
-  function labelsOf(ids, source) {
-    return ids.map((id) => { const o = source.find((x) => x.id === id); return o ? o[lang] : id; });
-  }
+  // Herinneringen best-effort checken (bij openen, elke minuut, bij terugkeren)
+  useEffect(() => {
+    checkReminders(lang);
+    const iv = setInterval(() => checkReminders(lang), 60000);
+    const onVis = () => { if (!document.hidden) checkReminders(lang); };
+    document.addEventListener("visibilitychange", onVis);
+    return () => { clearInterval(iv); document.removeEventListener("visibilitychange", onVis); };
+  }, [lang]);
+
+  async function doInstall() { if (!installEvt) return; try { installEvt.prompt(); await installEvt.userChoice; } catch (e) {} setInstallEvt(null); }
+  function dismissInstall() { setInstallDismissed(true); save("hf_install_dismissed", true); }
+
+  const toggle = (val, list, setList) => setList(list.includes(val) ? list.filter((x) => x !== val) : [...list, val]);
+  function labelsOf(ids, source) { return ids.map((id) => { const o = source.find((x) => x.id === id); return o ? o[lang] : id; }); }
 
   function common() {
     const dietObj = DIETS.find((d) => d.id === diet);
-    return {
-      sex, age, height, weight, activity, goal,
-      diet: dietObj ? dietObj[lang] : diet,
-      avoid, likes,
-      cuisines: labelsOf(cuisines, CUISINES),
-      proteins: labelsOf(proteins, PROTEINS),
-      lang,
-    };
+    return { sex, age, height, weight, activity, goal, diet: dietObj ? dietObj[lang] : diet, avoid, likes, cuisines: labelsOf(cuisines, CUISINES), proteins: labelsOf(proteins, PROTEINS), lang };
   }
-
-  function currentIntake() {
-    return { ...common(), trainingDays: [...trainingDays] };
-  }
+  function currentIntake() { return { ...common(), trainingDays: [...trainingDays] }; }
 
   async function handleBuild() {
     setError(""); setStarted(true); setView("plan"); setChecked({}); setWeek(null); setLockReason(""); setPlanEmail("");
     const intake = currentIntake();
     try { localStorage.setItem("hf_intake", JSON.stringify(intake)); } catch (e) {}
-    if (unlocked) await generatePaid(intake);
-    else await computeFree(intake);
+    if (unlocked) await generatePaid(intake); else await computeFree(intake);
   }
 
-  // GRATIS: alleen je persoonlijke macro's + trainings/rust-split. Geen AI, geen kosten.
   async function computeFree(intake) {
     setLoading(true); setTargets(null);
     try {
       const nTrain = (intake.trainingDays || []).length;
       const data = await fetchChunk({ ...intake, trainingCount: nTrain, paid: false });
       setTargets(data.targets);
-    } catch (e) {
-      setError(e && e.message ? e.message : T("unknownErr"));
-    } finally {
-      setLoading(false);
-    }
+    } catch (e) { setError(e && e.message ? e.message : T("unknownErr")); } finally { setLoading(false); }
   }
 
-  // E-MAIL CAPTURE: stuurt het adres naar /api/subscribe (server houdt de lijst bij).
   async function subscribe() {
     const e = (email || "").trim();
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) { setLeadStatus("bad"); return; }
     setLeadStatus("sending");
     try {
-      const res = await fetch("/api/subscribe", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: e, lang }),
-      });
+      const res = await fetch("/api/subscribe", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: e, lang }) });
       if (!res.ok) throw new Error("fail");
       setLeadStatus("ok");
     } catch (_) { setLeadStatus("err"); }
   }
 
-  // BETAALD: het volledige AI-maaltijdplan (7 dagen, met cycling).
   async function generatePaid(intake) {
     setLoading(true); setError("");
     try {
       const nTrain = (intake.trainingDays || []).length;
-      const request = (nTrain === 0 || nTrain === 7)
-        ? [{ label: "D1", level: "base" }]
-        : [{ label: "TR", level: "train" }, { label: "RS", level: "rest" }];
+      const request = (nTrain === 0 || nTrain === 7) ? [{ label: "D1", level: "base" }] : [{ label: "TR", level: "train" }, { label: "RS", level: "rest" }];
       const token = (() => { try { return localStorage.getItem("hf_token") || ""; } catch (e) { return ""; } })();
       const data = await fetchChunk({ ...intake, trainingCount: nTrain, request, paid: true, token });
       setTargets(data.targets);
-      if (data.locked || !data.plan) { // credits op of betaling niet geverifieerd → terug naar de betaalmuur
+      if (data.locked || !data.plan) {
         setUnlocked(false); setWeek(null); setLockReason(data.reason || "");
         try { localStorage.removeItem("hf_unlocked"); } catch (e) {}
         return;
@@ -377,12 +375,8 @@ export default function App() {
       });
       setWeek({ days });
       try { localStorage.setItem("hf_lastplan", JSON.stringify({ targets: data.targets, week: { days } })); } catch (e) {}
-      emailPlan({ days }); // vangnet: plan direct naar het betaaladres mailen
-    } catch (e) {
-      setError(e && e.message ? e.message : T("unknownErr"));
-    } finally {
-      setLoading(false);
-    }
+      emailPlan({ days });
+    } catch (e) { setError(e && e.message ? e.message : T("unknownErr")); } finally { setLoading(false); }
   }
 
   function shoppingFor(wk) {
@@ -395,14 +389,12 @@ export default function App() {
     })));
     const byCat = {};
     Object.entries(agg).forEach(([name, v]) => { (byCat[v.ci] = byCat[v.ci] || []).push({ name, g: Math.round(v.g) }); });
-    return SHOP_CATS.map((c, i) => ({ n: c[lang], items: byCat[i] })).filter((c) => c.items)
-      .map((c) => ({ n: c.n, items: c.items.sort((a, b) => b.g - a.g) }));
+    return SHOP_CATS.map((c, i) => ({ n: c[lang], items: byCat[i] })).filter((c) => c.items).map((c) => ({ n: c.n, items: c.items.sort((a, b) => b.g - a.g) }));
   }
 
   function exportExcel() {
     const XLSX = window.XLSX;
     if (!XLSX || !week) return;
-
     const planRows = [[T("xDay"), T("xType"), T("xMeal"), T("xDish"), T("xIng"), T("xEaten"), T("xNotes")]];
     week.days.forEach((day) => {
       const typ = day.train ? T("trainTag") : T("restTag");
@@ -414,7 +406,6 @@ export default function App() {
     });
     const ws1 = XLSX.utils.aoa_to_sheet(planRows);
     ws1["!cols"] = [{ wch: 6 }, { wch: 9 }, { wch: 10 }, { wch: 26 }, { wch: 40 }, { wch: 9 }, { wch: 22 }];
-
     const shopRows = [[T("xItem"), T("xQty"), T("xGot")]];
     shoppingFor(week).forEach((cat) => {
       shopRows.push([cat.n.toUpperCase(), "", ""]);
@@ -423,25 +414,17 @@ export default function App() {
     });
     const ws2 = XLSX.utils.aoa_to_sheet(shopRows);
     ws2["!cols"] = [{ wch: 28 }, { wch: 14 }, { wch: 9 }];
-
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws1, T("xSheetPlan"));
     XLSX.utils.book_append_sheet(wb, ws2, T("xSheetShop"));
     XLSX.writeFile(wb, "HybridFuelCo_MealPlan.xlsx");
   }
 
-  // Haalt de VOLLEDIGE tracker (dashboard, grafiek, weekplan, boodschappen, recepten)
-  // met het plan van de klant erin, via /api/tracker. Valt terug op het kale
-  // client-export als de server onverhoopt niet reageert.
   async function downloadTracker() {
     if (!week || trackerBusy) return;
     setTrackerBusy(true);
     try {
-      const res = await fetch("/api/tracker", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ week, shopping: shoppingFor(week), lang }),
-      });
+      const res = await fetch("/api/tracker", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ week, shopping: shoppingFor(week), lang }) });
       if (!res.ok) throw new Error("fail");
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
@@ -449,25 +432,15 @@ export default function App() {
       a.href = url; a.download = "HybridFuelCo_MealPlan.xlsx";
       document.body.appendChild(a); a.click(); a.remove();
       setTimeout(() => { try { URL.revokeObjectURL(url); } catch (e) {} }, 2000);
-    } catch (e) {
-      exportExcel(); // terugval: kaal weekplan client-side
-    } finally {
-      setTrackerBusy(false);
-    }
+    } catch (e) { exportExcel(); } finally { setTrackerBusy(false); }
   }
 
-  // Mailt de tracker automatisch naar het betaaladres (via /api/email-plan). Vangnet
-  // zodat de klant z'n plan altijd in de inbox heeft, ook zonder te downloaden.
   async function emailPlan(wk) {
     if (!wk || !wk.days) return;
     try {
       const token = (() => { try { return localStorage.getItem("hf_token") || ""; } catch (e) { return ""; } })();
       setPlanEmail("sending");
-      const res = await fetch("/api/email-plan", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ lang, week: wk, shopping: shoppingFor(wk), token }),
-      });
+      const res = await fetch("/api/email-plan", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ lang, week: wk, shopping: shoppingFor(wk), token }) });
       const j = await res.json().catch(() => ({}));
       setPlanEmail(j && j.emailed ? "sent" : "");
     } catch (e) { setPlanEmail(""); }
@@ -483,8 +456,7 @@ export default function App() {
   const FlagNL = <svg width="22" height="15" viewBox="0 0 9 6" style={{ borderRadius: 2, display: "block" }}><rect width="9" height="6" fill="#fff" /><rect width="9" height="2" fill="#AE1C28" /><rect y="4" width="9" height="2" fill="#21468B" /></svg>;
   const FlagGB = <svg width="22" height="15" viewBox="0 0 60 30" style={{ borderRadius: 2, display: "block" }}><clipPath id="gbc"><rect width="60" height="30" /></clipPath><g clipPath="url(#gbc)"><rect width="60" height="30" fill="#012169" /><path d="M0,0 60,30 M60,0 0,30" stroke="#fff" strokeWidth="6" /><path d="M0,0 60,30 M60,0 0,30" stroke="#C8102E" strokeWidth="4" /><path d="M30,0 V30 M0,15 H60" stroke="#fff" strokeWidth="10" /><path d="M30,0 V30 M0,15 H60" stroke="#C8102E" strokeWidth="6" /></g></svg>;
 
-  // Eén dagkaart (plan).
-  function DayCard({ day, di, sample }) {
+  function DayCard({ day, sample }) {
     const tot = day.m.reduce((a, m) => ({ kcal: a.kcal + num(m.kcal), p: a.p + num(m.p), c: a.c + num(m.c), f: a.f + num(m.f) }), { kcal: 0, p: 0, c: 0, f: 0 });
     return (
       <div style={{ background: INK2, border: `1px solid ${LINE}`, borderRadius: 12, overflow: "hidden" }}>
@@ -521,17 +493,22 @@ export default function App() {
   const lowBmi = !!(targets && targets.lowBmi);
   const safeText = lowBmi ? T("lowBmiWarn") : goal === "cut" ? T("safeCut") : goal === "gain" ? T("safeGain") : T("safeMaintain");
   const hasCycle = targets && targets.trainingCount > 0 && targets.trainingCount < 7 && targets.train && targets.rest;
-  const lockedCount = week ? Math.max(0, week.days.length - 1) : 0;
+
+  const NAV = [["plan", "navPlan"], ["today", "navToday"], ["tracker", "navTracker"], ["recipes", "navRecipes"]];
 
   return (
-    <div style={{ minHeight: "100vh", background: INK, color: PAPER, fontFamily: "Inter, sans-serif" }}>
-      <style dangerouslySetInnerHTML={{ __html: fonts + `*{box-sizing:border-box} select option{background:${INK2};color:${PAPER}} @keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}} .dot{animation:pulse 1s infinite}` }} />
+    <div style={{ minHeight: "100vh", background: INK, color: PAPER, fontFamily: "Inter, sans-serif", paddingBottom: 76 }}>
+      <style dangerouslySetInnerHTML={{ __html: fonts + `*{box-sizing:border-box} select option{background:${INK2};color:${PAPER}} @keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}} .dot{animation:pulse 1s infinite} input[type=date],input[type=time]{color-scheme:dark}` }} />
 
-      <div style={{ borderBottom: `1px solid ${LINE}`, padding: "16px 18px", display: "flex", alignItems: "center", gap: 12 }}>
-        <div style={{ width: 34, height: 34, borderRadius: 8, background: EMBER, display: "flex", alignItems: "center", justifyContent: "center", ...disp, fontWeight: 700, color: INK, fontSize: 20 }}>H</div>
-        <div style={{ flex: 1 }}>
-          <div style={{ ...disp, fontWeight: 700, fontSize: 21, letterSpacing: 0.5, lineHeight: 1 }}>HYBRIDFUEL<span style={{ color: EMBER }}>CO</span></div>
-          <div style={{ fontSize: 10.5, color: MUTED, letterSpacing: 1, textTransform: "uppercase", marginTop: 3 }}>{T("tagline")}</div>
+      {/* HEADER */}
+      <div style={{ borderBottom: `1px solid ${LINE}`, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, position: "sticky", top: 0, background: INK, zIndex: 20 }}>
+        <div style={{ width: 32, height: 32, borderRadius: 8, background: EMBER, display: "flex", alignItems: "center", justifyContent: "center", ...disp, fontWeight: 700, color: INK, fontSize: 19 }}>H</div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ ...disp, fontWeight: 700, fontSize: 19, letterSpacing: 0.5, lineHeight: 1 }}>HYBRIDFUEL<span style={{ color: EMBER }}>CO</span></div>
+          <div style={{ fontSize: 10, color: MUTED, letterSpacing: 1, textTransform: "uppercase", marginTop: 3 }}>{T("tagline")}</div>
+        </div>
+        <div onClick={() => setShowReminders(true)} title="Reminders" style={{ cursor: "pointer", padding: 6, display: "flex", alignItems: "center" }}>
+          <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke={MUTED} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0" /></svg>
         </div>
         <div style={{ display: "flex", gap: 6 }}>
           <div onClick={() => setLang("nl")} style={flagBtn(lang === "nl")} title="Nederlands">{FlagNL}</div>
@@ -539,239 +516,262 @@ export default function App() {
         </div>
       </div>
 
-      <div style={{ maxWidth: 1080, margin: "0 auto", padding: 16, display: "grid", gridTemplateColumns: "minmax(0,1fr)", gap: 18 }}>
-        <div style={{ background: INK2, border: `1px solid ${LINE}`, borderRadius: 14, padding: 18 }}>
-          <div style={{ ...disp, fontSize: 15, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 6, color: EMBER }}>{T("yourStats")}</div>
-          <div style={{ fontSize: 11, color: MUTED, lineHeight: 1.5, marginBottom: 14 }}>{T("statsHint")}</div>
-
-          <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
-            {[["male", T("man")], ["female", T("woman")]].map(([id, lbl]) => (
-              <div key={id} onClick={() => setSex(id)} style={{ ...segS(sex === id), padding: "10px 0" }}>{lbl}</div>
-            ))}
+      {/* INSTALL-BANNER */}
+      {installEvt && !installDismissed && (
+        <div style={{ background: "rgba(232,50,30,0.1)", borderBottom: `1px solid ${LINE}`, padding: "10px 16px", display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 13, fontWeight: 600 }}>{T("install")}</div>
+            <div style={{ fontSize: 11, color: MUTED, marginTop: 1 }}>{T("installHint")}</div>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 14 }}>
-            <div><label style={label}>{T("age")}</label><input style={input} value={age} onChange={(e) => setAge(e.target.value)} inputMode="numeric" /></div>
-            <div><label style={label}>{T("height")}</label><input style={input} value={height} onChange={(e) => setHeight(e.target.value)} inputMode="numeric" /></div>
-            <div><label style={label}>{T("weight")}</label><input style={input} value={weight} onChange={(e) => setWeight(e.target.value)} inputMode="numeric" /></div>
-          </div>
-          <div style={{ marginBottom: 14 }}>
-            <label style={label}>{T("trainingLoad")}</label>
-            <select style={input} value={activity} onChange={(e) => setActivity(e.target.value)}>
-              {ACTIVITY.map((a) => <option key={a.id} value={a.id}>{a[lang]}</option>)}
-            </select>
-          </div>
-          <div style={{ marginBottom: 14 }}>
-            <label style={label}>{T("goal")}</label>
-            <div style={{ display: "flex", gap: 8 }}>
-              {GOALS.map((g) => <div key={g.id} onClick={() => setGoal(g.id)} style={segS(goal === g.id)}>{g[lang]}</div>)}
-            </div>
-          </div>
-          <div style={{ marginBottom: 14 }}>
-            <label style={label}>{T("diet")}</label>
-            <select style={input} value={diet} onChange={(e) => setDiet(e.target.value)}>
-              {DIETS.map((d) => <option key={d.id} value={d.id}>{d[lang]}</option>)}
-            </select>
-          </div>
-          <div style={{ marginBottom: 16 }}>
-            <label style={label}>{T("avoid")}</label>
-            <input style={input} value={avoid} onChange={(e) => setAvoid(e.target.value)} placeholder={T("avoidPh")} />
-          </div>
-
-          <div style={{ height: 1, background: LINE, margin: "2px 0 16px" }} />
-          <div style={{ ...disp, fontSize: 15, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 14, color: EMBER }}>{T("whatYouLove")}</div>
-          <div style={{ marginBottom: 14 }}>
-            <label style={label}>{T("favFoods")}</label>
-            <input style={input} value={likes} onChange={(e) => setLikes(e.target.value)} placeholder={T("favPh")} />
-          </div>
-          <div style={{ marginBottom: 14 }}>
-            <label style={label}>{T("goToProteins")}</label>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
-              {PROTEINS.map((p) => <div key={p.id} onClick={() => toggle(p.id, proteins, setProteins)} style={chipS(proteins.includes(p.id))}>{p[lang]}</div>)}
-            </div>
-          </div>
-          <div style={{ marginBottom: 16 }}>
-            <label style={label}>{T("cuisine")}</label>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
-              {CUISINES.map((c) => <div key={c.id} onClick={() => toggle(c.id, cuisines, setCuisines)} style={chipS(cuisines.includes(c.id))}>{c[lang]}</div>)}
-            </div>
-          </div>
-
-          <div style={{ height: 1, background: LINE, margin: "2px 0 16px" }} />
-          <div style={{ marginBottom: 18 }}>
-            <label style={label}>{T("trainingDays")}</label>
-            <div style={{ display: "flex", gap: 5, marginBottom: 8 }}>
-              {WD[lang].map((d, i) => <div key={i} onClick={() => toggle(i, trainingDays, setTrainingDays)} style={dayChip(trainingDays.includes(i))}>{d}</div>)}
-            </div>
-            <div style={{ fontSize: 11, color: MUTED, lineHeight: 1.5 }}>{T("trainingDaysHint")}</div>
-          </div>
-
-          <button onClick={handleBuild} disabled={loading} style={{ width: "100%", background: EMBER, color: INK, border: "none", padding: "14px 0", borderRadius: 10, ...disp, fontWeight: 700, fontSize: 16, letterSpacing: 1, textTransform: "uppercase", cursor: loading ? "default" : "pointer", opacity: loading ? 0.7 : 1 }}>
-            {loading ? T("building") : T("build")}
-          </button>
+          <button onClick={doInstall} style={{ background: EMBER, color: INK, border: "none", padding: "8px 14px", borderRadius: 8, ...disp, fontWeight: 700, fontSize: 12.5, letterSpacing: 0.5, cursor: "pointer", whiteSpace: "nowrap" }}>{T("installBtn")}</button>
+          <div onClick={dismissInstall} style={{ cursor: "pointer", color: MUTED, fontSize: 20, lineHeight: 1, padding: "0 2px" }}>×</div>
         </div>
+      )}
 
-        <div>
-          {!started && (
-            <div style={{ border: `1px dashed ${LINE}`, borderRadius: 14, padding: "48px 24px", textAlign: "center", color: MUTED }}>
-              <div style={{ ...disp, fontSize: 24, fontWeight: 600, color: PAPER, marginBottom: 8 }}>{T("emptyTitle")}</div>
-              <div style={{ fontSize: 13.5, lineHeight: 1.6 }}>{T("emptyBody")}</div>
+      <div style={{ maxWidth: 680, margin: "0 auto", padding: 16 }}>
+
+        {/* ====== PLAN TAB ====== */}
+        {tab === "plan" && (
+          <div style={{ display: "grid", gap: 18 }}>
+            <div style={{ background: INK2, border: `1px solid ${LINE}`, borderRadius: 14, padding: 18 }}>
+              <div style={{ ...disp, fontSize: 15, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 6, color: EMBER }}>{T("yourStats")}</div>
+              <div style={{ fontSize: 11, color: MUTED, lineHeight: 1.5, marginBottom: 14 }}>{T("statsHint")}</div>
+
+              <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
+                {[["male", T("man")], ["female", T("woman")]].map(([id, lbl]) => (
+                  <div key={id} onClick={() => setSex(id)} style={{ ...segS(sex === id), padding: "10px 0" }}>{lbl}</div>
+                ))}
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 14 }}>
+                <div><label style={label}>{T("age")}</label><input style={input} value={age} onChange={(e) => setAge(e.target.value)} inputMode="numeric" /></div>
+                <div><label style={label}>{T("height")}</label><input style={input} value={height} onChange={(e) => setHeight(e.target.value)} inputMode="numeric" /></div>
+                <div><label style={label}>{T("weight")}</label><input style={input} value={weight} onChange={(e) => setWeight(e.target.value)} inputMode="numeric" /></div>
+              </div>
+              <div style={{ marginBottom: 14 }}>
+                <label style={label}>{T("trainingLoad")}</label>
+                <select style={input} value={activity} onChange={(e) => setActivity(e.target.value)}>
+                  {ACTIVITY.map((a) => <option key={a.id} value={a.id}>{a[lang]}</option>)}
+                </select>
+              </div>
+              <div style={{ marginBottom: 14 }}>
+                <label style={label}>{T("goal")}</label>
+                <div style={{ display: "flex", gap: 8 }}>
+                  {GOALS.map((g) => <div key={g.id} onClick={() => setGoal(g.id)} style={segS(goal === g.id)}>{g[lang]}</div>)}
+                </div>
+              </div>
+              <div style={{ marginBottom: 14 }}>
+                <label style={label}>{T("diet")}</label>
+                <select style={input} value={diet} onChange={(e) => setDiet(e.target.value)}>
+                  {DIETS.map((d) => <option key={d.id} value={d.id}>{d[lang]}</option>)}
+                </select>
+              </div>
+              <div style={{ marginBottom: 16 }}>
+                <label style={label}>{T("avoid")}</label>
+                <input style={input} value={avoid} onChange={(e) => setAvoid(e.target.value)} placeholder={T("avoidPh")} />
+              </div>
+
+              <div style={{ height: 1, background: LINE, margin: "2px 0 16px" }} />
+              <div style={{ ...disp, fontSize: 15, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 14, color: EMBER }}>{T("whatYouLove")}</div>
+              <div style={{ marginBottom: 14 }}>
+                <label style={label}>{T("favFoods")}</label>
+                <input style={input} value={likes} onChange={(e) => setLikes(e.target.value)} placeholder={T("favPh")} />
+              </div>
+              <div style={{ marginBottom: 14 }}>
+                <label style={label}>{T("goToProteins")}</label>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+                  {PROTEINS.map((p) => <div key={p.id} onClick={() => toggle(p.id, proteins, setProteins)} style={chipS(proteins.includes(p.id))}>{p[lang]}</div>)}
+                </div>
+              </div>
+              <div style={{ marginBottom: 16 }}>
+                <label style={label}>{T("cuisine")}</label>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+                  {CUISINES.map((c) => <div key={c.id} onClick={() => toggle(c.id, cuisines, setCuisines)} style={chipS(cuisines.includes(c.id))}>{c[lang]}</div>)}
+                </div>
+              </div>
+
+              <div style={{ height: 1, background: LINE, margin: "2px 0 16px" }} />
+              <div style={{ marginBottom: 18 }}>
+                <label style={label}>{T("trainingDays")}</label>
+                <div style={{ display: "flex", gap: 5, marginBottom: 8 }}>
+                  {WD[lang].map((d, i) => <div key={i} onClick={() => toggle(i, trainingDays, setTrainingDays)} style={dayChip(trainingDays.includes(i))}>{d}</div>)}
+                </div>
+                <div style={{ fontSize: 11, color: MUTED, lineHeight: 1.5 }}>{T("trainingDaysHint")}</div>
+              </div>
+
+              <button onClick={handleBuild} disabled={loading} style={{ width: "100%", background: EMBER, color: INK, border: "none", padding: "14px 0", borderRadius: 10, ...disp, fontWeight: 700, fontSize: 16, letterSpacing: 1, textTransform: "uppercase", cursor: loading ? "default" : "pointer", opacity: loading ? 0.7 : 1 }}>
+                {loading ? T("building") : T("build")}
+              </button>
             </div>
-          )}
 
-          {started && (
-            <>
-              {targets && (
-                <div style={{ background: INK2, border: `1px solid ${LINE}`, borderRadius: 14, padding: 16, marginBottom: 16 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 12 }}>
-                    <div style={{ ...label, marginBottom: 0 }}>{T("dailyTargets")}</div>
-                    <div style={{ ...disp, fontSize: 28, fontWeight: 700 }}>{targets.kcal}<span style={{ fontSize: 12, color: MUTED, fontWeight: 400, marginLeft: 5 }}>kcal</span></div>
-                  </div>
-                  {targets.maintenance != null && (
-                    <div style={{ fontSize: 12, color: MUTED, marginBottom: 12 }}>
-                      {T("maintenance")} ≈ <span style={{ color: PAPER }}>{targets.maintenance} kcal</span>{targets.kcal !== targets.maintenance && <> · {targets.kcal < targets.maintenance ? (targets.maintenance - targets.kcal) + " " + T("below") : (targets.kcal - targets.maintenance) + " " + T("above")}</>}{targets.bmi != null && <> · BMI <span style={{ color: PAPER }}>{targets.bmi}</span></>}
-                    </div>
-                  )}
-                  {targets.bmi != null && (
-                    <div style={{ fontSize: 11, color: MUTED, marginBottom: 12, lineHeight: 1.5 }}>{T("bmiNote")}</div>
-                  )}
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
-                    {[[T("protein"), targets.protein, EMBER], [T("carbs"), targets.carbs, EMBER_SOFT], [T("fat"), targets.fat, SAGE]].map(([n, v, c]) => (
-                      <div key={n} style={{ background: INK, borderRadius: 10, padding: "10px 12px", borderLeft: `3px solid ${c}` }}>
-                        <div style={{ fontSize: 10, letterSpacing: 1, textTransform: "uppercase", color: MUTED, fontWeight: 600 }}>{n}</div>
-                        <div style={{ ...disp, fontSize: 20, fontWeight: 600 }}>{v}<span style={{ fontSize: 10, color: MUTED, marginLeft: 3 }}>g</span></div>
-                      </div>
-                    ))}
-                  </div>
-                  {hasCycle && (
-                    <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-                      <div style={{ flex: 1, background: INK, borderRadius: 10, padding: "9px 12px", borderLeft: `3px solid ${EMBER}` }}>
-                        <div style={{ fontSize: 10, letterSpacing: 1, textTransform: "uppercase", color: MUTED, fontWeight: 600 }}>{T("cycleTrain")}</div>
-                        <div style={{ ...disp, fontSize: 18, fontWeight: 600 }}>{targets.train.kcal}<span style={{ fontSize: 10, color: MUTED, marginLeft: 3 }}>kcal · {targets.train.carbs}g {T("carbs").toLowerCase()}</span></div>
-                      </div>
-                      <div style={{ flex: 1, background: INK, borderRadius: 10, padding: "9px 12px", borderLeft: `3px solid ${SAGE}` }}>
-                        <div style={{ fontSize: 10, letterSpacing: 1, textTransform: "uppercase", color: MUTED, fontWeight: 600 }}>{T("cycleRest")}</div>
-                        <div style={{ ...disp, fontSize: 18, fontWeight: 600 }}>{targets.rest.kcal}<span style={{ fontSize: 10, color: MUTED, marginLeft: 3 }}>kcal · {targets.rest.carbs}g {T("carbs").toLowerCase()}</span></div>
-                      </div>
-                    </div>
-                  )}
-                  <div style={lowBmi
-                    ? { marginTop: 12, border: `1px solid ${EMBER}`, background: "rgba(232,50,30,0.14)", borderRadius: 10, padding: "10px 12px" }
-                    : { marginTop: 12, borderLeft: `2px solid ${EMBER}`, padding: "2px 0 2px 12px" }}>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: PAPER, textTransform: "uppercase", letterSpacing: 0.5 }}>{lowBmi ? "⚠ " + T("lowBmiTitle") : T("safeTitle")}. </span>
-                    <span style={{ fontSize: 11.5, color: lowBmi ? PAPER : MUTED, lineHeight: 1.5 }}>{safeText}</span>
-                  </div>
+            <div>
+              {!started && (
+                <div style={{ border: `1px dashed ${LINE}`, borderRadius: 14, padding: "48px 24px", textAlign: "center", color: MUTED }}>
+                  <div style={{ ...disp, fontSize: 24, fontWeight: 600, color: PAPER, marginBottom: 8 }}>{T("emptyTitle")}</div>
+                  <div style={{ fontSize: 13.5, lineHeight: 1.6 }}>{T("emptyBody")}</div>
                 </div>
               )}
 
-              {loading && <div style={{ textAlign: "center", padding: "40px 0", color: EMBER, ...disp, fontSize: 17, letterSpacing: 1 }}><span className="dot">{T("cooking")}</span></div>}
-
-              {error && !loading && (
-                <div style={{ background: "rgba(232,50,30,0.1)", border: `1px solid ${EMBER}`, borderRadius: 12, padding: 16, textAlign: "center" }}>
-                  <div style={{ marginBottom: 12, color: PAPER, fontSize: 13, wordBreak: "break-word" }}>{error}</div>
-                  <button onClick={handleBuild} style={{ background: EMBER, color: INK, border: "none", padding: "9px 22px", borderRadius: 8, fontWeight: 700, cursor: "pointer", ...disp, letterSpacing: 1 }}>{T("retry")}</button>
-                </div>
-              )}
-
-              {/* ONTGRENDELD: volledige weergave met tabs + download */}
-              {week && !loading && unlocked && (
+              {started && (
                 <>
-                  <div style={{ background: INK2, border: `1px solid ${LINE}`, borderRadius: 14, padding: 16, marginBottom: 16 }}>
-                    <div style={{ ...label, marginBottom: 10 }}>{T("dlTitle")}</div>
-                    {planEmail === "sent" && <div style={{ fontSize: 12, color: SAGE, marginBottom: 10, lineHeight: 1.5 }}>{T("emailedPlan")}</div>}
-                    {planEmail === "sending" && <div style={{ fontSize: 12, color: MUTED, marginBottom: 10, lineHeight: 1.5 }}>{T("emailingPlan")}</div>}
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-                      <div onClick={downloadTracker} style={{ cursor: trackerBusy ? "default" : "pointer", opacity: trackerBusy ? 0.7 : 1, padding: "10px 16px", borderRadius: 8, border: "none", background: EMBER, color: INK, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.3 }}>{trackerBusy ? T("dlPreparing") : T("dlTracker")}</div>
-                      {tier === "bundle" && <a href={`https://www.hybridfuelco.com/hyrox-guide-${lang}.pdf`} target="_blank" rel="noopener" style={{ textDecoration: "none", padding: "10px 16px", borderRadius: 8, border: `1px solid ${EMBER}`, color: EMBER, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.3 }}>{T("dlGuide")}</a>}
-                    </div>
-                    <div style={{ fontSize: 11.5, color: MUTED, marginTop: 10, lineHeight: 1.5 }}>{T("dlHint")}</div>
-                  </div>
-                  <div style={{ marginBottom: 14 }}>
-                    <div style={{ display: "inline-flex", gap: 4, background: INK2, border: `1px solid ${LINE}`, borderRadius: 10, padding: 4 }}>
-                      {[["plan", T("tabPlan")], ["shop", T("tabShop")]].map(([id, lbl]) => (
-                        <div key={id} onClick={() => setView(id)} style={{ padding: "8px 16px", borderRadius: 7, background: view === id ? EMBER : "transparent", color: view === id ? INK : PAPER, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.5, cursor: "pointer" }}>{lbl}</div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {view === "plan" && (
-                    <div style={{ display: "grid", gap: 12 }}>
-                      {week.days.map((day, di) => <DayCard key={di} day={day} di={di} />)}
+                  {targets && (
+                    <div style={{ background: INK2, border: `1px solid ${LINE}`, borderRadius: 14, padding: 16, marginBottom: 16 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 12 }}>
+                        <div style={{ ...label, marginBottom: 0 }}>{T("dailyTargets")}</div>
+                        <div style={{ ...disp, fontSize: 28, fontWeight: 700 }}>{targets.kcal}<span style={{ fontSize: 12, color: MUTED, fontWeight: 400, marginLeft: 5 }}>kcal</span></div>
+                      </div>
+                      {targets.maintenance != null && (
+                        <div style={{ fontSize: 12, color: MUTED, marginBottom: 12 }}>
+                          {T("maintenance")} ≈ <span style={{ color: PAPER }}>{targets.maintenance} kcal</span>{targets.kcal !== targets.maintenance && <> · {targets.kcal < targets.maintenance ? (targets.maintenance - targets.kcal) + " " + T("below") : (targets.kcal - targets.maintenance) + " " + T("above")}</>}{targets.bmi != null && <> · BMI <span style={{ color: PAPER }}>{targets.bmi}</span></>}
+                        </div>
+                      )}
+                      {targets.bmi != null && (<div style={{ fontSize: 11, color: MUTED, marginBottom: 12, lineHeight: 1.5 }}>{T("bmiNote")}</div>)}
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+                        {[[T("protein"), targets.protein, EMBER], [T("carbs"), targets.carbs, EMBER_SOFT], [T("fat"), targets.fat, SAGE]].map(([n, v, c]) => (
+                          <div key={n} style={{ background: INK, borderRadius: 10, padding: "10px 12px", borderLeft: `3px solid ${c}` }}>
+                            <div style={{ fontSize: 10, letterSpacing: 1, textTransform: "uppercase", color: MUTED, fontWeight: 600 }}>{n}</div>
+                            <div style={{ ...disp, fontSize: 20, fontWeight: 600 }}>{v}<span style={{ fontSize: 10, color: MUTED, marginLeft: 3 }}>g</span></div>
+                          </div>
+                        ))}
+                      </div>
+                      {hasCycle && (
+                        <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+                          <div style={{ flex: 1, background: INK, borderRadius: 10, padding: "9px 12px", borderLeft: `3px solid ${EMBER}` }}>
+                            <div style={{ fontSize: 10, letterSpacing: 1, textTransform: "uppercase", color: MUTED, fontWeight: 600 }}>{T("cycleTrain")}</div>
+                            <div style={{ ...disp, fontSize: 18, fontWeight: 600 }}>{targets.train.kcal}<span style={{ fontSize: 10, color: MUTED, marginLeft: 3 }}>kcal · {targets.train.carbs}g {T("carbs").toLowerCase()}</span></div>
+                          </div>
+                          <div style={{ flex: 1, background: INK, borderRadius: 10, padding: "9px 12px", borderLeft: `3px solid ${SAGE}` }}>
+                            <div style={{ fontSize: 10, letterSpacing: 1, textTransform: "uppercase", color: MUTED, fontWeight: 600 }}>{T("cycleRest")}</div>
+                            <div style={{ ...disp, fontSize: 18, fontWeight: 600 }}>{targets.rest.kcal}<span style={{ fontSize: 10, color: MUTED, marginLeft: 3 }}>kcal · {targets.rest.carbs}g {T("carbs").toLowerCase()}</span></div>
+                          </div>
+                        </div>
+                      )}
+                      <div style={lowBmi ? { marginTop: 12, border: `1px solid ${EMBER}`, background: "rgba(232,50,30,0.14)", borderRadius: 10, padding: "10px 12px" } : { marginTop: 12, borderLeft: `2px solid ${EMBER}`, padding: "2px 0 2px 12px" }}>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: PAPER, textTransform: "uppercase", letterSpacing: 0.5 }}>{lowBmi ? "⚠ " + T("lowBmiTitle") : T("safeTitle")}. </span>
+                        <span style={{ fontSize: 11.5, color: lowBmi ? PAPER : MUTED, lineHeight: 1.5 }}>{safeText}</span>
+                      </div>
                     </div>
                   )}
-                  {view === "shop" && (
-                    <div style={{ display: "grid", gap: 12 }}>
-                      <div style={{ fontSize: 12, color: MUTED }}>{T("shopHint")}</div>
-                      {shoppingFor(week).map((cat, ci) => (
-                        <div key={ci} style={{ background: INK2, border: `1px solid ${LINE}`, borderRadius: 12, overflow: "hidden" }}>
-                          <div style={{ padding: "10px 14px", background: INK, borderBottom: `1px solid ${LINE}`, ...disp, fontWeight: 600, fontSize: 13.5, letterSpacing: 1, textTransform: "uppercase", color: EMBER }}>{cat.n}</div>
-                          {cat.items.map((item, ii) => {
-                            const key = cat.n + ":" + item.name, on = checked[key];
-                            return (
-                              <div key={ii} onClick={() => setChecked((p) => ({ ...p, [key]: !p[key] }))} style={{ display: "flex", alignItems: "center", gap: 11, padding: "10px 14px", borderBottom: ii < cat.items.length - 1 ? `1px solid ${LINE}` : "none", cursor: "pointer" }}>
-                                <div style={{ width: 19, height: 19, borderRadius: 6, border: `2px solid ${on ? EMBER : MUTED}`, background: on ? EMBER : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: INK, fontSize: 12, fontWeight: 800 }}>{on ? "✓" : ""}</div>
-                                <div style={{ flex: 1, fontSize: 13.5, color: on ? MUTED : PAPER, textDecoration: on ? "line-through" : "none" }}>{item.name}</div>
-                                <div style={{ fontSize: 12.5, color: on ? MUTED : EMBER, fontWeight: 600, ...disp }}>{item.g >= 1000 ? (item.g / 1000).toFixed(1) + " kg" : item.g + " g"}</div>
-                              </div>
-                            );
-                          })}
+
+                  {loading && <div style={{ textAlign: "center", padding: "40px 0", color: EMBER, ...disp, fontSize: 17, letterSpacing: 1 }}><span className="dot">{T("cooking")}</span></div>}
+
+                  {error && !loading && (
+                    <div style={{ background: "rgba(232,50,30,0.1)", border: `1px solid ${EMBER}`, borderRadius: 12, padding: 16, textAlign: "center" }}>
+                      <div style={{ marginBottom: 12, color: PAPER, fontSize: 13, wordBreak: "break-word" }}>{error}</div>
+                      <button onClick={handleBuild} style={{ background: EMBER, color: INK, border: "none", padding: "9px 22px", borderRadius: 8, fontWeight: 700, cursor: "pointer", ...disp, letterSpacing: 1 }}>{T("retry")}</button>
+                    </div>
+                  )}
+
+                  {week && !loading && unlocked && (
+                    <>
+                      <div style={{ background: INK2, border: `1px solid ${LINE}`, borderRadius: 14, padding: 16, marginBottom: 16 }}>
+                        <div style={{ ...label, marginBottom: 10 }}>{T("dlTitle")}</div>
+                        {planEmail === "sent" && <div style={{ fontSize: 12, color: SAGE, marginBottom: 10, lineHeight: 1.5 }}>{T("emailedPlan")}</div>}
+                        {planEmail === "sending" && <div style={{ fontSize: 12, color: MUTED, marginBottom: 10, lineHeight: 1.5 }}>{T("emailingPlan")}</div>}
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+                          <div onClick={downloadTracker} style={{ cursor: trackerBusy ? "default" : "pointer", opacity: trackerBusy ? 0.7 : 1, padding: "10px 16px", borderRadius: 8, border: "none", background: EMBER, color: INK, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.3 }}>{trackerBusy ? T("dlPreparing") : T("dlTracker")}</div>
+                          {tier === "bundle" && <a href={`https://www.hybridfuelco.com/hyrox-guide-${lang}.pdf`} target="_blank" rel="noopener" style={{ textDecoration: "none", padding: "10px 16px", borderRadius: 8, border: `1px solid ${EMBER}`, color: EMBER, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.3 }}>{T("dlGuide")}</a>}
                         </div>
-                      ))}
+                        <div style={{ fontSize: 11.5, color: MUTED, marginTop: 10, lineHeight: 1.5 }}>{T("dlHint")}</div>
+                      </div>
+                      <div style={{ marginBottom: 14 }}>
+                        <div style={{ display: "inline-flex", gap: 4, background: INK2, border: `1px solid ${LINE}`, borderRadius: 10, padding: 4 }}>
+                          {[["plan", T("tabPlan")], ["shop", T("tabShop")]].map(([id, lbl]) => (
+                            <div key={id} onClick={() => setView(id)} style={{ padding: "8px 16px", borderRadius: 7, background: view === id ? EMBER : "transparent", color: view === id ? INK : PAPER, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.5, cursor: "pointer" }}>{lbl}</div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {view === "plan" && (<div style={{ display: "grid", gap: 12 }}>{week.days.map((day, di) => <DayCard key={di} day={day} />)}</div>)}
+                      {view === "shop" && (
+                        <div style={{ display: "grid", gap: 12 }}>
+                          <div style={{ fontSize: 12, color: MUTED }}>{T("shopHint")}</div>
+                          {shoppingFor(week).map((cat, ci) => (
+                            <div key={ci} style={{ background: INK2, border: `1px solid ${LINE}`, borderRadius: 12, overflow: "hidden" }}>
+                              <div style={{ padding: "10px 14px", background: INK, borderBottom: `1px solid ${LINE}`, ...disp, fontWeight: 600, fontSize: 13.5, letterSpacing: 1, textTransform: "uppercase", color: EMBER }}>{cat.n}</div>
+                              {cat.items.map((item, ii) => {
+                                const key = cat.n + ":" + item.name, on = checked[key];
+                                return (
+                                  <div key={ii} onClick={() => setChecked((p) => ({ ...p, [key]: !p[key] }))} style={{ display: "flex", alignItems: "center", gap: 11, padding: "10px 14px", borderBottom: ii < cat.items.length - 1 ? `1px solid ${LINE}` : "none", cursor: "pointer" }}>
+                                    <div style={{ width: 19, height: 19, borderRadius: 6, border: `2px solid ${on ? EMBER : MUTED}`, background: on ? EMBER : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: INK, fontSize: 12, fontWeight: 800 }}>{on ? "✓" : ""}</div>
+                                    <div style={{ flex: 1, fontSize: 13.5, color: on ? MUTED : PAPER, textDecoration: on ? "line-through" : "none" }}>{item.name}</div>
+                                    <div style={{ fontSize: 12.5, color: on ? MUTED : EMBER, fontWeight: 600, ...disp }}>{item.g >= 1000 ? (item.g / 1000).toFixed(1) + " kg" : item.g + " g"}</div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {targets && !loading && !error && !unlocked && (
+                    <div style={{ border: `1px solid ${EMBER}`, borderRadius: 14, padding: 20, background: "linear-gradient(180deg, rgba(232,50,30,0.09), transparent 60%)" }}>
+                      <div style={{ ...disp, fontSize: 20, fontWeight: 700, letterSpacing: 0.3, marginBottom: 6 }}>{lockReason === "no_credits" ? T("creditsOutTitle") : T("lockTitle")}</div>
+                      <div style={{ fontSize: 12.5, color: MUTED, marginBottom: 16, lineHeight: 1.5 }}>{lockReason === "no_credits" ? T("creditsOutSub") : T("lockSub")}</div>
+                      <div style={{ display: "grid", gap: 9, marginBottom: 18 }}>
+                        {[T("lb1"), T("lb2"), T("lb3")].map((t, i) => (
+                          <div key={i} style={{ display: "flex", gap: 9, alignItems: "flex-start", fontSize: 13.5 }}><span style={{ color: EMBER, fontWeight: 800 }}>✓</span><span>{t}</span></div>
+                        ))}
+                        <div style={{ display: "flex", gap: 9, alignItems: "flex-start", fontSize: 13.5, color: MUTED }}><span style={{ color: EMBER_SOFT, fontWeight: 800 }}>+</span><span>{T("lbBundle")}</span></div>
+                      </div>
+                      <a href={STRIPE_WEEK_LINK} style={{ display: "block", textAlign: "center", background: EMBER, color: INK, textDecoration: "none", padding: "14px 0", borderRadius: 10, ...disp, fontWeight: 700, fontSize: 15.5, letterSpacing: 0.5, marginBottom: 9 }}>{T("unlockWeek")}</a>
+                      <a href={STRIPE_BUNDLE_LINK} style={{ display: "block", textAlign: "center", background: "transparent", color: PAPER, textDecoration: "none", padding: "12px 0", borderRadius: 10, border: `1px solid ${LINE}`, ...disp, fontWeight: 700, fontSize: 14, letterSpacing: 0.5 }}>{T("unlockBundle")}</a>
+                      <div style={{ fontSize: 11, color: MUTED, marginTop: 12, textAlign: "center" }}>{T("lockFoot")}</div>
+                    </div>
+                  )}
+
+                  {targets && !loading && !error && !unlocked && (
+                    <div style={{ marginTop: 16, border: `1px solid ${LINE}`, borderRadius: 14, padding: 18, background: INK2 }}>
+                      {leadStatus === "ok" ? (
+                        <div>
+                          <div style={{ ...disp, fontSize: 16, fontWeight: 700, marginBottom: 4 }}>{T("leadOkTitle")}</div>
+                          <div style={{ fontSize: 12.5, color: MUTED, lineHeight: 1.5 }}>{T("leadOkBody")}</div>
+                        </div>
+                      ) : (
+                        <div>
+                          <div style={{ ...disp, fontSize: 16, fontWeight: 700, marginBottom: 4 }}>{T("leadTitle")}</div>
+                          <div style={{ fontSize: 12.5, color: MUTED, marginBottom: 12, lineHeight: 1.5 }}>{T("leadSub")}</div>
+                          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                            <input style={{ ...input, flex: 1, minWidth: 180 }} type="email" value={email} onChange={(ev) => { setEmail(ev.target.value); if (leadStatus !== "idle") setLeadStatus("idle"); }} placeholder={T("leadPh")} />
+                            <button onClick={subscribe} disabled={leadStatus === "sending"} style={{ background: "transparent", color: EMBER, border: `1px solid ${EMBER}`, padding: "11px 18px", borderRadius: 8, ...disp, fontWeight: 700, fontSize: 13, letterSpacing: 0.3, cursor: leadStatus === "sending" ? "default" : "pointer", whiteSpace: "nowrap" }}>
+                              {leadStatus === "sending" ? T("leadSending") : T("leadBtn")}
+                            </button>
+                          </div>
+                          {leadStatus === "bad" && <div style={{ fontSize: 11.5, color: EMBER_SOFT, marginTop: 8 }}>{T("leadBad")}</div>}
+                          {leadStatus === "err" && <div style={{ fontSize: 11.5, color: EMBER_SOFT, marginTop: 8 }}>{T("leadErr")}</div>}
+                        </div>
+                      )}
                     </div>
                   )}
                 </>
               )}
+            </div>
 
-              {/* VERGRENDELD (Optie A): je cijfers staan hierboven, de maaltijden zitten achter betaling */}
-              {targets && !loading && !error && !unlocked && (
-                <div style={{ border: `1px solid ${EMBER}`, borderRadius: 14, padding: 20, background: "linear-gradient(180deg, rgba(232,50,30,0.09), transparent 60%)" }}>
-                  <div style={{ ...disp, fontSize: 20, fontWeight: 700, letterSpacing: 0.3, marginBottom: 6 }}>{lockReason === "no_credits" ? T("creditsOutTitle") : T("lockTitle")}</div>
-                  <div style={{ fontSize: 12.5, color: MUTED, marginBottom: 16, lineHeight: 1.5 }}>{lockReason === "no_credits" ? T("creditsOutSub") : T("lockSub")}</div>
-                  <div style={{ display: "grid", gap: 9, marginBottom: 18 }}>
-                    {[T("lb1"), T("lb2"), T("lb3")].map((t, i) => (
-                      <div key={i} style={{ display: "flex", gap: 9, alignItems: "flex-start", fontSize: 13.5 }}>
-                        <span style={{ color: EMBER, fontWeight: 800 }}>✓</span><span>{t}</span>
-                      </div>
-                    ))}
-                    <div style={{ display: "flex", gap: 9, alignItems: "flex-start", fontSize: 13.5, color: MUTED }}>
-                      <span style={{ color: EMBER_SOFT, fontWeight: 800 }}>+</span><span>{T("lbBundle")}</span>
-                    </div>
-                  </div>
-                  <a href={STRIPE_WEEK_LINK} style={{ display: "block", textAlign: "center", background: EMBER, color: INK, textDecoration: "none", padding: "14px 0", borderRadius: 10, ...disp, fontWeight: 700, fontSize: 15.5, letterSpacing: 0.5, marginBottom: 9 }}>{T("unlockWeek")}</a>
-                  <a href={STRIPE_BUNDLE_LINK} style={{ display: "block", textAlign: "center", background: "transparent", color: PAPER, textDecoration: "none", padding: "12px 0", borderRadius: 10, border: `1px solid ${LINE}`, ...disp, fontWeight: 700, fontSize: 14, letterSpacing: 0.5 }}>{T("unlockBundle")}</a>
-                  <div style={{ fontSize: 11, color: MUTED, marginTop: 12, textAlign: "center" }}>{T("lockFoot")}</div>
-                </div>
-              )}
+            <div style={{ textAlign: "center", padding: "6px 8px 4px", color: MUTED, fontSize: 10.5, lineHeight: 1.6 }}>{T("footer")}</div>
+          </div>
+        )}
 
-              {/* LEAD CAPTURE: vangt wie (nog) niet koopt — gratis starter in ruil voor e-mail */}
-              {targets && !loading && !error && !unlocked && (
-                <div style={{ marginTop: 16, border: `1px solid ${LINE}`, borderRadius: 14, padding: 18, background: INK2 }}>
-                  {leadStatus === "ok" ? (
-                    <div>
-                      <div style={{ ...disp, fontSize: 16, fontWeight: 700, marginBottom: 4 }}>{T("leadOkTitle")}</div>
-                      <div style={{ fontSize: 12.5, color: MUTED, lineHeight: 1.5 }}>{T("leadOkBody")}</div>
-                    </div>
-                  ) : (
-                    <div>
-                      <div style={{ ...disp, fontSize: 16, fontWeight: 700, marginBottom: 4 }}>{T("leadTitle")}</div>
-                      <div style={{ fontSize: 12.5, color: MUTED, marginBottom: 12, lineHeight: 1.5 }}>{T("leadSub")}</div>
-                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                        <input style={{ ...input, flex: 1, minWidth: 180 }} type="email" value={email} onChange={(ev) => { setEmail(ev.target.value); if (leadStatus !== "idle") setLeadStatus("idle"); }} placeholder={T("leadPh")} />
-                        <button onClick={subscribe} disabled={leadStatus === "sending"} style={{ background: "transparent", color: EMBER, border: `1px solid ${EMBER}`, padding: "11px 18px", borderRadius: 8, ...disp, fontWeight: 700, fontSize: 13, letterSpacing: 0.3, cursor: leadStatus === "sending" ? "default" : "pointer", whiteSpace: "nowrap" }}>
-                          {leadStatus === "sending" ? T("leadSending") : T("leadBtn")}
-                        </button>
-                      </div>
-                      {leadStatus === "bad" && <div style={{ fontSize: 11.5, color: EMBER_SOFT, marginTop: 8 }}>{T("leadBad")}</div>}
-                      {leadStatus === "err" && <div style={{ fontSize: 11.5, color: EMBER_SOFT, marginTop: 8 }}>{T("leadErr")}</div>}
-                    </div>
-                  )}
-                </div>
-              )}
-            </>
-          )}
-        </div>
+        {/* ====== OTHER TABS ====== */}
+        {tab === "today" && <Today lang={lang} week={week} onGoPlan={() => setTab("plan")} />}
+        {tab === "tracker" && <Tracker lang={lang} height={height} />}
+        {tab === "recipes" && <Recipes lang={lang} />}
       </div>
 
-      <div style={{ textAlign: "center", padding: "8px 20px 28px", color: MUTED, fontSize: 10.5, lineHeight: 1.6 }}>{T("footer")}</div>
+      {/* BOTTOM NAV */}
+      <div style={{ position: "fixed", left: 0, right: 0, bottom: 0, background: INK, borderTop: `1px solid ${LINE}`, display: "flex", zIndex: 30, paddingBottom: "env(safe-area-inset-bottom)" }}>
+        {NAV.map(([id, key]) => {
+          const on = tab === id;
+          return (
+            <div key={id} onClick={() => { setTab(id); try { window.scrollTo(0, 0); } catch (e) {} }} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 3, padding: "9px 0 8px", cursor: "pointer" }}>
+              <Icon name={id} on={on} />
+              <div style={{ fontSize: 10.5, fontWeight: 600, color: on ? EMBER : MUTED, letterSpacing: 0.3 }}>{T(key)}</div>
+            </div>
+          );
+        })}
+      </div>
+
+      {showReminders && <Reminders lang={lang} onClose={() => setShowReminders(false)} />}
     </div>
   );
 }
