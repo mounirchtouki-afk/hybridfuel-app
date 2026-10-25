@@ -34,7 +34,9 @@ function validToken(token) {
 }
 
 // --- Simpele rate-limit (per IP, per dag) --------------------------------
-const MAX_PER_DAY = 3;
+// Losse anti-misbruik-backstop per IP per dag. De échte rem is Optie B (credits per
+// betaling). Ruim gezet zodat echte klanten (ook meerdere op één IP) niet geraakt worden.
+const MAX_PER_DAY = parseInt(process.env.MAX_PER_DAY_IP || "30", 10);
 const hits = new Map(); // ip -> { day, count }
 
 function rateLimited(ip) {
@@ -227,7 +229,7 @@ export default async function handler(req, res) {
     if (!trusted) {
       const ip = (req.headers["x-forwarded-for"] || "unknown").split(",")[0].trim();
       if (rateLimited(ip)) {
-        return res.status(429).json({ error: "Dagelijkse limiet bereikt. Probeer morgen opnieuw." });
+        return res.status(429).json({ error: "Te veel aanvragen op dit moment. Probeer het over een paar minuten opnieuw." });
       }
     }
 
