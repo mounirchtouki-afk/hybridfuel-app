@@ -802,7 +802,7 @@ export default function App() {
 
         {/* ====== OTHER TABS ====== */}
         {tab === "today" && <Today lang={lang} week={week} onGoPlan={() => setTab("plan")} />}
-        {tab === "tracker" && <Tracker lang={lang} height={height} />}
+        {tab === "tracker" && <Tracker lang={lang} height={height} session={session} />}
         {tab === "recipes" && <Recipes lang={lang} />}
       </div>
 

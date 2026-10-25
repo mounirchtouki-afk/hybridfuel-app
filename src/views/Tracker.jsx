@@ -1,9 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, SAGE, disp, num, card, label, input, sectionTitle, primaryBtn, load, save, todayISO, fmtDate } from "../shared.js";
+import { supabase } from "../supabaseClient.js";
 
 const T = {
   title: { nl: "Voortgang", en: "Progress" },
-  sub: { nl: "Log je gewicht en volg de trend. Blijft lokaal op dit apparaat.", en: "Log your weight and watch the trend. Stays local on this device." },
+  sub: { nl: "Log je gewicht en volg de trend.", en: "Log your weight and watch the trend." },
   current: { nl: "Huidig gewicht", en: "Current weight" },
   change: { nl: "Laatste verandering", en: "Last change" },
   bmiLbl: { nl: "BMI", en: "BMI" },
@@ -52,12 +53,23 @@ function Chart({ data }) {
   );
 }
 
-export default function Tracker({ lang, height: appHeight }) {
+export default function Tracker({ lang, height: appHeight, session }) {
   const t = (k) => (T[k] ? T[k][lang] : k);
   const [weights, setWeights] = useState(() => load("hf_weights", []));
   const [height, setHeight] = useState(() => load("hf_height", appHeight ? String(appHeight) : ""));
   const [d, setD] = useState(todayISO());
   const [kg, setKg] = useState("");
+
+  const cloud = !!(session && supabase);
+  // Bij een sessie: wegingen uit Supabase laden (anders blijft 't lokaal).
+  useEffect(() => {
+    let active = true;
+    if (cloud) {
+      supabase.from("weights").select("date,kg").eq("user_id", session.user.id).order("date")
+        .then(({ data }) => { if (active && data) setWeights(data.map((r) => ({ date: r.date, kg: Number(r.kg) }))); });
+    }
+    return () => { active = false; };
+  }, [session]);
 
   const sorted = [...weights].sort((a, b) => a.date.localeCompare(b.date));
   const latest = sorted.length ? sorted[sorted.length - 1] : null;
@@ -68,14 +80,21 @@ export default function Tracker({ lang, height: appHeight }) {
   const bmiCat = bmi == null ? null : bmi < 18.5 ? T.cat.under[lang] : bmi < 25 ? T.cat.healthy[lang] : bmi < 30 ? T.cat.over[lang] : T.cat.obese[lang];
   const bmiColor = bmi == null ? MUTED : bmi < 18.5 ? EMBER_SOFT : bmi < 25 ? "#4ADE80" : bmi < 30 ? "#FACC15" : EMBER;
 
-  function persist(next) { setWeights(next); save("hf_weights", next); }
   function addLog() {
     const v = num(kg);
     if (!(v > 0) || !d) return;
-    const next = [...weights.filter((w) => w.date !== d), { date: d, kg: Math.round(v * 10) / 10 }];
-    persist(next); setKg("");
+    const entry = { date: d, kg: Math.round(v * 10) / 10 };
+    const next = [...weights.filter((w) => w.date !== d), entry];
+    setWeights(next); setKg("");
+    if (cloud) { supabase.from("weights").upsert({ user_id: session.user.id, date: entry.date, kg: entry.kg }, { onConflict: "user_id,date" }).then(() => {}, () => {}); }
+    else { save("hf_weights", next); }
   }
-  function del(date) { persist(weights.filter((w) => w.date !== date)); }
+  function del(date) {
+    const next = weights.filter((w) => w.date !== date);
+    setWeights(next);
+    if (cloud) { supabase.from("weights").delete().eq("user_id", session.user.id).eq("date", date).then(() => {}, () => {}); }
+    else { save("hf_weights", next); }
+  }
   function setH(v) { setHeight(v); save("hf_height", v); }
 
   const stat = (lbl, val, sub, color) => (
