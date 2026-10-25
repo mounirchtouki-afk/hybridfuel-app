@@ -3,6 +3,7 @@ import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, SAGE, load, save } fr
 import Today from "./views/Today.jsx";
 import Tracker from "./views/Tracker.jsx";
 import Water from "./views/Water.jsx";
+import Products from "./views/Products.jsx";
 import Recipes from "./views/Recipes.jsx";
 import Reminders, { checkReminders } from "./views/Reminders.jsx";
 import Auth from "./views/Auth.jsx";
@@ -110,6 +111,8 @@ const TXT = {
   editDone: { nl: "Klaar", en: "Done" },
   addMeal: { nl: "+ Maaltijd", en: "+ Meal" },
   addIngr: { nl: "+ Ingrediënt", en: "+ Ingredient" },
+  addProd: { nl: "+ Uit producten", en: "+ From products" },
+  myProducts: { nl: "Producten", en: "Products" },
   mealNamePh: { nl: "Naam maaltijd", en: "Meal name" },
   ingrNamePh: { nl: "Ingrediënt", en: "Ingredient" },
   editHint: { nl: "Pas porties, ingrediënten en maaltijden aan. −/+ schaalt de hele maaltijd (gewichten én macro's).", en: "Adjust portions, ingredients and meals. −/+ scales the whole meal (weights and macros)." },
@@ -240,6 +243,8 @@ export default function App() {
   const [targets, setTargets] = useState(null);
   const [week, setWeek] = useState(null);
   const [planEdit, setPlanEdit] = useState(false);
+  const [showProducts, setShowProducts] = useState(false);
+  const [pickTarget, setPickTarget] = useState(null);
   const [view, setView] = useState("plan");
   const [checked, setChecked] = useState({});
   const [loading, setLoading] = useState(false);
@@ -539,9 +544,39 @@ export default function App() {
   }
   const patchMeal = (di, mi, patch) => mutDay(di, (d) => { d.m = d.m.map((mm, j) => j === mi ? { ...mm, ...patch } : mm); return d; });
   const scaleMeal = (di, mi, fac) => mutDay(di, (d) => { d.m = d.m.map((mm, j) => j === mi ? { ...mm, kcal: R(num(mm.kcal) * fac), p: R(num(mm.p) * fac), c: R(num(mm.c) * fac), f: R(num(mm.f) * fac), ing: (mm.ing || []).map((g) => ({ ...g, g: R(num(g.g) * fac) })) } : mm); return d; });
-  const patchIng = (di, mi, ii, patch) => mutDay(di, (d) => { d.m = d.m.map((mm, j) => j === mi ? { ...mm, ing: (mm.ing || []).map((g, k) => k === ii ? { ...g, ...patch } : g) } : mm); return d; });
+  const ingMacros = (ing) => { const p = ing && ing.per100; if (!p) return null; const fac = num(ing.g) / 100; return { kcal: R(num(p.kcal) * fac), p: R(num(p.p) * fac), c: R(num(p.c) * fac), f: R(num(p.f) * fac) }; };
+  const patchIng = (di, mi, ii, patch) => mutDay(di, (d) => {
+    d.m = d.m.map((mm, j) => {
+      if (j !== mi) return mm;
+      const ing = mm.ing || [], old = ing[ii], next = { ...old, ...patch };
+      const na = { ...mm, ing: ing.map((g, k) => k === ii ? next : g) };
+      if (old && old.per100 && ("g" in patch)) { const a = ingMacros(old) || {}, b = ingMacros(next) || {}; na.kcal = R(num(mm.kcal) + (b.kcal || 0) - (a.kcal || 0)); na.p = R(num(mm.p) + (b.p || 0) - (a.p || 0)); na.c = R(num(mm.c) + (b.c || 0) - (a.c || 0)); na.f = R(num(mm.f) + (b.f || 0) - (a.f || 0)); }
+      return na;
+    });
+    return d;
+  });
   const addIngr = (di, mi) => mutDay(di, (d) => { d.m = d.m.map((mm, j) => j === mi ? { ...mm, ing: [...(mm.ing || []), { n: "", g: 0 }] } : mm); return d; });
-  const removeIngr = (di, mi, ii) => mutDay(di, (d) => { d.m = d.m.map((mm, j) => j === mi ? { ...mm, ing: (mm.ing || []).filter((_, k) => k !== ii) } : mm); return d; });
+  const removeIngr = (di, mi, ii) => mutDay(di, (d) => {
+    d.m = d.m.map((mm, j) => {
+      if (j !== mi) return mm;
+      const ing = mm.ing || [], old = ing[ii];
+      const na = { ...mm, ing: ing.filter((_, k) => k !== ii) };
+      if (old && old.per100) { const a = ingMacros(old) || {}; na.kcal = R(num(mm.kcal) - (a.kcal || 0)); na.p = R(num(mm.p) - (a.p || 0)); na.c = R(num(mm.c) - (a.c || 0)); na.f = R(num(mm.f) - (a.f || 0)); }
+      return na;
+    });
+    return d;
+  });
+  function addProductIng(di, mi, product) {
+    mutDay(di, (d) => {
+      d.m = d.m.map((mm, j) => {
+        if (j !== mi) return mm;
+        const ing = { n: product.name, g: 100, per100: product.per_100 || {} };
+        const a = ingMacros(ing) || {};
+        return { ...mm, ing: [...(mm.ing || []), ing], kcal: R(num(mm.kcal) + (a.kcal || 0)), p: R(num(mm.p) + (a.p || 0)), c: R(num(mm.c) + (a.c || 0)), f: R(num(mm.f) + (a.f || 0)) };
+      });
+      return d;
+    });
+  }
   const removeMeal = (di, mi) => mutDay(di, (d) => { d.m = d.m.filter((_, j) => j !== mi); return d; });
   const addMealTo = (di) => mutDay(di, (d) => { d.m = [...d.m, { t: "EXTRA", n: "", kcal: 0, p: 0, c: 0, f: 0, ing: [] }]; return d; });
   function toggleEdit() { if (planEdit) persistPlanCloud(); setPlanEdit(!planEdit); }
@@ -576,8 +611,11 @@ export default function App() {
                   <div onClick={() => removeIngr(di, mi, ii)} style={{ cursor: "pointer", color: MUTED, fontSize: 15, padding: "0 2px" }}>×</div>
                 </div>
               ))}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 6 }}>
-                <div onClick={() => addIngr(di, mi)} style={{ cursor: "pointer", fontSize: 11.5, color: EMBER, fontWeight: 600 }}>{T("addIngr")}</div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 6, gap: 10, flexWrap: "wrap" }}>
+                <div style={{ display: "flex", gap: 14 }}>
+                  <div onClick={() => addIngr(di, mi)} style={{ cursor: "pointer", fontSize: 11.5, color: EMBER, fontWeight: 600 }}>{T("addIngr")}</div>
+                  <div onClick={() => { setPickTarget({ di, mi }); setShowProducts(true); }} style={{ cursor: "pointer", fontSize: 11.5, color: EMBER, fontWeight: 600 }}>{T("addProd")}</div>
+                </div>
                 <div style={{ fontSize: 10.5, color: MUTED }}>{m.kcal} kcal · {m.p}p/{m.c}c/{m.f}f</div>
               </div>
             </div>
@@ -814,7 +852,12 @@ export default function App() {
                             <div key={id} onClick={() => setView(id)} style={{ padding: "8px 16px", borderRadius: 7, background: view === id ? EMBER : "transparent", color: PAPER, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.5, cursor: "pointer" }}>{lbl}</div>
                           ))}
                         </div>
-                        {view === "plan" && <div onClick={toggleEdit} style={{ cursor: "pointer", padding: "8px 16px", borderRadius: 8, border: `1px solid ${planEdit ? EMBER : LINE}`, background: planEdit ? EMBER : "transparent", color: planEdit ? PAPER : EMBER, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.5 }}>{planEdit ? T("editDone") : T("editPlan")}</div>}
+                        {view === "plan" && (
+                          <div style={{ display: "flex", gap: 8 }}>
+                            {planEdit && <div onClick={() => setShowProducts(true)} style={{ cursor: "pointer", padding: "8px 14px", borderRadius: 8, border: `1px solid ${LINE}`, color: EMBER, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.5 }}>{T("myProducts")}</div>}
+                            <div onClick={toggleEdit} style={{ cursor: "pointer", padding: "8px 16px", borderRadius: 8, border: `1px solid ${planEdit ? EMBER : LINE}`, background: planEdit ? EMBER : "transparent", color: planEdit ? PAPER : EMBER, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.5 }}>{planEdit ? T("editDone") : T("editPlan")}</div>
+                          </div>
+                        )}
                       </div>
 
                       {view === "plan" && planEdit && <div style={{ fontSize: 11.5, color: MUTED, marginBottom: 12, lineHeight: 1.5 }}>{T("editHint")}</div>}
@@ -911,6 +954,7 @@ export default function App() {
 
       {showReminders && <Reminders lang={lang} onClose={() => setShowReminders(false)} />}
       {showAuth && <Auth lang={lang} session={session} tier={subTier} onClose={() => setShowAuth(false)} />}
+      {showProducts && <Products lang={lang} session={session} onClose={() => { setShowProducts(false); setPickTarget(null); }} onPick={pickTarget ? (prod) => { addProductIng(pickTarget.di, pickTarget.mi, prod); setShowProducts(false); setPickTarget(null); } : null} />}
     </div>
   );
 }
