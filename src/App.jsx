@@ -127,6 +127,8 @@ const TXT = {
   unlockBundle: { nl: "Week + Hyrox-gids — €17,95", en: "Week + Hyrox guide — €17.95" },
   lockFoot: { nl: "Direct beschikbaar na betaling.", en: "Available instantly after payment." },
   lockedDays: { nl: "dagen vergrendeld", en: "days locked" },
+  creditsOutTitle: { nl: "Je plannen zijn op", en: "You've used your plans" },
+  creditsOutSub: { nl: "Je hebt je gegenereerde plannen gebruikt. Ontgrendel een nieuwe week om verder te gaan.", en: "You've used your generated plans. Unlock another week to continue." },
   // Lead capture — gratis starter in ruil voor e-mail (vangt wie nog niet koopt)
   leadTitle: { nl: "Nog niet klaar om te kopen?", en: "Not ready to buy yet?" },
   leadSub: { nl: "Pak de gratis starter: 5 Hyrox-voedingsregels (40+) die 90% van de fouten oplossen. Direct in je inbox.", en: "Grab the free starter: 5 Hyrox fueling rules (40+) that fix 90% of mistakes. Straight to your inbox." },
@@ -228,6 +230,7 @@ export default function App() {
   const [email, setEmail] = useState("");
   const [leadStatus, setLeadStatus] = useState("idle"); // idle | sending | ok | err | bad
   const [trackerBusy, setTrackerBusy] = useState(false);
+  const [lockReason, setLockReason] = useState(""); // "" of "no_credits" (credits op)
 
   // Bij laden: taal herstellen + ontgrendeling checken (terugkomst van Stripe of eerder betaald).
   useEffect(() => {
@@ -297,7 +300,7 @@ export default function App() {
   }
 
   async function handleBuild() {
-    setError(""); setStarted(true); setView("plan"); setChecked({}); setWeek(null);
+    setError(""); setStarted(true); setView("plan"); setChecked({}); setWeek(null); setLockReason("");
     const intake = currentIntake();
     try { localStorage.setItem("hf_intake", JSON.stringify(intake)); } catch (e) {}
     if (unlocked) await generatePaid(intake);
@@ -345,8 +348,8 @@ export default function App() {
       const token = (() => { try { return localStorage.getItem("hf_token") || ""; } catch (e) { return ""; } })();
       const data = await fetchChunk({ ...intake, trainingCount: nTrain, request, paid: true, token });
       setTargets(data.targets);
-      if (data.locked || !data.plan) { // betaling niet geverifieerd → terug naar de betaalmuur
-        setUnlocked(false); setWeek(null);
+      if (data.locked || !data.plan) { // credits op of betaling niet geverifieerd → terug naar de betaalmuur
+        setUnlocked(false); setWeek(null); setLockReason(data.reason || "");
         try { localStorage.removeItem("hf_unlocked"); } catch (e) {}
         return;
       }
@@ -687,8 +690,8 @@ export default function App() {
               {/* VERGRENDELD (Optie A): je cijfers staan hierboven, de maaltijden zitten achter betaling */}
               {targets && !loading && !error && !unlocked && (
                 <div style={{ border: `1px solid ${EMBER}`, borderRadius: 14, padding: 20, background: "linear-gradient(180deg, rgba(232,50,30,0.09), transparent 60%)" }}>
-                  <div style={{ ...disp, fontSize: 20, fontWeight: 700, letterSpacing: 0.3, marginBottom: 6 }}>{T("lockTitle")}</div>
-                  <div style={{ fontSize: 12.5, color: MUTED, marginBottom: 16, lineHeight: 1.5 }}>{T("lockSub")}</div>
+                  <div style={{ ...disp, fontSize: 20, fontWeight: 700, letterSpacing: 0.3, marginBottom: 6 }}>{lockReason === "no_credits" ? T("creditsOutTitle") : T("lockTitle")}</div>
+                  <div style={{ fontSize: 12.5, color: MUTED, marginBottom: 16, lineHeight: 1.5 }}>{lockReason === "no_credits" ? T("creditsOutSub") : T("lockSub")}</div>
                   <div style={{ display: "grid", gap: 9, marginBottom: 18 }}>
                     {[T("lb1"), T("lb2"), T("lb3")].map((t, i) => (
                       <div key={i} style={{ display: "flex", gap: 9, alignItems: "flex-start", fontSize: 13.5 }}>
