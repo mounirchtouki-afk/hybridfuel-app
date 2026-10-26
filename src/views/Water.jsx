@@ -69,7 +69,7 @@ export default function Water({ lang, session, week }) {
     return () => { active = false; };
   }, [session]);
 
-  const effKg = kg > 0 ? kg : num(manualKg);
+  const effKg = num(manualKg) > 0 ? num(manualKg) : kg;
   const goal = effKg > 0 ? Math.round((ML_PER_KG * effKg + (train ? TRAIN_BONUS : 0)) / 50) * 50 : 0;
   const pct = goal > 0 ? ml / goal : 0;
   const leftMl = Math.max(0, goal - ml);
@@ -96,31 +96,24 @@ export default function Water({ lang, session, week }) {
         <div style={{ fontSize: 12, color: MUTED, marginTop: 5, lineHeight: 1.5 }}>{t("sub")}</div>
       </div>
 
-      {effKg <= 0 ? (
-        <div style={card}>
-          <div style={{ fontSize: 12.5, color: MUTED, lineHeight: 1.6, marginBottom: 12 }}>{t("weightQ")}</div>
-          <label style={label}>{t("weightKg")}</label>
-          <input style={input} value={manualKg} onChange={(e) => setKgManual(e.target.value)} inputMode="decimal" placeholder="87" />
-        </div>
-      ) : (
-        <div style={{ ...card, display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 22, paddingBottom: 22 }}>
-          <div style={{ position: "relative", width: 180, height: 180 }}>
-            <Ring pct={pct} />
-            <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-              <div style={{ ...disp, fontSize: 32, fontWeight: 700, color: PAPER, lineHeight: 1 }}>{(ml / 1000).toFixed(ml % 1000 === 0 ? 0 : 1)}<span style={{ fontSize: 15, color: MUTED }}>/{(goal / 1000).toFixed(goal % 1000 === 0 ? 0 : 1)}L</span></div>
-              <div style={{ fontSize: 11.5, color: pct >= 1 ? EMBER_SOFT : MUTED, marginTop: 6, fontWeight: 600 }}>
-                {pct >= 1 ? t("done") : leftMl + " ml " + t("left")}
-              </div>
+      <div style={{ ...card, display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 22, paddingBottom: 22 }}>
+        <div style={{ position: "relative", width: 180, height: 180 }}>
+          <Ring pct={pct} />
+          <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+            <div style={{ ...disp, fontSize: 32, fontWeight: 700, color: PAPER, lineHeight: 1 }}>{(ml / 1000).toFixed(ml % 1000 === 0 ? 0 : 1)}<span style={{ fontSize: 15, color: MUTED }}>/{goal > 0 ? (goal / 1000).toFixed(goal % 1000 === 0 ? 0 : 1) + "L" : "—"}</span></div>
+            <div style={{ fontSize: 11.5, color: pct >= 1 ? EMBER_SOFT : MUTED, marginTop: 6, fontWeight: 600, textAlign: "center", padding: "0 20px" }}>
+              {goal <= 0 ? t("weightQ") : (pct >= 1 ? t("done") : leftMl + " ml " + t("left"))}
             </div>
           </div>
+        </div>
+        {goal > 0 && (
           <div style={{ fontSize: 11, color: MUTED, marginTop: 14, textAlign: "center" }}>
             {t("goal")}: <span style={{ color: PAPER, fontWeight: 600 }}>{goal} ml</span> · {t("basedOn")} {effKg} kg{train ? " " + t("trainBonus") : ""}
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
-      {effKg > 0 && (
-        <div style={card}>
+      <div style={card}>
           <div style={{ ...label, marginBottom: 12 }}>{t("add")}</div>
           <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
             {addBtn(t("glass"), GLASS)}
@@ -132,12 +125,21 @@ export default function Water({ lang, session, week }) {
             <div onClick={() => persist(0)} style={{ flex: 1, textAlign: "center", padding: "9px 0", borderRadius: 8, border: `1px solid ${LINE}`, color: MUTED, fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}>{t("reset")}</div>
           </div>
         </div>
-      )}
 
-      <div style={{ ...card, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <span style={{ fontSize: 13, color: PAPER, fontWeight: 600 }}>{t("training")}</span>
-        <div onClick={() => setTrain(!train)} style={{ width: 46, height: 26, borderRadius: 20, background: train ? EMBER : LINE, position: "relative", cursor: "pointer", transition: "background .2s" }}>
-          <div style={{ position: "absolute", top: 3, left: train ? 23 : 3, width: 20, height: 20, borderRadius: "50%", background: PAPER, transition: "left .2s" }} />
+      <div style={card}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+          <span style={{ fontSize: 13, color: PAPER, fontWeight: 600 }}>{t("weightKg")}</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <input value={manualKg !== "" ? manualKg : (kg > 0 ? String(kg) : "")} onChange={(e) => setKgManual(e.target.value)} inputMode="decimal" placeholder="87" style={{ width: 64, textAlign: "right", background: INK, border: `1px solid ${LINE}`, color: PAPER, padding: "7px 8px", borderRadius: 8, fontSize: 14, outline: "none" }} />
+            <span style={{ fontSize: 12, color: MUTED }}>kg</span>
+          </div>
+        </div>
+        <div style={{ height: 1, background: LINE, marginBottom: 14 }} />
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <span style={{ fontSize: 13, color: PAPER, fontWeight: 600 }}>{t("training")}</span>
+          <div onClick={() => setTrain(!train)} style={{ width: 46, height: 26, borderRadius: 20, background: train ? EMBER : LINE, position: "relative", cursor: "pointer", transition: "background .2s" }}>
+            <div style={{ position: "absolute", top: 3, left: train ? 23 : 3, width: 20, height: 20, borderRadius: "50%", background: PAPER, transition: "left .2s" }} />
+          </div>
         </div>
       </div>
     </div>
