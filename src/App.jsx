@@ -266,6 +266,16 @@ const TXT = {
   install: { nl: "Installeer de app", en: "Install the app" },
   installHint: { nl: "Zet HybridFuelCo op je beginscherm — sneller, met herinneringen.", en: "Add HybridFuelCo to your home screen — faster, with reminders." },
   installBtn: { nl: "Installeren", en: "Install" },
+  installHelpTitle: { nl: "Zet de app op je telefoon", en: "Add the app to your phone" },
+  installIosT: { nl: "iPhone (Safari)", en: "iPhone (Safari)" },
+  installIos1: { nl: "Tik onderin op het deel-icoon (vierkantje met pijl omhoog).", en: "Tap the Share icon at the bottom (square with an up arrow)." },
+  installIos2: { nl: "Kies “Zet op beginscherm”.", en: "Choose “Add to Home Screen”." },
+  installIos3: { nl: "Tik op “Voeg toe” — de app staat nu tussen je andere apps.", en: "Tap “Add” — the app now sits with your other apps." },
+  installAndroidT: { nl: "Android (Chrome)", en: "Android (Chrome)" },
+  installAndroid1: { nl: "Tik rechtsboven op het menu (⋮).", en: "Tap the menu (⋮) at the top right." },
+  installAndroid2: { nl: "Kies “App installeren” of “Toevoegen aan startscherm”.", en: "Choose “Install app” or “Add to home screen”." },
+  installAndroid3: { nl: "Bevestig — de app staat nu tussen je andere apps.", en: "Confirm — the app now sits with your other apps." },
+  installClose: { nl: "Begrepen", en: "Got it" },
 };
 
 const fonts = `@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap');`;
@@ -380,6 +390,7 @@ export default function App() {
   const [authRecovery, setAuthRecovery] = useState(false);
   const [showLogout, setShowLogout] = useState(false);
   const [saveFlash, setSaveFlash] = useState(false);
+  const [showInstallHelp, setShowInstallHelp] = useState(false);
   const [subTier, setSubTier] = useState("free");
   const [installEvt, setInstallEvt] = useState(null);
   const [installDismissed, setInstallDismissed] = useState(() => load("hf_install_dismissed", false));
@@ -557,7 +568,12 @@ export default function App() {
     return () => { clearInterval(iv); window.removeEventListener("resize", measure); };
   }, []);
 
-  async function doInstall() { if (!installEvt) return; try { installEvt.prompt(); await installEvt.userChoice; } catch (e) {} setInstallEvt(null); }
+  const isStandalone = (() => { try { return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true; } catch (e) { return false; } })();
+  const isIOS = (() => { try { return /iphone|ipad|ipod/i.test(navigator.userAgent); } catch (e) { return false; } })();
+  async function doInstall() {
+    if (installEvt) { try { installEvt.prompt(); await installEvt.userChoice; } catch (e) {} setInstallEvt(null); return; }
+    setShowInstallHelp(true); // iOS / geen native prompt → toon stap-voor-stap
+  }
   function dismissInstall() { setInstallDismissed(true); save("hf_install_dismissed", true); }
 
   const toggle = (val, list, setList) => setList(list.includes(val) ? list.filter((x) => x !== val) : [...list, val]);
@@ -1096,15 +1112,37 @@ export default function App() {
         </div>
       </div>
 
-      {/* INSTALL-BANNER */}
-      {installEvt && !installDismissed && (
+      {/* INSTALL-BANNER — voor iedereen die de app nog niet geïnstalleerd heeft (ook iPhone) */}
+      {!isStandalone && !installDismissed && (
         <div style={{ background: "rgba(225,29,72,0.1)", borderBottom: `1px solid ${LINE}`, padding: "10px 16px", display: "flex", alignItems: "center", gap: 12, position: "relative", zIndex: 1 }}>
-          <div style={{ flex: 1 }}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M12 3v12M8 11l4 4 4-4" /><path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" /></svg>
+          <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 13, fontWeight: 600 }}>{T("install")}</div>
             <div style={{ fontSize: 11, color: MUTED, marginTop: 1 }}>{T("installHint")}</div>
           </div>
           <button onClick={doInstall} style={{ background: EMBER, color: PAPER, border: "none", padding: "8px 14px", borderRadius: 8, ...disp, fontWeight: 700, fontSize: 12.5, letterSpacing: 0.5, cursor: "pointer", whiteSpace: "nowrap" }}>{T("installBtn")}</button>
           <div onClick={dismissInstall} style={{ cursor: "pointer", color: MUTED, fontSize: 20, lineHeight: 1, padding: "0 2px" }}>×</div>
+        </div>
+      )}
+      {showInstallHelp && (
+        <div onClick={() => setShowInstallHelp(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 90, display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ background: INK, border: `1px solid ${LINE}`, borderRadius: 18, width: "100%", maxWidth: 380, padding: 22, maxHeight: "86vh", overflowY: "auto" }} className="hf-modal">
+            <div style={{ ...disp, fontWeight: 700, fontSize: 18, marginBottom: 16 }}>{T("installHelpTitle")}</div>
+            {[[T("installIosT"), [T("installIos1"), T("installIos2"), T("installIos3")]], [T("installAndroidT"), [T("installAndroid1"), T("installAndroid2"), T("installAndroid3")]]].map(([head, steps], bi) => (
+              <div key={bi} style={{ marginBottom: 16 }}>
+                <div style={{ fontSize: 11, letterSpacing: 1, textTransform: "uppercase", color: EMBER, fontWeight: 700, marginBottom: 8 }}>{head}</div>
+                <div style={{ display: "grid", gap: 8 }}>
+                  {steps.map((s, i) => (
+                    <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                      <div style={{ flexShrink: 0, width: 20, height: 20, borderRadius: "50%", background: INK2, border: `1px solid ${LINE}`, color: EMBER, fontSize: 11, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", ...disp }}>{i + 1}</div>
+                      <div style={{ fontSize: 13, color: PAPER, lineHeight: 1.5 }}>{s}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+            <div onClick={() => setShowInstallHelp(false)} style={{ cursor: "pointer", textAlign: "center", background: EMBER, color: PAPER, padding: "12px 0", borderRadius: 10, ...disp, fontWeight: 700, fontSize: 15, marginTop: 4 }}>{T("installClose")}</div>
+          </div>
         </div>
       )}
 

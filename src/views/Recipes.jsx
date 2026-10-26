@@ -133,8 +133,9 @@ export default function Recipes({ lang, session }) {
             return (
               <div key={r.id} style={{ background: INK2, border: `1px solid ${LINE}`, borderRadius: 14, overflow: "hidden" }}>
                 <div onClick={() => setOpen(isOpen ? null : r.id)} style={{ cursor: "pointer" }}>
-                  <div style={{ position: "relative", width: "100%", aspectRatio: "1 / 1", background: INK }}>
-                    <img src={`/recipes/${r.id}.jpg`} alt={r.name[lang]} loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                  <div style={{ position: "relative", width: "100%", aspectRatio: "1 / 1", background: `linear-gradient(135deg, ${INK2}, ${INK})` }}>
+                    <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", color: LINE, ...disp, fontSize: 52, fontWeight: 700 }}>{r.name[lang].slice(0, 1)}</div>
+                    <img src={r.image_url || `/recipes/${r.id}.jpg`} alt={r.name[lang]} loading="lazy" onError={(e) => { e.currentTarget.style.display = "none"; }} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                     <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, transparent 45%, rgba(10,10,10,0.9) 100%)" }} />
                     <div style={{ position: "absolute", left: 14, right: 14, bottom: 12 }}>
                       <div style={{ display: "inline-block", fontSize: 9.5, color: PAPER, background: EMBER, borderRadius: 5, padding: "2px 7px", letterSpacing: 0.5, fontWeight: 700, ...disp, marginBottom: 6 }}>{r.goal[lang]}</div>
@@ -145,6 +146,7 @@ export default function Recipes({ lang, session }) {
                 </div>
                 {isOpen && (
                   <div style={{ padding: "12px 14px 14px", borderTop: `1px solid ${LINE}` }}>
+                    {r.desc && <div style={{ fontSize: 13, color: PAPER, lineHeight: 1.55, marginBottom: 12 }}>{r.desc[lang]}</div>}
                     <div style={{ fontSize: 9.5, color: EMBER, letterSpacing: 1, textTransform: "uppercase", fontWeight: 600, marginBottom: 7 }}>{t("ingredients")}</div>
                     <div style={{ display: "grid", gap: 6 }}>
                       {r.ing.map((x, i) => (
@@ -153,6 +155,12 @@ export default function Recipes({ lang, session }) {
                         </div>
                       ))}
                     </div>
+                    {r.steps && (r.steps[lang] || typeof r.steps === "string") && (
+                      <>
+                        <div style={{ fontSize: 9.5, color: EMBER, letterSpacing: 1, textTransform: "uppercase", fontWeight: 600, margin: "12px 0 7px" }}>{t("steps")}</div>
+                        <div style={{ fontSize: 13, color: PAPER, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{typeof r.steps === "string" ? r.steps : r.steps[lang]}</div>
+                      </>
+                    )}
                   </div>
                 )}
               </div>
