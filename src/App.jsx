@@ -1199,7 +1199,7 @@ export default function App() {
   const mIcon = (name) => <Icon name={name} on={true} />;
 
   return (
-    <div style={{ minHeight: "100vh", background: INK, position: "relative", color: PAPER, fontFamily: "Inter, sans-serif", paddingBottom: 76 + consentH }}>
+    <div style={{ minHeight: "100vh", background: INK, position: "relative", color: PAPER, fontFamily: "Inter, sans-serif", paddingBottom: `calc(${76 + consentH}px + env(safe-area-inset-bottom))` }}>
       <style dangerouslySetInnerHTML={{ __html: fonts + `*{box-sizing:border-box;scrollbar-width:none;-ms-overflow-style:none} *::-webkit-scrollbar{display:none;width:0;height:0} html,body{overflow-x:hidden} select option{background:${INK2};color:${PAPER}} @keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}} .dot{animation:pulse 1s infinite} input[type=date],input[type=time]{color-scheme:dark} .hf-glow{position:absolute;top:-240px;right:-180px;width:680px;height:680px;max-width:135vw;border-radius:50%;background:radial-gradient(circle,rgba(225,29,72,0.22),transparent 60%);pointer-events:none;z-index:0;animation:drift 16s ease-in-out infinite alternate} @keyframes drift{from{transform:translate(0,0)}to{transform:translate(-55px,45px)}} .hf-modal{scrollbar-width:none;-ms-overflow-style:none} .hf-modal::-webkit-scrollbar{display:none;width:0;height:0}` }} />
       <div className="hf-glow" aria-hidden="true" />
 
@@ -1512,7 +1512,7 @@ export default function App() {
       {/* QUICK-ADD + (centraal, verhoogd) */}
       {fab && <div onClick={() => setFab(false)} style={{ position: "fixed", inset: 0, zIndex: 44, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(9px)", WebkitBackdropFilter: "blur(9px)" }} />}
       {fab && (
-        <div style={{ position: "fixed", left: 0, right: 0, bottom: consentH + 100, zIndex: 46, display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
+        <div style={{ position: "fixed", left: 0, right: 0, bottom: "calc(env(safe-area-inset-bottom) + 100px)", zIndex: 46, display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
           {fabAct(lang === "nl" ? "Training loggen" : "Log training", <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M6.5 6.5l11 11M4 9l-1.5 1.5a1.5 1.5 0 000 2L4 14M20 9l1.5 1.5a1.5 1.5 0 010 2L20 14M7 4l1.5 1.5M17 20l-1.5-1.5" /></svg>, () => { setFab(false); if (!hasBasis) { setShowAuth(true); return; } go("training"); })}
           {fabAct(lang === "nl" ? "Recept maken" : "Create recipe", <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4v6a3 3 0 006 0V4M7 4v16" /><path d="M17 4c-1.5 0-2.5 2-2.5 5s1 4 2.5 4 2.5-1 2.5-4-1-5-2.5-5zM17 13v7" /></svg>, () => { setFab(false); setShowBuilder(true); })}
           {fabAct(lang === "nl" ? "Gewicht loggen" : "Log weight", <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M4 18l5-6 4 3 6-8" /><path d="M4 21h16" /></svg>, () => { setFab(false); if (!hasBasis) { setShowAuth(true); return; } go("tracker"); })}
@@ -1520,12 +1520,12 @@ export default function App() {
           {fabAct(lang === "nl" ? "Scan / log eten" : "Scan / log food", <svg width="20" height="20" viewBox="0 0 24 24" fill={EMBER} aria-hidden="true"><rect x="3" y="5" width="1.7" height="14" /><rect x="6" y="5" width="1" height="14" /><rect x="8.5" y="5" width="2" height="14" /><rect x="12" y="5" width="1" height="14" /><rect x="14.6" y="5" width="1.7" height="14" /><rect x="17.6" y="5" width="1" height="14" /><rect x="20" y="5" width="1.4" height="14" /></svg>, () => { setFab(false); if (!hasPro) { setShowAuth(true); return; } setFabScan(true); setShowProducts(true); })}
         </div>
       )}
-      <div onClick={() => setFab(!fab)} title="+" style={{ position: "fixed", left: "50%", bottom: consentH + 28, zIndex: 47, width: 58, height: 58, borderRadius: "50%", background: EMBER, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 6px 20px rgba(225,29,72,0.5)", cursor: "pointer", transition: "transform .2s", transform: `translateX(-50%) ${fab ? "rotate(45deg)" : ""}`, border: `3px solid ${INK}` }}>
+      <div onClick={() => setFab(!fab)} title="+" style={{ position: "fixed", left: "50%", bottom: "calc(env(safe-area-inset-bottom) + 28px)", zIndex: 47, width: 58, height: 58, borderRadius: "50%", background: EMBER, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 6px 20px rgba(225,29,72,0.5)", cursor: "pointer", transition: "transform .2s", transform: `translateX(-50%) ${fab ? "rotate(45deg)" : ""}`, border: `3px solid ${INK}` }}>
         <svg width="27" height="27" viewBox="0 0 24 24" fill="none" stroke={PAPER} strokeWidth="2.4" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
       </div>
 
       {/* BOTTOM NAV — 2 links, +, 2 rechts */}
-      <div style={{ position: "fixed", left: 0, right: 0, bottom: consentH, background: INK, borderTop: `1px solid ${LINE}`, display: "flex", zIndex: 45, paddingBottom: "env(safe-area-inset-bottom)", transition: "bottom .2s" }}>
+      <div style={{ position: "fixed", left: 0, right: 0, bottom: 0, background: INK, borderTop: `1px solid ${LINE}`, display: "flex", zIndex: 45, paddingBottom: "env(safe-area-inset-bottom)" }}>
         {navCell("dashboard", "navDash", () => go("dashboard"), tab === "dashboard")}
         {navCell("plan", "navPlan", () => go("plan"), tab === "plan")}
         <div style={{ flex: 1 }} />
@@ -1576,7 +1576,7 @@ export default function App() {
 
       {/* Opgeslagen-bevestiging met "Naar dashboard" */}
       {saveFlash && (
-        <div style={{ position: "fixed", left: "50%", transform: "translateX(-50%)", bottom: consentH + 96, zIndex: 80, display: "flex", alignItems: "center", gap: 12, background: INK2, border: `1px solid ${SAGE}`, borderRadius: 12, padding: "11px 14px", boxShadow: "0 10px 30px rgba(0,0,0,0.5)", maxWidth: "92vw" }}>
+        <div style={{ position: "fixed", left: "50%", transform: "translateX(-50%)", bottom: "calc(env(safe-area-inset-bottom) + 96px)", zIndex: 80, display: "flex", alignItems: "center", gap: 12, background: INK2, border: `1px solid ${SAGE}`, borderRadius: 12, padding: "11px 14px", boxShadow: "0 10px 30px rgba(0,0,0,0.5)", maxWidth: "92vw" }}>
           <span style={{ color: SAGE, fontSize: 16, fontWeight: 800 }}>✓</span>
           <span style={{ fontSize: 13.5, color: PAPER, fontWeight: 600 }}>{T("savedFlash")}</span>
           <div onClick={() => { setSaveFlash(false); setPlanEdit(false); setTab("dashboard"); try { window.scrollTo(0, 0); } catch (e) {} }} style={{ cursor: "pointer", marginLeft: 4, background: EMBER, color: PAPER, borderRadius: 8, padding: "7px 12px", fontSize: 12.5, fontWeight: 700, ...disp, letterSpacing: 0.3, whiteSpace: "nowrap" }}>{T("toDashboard")} →</div>
