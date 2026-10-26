@@ -292,6 +292,7 @@ export default function App() {
   const [showReminders, setShowReminders] = useState(false);
   const [session, setSession] = useState(null);
   const [showAuth, setShowAuth] = useState(false);
+  const [authRecovery, setAuthRecovery] = useState(false);
   const [subTier, setSubTier] = useState("free");
   const [installEvt, setInstallEvt] = useState(null);
   const [installDismissed, setInstallDismissed] = useState(() => load("hf_install_dismissed", false));
@@ -378,7 +379,7 @@ export default function App() {
     if (!supabase) return;
     supabase.auth.getSession().then(({ data }) => setSession((data && data.session) || null)).catch(() => {});
     let sub;
-    try { sub = supabase.auth.onAuthStateChange((_e, s) => setSession(s || null)); } catch (e) {}
+    try { sub = supabase.auth.onAuthStateChange((e, s) => { setSession(s || null); if (e === "PASSWORD_RECOVERY") { setAuthRecovery(true); setShowAuth(true); } }); } catch (e) {}
     return () => { try { sub.data.subscription.unsubscribe(); } catch (e) {} };
   }, []);
 
@@ -1030,7 +1031,7 @@ export default function App() {
       </div>
 
       {showReminders && <Reminders lang={lang} onClose={() => setShowReminders(false)} />}
-      {showAuth && <Auth lang={lang} session={session} tier={subTier} onClose={() => setShowAuth(false)} />}
+      {showAuth && <Auth lang={lang} session={session} tier={subTier} recovery={authRecovery} onClose={() => { setShowAuth(false); setAuthRecovery(false); }} />}
       {showProducts && <Products lang={lang} session={session} onClose={() => { setShowProducts(false); setPickTarget(null); }} onPick={pickTarget ? (prod) => { addProductIng(pickTarget.di, pickTarget.mi, prod); setShowProducts(false); setPickTarget(null); } : null} />}
     </div>
   );
