@@ -481,7 +481,8 @@ export default function App() {
       const nTrain = (intake.trainingDays || []).length;
       const request = (nTrain === 0 || nTrain === 7) ? [{ label: "D1", level: "base" }] : [{ label: "TR", level: "train" }, { label: "RS", level: "rest" }];
       const token = (() => { try { return localStorage.getItem("hf_token") || ""; } catch (e) { return ""; } })();
-      const data = await fetchChunk({ ...intake, trainingCount: nTrain, request, paid: true, token });
+      const authToken = (session && session.access_token) || "";
+      const data = await fetchChunk({ ...intake, trainingCount: nTrain, request, paid: true, token, authToken });
       setTargets(data.targets);
       if (data.locked || !data.plan) {
         setUnlocked(false); setWeek(null); setLockReason(data.reason || "");

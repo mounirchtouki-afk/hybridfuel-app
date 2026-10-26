@@ -33,6 +33,28 @@ function validToken(token) {
   }
 }
 
+// --- Abonnement-verificatie ----------------------------------------------
+// Checkt via de Supabase-sessie (JWT) of de ingelogde gebruiker een actief
+// Basis/Pro/Plus-abonnement heeft. RLS zorgt dat de query alleen de eigen rij teruggeeft.
+async function subActive(authToken) {
+  if (!authToken || typeof authToken !== "string") return false;
+  const url = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "").replace(/\/$/, "");
+  const anon = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || "sb_publishable_5CJ_waXIVhhzkkqD96iqMA_63yJJnaH";
+  if (!url) return false;
+  try {
+    const r = await fetch(url + "/rest/v1/subscriptions?select=tier,status", {
+      headers: { apikey: anon, Authorization: "Bearer " + authToken },
+    });
+    if (!r.ok) return false;
+    const rows = await r.json().catch(() => []);
+    const s = rows && rows[0];
+    if (!s) return false;
+    const activeStatus = s.status === "active" || s.status === "trialing";
+    const paidTier = s.tier === "basis" || s.tier === "pro" || s.tier === "plus";
+    return !!(activeStatus && paidTier);
+  } catch (e) { return false; }
+}
+
 // --- Simpele rate-limit (per IP, per dag) --------------------------------
 // Losse anti-misbruik-backstop per IP per dag. De échte rem is Optie B (credits per
 // betaling). Ruim gezet zodat echte klanten (ook meerdere op één IP) niet geraakt worden.
@@ -225,7 +247,8 @@ export default async function handler(req, res) {
     // Betaald telt alleen als er een geldig token uit /api/verify meekomt (zodra het
     // slot actief is via UNLOCK_SECRET). Zonder die env var volstaat de paid-vlag.
     const isPaid = body.paid === true;
-    const paidVerified = isPaid && (trusted || validToken(body.token));
+    const subVerified = await subActive(body.authToken);
+    const paidVerified = isPaid && (trusted || subVerified || validToken(body.token));
     if (!trusted && !paidVerified) {
       return res.status(200).json({ targets, plan: null, locked: true });
     }
@@ -241,7 +264,7 @@ export default async function handler(req, res) {
     // OPTIE B: credits per betaling. Elke generatie telt er één af; bij 0 → opnieuw
     // betalen. Alleen voor echte betaalde gebruikers (niet voor trusted automatisering),
     // en alleen als er een credit-opslag gekoppeld is (anders verandert er niets).
-    if (!trusted && kvConfigured()) {
+    if (!trusted && !subVerified && kvConfigured()) {
       const sid = tokenSid(body.token);
       const dec = sid ? await kv(["DECR", "cr:" + sid]) : { result: -1 };
       const n = typeof dec.result === "number" ? dec.result : parseInt(dec.result, 10);
