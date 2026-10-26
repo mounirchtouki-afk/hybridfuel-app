@@ -42,6 +42,9 @@ const T = {
   backToLogin: { nl: "Terug naar inloggen", en: "Back to log in" },
   newsletter: { nl: "Houd me op de hoogte (tips & nieuws)", en: "Keep me posted (tips & news)" },
   newsletterLbl: { nl: "Nieuwsbrief", en: "Newsletter" },
+  nameLbl: { nl: "Naam", en: "Name" },
+  namePh: { nl: "Je naam (voor je dashboard)", en: "Your name (for your dashboard)" },
+  nameSavedTxt: { nl: "Opgeslagen ✓", en: "Saved ✓" },
   setNewPw: { nl: "Nieuw wachtwoord instellen", en: "Set a new password" },
   newPwPh: { nl: "Nieuw wachtwoord", en: "New password" },
   save: { nl: "Opslaan", en: "Save" },
@@ -80,6 +83,14 @@ export default function Auth({ lang, session, tier, recovery, onClose }) {
   const [newEmail, setNewEmail] = useState("");
   const [newPw, setNewPw] = useState("");
   const [newsOn, setNewsOn] = useState(() => { try { const v = localStorage.getItem("hf_newsletter"); return v === null ? true : v === "1"; } catch (e) { return true; } });
+  const [name, setName] = useState(() => (session && session.user && session.user.user_metadata && session.user.user_metadata.display_name) || (() => { try { return localStorage.getItem("hf_name") || ""; } catch (e) { return ""; } })());
+  const [nameSaved, setNameSaved] = useState(false);
+  async function saveName() {
+    const v = name.trim();
+    try { localStorage.setItem("hf_name", v); } catch (e) {}
+    if (supabase && session) { try { await supabase.auth.updateUser({ data: { display_name: v } }); } catch (e) {} }
+    setNameSaved(true); setTimeout(() => setNameSaved(false), 1500);
+  }
 
   function setNewsletter(email, on) {
     try { localStorage.setItem("hf_newsletter", on ? "1" : "0"); } catch (e) {}
@@ -251,6 +262,13 @@ export default function Auth({ lang, session, tier, recovery, onClose }) {
 
         {/* Instellingen */}
         <div style={{ ...sectionTitle, marginBottom: 8 }}>{t("settings")}</div>
+        <div style={{ padding: "9px 0", borderBottom: `1px solid ${LINE}` }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+            <span style={{ fontSize: 13, color: PAPER, fontWeight: 600 }}>{t("nameLbl")}</span>
+            {nameSaved && <span style={{ fontSize: 11, color: "#4ADE80", fontWeight: 600 }}>{t("nameSavedTxt")}</span>}
+          </div>
+          <input value={name} onChange={(e) => setName(e.target.value)} onBlur={saveName} placeholder={t("namePh")} style={input} />
+        </div>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 0", borderBottom: `1px solid ${LINE}` }}>
           <span style={{ fontSize: 13, color: PAPER, fontWeight: 600 }}>{t("newsletterLbl")}</span>
           {toggle(newsOn, () => { const v = !newsOn; setNewsOn(v); setNewsletter(session.user.email, v); })}

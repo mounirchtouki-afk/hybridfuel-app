@@ -65,7 +65,8 @@ export default function Dashboard({ lang, session, week, targets, onGo }) {
 
   const hr = new Date().getHours();
   const greet = hr < 12 ? t("morning") : hr < 18 ? t("afternoon") : t("evening");
-  const name = session && session.user && session.user.email ? session.user.email.split("@")[0] : t("athlete");
+  const savedName = ((session && session.user && session.user.user_metadata && session.user.user_metadata.display_name) || load("hf_name", "") || "").trim();
+  const name = savedName || (session && session.user && session.user.email ? session.user.email.split("@")[0] : t("athlete"));
 
   const idx = jsDayToIdx(new Date(d + "T12:00:00").getDay());
   const day = week && week.days && week.days.length ? (week.days[idx] || week.days[0]) : null;
