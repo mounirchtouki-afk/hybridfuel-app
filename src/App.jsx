@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, SAGE, load, save, genSteps, todayISO } from "./shared.js";
 import Today from "./views/Today.jsx";
+import Dashboard from "./views/Dashboard.jsx";
 import RecipeBuilder from "./views/RecipeBuilder.jsx";
 import Tracker from "./views/Tracker.jsx";
 import Water from "./views/Water.jsx";
@@ -207,6 +208,8 @@ const TXT = {
   navProducts: { nl: "Producten", en: "Products" },
   navRecipes: { nl: "Recepten", en: "Recipes" },
   navRace: { nl: "Race", en: "Race" },
+  navDash: { nl: "Home", en: "Home" },
+  navMore: { nl: "Meer", en: "More" },
   install: { nl: "Installeer de app", en: "Install the app" },
   installHint: { nl: "Zet HybridFuelCo op je beginscherm — sneller, met herinneringen.", en: "Add HybridFuelCo to your home screen — faster, with reminders." },
   installBtn: { nl: "Installeren", en: "Install" },
@@ -260,6 +263,8 @@ const Icon = ({ name, on }) => {
   if (name === "producten") return <svg width="23" height="23" viewBox="0 0 24 24"><path d="M21 8l-9-5-9 5 9 5 9-5z" {...p} /><path d="M3 8v8l9 5 9-5V8M12 13v8" {...p} /></svg>;
   if (name === "recipes") return <svg width="23" height="23" viewBox="0 0 24 24"><path d="M4 4v6a3 3 0 006 0V4M7 4v16" {...p} /><path d="M17 4c-1.5 0-2.5 2-2.5 5s1 4 2.5 4 2.5-1 2.5-4-1-5-2.5-5zM17 13v7" {...p} /></svg>;
   if (name === "race") return <svg width="23" height="23" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8" {...p} /><path d="M12 13V8.5M12 3.5V2M9.5 2h5" {...p} /></svg>;
+  if (name === "dashboard") return <svg width="23" height="23" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1.5" {...p} /><rect x="14" y="3" width="7" height="5" rx="1.5" {...p} /><rect x="14" y="12" width="7" height="9" rx="1.5" {...p} /><rect x="3" y="16" width="7" height="5" rx="1.5" {...p} /></svg>;
+  if (name === "more") return <svg width="23" height="23" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.6" fill={c} stroke="none" /><circle cx="12" cy="12" r="1.6" fill={c} stroke="none" /><circle cx="19" cy="12" r="1.6" fill={c} stroke="none" /></svg>;
   return null;
 };
 
@@ -310,7 +315,8 @@ export default function App() {
   const [planEmail, setPlanEmail] = useState("");
 
   // App-navigatie + PWA
-  const [tab, setTab] = useState("plan");
+  const [tab, setTab] = useState("dashboard");
+  const [showMore, setShowMore] = useState(false);
   const [showReminders, setShowReminders] = useState(false);
   const [session, setSession] = useState(null);
   const [showAuth, setShowAuth] = useState(false);
@@ -844,13 +850,27 @@ export default function App() {
   const safeText = lowBmi ? T("lowBmiWarn") : goal === "cut" ? T("safeCut") : goal === "gain" ? T("safeGain") : T("safeMaintain");
   const hasCycle = targets && targets.trainingCount > 0 && targets.trainingCount < 7 && targets.train && targets.rest;
 
-  const NAV = [["plan", "navPlan"], ["today", "navToday"], ["tracker", "navTracker"], ["water", "navWater"], ["producten", "navProducts"], ["recipes", "navRecipes"], ["race", "navRace"]];
+  const OVERFLOW = ["today", "tracker", "water", "producten", "race"]; // zitten onder "Meer"
+  const go = (x) => { setShowMore(false); setTab(x); try { window.scrollTo(0, 0); } catch (e) {} };
   const fabAct = (label, icon, onClick) => (
     <div onClick={onClick} style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
       <span style={{ background: INK2, border: `1px solid ${LINE}`, color: PAPER, fontSize: 12.5, fontWeight: 600, padding: "7px 12px", borderRadius: 9, whiteSpace: "nowrap", boxShadow: "0 4px 14px rgba(0,0,0,.45)" }}>{label}</span>
       <div style={{ width: 46, height: 46, borderRadius: "50%", background: INK2, border: `1px solid ${EMBER}`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 14px rgba(0,0,0,.45)", flexShrink: 0 }}>{icon}</div>
     </div>
   );
+  const navCell = (id, key, onClick, active) => (
+    <div key={id} onClick={onClick} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 3, padding: "8px 0 7px", cursor: "pointer" }}>
+      <Icon name={id} on={active} />
+      <div style={{ fontSize: 10, fontWeight: 600, color: active ? EMBER : MUTED, letterSpacing: 0.2 }}>{T(key)}</div>
+    </div>
+  );
+  const moreTile = (icon, label, onClick) => (
+    <div onClick={onClick} style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: 11, background: INK2, border: `1px solid ${LINE}`, borderRadius: 12, padding: "13px 13px" }}>
+      <div style={{ width: 34, height: 34, borderRadius: 9, background: "rgba(225,29,72,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{icon}</div>
+      <div style={{ fontSize: 13, fontWeight: 600, color: PAPER }}>{label}</div>
+    </div>
+  );
+  const mIcon = (name) => <Icon name={name} on={true} />;
 
   return (
     <div style={{ minHeight: "100vh", background: INK, position: "relative", color: PAPER, fontFamily: "Inter, sans-serif", paddingBottom: 76 + consentH }}>
@@ -892,6 +912,8 @@ export default function App() {
       )}
 
       <div style={{ maxWidth: 680, margin: "0 auto", padding: 16, position: "relative", zIndex: 1 }}>
+
+        {tab === "dashboard" && <Dashboard lang={lang} session={session} week={week} targets={targets} onGo={(x) => { setTab(x); try { window.scrollTo(0, 0); } catch (e) {} }} />}
 
         {/* ====== PLAN TAB ====== */}
         {tab === "plan" && (
@@ -1134,34 +1156,47 @@ export default function App() {
         {tab === "race" && (hasPlus ? <RaceProtocol lang={lang} weight={weight} session={session} week={week} /> : <Locked pro />)}
       </div>
 
-      {/* QUICK-ADD + */}
-      {fab && <div onClick={() => setFab(false)} style={{ position: "fixed", inset: 0, zIndex: 39 }} />}
-      <div style={{ position: "fixed", right: 16, bottom: consentH + 76, zIndex: 41, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 12 }}>
-        {fab && (
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 12 }}>
-            {fabAct(lang === "nl" ? "Recept maken" : "Create recipe", <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4v6a3 3 0 006 0V4M7 4v16" /><path d="M17 4c-1.5 0-2.5 2-2.5 5s1 4 2.5 4 2.5-1 2.5-4-1-5-2.5-5zM17 13v7" /></svg>, () => { setFab(false); setShowBuilder(true); })}
-            {fabAct(lang === "nl" ? "Gewicht loggen" : "Log weight", <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M4 18l5-6 4 3 6-8" /><path d="M4 21h16" /></svg>, () => { setFab(false); if (!hasBasis) { setShowAuth(true); return; } setTab("tracker"); try { window.scrollTo(0, 0); } catch (e) {} })}
-            {fabAct(lang === "nl" ? "Water toevoegen" : "Add water", <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3c3.5 4.2 6 7.3 6 10.3A6 6 0 016 13.3C6 10.3 8.5 7.2 12 3z" /></svg>, () => { setFab(false); if (!hasBasis) { setShowAuth(true); return; } setTab("water"); try { window.scrollTo(0, 0); } catch (e) {} })}
-            {fabAct(lang === "nl" ? "Scan / log eten" : "Scan / log food", <svg width="20" height="20" viewBox="0 0 24 24" fill={EMBER} aria-hidden="true"><rect x="3" y="5" width="1.7" height="14" /><rect x="6" y="5" width="1" height="14" /><rect x="8.5" y="5" width="2" height="14" /><rect x="12" y="5" width="1" height="14" /><rect x="14.6" y="5" width="1.7" height="14" /><rect x="17.6" y="5" width="1" height="14" /><rect x="20" y="5" width="1.4" height="14" /></svg>, () => { setFab(false); if (!hasPro) { setShowAuth(true); return; } setFabScan(true); setShowProducts(true); })}
-          </div>
-        )}
-        <div onClick={() => setFab(!fab)} title="+" style={{ width: 56, height: 56, borderRadius: "50%", background: EMBER, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 8px 24px rgba(225,29,72,0.45)", cursor: "pointer", transition: "transform .2s", transform: fab ? "rotate(45deg)" : "none" }}>
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={PAPER} strokeWidth="2.4" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+      {/* QUICK-ADD + (centraal, verhoogd) */}
+      {fab && <div onClick={() => setFab(false)} style={{ position: "fixed", inset: 0, zIndex: 44 }} />}
+      {fab && (
+        <div style={{ position: "fixed", left: 0, right: 0, bottom: consentH + 100, zIndex: 46, display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
+          {fabAct(lang === "nl" ? "Recept maken" : "Create recipe", <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4v6a3 3 0 006 0V4M7 4v16" /><path d="M17 4c-1.5 0-2.5 2-2.5 5s1 4 2.5 4 2.5-1 2.5-4-1-5-2.5-5zM17 13v7" /></svg>, () => { setFab(false); setShowBuilder(true); })}
+          {fabAct(lang === "nl" ? "Gewicht loggen" : "Log weight", <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M4 18l5-6 4 3 6-8" /><path d="M4 21h16" /></svg>, () => { setFab(false); if (!hasBasis) { setShowAuth(true); return; } go("tracker"); })}
+          {fabAct(lang === "nl" ? "Water toevoegen" : "Add water", <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3c3.5 4.2 6 7.3 6 10.3A6 6 0 016 13.3C6 10.3 8.5 7.2 12 3z" /></svg>, () => { setFab(false); if (!hasBasis) { setShowAuth(true); return; } go("water"); })}
+          {fabAct(lang === "nl" ? "Scan / log eten" : "Scan / log food", <svg width="20" height="20" viewBox="0 0 24 24" fill={EMBER} aria-hidden="true"><rect x="3" y="5" width="1.7" height="14" /><rect x="6" y="5" width="1" height="14" /><rect x="8.5" y="5" width="2" height="14" /><rect x="12" y="5" width="1" height="14" /><rect x="14.6" y="5" width="1.7" height="14" /><rect x="17.6" y="5" width="1" height="14" /><rect x="20" y="5" width="1.4" height="14" /></svg>, () => { setFab(false); if (!hasPro) { setShowAuth(true); return; } setFabScan(true); setShowProducts(true); })}
         </div>
+      )}
+      <div onClick={() => setFab(!fab)} title="+" style={{ position: "fixed", left: "50%", bottom: consentH + 28, zIndex: 47, width: 58, height: 58, borderRadius: "50%", background: EMBER, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 6px 20px rgba(225,29,72,0.5)", cursor: "pointer", transition: "transform .2s", transform: `translateX(-50%) ${fab ? "rotate(45deg)" : ""}`, border: `3px solid ${INK}` }}>
+        <svg width="27" height="27" viewBox="0 0 24 24" fill="none" stroke={PAPER} strokeWidth="2.4" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
       </div>
 
-      {/* BOTTOM NAV */}
-      <div style={{ position: "fixed", left: 0, right: 0, bottom: consentH, background: INK, borderTop: `1px solid ${LINE}`, display: "flex", zIndex: 30, paddingBottom: "env(safe-area-inset-bottom)", transition: "bottom .2s" }}>
-        {NAV.map(([id, key]) => {
-          const on = tab === id;
-          return (
-            <div key={id} onClick={() => { setTab(id); try { window.scrollTo(0, 0); } catch (e) {} }} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 3, padding: "9px 0 8px", cursor: "pointer" }}>
-              <Icon name={id} on={on} />
-              <div style={{ fontSize: 10.5, fontWeight: 600, color: on ? EMBER : MUTED, letterSpacing: 0.3 }}>{T(key)}</div>
-            </div>
-          );
-        })}
+      {/* BOTTOM NAV — 2 links, +, 2 rechts */}
+      <div style={{ position: "fixed", left: 0, right: 0, bottom: consentH, background: INK, borderTop: `1px solid ${LINE}`, display: "flex", zIndex: 45, paddingBottom: "env(safe-area-inset-bottom)", transition: "bottom .2s" }}>
+        {navCell("dashboard", "navDash", () => go("dashboard"), tab === "dashboard")}
+        {navCell("plan", "navPlan", () => go("plan"), tab === "plan")}
+        <div style={{ flex: 1 }} />
+        {navCell("recipes", "navRecipes", () => go("recipes"), tab === "recipes")}
+        {navCell("more", "navMore", () => setShowMore(true), showMore || OVERFLOW.includes(tab))}
       </div>
+
+      {/* MEER-menu */}
+      {showMore && (
+        <div onClick={() => setShowMore(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)", WebkitBackdropFilter: "blur(4px)", zIndex: 50, display: "flex", alignItems: "flex-end" }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", background: INK, borderTop: `1px solid ${LINE}`, borderRadius: "20px 20px 0 0", padding: "16px 16px calc(20px + env(safe-area-inset-bottom))", backgroundImage: "radial-gradient(130% 60% at 90% 0%, rgba(225,29,72,0.1), transparent 60%)" }}>
+            <div style={{ width: 40, height: 4, background: LINE, borderRadius: 2, margin: "0 auto 14px" }} />
+            <div style={{ ...disp, fontSize: 12.5, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", color: EMBER, marginBottom: 12 }}>{T("navMore")}</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              {moreTile(mIcon("today"), T("navToday"), () => go("today"))}
+              {moreTile(mIcon("tracker"), T("navTracker"), () => go("tracker"))}
+              {moreTile(mIcon("water"), T("navWater"), () => go("water"))}
+              {moreTile(mIcon("producten"), T("navProducts"), () => go("producten"))}
+              {moreTile(mIcon("race"), T("navRace"), () => go("race"))}
+              {moreTile(<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 4-6.5 8-6.5s8 2.5 8 6.5" /></svg>, lang === "nl" ? "Account" : "Account", () => { setShowMore(false); setShowAuth(true); })}
+              {moreTile(<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0" /></svg>, lang === "nl" ? "Herinneringen" : "Reminders", () => { setShowMore(false); setShowReminders(true); })}
+            </div>
+          </div>
+        </div>
+      )}
 
       {showReminders && <Reminders lang={lang} onClose={() => setShowReminders(false)} />}
       {showAuth && <Auth lang={lang} session={session} tier={subTier} recovery={authRecovery} onClose={() => { setShowAuth(false); setAuthRecovery(false); }} />}
