@@ -56,17 +56,20 @@ export default function Today({ lang, week, onGoPlan, session }) {
   useEffect(() => {
     setEaten(load("hf_eaten_" + d, {}));
     let active = true;
+    // Handmatig gewicht uit de Water-tab wint (zelfde logica als Water).
+    const mw = num(load("hf_water_weight", ""));
+    if (mw > 0) setWeightKg(mw);
     if (cloud) {
       supabase.from("food_logs").select("id,item,grams,kcal,p,c,f").eq("user_id", session.user.id).eq("date", d).order("created_at")
         .then(({ data }) => { if (active && data) setExtras(data.map((r) => ({ ...r }))); }, () => {});
       supabase.from("water_logs").select("ml").eq("user_id", session.user.id).eq("date", d)
         .then(({ data }) => { if (active) setWaterMl((data && data[0] && data[0].ml) || 0); }, () => {});
-      supabase.from("weights").select("kg").eq("user_id", session.user.id).order("date", { ascending: false }).limit(1)
+      if (mw <= 0) supabase.from("weights").select("kg").eq("user_id", session.user.id).order("date", { ascending: false }).limit(1)
         .then(({ data }) => { if (active && data && data[0]) setWeightKg(Number(data[0].kg)); }, () => {});
     } else {
       setExtras(load("hf_food_" + d, []));
       setWaterMl((load("hf_water", {})[d]) || 0);
-      const ws = load("hf_weights", []); if (ws.length) { const s = [...ws].sort((a, b) => a.date.localeCompare(b.date)); setWeightKg(Number(s[s.length - 1].kg)); }
+      if (mw <= 0) { const ws = load("hf_weights", []); if (ws.length) { const s = [...ws].sort((a, b) => a.date.localeCompare(b.date)); setWeightKg(Number(s[s.length - 1].kg)); } }
     }
     return () => { active = false; };
   }, [d, session]);
