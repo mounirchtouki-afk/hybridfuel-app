@@ -471,7 +471,15 @@ export default function App() {
     setError(""); setStarted(true); setView("plan"); setChecked({}); setWeek(null); setLockReason(""); setPlanEmail("");
     const intake = currentIntake();
     try { localStorage.setItem("hf_intake", JSON.stringify(intake)); } catch (e) {}
-    if (devMode) { await computeFree(intake); setWeek(demoWeek(lang)); return; } // dev: demo-plan zonder server
+    if (devMode) { // dev: demo-maaltijden, maar wél geschaald naar je echte berekende targets
+      const tg = await computeFree(intake);
+      const dw = demoWeek(lang);
+      const days = (tg && tg.train && tg.rest)
+        ? dw.days.map((d) => scaleDayTo(d, d.train ? tg.train.kcal : tg.rest.kcal))
+        : dw.days;
+      setWeek({ days });
+      return;
+    }
     if (hasBasis) await generatePaid(intake); else await computeFree(intake);
   }
 
@@ -481,6 +489,7 @@ export default function App() {
       const nTrain = (intake.trainingDays || []).length;
       const data = await fetchChunk({ ...intake, trainingCount: nTrain, paid: false });
       setTargets(data.targets);
+      return data.targets;
     } catch (e) { setError(e && e.message ? e.message : T("unknownErr")); } finally { setLoading(false); }
   }
 

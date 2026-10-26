@@ -104,7 +104,10 @@ function computeBase(b) {
     ? 10 * kg + 6.25 * cm - 5 * age + 5
     : 10 * kg + 6.25 * cm - 5 * age - 161;
   const maintenance = Math.round((bmr * ACTIVITY[activity]) / 10) * 10;
-  const kcal = Math.round((maintenance * (1 + GOAL_ADJ[goal])) / 10) * 10;
+  // Veiligheidsvloer: het gemiddelde dagdoel zakt nooit onder de ruststofwisseling (BMR).
+  // Zo blijft een tekort verantwoord, ook voor slanke of lichte mensen.
+  const bmrFloor = Math.round(bmr / 10) * 10;
+  const kcal = Math.max(bmrFloor, Math.round((maintenance * (1 + GOAL_ADJ[goal])) / 10) * 10);
   const protein = Math.round(kg * 2.0);
   const fat = Math.round(kg * 0.9);
   const carbs = Math.max(40, Math.round((kcal - protein * 4 - fat * 9) / 4));
