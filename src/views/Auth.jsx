@@ -165,21 +165,21 @@ export default function Auth({ lang, session, tier, recovery, onClose }) {
     const price = PRICE[plan][billInterval];
     const popular = plan === "pro";
     return (
-      <div style={{ position: "relative", background: INK2, border: `1px solid ${popular ? EMBER : LINE}`, borderRadius: 12, padding: 14, marginBottom: 10 }}>
+      <div style={{ position: "relative", background: INK2, border: `1px solid ${popular ? EMBER : LINE}`, borderRadius: 12, padding: 11, marginBottom: 8 }}>
         {popular && <div style={{ position: "absolute", top: -9, right: 12, background: EMBER, color: PAPER, fontSize: 9.5, fontWeight: 700, ...disp, letterSpacing: 0.8, textTransform: "uppercase", padding: "2px 8px", borderRadius: 5 }}>{t("popular")}</div>}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
           <div style={{ ...disp, fontSize: 16, fontWeight: 700, color: PAPER, textTransform: "uppercase", letterSpacing: 0.5 }}>{t(plan + "Name")}</div>
           <div style={{ ...disp, fontSize: 19, fontWeight: 700, color: popular ? EMBER : PAPER }}>{price}<span style={{ fontSize: 11, color: MUTED, fontWeight: 500 }}>{billInterval === "year" ? t("perYr") : t("perMo")}</span></div>
         </div>
-        <div style={{ fontSize: 11.5, color: MUTED, lineHeight: 1.5, marginBottom: 12 }}>{t(plan + "Feat")}</div>
-        <button onClick={() => upgrade(plan)} disabled={!!subBusy} style={{ ...(popular ? primaryBtn : ghostBtn), width: "100%", opacity: subBusy ? 0.7 : 1 }}>{subBusy === plan ? t("busy") : t("choose")}</button>
+        <div style={{ fontSize: 11.5, color: MUTED, lineHeight: 1.45, marginBottom: 9 }}>{t(plan + "Feat")}</div>
+        <button onClick={() => upgrade(plan)} disabled={!!subBusy} style={{ ...(popular ? primaryBtn : ghostBtn), width: "100%", padding: "10px 0", opacity: subBusy ? 0.7 : 1 }}>{subBusy === plan ? t("busy") : t("choose")}</button>
       </div>
     );
   };
 
   const shell = (children) => (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-      <div onClick={(e) => e.stopPropagation()} className="hf-modal" style={{ position: "relative", background: INK, border: `1px solid ${LINE}`, borderRadius: 20, width: "100%", maxWidth: 420, maxHeight: "90dvh", overflowY: "auto", padding: 22, boxShadow: "0 24px 70px rgba(0,0,0,.65)", backgroundImage: "radial-gradient(130% 70% at 92% -10%, rgba(225,29,72,0.13), transparent 58%)" }}>
+      <div onClick={(e) => e.stopPropagation()} className="hf-modal" style={{ position: "relative", background: INK, border: `1px solid ${LINE}`, borderRadius: 20, width: "100%", maxWidth: 420, maxHeight: "90dvh", overflowY: "auto", padding: 18, boxShadow: "0 24px 70px rgba(0,0,0,.65)", backgroundImage: "radial-gradient(130% 70% at 92% -10%, rgba(225,29,72,0.13), transparent 58%)" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{ width: 28, height: 28, borderRadius: 8, background: EMBER, display: "flex", alignItems: "center", justifyContent: "center", ...disp, fontWeight: 700, color: PAPER, fontSize: 16 }}>H</div>
@@ -198,7 +198,7 @@ export default function Auth({ lang, session, tier, recovery, onClose }) {
     </div>
   );
   const linkRow = (lbl, onClick, danger) => (
-    <div onClick={onClick} style={{ cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", padding: "11px 0", borderBottom: `1px solid ${LINE}`, color: danger ? EMBER_SOFT : PAPER, fontSize: 13, fontWeight: 600 }}>
+    <div onClick={onClick} style={{ cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 0", borderBottom: `1px solid ${LINE}`, color: danger ? EMBER_SOFT : PAPER, fontSize: 13, fontWeight: 600 }}>
       <span>{lbl}</span><span style={{ color: MUTED }}>›</span>
     </div>
   );
@@ -227,16 +227,16 @@ export default function Auth({ lang, session, tier, recovery, onClose }) {
     return shell(
       <div>
         <div style={{ fontSize: 12, color: MUTED }}>{t("loggedInAs")}</div>
-        <div style={{ ...disp, fontSize: 18, fontWeight: 600, marginTop: 2, marginBottom: 14, wordBreak: "break-all" }}>{session.user.email}</div>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px", background: INK2, border: `1px solid ${LINE}`, borderRadius: 10, marginBottom: 16 }}>
+        <div style={{ ...disp, fontSize: 16, fontWeight: 600, marginTop: 2, marginBottom: 10, wordBreak: "break-all" }}>{session.user.email}</div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 12px", background: INK2, border: `1px solid ${LINE}`, borderRadius: 10, marginBottom: 12 }}>
           <span style={{ fontSize: 12, color: MUTED }}>{t("tier")}</span>
           <span style={{ ...disp, fontSize: 13, fontWeight: 700, color: tier && tier !== "free" ? EMBER : MUTED, textTransform: "uppercase", letterSpacing: 1 }}>{tier || "free"}{tier && tier !== "free" ? " · " + t("active") : ""}</span>
         </div>
 
         {(!tier || tier === "free") ? (
-          <div style={{ marginBottom: 16 }}>
+          <div style={{ marginBottom: 10 }}>
             <div style={sectionTitle}>{t("upgradeTitle")}</div>
-            <div style={{ display: "inline-flex", gap: 4, background: INK2, border: `1px solid ${LINE}`, borderRadius: 10, padding: 4, margin: "12px 0 14px" }}>
+            <div style={{ display: "inline-flex", gap: 4, background: INK2, border: `1px solid ${LINE}`, borderRadius: 10, padding: 4, margin: "8px 0 10px" }}>
               {[["month", t("month")], ["year", t("year")]].map(([id, lbl]) => (
                 <div key={id} onClick={() => setBillInterval(id)} style={{ padding: "7px 16px", borderRadius: 7, background: billInterval === id ? EMBER : "transparent", color: PAPER, fontSize: 12.5, fontWeight: 700, ...disp, letterSpacing: 0.5, cursor: "pointer" }}>{lbl}</div>
               ))}
@@ -251,7 +251,7 @@ export default function Auth({ lang, session, tier, recovery, onClose }) {
 
         {/* Instellingen */}
         <div style={{ ...sectionTitle, marginBottom: 8 }}>{t("settings")}</div>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "11px 0", borderBottom: `1px solid ${LINE}` }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 0", borderBottom: `1px solid ${LINE}` }}>
           <span style={{ fontSize: 13, color: PAPER, fontWeight: 600 }}>{t("newsletterLbl")}</span>
           {toggle(newsOn, () => { const v = !newsOn; setNewsOn(v); setNewsletter(session.user.email, v); })}
         </div>
@@ -283,7 +283,7 @@ export default function Auth({ lang, session, tier, recovery, onClose }) {
 
         {err && <div style={{ fontSize: 12, color: EMBER_SOFT, margin: "12px 0", lineHeight: 1.4 }}>{err}</div>}
         {msg && <div style={{ fontSize: 12.5, color: "#4ADE80", margin: "12px 0", lineHeight: 1.5 }}>{msg}</div>}
-        <button onClick={logout} style={{ ...ghostBtn, width: "100%", marginTop: 16 }}>{t("logout")}</button>
+        <button onClick={logout} style={{ ...ghostBtn, width: "100%", marginTop: 12 }}>{t("logout")}</button>
       </div>
     );
   }
