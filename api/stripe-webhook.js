@@ -64,6 +64,26 @@ async function stripeGet(path) {
   return r.ok ? r.json() : null;
 }
 
+// Haalt de ECHTE huidige status van een subscription bij Stripe op, zodat de tier
+// niet afhangt van de volgorde waarin webhook-events binnenkomen. Niet op te halen
+// (404 = opgezegd/weg) → null, en de aanroeper behandelt dat als 'free'.
+async function fetchSubState(subId) {
+  if (!subId) return null;
+  const sub = await stripeGet("subscriptions/" + encodeURIComponent(subId));
+  if (!sub || !sub.id) return null;
+  const active = sub.status === "active" || sub.status === "trialing";
+  const interval = sub.items && sub.items.data && sub.items.data[0] && sub.items.data[0].price && sub.items.data[0].price.recurring && sub.items.data[0].price.recurring.interval;
+  return {
+    tier: active ? ((sub.metadata && sub.metadata.tier) || "basis") : "free",
+    status: sub.status,
+    interval: interval || null,
+    periodEnd: sub.current_period_end ? new Date(sub.current_period_end * 1000).toISOString() : null,
+    cancelAtPeriodEnd: !!sub.cancel_at_period_end,
+    customer: sub.customer || null,
+    userId: (sub.metadata && sub.metadata.user_id) || null,
+  };
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") { res.setHeader("Allow", "POST"); return res.status(405).end(); }
 
@@ -84,31 +104,23 @@ export default async function handler(req, res) {
     const o = evt.data && evt.data.object;
     if (evt.type === "checkout.session.completed" && o && o.mode === "subscription") {
       const userId = o.client_reference_id || (o.metadata && o.metadata.user_id);
-      const tier = (o.metadata && o.metadata.tier) || "basis";
-      let interval = null, periodEnd = null;
-      if (o.subscription) {
-        const sub = await stripeGet("subscriptions/" + encodeURIComponent(o.subscription));
-        if (sub) {
-          interval = sub.items && sub.items.data && sub.items.data[0] && sub.items.data[0].price && sub.items.data[0].price.recurring && sub.items.data[0].price.recurring.interval;
-          if (sub.current_period_end) periodEnd = new Date(sub.current_period_end * 1000).toISOString();
-        }
-      }
+      const st = o.subscription ? await fetchSubState(o.subscription) : null; // echte status bij Stripe
       db = await setSub(userId, {
-        stripe_customer_id: o.customer || null,
+        stripe_customer_id: o.customer || (st && st.customer) || null,
         stripe_subscription_id: o.subscription || null,
-        tier, status: "active", interval, current_period_end: periodEnd, cancel_at_period_end: false,
+        tier: (st && st.tier) || (o.metadata && o.metadata.tier) || "basis",
+        status: (st && st.status) || "active",
+        interval: st ? st.interval : null,
+        current_period_end: st ? st.periodEnd : null,
+        cancel_at_period_end: st ? st.cancelAtPeriodEnd : false,
       });
     } else if (evt.type === "customer.subscription.updated" && o) {
       const userId = o.metadata && o.metadata.user_id;
-      const active = o.status === "active" || o.status === "trialing";
-      const tier = active ? ((o.metadata && o.metadata.tier) || "basis") : "free";
-      const interval = o.items && o.items.data && o.items.data[0] && o.items.data[0].price && o.items.data[0].price.recurring && o.items.data[0].price.recurring.interval;
-      db = await setSub(userId, {
-        tier, status: o.status,
-        interval: interval || null,
-        current_period_end: o.current_period_end ? new Date(o.current_period_end * 1000).toISOString() : null,
-        cancel_at_period_end: !!o.cancel_at_period_end,
-      });
+      // Niet op het event vertrouwen: haal de echte status op. Niet-ophaalbaar = weg = free.
+      const st = await fetchSubState(o.id);
+      db = st
+        ? await setSub(userId, { tier: st.tier, status: st.status, interval: st.interval, current_period_end: st.periodEnd, cancel_at_period_end: st.cancelAtPeriodEnd })
+        : await setSub(userId, { tier: "free", status: "canceled", cancel_at_period_end: false });
     } else if (evt.type === "customer.subscription.deleted" && o) {
       const userId = o.metadata && o.metadata.user_id;
       db = await setSub(userId, { tier: "free", status: "canceled", cancel_at_period_end: false });
