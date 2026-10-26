@@ -3,7 +3,7 @@
 // De frontend stuurt alleen ingevulde velden; deze functie bouwt de prompt zelf.
 
 import crypto from "crypto";
-import { RECIPES } from "../src/recipes.js";
+import { RECIPES, snackOptions } from "../src/recipes.js";
 import { kv, kvConfigured } from "./_kv.js";
 
 const ACTIVITY = { light: 1.375, moderate: 1.55, high: 1.725, athlete: 1.9 };
@@ -157,9 +157,13 @@ function buildPrompt(b, cyc) {
 
   // Tussendoortjes: aantal (0-3) + voorkeuren. Bepaalt hoeveel maaltijden de dag telt
   // en hoe de kcal verdeeld worden (hoofdmaaltijden + kleine snacks).
-  const nSnack = Math.max(0, Math.min(3, parseInt(b.snacks, 10)));
-  const nSnackSafe = isNaN(nSnack) ? 0 : nSnack;
-  const snackLikes = Array.isArray(b.snackLikes) ? b.snackLikes.slice(0, 8).map((x) => cleanStr(x, 40)).filter(Boolean).join(", ") : "";
+  const nSnackRaw = parseInt(b.snacks, 10);
+  const nSnackSafe = isNaN(nSnackRaw) ? 0 : Math.max(0, Math.min(3, nSnackRaw));
+  // snackLikes = gekozen type-ids (fruit/nuts/...). Kies concrete opties uit de
+  // database — banaan vooraan als default. Zo wordt "fruit" niet letterlijk, maar
+  // gevarieerd ingevuld vanuit de DB.
+  const snackCandList = nSnackSafe > 0 ? snackOptions(Array.isArray(b.snackLikes) ? b.snackLikes : []).slice(0, 14) : [];
+  const snackCands = snackCandList.map((s) => (lang === "en" ? s.en : s.nl)).join(", ");
   const totalMeals = 3 + nSnackSafe;
 
   const prefs = [];
@@ -208,8 +212,8 @@ function buildPrompt(b, cyc) {
         : '- 3 maaltijden/dag. Gebruik precies deze types voor "t": Ontbijt, Lunch, Diner.');
   const snackGuide = nSnackSafe > 0
     ? (lang === "en"
-        ? `- Keep each Snack small (roughly 8-15% of the day's calories) and simple; let the 3 main meals carry the rest. Spread the snacks between the main meals so the day is well distributed.${snackLikes ? " Base snacks on these preferences: " + snackLikes + " (e.g. a banana, an apple, a handful of nuts, Greek yoghurt)." : " Use simple snacks like a banana, an apple, a handful of nuts or Greek yoghurt."}`
-        : `- Houd elk Tussendoortje klein (ongeveer 8-15% van de dagcalorieën) en simpel; de 3 hoofdmaaltijden dragen de rest. Spreid de tussendoortjes tussen de hoofdmaaltijden zodat de dag goed verdeeld is.${snackLikes ? " Baseer de tussendoortjes op deze voorkeuren: " + snackLikes + " (bijv. een banaan, een appel, een handje noten, Griekse yoghurt)." : " Gebruik simpele tussendoortjes zoals een banaan, een appel, een handje noten of Griekse yoghurt."}`)
+        ? `- Keep each Snack small (roughly 8-15% of the day's calories) and simple; let the 3 main meals carry the rest. Spread the snacks between the main meals so the day is well distributed. Pick snacks FROM this list and vary them across the days (don't repeat the same snack every day): ${snackCands}. If in doubt, a banana is the most obvious default.`
+        : `- Houd elk Tussendoortje klein (ongeveer 8-15% van de dagcalorieën) en simpel; de 3 hoofdmaaltijden dragen de rest. Spreid de tussendoortjes tussen de hoofdmaaltijden zodat de dag goed verdeeld is. Kies de tussendoortjes UIT deze lijst en varieer ze over de dagen (niet elke dag hetzelfde): ${snackCands}. Bij twijfel is een banaan de meest voor de hand liggende keuze.`)
     : "";
   const L = lang === "en"
     ? {

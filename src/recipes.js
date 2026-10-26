@@ -180,3 +180,60 @@ export function recipeToMeal(recipe, lang) {
     ing: recipe.ing.map((x) => ({ n: x[L], g: x.g })),
   };
 }
+
+// --- Tussendoortjes-database ---------------------------------------------
+// Per snacktype (zelfde ids als de intake-chips) een lijst concrete opties met
+// macro's voor een normale portie. De app/generator kiest HIERUIT — niet
+// letterlijk "banaan/appel". Banaan staat vooraan als meest voor de hand
+// liggende default wanneer er niets gekozen is of de lijst leeg zou zijn.
+export const SNACK_DB = {
+  fruit: [
+    { nl: "Banaan", en: "Banana", kcal: 105, p: 1, c: 27, f: 0, ing: [{ nl: "banaan", en: "banana", g: 120 }] },
+    { nl: "Appel", en: "Apple", kcal: 78, p: 0, c: 21, f: 0, ing: [{ nl: "appel", en: "apple", g: 150 }] },
+    { nl: "Peer", en: "Pear", kcal: 91, p: 1, c: 24, f: 0, ing: [{ nl: "peer", en: "pear", g: 160 }] },
+    { nl: "Sinaasappel", en: "Orange", kcal: 66, p: 1, c: 16, f: 0, ing: [{ nl: "sinaasappel", en: "orange", g: 140 }] },
+    { nl: "Handje blauwe bessen", en: "Handful of blueberries", kcal: 57, p: 1, c: 14, f: 0, ing: [{ nl: "blauwe bessen", en: "blueberries", g: 100 }] },
+    { nl: "Druiven", en: "Grapes", kcal: 69, p: 1, c: 18, f: 0, ing: [{ nl: "druiven", en: "grapes", g: 100 }] },
+    { nl: "Mango", en: "Mango", kcal: 72, p: 1, c: 18, f: 0, ing: [{ nl: "mango", en: "mango", g: 120 }] },
+    { nl: "2 kiwi's", en: "2 kiwis", kcal: 85, p: 2, c: 20, f: 1, ing: [{ nl: "kiwi", en: "kiwi", g: 140 }] },
+  ],
+  nuts: [
+    { nl: "Handje amandelen", en: "Handful of almonds", kcal: 145, p: 5, c: 5, f: 13, ing: [{ nl: "amandelen", en: "almonds", g: 25 }] },
+    { nl: "Handje walnoten", en: "Handful of walnuts", kcal: 164, p: 4, c: 3, f: 16, ing: [{ nl: "walnoten", en: "walnuts", g: 25 }] },
+    { nl: "Handje cashewnoten", en: "Handful of cashews", kcal: 138, p: 5, c: 8, f: 11, ing: [{ nl: "cashewnoten", en: "cashews", g: 25 }] },
+    { nl: "Gemengde noten", en: "Mixed nuts", kcal: 150, p: 5, c: 5, f: 13, ing: [{ nl: "gemengde noten", en: "mixed nuts", g: 25 }] },
+  ],
+  yoghurt: [
+    { nl: "Griekse yoghurt", en: "Greek yoghurt", kcal: 150, p: 15, c: 10, f: 5, ing: [{ nl: "Griekse yoghurt", en: "Greek yoghurt", g: 200 }] },
+    { nl: "Skyr", en: "Skyr", kcal: 130, p: 22, c: 8, f: 1, ing: [{ nl: "skyr", en: "skyr", g: 200 }] },
+    { nl: "Yoghurt met bessen", en: "Yoghurt with berries", kcal: 165, p: 14, c: 18, f: 4, ing: [{ nl: "Griekse yoghurt", en: "Greek yoghurt", g: 170 }, { nl: "bessen", en: "berries", g: 60 }] },
+  ],
+  quark: [
+    { nl: "Magere kwark", en: "Low-fat quark", kcal: 160, p: 32, c: 11, f: 0, ing: [{ nl: "magere kwark", en: "low-fat quark", g: 250 }] },
+    { nl: "Kwark met fruit", en: "Quark with fruit", kcal: 200, p: 30, c: 20, f: 1, ing: [{ nl: "magere kwark", en: "low-fat quark", g: 250 }, { nl: "fruit", en: "fruit", g: 80 }] },
+  ],
+  bar: [
+    { nl: "Eiwitreep", en: "Protein bar", kcal: 220, p: 20, c: 22, f: 7, ing: [{ nl: "eiwitreep", en: "protein bar", g: 60 }] },
+    { nl: "Mueslireep", en: "Granola bar", kcal: 160, p: 3, c: 24, f: 6, ing: [{ nl: "mueslireep", en: "granola bar", g: 40 }] },
+  ],
+  ricecake: [
+    { nl: "Rijstwafels + pindakaas", en: "Rice cakes + peanut butter", kcal: 170, p: 6, c: 18, f: 9, ing: [{ nl: "rijstwafels", en: "rice cakes", g: 20 }, { nl: "pindakaas", en: "peanut butter", g: 15 }] },
+    { nl: "Rijstwafels + kwark", en: "Rice cakes + quark", kcal: 130, p: 12, c: 16, f: 1, ing: [{ nl: "rijstwafels", en: "rice cakes", g: 20 }, { nl: "magere kwark", en: "low-fat quark", g: 100 }] },
+  ],
+  shake: [
+    { nl: "Proteïneshake", en: "Protein shake", kcal: 120, p: 24, c: 3, f: 2, ing: [{ nl: "whey-eiwit", en: "whey protein", g: 30 }] },
+    { nl: "Shake met melk & banaan", en: "Shake with milk & banana", kcal: 260, p: 24, c: 32, f: 5, ing: [{ nl: "whey-eiwit", en: "whey protein", g: 30 }, { nl: "melk", en: "milk", g: 250 }, { nl: "banaan", en: "banana", g: 100 }] },
+  ],
+  veg: [
+    { nl: "Worteltjes + hummus", en: "Carrots + hummus", kcal: 140, p: 4, c: 14, f: 8, ing: [{ nl: "worteltjes", en: "carrots", g: 100 }, { nl: "hummus", en: "hummus", g: 40 }] },
+    { nl: "Komkommer + kwarkdip", en: "Cucumber + quark dip", kcal: 90, p: 10, c: 7, f: 2, ing: [{ nl: "komkommer", en: "cucumber", g: 150 }, { nl: "magere kwark", en: "low-fat quark", g: 80 }] },
+  ],
+};
+
+// Vlakke kandidatenlijst voor de gekozen snacktypes (ids). Leeg/niets gekozen →
+// fruit (met banaan vooraan) als meest voor de hand liggende default.
+export function snackOptions(typeIds) {
+  const ids = Array.isArray(typeIds) && typeIds.length ? typeIds.filter((k) => SNACK_DB[k]) : [];
+  const pool = (ids.length ? ids : ["fruit"]).flatMap((k) => SNACK_DB[k] || []);
+  return pool.length ? pool : SNACK_DB.fruit;
+}

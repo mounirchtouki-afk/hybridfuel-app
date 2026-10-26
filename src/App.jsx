@@ -9,22 +9,22 @@ import Products from "./views/Products.jsx";
 import Recipes from "./views/Recipes.jsx";
 import RaceProtocol from "./views/RaceProtocol.jsx";
 import Training from "./views/Training.jsx";
-import { RECIPES } from "./recipes.js";
+import { RECIPES, snackOptions } from "./recipes.js";
 import Reminders, { checkReminders } from "./views/Reminders.jsx";
 import Auth from "./views/Auth.jsx";
 import { supabase } from "./supabaseClient.js";
 
 // ===== Dev-modus demo-plan (alleen voor review op preview/localhost) =====
 const DEMO_TARGETS = { kcal: 2400, protein: 180, carbs: 240, fat: 70, bmi: 24.1, train: { kcal: 2600 }, rest: { kcal: 2200 } };
-function demoWeek(lang, nSnack = 0) {
+function demoWeek(lang, nSnack = 0, snackLikes = []) {
   const names = lang === "nl" ? ["Ma", "Di", "Wo", "Do", "Vr", "Za", "Zo"] : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
   const SNK = lang === "nl" ? "TUSSENDOORTJE" : "SNACK";
-  const snackPool = [
-    { t: SNK, n: lang === "nl" ? "Banaan" : "Banana", kcal: 105, p: 1, c: 27, f: 0, ing: [{ n: lang === "nl" ? "banaan" : "banana", g: 120 }] },
-    { t: SNK, n: lang === "nl" ? "Appel + handje noten" : "Apple + handful nuts", kcal: 190, p: 5, c: 22, f: 10, ing: [{ n: lang === "nl" ? "appel" : "apple", g: 150 }, { n: lang === "nl" ? "amandelen" : "almonds", g: 20 }] },
-    { t: SNK, n: lang === "nl" ? "Griekse yoghurt" : "Greek yoghurt", kcal: 150, p: 15, c: 10, f: 5, ing: [{ n: lang === "nl" ? "Griekse yoghurt" : "Greek yoghurt", g: 200 }] },
-  ];
-  const snk = snackPool.slice(0, Math.max(0, Math.min(3, nSnack))).map((m) => ({ ...m, ing: m.ing.map((g) => ({ ...g })) }));
+  const L = lang === "nl" ? "nl" : "en";
+  // Kies uit de tussendoortjes-database (banaan vooraan als default). Per dag
+  // andere opties zodat de week niet elke dag "banaan" is.
+  const pool = snackOptions(snackLikes).map((s) => ({ t: SNK, n: s[L], kcal: s.kcal, p: s.p, c: s.c, f: s.f, ing: s.ing.map((g) => ({ n: g[L], g: g.g })) }));
+  const nS = Math.max(0, Math.min(3, nSnack));
+  const pickSnacks = (dayIdx) => Array.from({ length: nS }, (_, i) => { const src = pool[(dayIdx + i * 3) % pool.length]; return { ...src, ing: src.ing.map((g) => ({ ...g })) }; });
   const train = [
     { t: lang === "nl" ? "ONTBIJT" : "BREAKFAST", n: lang === "nl" ? "Skyr met havermout & bessen" : "Skyr with oats & berries", kcal: 520, p: 42, c: 60, f: 12, ing: [{ n: "skyr", g: 250 }, { n: lang === "nl" ? "havermout" : "oats", g: 60 }, { n: lang === "nl" ? "blauwe bessen" : "blueberries", g: 80 }] },
     { t: "LUNCH", n: lang === "nl" ? "Kipfilet, rijst & broccoli" : "Chicken, rice & broccoli", kcal: 680, p: 55, c: 80, f: 14, ing: [{ n: lang === "nl" ? "kipfilet" : "chicken breast", g: 180 }, { n: lang === "nl" ? "rijst" : "rice", g: 90 }, { n: "broccoli", g: 150 }] },
@@ -35,14 +35,15 @@ function demoWeek(lang, nSnack = 0) {
     { t: "LUNCH", n: lang === "nl" ? "Kwark met noten & appel" : "Quark with nuts & apple", kcal: 420, p: 34, c: 32, f: 16, ing: [{ n: lang === "nl" ? "magere kwark" : "low-fat quark", g: 300 }, { n: lang === "nl" ? "walnoten" : "walnuts", g: 20 }, { n: lang === "nl" ? "appel" : "apple", g: 150 }] },
     { t: lang === "nl" ? "DINER" : "DINNER", n: lang === "nl" ? "Rundergehakt met quinoa" : "Beef mince with quinoa", kcal: 620, p: 46, c: 52, f: 22, ing: [{ n: lang === "nl" ? "rundergehakt 5%" : "beef mince 5%", g: 150 }, { n: "quinoa", g: 80 }, { n: lang === "nl" ? "courgette" : "zucchini", g: 150 }] },
   ];
-  const withSnacks = (base) => {
+  const withSnacks = (base, dayIdx) => {
     const [bf, lu, di] = base.map((m) => ({ ...m, ing: m.ing.map((g) => ({ ...g })) }));
-    const order = [bf]; if (snk[0]) order.push({ ...snk[0], ing: snk[0].ing.map((g) => ({ ...g })) });
-    order.push(lu); if (snk[1]) order.push({ ...snk[1], ing: snk[1].ing.map((g) => ({ ...g })) });
-    order.push(di); if (snk[2]) order.push({ ...snk[2], ing: snk[2].ing.map((g) => ({ ...g })) });
+    const snk = pickSnacks(dayIdx);
+    const order = [bf]; if (snk[0]) order.push(snk[0]);
+    order.push(lu); if (snk[1]) order.push(snk[1]);
+    order.push(di); if (snk[2]) order.push(snk[2]);
     return order;
   };
-  return { days: names.map((d, i) => { const tr = i % 2 === 0; return { d, train: tr, m: withSnacks(tr ? train : rest) }; }) };
+  return { days: names.map((d, i) => { const tr = i % 2 === 0; return { d, train: tr, m: withSnacks(tr ? train : rest, i) }; }) };
 }
 
 // Roept GEEN Claude aan vanuit de browser — alles via /api/plan (key zit op de server).
@@ -89,7 +90,7 @@ const PROTEINS = [
 ];
 const WD = { nl: ["Ma", "Di", "Wo", "Do", "Vr", "Za", "Zo"], en: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] };
 const SNACKS = [
-  { id: "fruit", nl: "Fruit (banaan, appel)", en: "Fruit (banana, apple)" },
+  { id: "fruit", nl: "Fruit", en: "Fruit" },
   { id: "nuts", nl: "Noten", en: "Nuts" },
   { id: "yoghurt", nl: "(Griekse) yoghurt", en: "(Greek) yoghurt" },
   { id: "quark", nl: "Kwark/Skyr", en: "Quark/Skyr" },
@@ -521,7 +522,7 @@ export default function App() {
 
   function common() {
     const dietObj = DIETS.find((d) => d.id === diet);
-    return { sex, age, height, weight, activity, goal, diet: dietObj ? dietObj[lang] : diet, avoid, likes, cuisines: labelsOf(cuisines, CUISINES), proteins: labelsOf(proteins, PROTEINS), snacks, snackLikes: labelsOf(snackLikes, SNACKS), lang };
+    return { sex, age, height, weight, activity, goal, diet: dietObj ? dietObj[lang] : diet, avoid, likes, cuisines: labelsOf(cuisines, CUISINES), proteins: labelsOf(proteins, PROTEINS), snacks, snackLikes, snackLikeLabels: labelsOf(snackLikes, SNACKS), lang };
   }
   function currentIntake() { return { ...common(), trainingDays: [...trainingDays] }; }
 
@@ -531,7 +532,7 @@ export default function App() {
     try { localStorage.setItem("hf_intake", JSON.stringify(intake)); } catch (e) {}
     if (devMode) { // dev: demo-maaltijden, maar wél geschaald naar je echte berekende targets
       const tg = await computeFree(intake);
-      const dw = demoWeek(lang, snacks);
+      const dw = demoWeek(lang, snacks, snackLikes);
       const days = (tg && tg.train && tg.rest)
         ? dw.days.map((d) => scaleDayTo(d, d.train ? tg.train.kcal : tg.rest.kcal))
         : dw.days;
@@ -1325,7 +1326,7 @@ export default function App() {
       </div>
 
       {/* QUICK-ADD + (centraal, verhoogd) */}
-      {fab && <div onClick={() => setFab(false)} style={{ position: "fixed", inset: 0, zIndex: 44 }} />}
+      {fab && <div onClick={() => setFab(false)} style={{ position: "fixed", inset: 0, zIndex: 44, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(9px)", WebkitBackdropFilter: "blur(9px)" }} />}
       {fab && (
         <div style={{ position: "fixed", left: 0, right: 0, bottom: consentH + 100, zIndex: 46, display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
           {fabAct(lang === "nl" ? "Recept maken" : "Create recipe", <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4v6a3 3 0 006 0V4M7 4v16" /><path d="M17 4c-1.5 0-2.5 2-2.5 5s1 4 2.5 4 2.5-1 2.5-4-1-5-2.5-5zM17 13v7" /></svg>, () => { setFab(false); setShowBuilder(true); })}
