@@ -196,6 +196,22 @@ const TXT = {
   copyMealToLbl: { nl: "Kopieer deze maaltijd naar:", en: "Copy this meal to:" },
   pickRecipe: { nl: "Kies een recept", en: "Pick a recipe" },
   noRecipes: { nl: "Nog geen eigen recepten. Maak er een aan onder Recepten.", en: "No recipes yet. Create one under Recipes." },
+  searchRecipePh: { nl: "Zoek een recept…", en: "Search a recipe…" },
+  mineRecipes: { nl: "Mijn recepten", en: "My recipes" },
+  addTitle: { nl: "Toevoegen", en: "Add" },
+  addFromDb: { nl: "Uit recepten", en: "From recipes" },
+  addFromDbSub: { nl: "Mijn recepten + de bibliotheek · schaalbaar", en: "My recipes + the library · scalable" },
+  addEmpty: { nl: "Lege maaltijd", en: "Empty meal" },
+  addEmptySub: { nl: "Zelf ingrediënten toevoegen", en: "Add ingredients yourself" },
+  addFromProd: { nl: "Uit mijn producten", en: "From my products" },
+  addFromProdSub: { nl: "Gescande / eigen producten", en: "Scanned / own products" },
+  fromDb: { nl: "recept", en: "recipe" },
+  libHeader: { nl: "Receptenbibliotheek", en: "Recipe library" },
+  mealOpts: { nl: "Opties", en: "Options" },
+  removeMealTxt: { nl: "Verwijderen", en: "Remove" },
+  buildOwn: { nl: "Of: zelf samenstellen", en: "Or: build your own" },
+  ownPlanHint: { nl: "Leeg weekschema — vul elke dag zelf met de +.", en: "Empty week — fill each day yourself with the +." },
+  cancel: { nl: "Annuleren", en: "Cancel" },
   system: { nl: "van ons", en: "from us" },
   myProducts: { nl: "Producten", en: "Products" },
   mealNamePh: { nl: "Naam maaltijd", en: "Meal name" },
@@ -601,6 +617,20 @@ export default function App() {
     if (hasBasis) await generatePaid(intake); else await computeFree(intake);
   }
 
+  // Zelf een plan samenstellen: leeg weekschema dat de klant zelf vult via de +.
+  async function buildOwnPlan() {
+    setError(""); setStarted(true); setView("plan"); setChecked({}); setWeek(null); setLockReason(""); setPlanEmail("");
+    const intake = currentIntake();
+    try { localStorage.setItem("hf_intake", JSON.stringify(intake)); } catch (e) {}
+    await computeFree(intake); // altijd de targets berekenen zodat je weet waar je naartoe werkt
+    if (hasBasis) { // leeg schema + direct in bewerkmodus; zonder abo zie je de targets + de paywall
+      const names = WD[lang];
+      const days = names.map((d, i) => ({ d, train: trainingDays.includes(i), m: [] }));
+      setWeek({ days });
+      setPlanEdit(true);
+    }
+  }
+
   async function computeFree(intake) {
     setLoading(true); setTargets(null);
     try {
@@ -799,6 +829,13 @@ export default function App() {
   }
   const removeMeal = (di, mi) => mutDay(di, (d) => { d.m = d.m.filter((_, j) => j !== mi); return d; });
   const addMealTo = (di) => mutDay(di, (d) => { d.m = [...d.m, { t: "EXTRA", n: "", kcal: 0, p: 0, c: 0, f: 0, ing: [] }]; return d; });
+  // Voeg een product toe als een NIEUWE maaltijd (dag-niveau "Uit producten").
+  function addProductAsMeal(di, product) {
+    const ing = { n: product.name, g: 100, per100: product.per_100 || {} };
+    const a = ingMacros(ing) || {};
+    const meal = { t: (lang === "nl" ? "PRODUCT" : "PRODUCT"), n: product.name, kcal: R(a.kcal || 0), p: R(a.p || 0), c: R(a.c || 0), f: R(a.f || 0), ing: [ing], src: "product" };
+    mutDay(di, (d) => { d.m = [...d.m, meal]; return d; });
+  }
   function toggleEdit() { if (planEdit) { persistPlanCloud(); flashSaved(); } setPlanEdit(!planEdit); }
   // Refs voor de terug-knop up-to-date houden (de popstate-listener leest hieruit).
   navRef.current = { tab, showMore, showReminders, showAuth, showBuilder, showProducts, movePlan, copyPick, recipePick, fab, planEdit, showLogout };
@@ -866,31 +903,66 @@ export default function App() {
   }
   function RecipePicker({ di, onClose }) {
     const [mine, setMine] = useState(() => (supabase && session ? [] : load("hf_recipes", [])));
+    const [q, setQ] = useState("");
+    const [open, setOpen] = useState("breakfast");
     useEffect(() => {
       let a = true;
-      if (supabase && session) supabase.from("recipes").select("id,name,type,ingredients,macros").eq("user_id", session.user.id).order("created_at", { ascending: false }).then(({ data }) => { if (a && data) setMine(data); });
+      if (supabase && session) supabase.from("recipes").select("id,name,type,ingredients,macros,image_url").eq("user_id", session.user.id).order("created_at", { ascending: false }).then(({ data }) => { if (a && data) setMine(data); });
       return () => { a = false; };
     }, []);
-    const toMealUser = (r) => ({ t: String(r.type || "maaltijd").toUpperCase(), n: r.name, kcal: num(r.macros && r.macros.kcal), p: num(r.macros && r.macros.p), c: num(r.macros && r.macros.c), f: num(r.macros && r.macros.f), ing: (r.ingredients || []).map((x) => ({ n: x.name, g: num(x.grams) })) });
-    const toMealSys = (r) => ({ t: "MAALTIJD", n: r.name[lang], kcal: num(r.macros.kcal), p: num(r.macros.p), c: num(r.macros.c), f: num(r.macros.f), ing: (r.ing || []).map((x) => ({ n: x[lang], g: num(x.g) })) });
+    const RT = { breakfast: { nl: "Ontbijt", en: "Breakfast" }, lunch: { nl: "Lunch", en: "Lunch" }, dinner: { nl: "Diner", en: "Dinner" }, snack: { nl: "Tussendoortje", en: "Snack" } };
+    const toMealUser = (r) => ({ t: (RT[r.type] ? RT[r.type][lang] : "Maaltijd").toUpperCase(), n: r.name, kcal: num(r.macros && r.macros.kcal), p: num(r.macros && r.macros.p), c: num(r.macros && r.macros.c), f: num(r.macros && r.macros.f), ing: (r.ingredients || []).map((x) => ({ n: x.name, g: num(x.grams) })), src: "db" });
+    const toMealSys = (r) => ({ t: (RT[r.type] ? RT[r.type][lang] : "Maaltijd").toUpperCase(), n: r.name[lang], kcal: num(r.macros.kcal), p: num(r.macros.p), c: num(r.macros.c), f: num(r.macros.f), ing: (r.ing || []).map((x) => ({ n: x[lang], g: num(x.g) })), src: "db" });
     const pick = (meal) => { addRecipeToDay(di, meal); onClose(); };
-    const Row = ({ title, sub, onClk }) => (
-      <div onClick={onClk} style={{ cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "11px 14px", borderRadius: 10, border: `1px solid ${LINE}`, background: INK2 }}>
-        <div style={{ minWidth: 0 }}><div style={{ fontSize: 13.5, fontWeight: 600, color: PAPER, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{title}</div><div style={{ fontSize: 10.5, color: MUTED, marginTop: 2 }}>{sub}</div></div>
-        <div style={{ color: EMBER, fontSize: 20, fontWeight: 700, flexShrink: 0 }}>+</div>
+    const ql = q.trim().toLowerCase();
+    const cats = ["breakfast", "lunch", "dinner", "snack"];
+    const Thumb = ({ src, letter }) => (
+      <div style={{ position: "relative", width: 42, height: 42, borderRadius: 8, overflow: "hidden", flexShrink: 0, background: `linear-gradient(135deg, ${INK2}, ${INK})` }}>
+        <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", color: LINE, ...disp, fontSize: 18 }}>{(letter || "?").slice(0, 1).toUpperCase()}</div>
+        {src && <img src={src} onError={(e) => { e.currentTarget.style.display = "none"; }} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />}
       </div>
     );
+    const RecRow = ({ src, title, sub, onClk }) => (
+      <div onClick={onClk} style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: 11, padding: "9px 12px", borderTop: `1px solid ${LINE}` }}>
+        <Thumb src={src} letter={title} />
+        <div style={{ minWidth: 0, flex: 1 }}><div style={{ fontSize: 13.5, fontWeight: 600, color: PAPER, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{title}</div><div style={{ fontSize: 10.5, color: MUTED, marginTop: 1 }}>{sub}</div></div>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="2.2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+      </div>
+    );
+    const mineF = mine.filter((r) => !ql || (r.name || "").toLowerCase().includes(ql));
     return (
       <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 70, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-        <div onClick={(e) => e.stopPropagation()} style={{ background: INK, border: `1px solid ${LINE}`, borderRadius: 18, width: "100%", maxWidth: 400, maxHeight: "86vh", overflowY: "auto", padding: 20, backgroundImage: "radial-gradient(130% 70% at 92% -10%, rgba(225,29,72,0.12), transparent 58%)" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+        <div onClick={(e) => e.stopPropagation()} className="hf-modal" style={{ background: INK, border: `1px solid ${LINE}`, borderRadius: 18, width: "100%", maxWidth: 400, maxHeight: "88vh", overflowY: "auto", padding: 20, backgroundImage: "radial-gradient(130% 70% at 92% -10%, rgba(225,29,72,0.12), transparent 58%)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
             <div style={{ ...disp, fontWeight: 700, fontSize: 16 }}>{T("pickRecipe")}</div>
             <div onClick={onClose} style={{ cursor: "pointer", color: MUTED, fontSize: 17, width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 9, border: `1px solid ${LINE}` }}>×</div>
           </div>
-          <div style={{ display: "grid", gap: 8 }}>
-            {mine.length === 0 && <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.5, padding: "2px 0 6px" }}>{T("noRecipes")}</div>}
-            {mine.map((r) => <Row key={"u" + r.id} title={r.name} sub={(num(r.macros && r.macros.kcal)) + " kcal · " + (r.ingredients ? r.ingredients.length : 0) + " ingr."} onClk={() => pick(toMealUser(r))} />)}
-            {RECIPES.map((r) => <Row key={"s" + r.id} title={r.name[lang]} sub={r.macros.kcal + " kcal · " + T("system")} onClk={() => pick(toMealSys(r))} />)}
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={T("searchRecipePh")} style={{ ...sIn, width: "100%", padding: "10px 12px", fontSize: 13.5, marginBottom: 12 }} />
+          <div style={{ border: `1px solid ${LINE}`, borderRadius: 12, overflow: "hidden" }}>
+            {mineF.length > 0 && (
+              <div style={{ borderBottom: `1px solid ${LINE}` }}>
+                <div onClick={() => setOpen(open === "mine" ? "" : "mine")} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 14px", cursor: "pointer" }}>
+                  <span style={{ ...disp, fontWeight: 700, fontSize: 12, letterSpacing: 1, textTransform: "uppercase", color: open === "mine" || ql ? EMBER : PAPER }}>{T("mineRecipes")}</span>
+                  <span style={{ display: "flex", gap: 10, alignItems: "center" }}><span style={{ fontSize: 11, color: MUTED }}>{mineF.length}</span><span style={{ fontSize: 11, color: EMBER, transform: open === "mine" || ql ? "rotate(90deg)" : "none" }}>›</span></span>
+                </div>
+                {(open === "mine" || ql) && mineF.map((r) => <RecRow key={"u" + r.id} src={r.image_url || null} title={r.name} sub={(num(r.macros && r.macros.kcal)) + " kcal"} onClk={() => pick(toMealUser(r))} />)}
+              </div>
+            )}
+            {!ql && <div style={{ padding: "9px 14px", borderBottom: `1px solid ${LINE}`, background: INK2, fontSize: 9.5, letterSpacing: 1, textTransform: "uppercase", color: MUTED, fontWeight: 700 }}>{T("libHeader")}</div>}
+            {cats.map((c) => {
+              const items = RECIPES.filter((r) => r.type === c && (!ql || r.name[lang].toLowerCase().includes(ql)));
+              if (ql && items.length === 0) return null;
+              const isOpen = ql ? true : open === c;
+              return (
+                <div key={c} style={{ borderBottom: `1px solid ${LINE}` }}>
+                  <div onClick={() => !ql && setOpen(isOpen ? "" : c)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 14px", cursor: "pointer" }}>
+                    <span style={{ ...disp, fontWeight: 700, fontSize: 12, letterSpacing: 1, textTransform: "uppercase", color: isOpen ? EMBER : PAPER, opacity: isOpen ? 1 : 0.85 }}>{RT[c][lang]}</span>
+                    <span style={{ display: "flex", gap: 10, alignItems: "center" }}><span style={{ fontSize: 11, color: MUTED }}>{items.length}</span><span style={{ fontSize: 11, color: isOpen ? EMBER : MUTED, transform: isOpen ? "rotate(90deg)" : "none" }}>›</span></span>
+                  </div>
+                  {isOpen && items.map((r) => <RecRow key={"s" + r.id} src={r.image_url || ("/recipes/" + r.id + ".jpg")} title={r.name[lang]} sub={r.macros.kcal + " kcal"} onClk={() => pick(toMealSys(r))} />)}
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
@@ -963,50 +1035,91 @@ export default function App() {
   }
 
   function EditDayCard({ day, di }) {
+    const [addOpen, setAddOpen] = useState(false);
+    const [openMeal, setOpenMeal] = useState(null);
+    const [dayMenu, setDayMenu] = useState(false);
     const tot = day.m.reduce((a, m) => ({ kcal: a.kcal + num(m.kcal), p: a.p + num(m.p), c: a.c + num(m.c), f: a.f + num(m.f) }), { kcal: 0, p: 0, c: 0, f: 0 });
+    const Dots = () => (<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.7" /><circle cx="12" cy="12" r="1.7" /><circle cx="12" cy="19" r="1.7" /></svg>);
+    const sqBtn = (on) => ({ cursor: "pointer", width: 30, height: 30, borderRadius: 7, border: `1px solid ${on ? EMBER : LINE}`, color: on ? EMBER : MUTED, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 });
+    const miniAct = (icon, txt, onClick, danger) => (
+      <div onClick={onClick} style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: 9, padding: "9px 12px", borderTop: `1px solid ${LINE}` }}>
+        <span style={{ color: danger ? MUTED : EMBER, display: "flex" }}>{icon}</span>
+        <span style={{ fontSize: 12.5, color: danger ? MUTED : PAPER, fontWeight: 600 }}>{txt}</span>
+      </div>
+    );
+    const addOpt = (icon, title, sub, onClick) => (
+      <div onClick={onClick} style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: 11, padding: "12px 14px", borderTop: `1px solid ${LINE}` }}>
+        <span style={{ width: 30, height: 30, borderRadius: 8, background: INK2, border: `1px solid ${LINE}`, color: EMBER, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{icon}</span>
+        <div style={{ minWidth: 0 }}><div style={{ fontSize: 14, fontWeight: 600, color: PAPER }}>{title}</div><div style={{ fontSize: 11, color: MUTED, marginTop: 1 }}>{sub}</div></div>
+      </div>
+    );
+    const icRecipe = <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M4 5a2 2 0 012-2h13v16H6a2 2 0 00-2 2V5z" /><path d="M9 7h6M9 10h6" /></svg>;
+    const icPlus = <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>;
+    const icBar = <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="6" width="1.6" height="12" /><rect x="6" y="6" width="1" height="12" /><rect x="8.4" y="6" width="2" height="12" /><rect x="12" y="6" width="1" height="12" /><rect x="14.6" y="6" width="1.6" height="12" /><rect x="17.6" y="6" width="1" height="12" /><rect x="20" y="6" width="1.4" height="12" /></svg>;
+    const icCopy = <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15V5a2 2 0 012-2h10" /></svg>;
+    const icSave = <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21l-7-4-7 4V5a2 2 0 012-2h10a2 2 0 012 2z" /></svg>;
+    const icTrash = <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14" /></svg>;
+    const icDate = <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 9h18M8 3v4M16 3v4" /></svg>;
     return (
       <div style={{ background: INK2, border: `1px solid ${LINE}`, borderRadius: 12, overflow: "hidden" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "11px 14px", background: INK, borderBottom: `1px solid ${LINE}` }}>
           <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
             <div style={{ ...disp, fontWeight: 600, fontSize: 15, letterSpacing: 1, textTransform: "uppercase" }}>{day.d}</div>
             <div onClick={() => mutDay(di, (d) => { d.train = !d.train; return d; })} style={{ cursor: "pointer", fontSize: 9.5, color: day.train ? EMBER : MUTED, border: `1px solid ${day.train ? EMBER : LINE}`, borderRadius: 5, padding: "2px 6px", letterSpacing: 1, fontWeight: 700 }}>{day.train ? T("trainTag") : T("restTag")}</div>
-            <div onClick={() => setCopyPick({ kind: "day", di })} style={{ cursor: "pointer", fontSize: 9.5, color: MUTED, border: `1px solid ${LINE}`, borderRadius: 5, padding: "2px 6px", letterSpacing: 0.5, fontWeight: 600 }}>{T("copyDay")}</div>
-            <div onClick={() => setMovePlan({ scope: "day", di })} style={{ cursor: "pointer", fontSize: 9.5, color: MUTED, border: `1px solid ${LINE}`, borderRadius: 5, padding: "2px 6px", letterSpacing: 0.5, fontWeight: 600 }}>{T("toDate")}</div>
           </div>
-          <div style={{ fontSize: 11.5, color: MUTED }}><span style={{ color: PAPER, fontWeight: 600 }}>{tot.kcal}</span> kcal · {tot.p}p/{tot.c}c/{tot.f}f</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ fontSize: 11.5, color: MUTED }}><span style={{ color: PAPER, fontWeight: 600 }}>{tot.kcal}</span> kcal · {tot.p}p/{tot.c}c/{tot.f}f</div>
+            <div onClick={() => { setDayMenu(!dayMenu); setOpenMeal(null); setAddOpen(false); }} style={{ ...sqBtn(dayMenu), width: 28, height: 28 }}><Dots /></div>
+          </div>
         </div>
+        {dayMenu && (
+          <div style={{ background: "#121212", borderBottom: `1px solid ${LINE}` }}>
+            {miniAct(icCopy, T("copyDay"), () => { setDayMenu(false); setCopyPick({ kind: "day", di }); })}
+            {miniAct(icDate, T("toDate"), () => { setDayMenu(false); setMovePlan({ scope: "day", di }); })}
+          </div>
+        )}
         <div style={{ padding: "4px 0" }}>
           {day.m.map((m, mi) => (
-            <div key={mi} style={{ padding: "11px 14px", borderBottom: `1px solid ${LINE}` }}>
-              <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8 }}>
-                <input value={m.n} onChange={(e) => patchMeal(di, mi, { n: e.target.value })} placeholder={T("mealNamePh")} style={{ ...sIn, flex: 1 }} />
-                <div onClick={() => scaleMeal(di, mi, 0.9)} style={{ cursor: "pointer", width: 30, height: 30, borderRadius: 7, border: `1px solid ${LINE}`, color: EMBER, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 700, flexShrink: 0 }}>−</div>
-                <div onClick={() => scaleMeal(di, mi, 1.1)} style={{ cursor: "pointer", width: 30, height: 30, borderRadius: 7, border: `1px solid ${LINE}`, color: EMBER, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 700, flexShrink: 0 }}>+</div>
-                <div onClick={() => removeMeal(di, mi)} style={{ cursor: "pointer", width: 30, height: 30, borderRadius: 7, border: `1px solid ${LINE}`, color: MUTED, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>×</div>
-              </div>
-              {(m.ing || []).map((ing, ii) => (
-                <div key={ii} style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 6 }}>
-                  <input value={ing.n} onChange={(e) => patchIng(di, mi, ii, { n: e.target.value })} placeholder={T("ingrNamePh")} style={{ ...sIn, flex: 1 }} />
-                  <input value={ing.g} onChange={(e) => patchIng(di, mi, ii, { g: num(e.target.value) })} inputMode="numeric" style={{ ...sIn, width: 58, textAlign: "right" }} />
-                  <span style={{ fontSize: 11, color: MUTED }}>g</span>
-                  <div onClick={() => removeIngr(di, mi, ii)} style={{ cursor: "pointer", color: MUTED, fontSize: 15, padding: "0 2px" }}>×</div>
+            <div key={mi} style={{ borderBottom: `1px solid ${LINE}` }}>
+              <div style={{ padding: "11px 14px" }}>
+                {m.src && <div style={{ display: "inline-block", fontSize: 8.5, color: PAPER, background: m.src === "product" ? SAGE : EMBER, borderRadius: 4, padding: "1px 6px", letterSpacing: 0.5, fontWeight: 700, ...disp, marginBottom: 6, textTransform: "uppercase" }}>{m.src === "product" ? "product" : T("fromDb")}</div>}
+                <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8 }}>
+                  <input value={m.n} onChange={(e) => patchMeal(di, mi, { n: e.target.value })} placeholder={T("mealNamePh")} style={{ ...sIn, flex: 1 }} />
+                  <div onClick={() => scaleMeal(di, mi, 0.9)} style={{ ...sqBtn(false), color: EMBER, fontSize: 18, fontWeight: 700 }}>−</div>
+                  <div onClick={() => scaleMeal(di, mi, 1.1)} style={{ ...sqBtn(false), color: EMBER, fontSize: 18, fontWeight: 700 }}>+</div>
+                  <div onClick={() => setOpenMeal(openMeal === mi ? null : mi)} style={sqBtn(openMeal === mi)}><Dots /></div>
                 </div>
-              ))}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 6, gap: 10, flexWrap: "wrap" }}>
-                <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-                  <div onClick={() => addIngr(di, mi)} style={{ cursor: "pointer", fontSize: 11.5, color: EMBER, fontWeight: 600 }}>{T("addIngr")}</div>
-                  <div onClick={() => { setPickTarget({ di, mi }); setShowProducts(true); }} style={{ cursor: "pointer", fontSize: 11.5, color: EMBER, fontWeight: 600 }}>{T("addProd")}</div>
-                  <div onClick={() => setCopyPick({ kind: "meal", di, mi })} style={{ cursor: "pointer", fontSize: 11.5, color: MUTED, fontWeight: 600 }}>{T("copyMeal")}</div>
-                  <div onClick={() => saveMealAsRecipe(di, mi)} style={{ cursor: "pointer", fontSize: 11.5, color: savedMsg === di + ":" + mi ? EMBER : MUTED, fontWeight: 600 }}>{savedMsg === di + ":" + mi ? T("savedAsRecipe") : T("saveAsRecipe")}</div>
-                </div>
-                <div style={{ fontSize: 10.5, color: MUTED }}>{m.kcal} kcal · {m.p}p/{m.c}c/{m.f}f</div>
+                {(m.ing || []).map((ing, ii) => (
+                  <div key={ii} style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 6 }}>
+                    <input value={ing.n} onChange={(e) => patchIng(di, mi, ii, { n: e.target.value })} placeholder={T("ingrNamePh")} style={{ ...sIn, flex: 1 }} />
+                    <input value={ing.g} onChange={(e) => patchIng(di, mi, ii, { g: num(e.target.value) })} inputMode="numeric" style={{ ...sIn, width: 58, textAlign: "right" }} />
+                    <span style={{ fontSize: 11, color: MUTED }}>g</span>
+                    <div onClick={() => removeIngr(di, mi, ii)} style={{ cursor: "pointer", color: MUTED, fontSize: 15, padding: "0 2px" }}>×</div>
+                  </div>
+                ))}
+                <div style={{ fontSize: 10.5, color: MUTED, marginTop: 6, textAlign: "right" }}>{m.kcal} kcal · {m.p}p/{m.c}c/{m.f}f</div>
               </div>
+              {openMeal === mi && (
+                <div style={{ background: "#121212", borderTop: `1px solid ${LINE}` }}>
+                  {miniAct(icPlus, T("addIngr").replace("+ ", ""), () => addIngr(di, mi))}
+                  {miniAct(icBar, T("addProd").replace("+ ", ""), () => { setOpenMeal(null); setPickTarget({ di, mi }); setShowProducts(true); })}
+                  {miniAct(icCopy, T("copyMeal"), () => { setOpenMeal(null); setCopyPick({ kind: "meal", di, mi }); })}
+                  {miniAct(icSave, savedMsg === di + ":" + mi ? T("savedAsRecipe") : T("saveAsRecipe"), () => saveMealAsRecipe(di, mi))}
+                  {miniAct(icTrash, T("removeMealTxt"), () => { setOpenMeal(null); removeMeal(di, mi); }, true)}
+                </div>
+              )}
             </div>
           ))}
-          <div style={{ display: "flex" }}>
-            <div onClick={() => addMealTo(di)} style={{ flex: 1, cursor: "pointer", textAlign: "center", padding: "10px 0", color: EMBER, fontSize: 12.5, fontWeight: 700, ...disp, letterSpacing: 0.5 }}>{T("addMeal")}</div>
-            <div onClick={() => setRecipePick(di)} style={{ flex: 1, cursor: "pointer", textAlign: "center", padding: "10px 0", color: EMBER, fontSize: 12.5, fontWeight: 700, ...disp, letterSpacing: 0.5, borderLeft: `1px solid ${LINE}` }}>{T("addRecipe")}</div>
-          </div>
+          {!addOpen ? (
+            <div onClick={() => { setAddOpen(true); setOpenMeal(null); setDayMenu(false); }} style={{ cursor: "pointer", textAlign: "center", padding: "11px 0", color: EMBER, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.5 }}>+ {T("addTitle")}</div>
+          ) : (
+            <div style={{ background: "#121212" }}>
+              {addOpt(icRecipe, T("addFromDb"), T("addFromDbSub"), () => { setAddOpen(false); setRecipePick(di); })}
+              {addOpt(icPlus, T("addEmpty"), T("addEmptySub"), () => { setAddOpen(false); addMealTo(di); })}
+              {addOpt(icBar, T("addFromProd"), T("addFromProdSub"), () => { setAddOpen(false); setPickTarget({ di, mi: null }); setShowProducts(true); })}
+              <div onClick={() => setAddOpen(false)} style={{ cursor: "pointer", textAlign: "center", padding: "10px 0", color: MUTED, fontSize: 12, fontWeight: 600, borderTop: `1px solid ${LINE}` }}>{T("cancel")}</div>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -1222,6 +1335,8 @@ export default function App() {
               <button onClick={handleBuild} disabled={loading} style={{ width: "100%", background: EMBER, color: PAPER, border: "none", padding: "14px 0", borderRadius: 10, ...disp, fontWeight: 700, fontSize: 16, letterSpacing: 1, textTransform: "uppercase", cursor: loading ? "default" : "pointer", opacity: loading ? 0.7 : 1 }}>
                 {loading ? T("building") : T("build")}
               </button>
+              <div onClick={() => { if (!loading) buildOwnPlan(); }} style={{ cursor: loading ? "default" : "pointer", textAlign: "center", marginTop: 10, color: EMBER, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.3 }}>{T("buildOwn")}</div>
+              <div style={{ fontSize: 10.5, color: MUTED, textAlign: "center", marginTop: 4, lineHeight: 1.4 }}>{T("ownPlanHint")}</div>
             </div>
 
             <div>
@@ -1440,7 +1555,7 @@ export default function App() {
 
       {showReminders && <Reminders lang={lang} onClose={() => setShowReminders(false)} />}
       {showAuth && <Auth lang={lang} session={session} tier={subTier} recovery={authRecovery} onClose={() => { setShowAuth(false); setAuthRecovery(false); }} />}
-      {showProducts && <Products lang={lang} session={session} autoScan={fabScan} onClose={() => { setShowProducts(false); setPickTarget(null); setFabScan(false); }} onPick={pickTarget ? (prod) => { addProductIng(pickTarget.di, pickTarget.mi, prod); setShowProducts(false); setPickTarget(null); } : fabScan ? (prod) => { addTodayProduct(prod); setShowProducts(false); setFabScan(false); } : null} />}
+      {showProducts && <Products lang={lang} session={session} autoScan={fabScan} onClose={() => { setShowProducts(false); setPickTarget(null); setFabScan(false); }} onPick={pickTarget ? (prod) => { if (pickTarget.mi == null) addProductAsMeal(pickTarget.di, prod); else addProductIng(pickTarget.di, pickTarget.mi, prod); setShowProducts(false); setPickTarget(null); } : fabScan ? (prod) => { addTodayProduct(prod); setShowProducts(false); setFabScan(false); } : null} />}
       {showBuilder && <RecipeBuilder lang={lang} session={session} onClose={() => setShowBuilder(false)} onSaved={() => flashSaved()} />}
 
       {copyPick && (
