@@ -59,10 +59,12 @@ export default function Today({ lang, week, onGoPlan, session, plus, onRebalance
   const [waterMl, setWaterMl] = useState(0);
   const [weightKg, setWeightKg] = useState(0);
   const [undo, setUndo] = useState(null);
+  const [over, setOver] = useState(null);
 
   useEffect(() => {
     setEaten(load("hf_eaten_" + d, {}));
     setUndo(null);
+    setOver(load("hf_dayover_" + d, null));
     let active = true;
     // Handmatig gewicht uit de Water-tab wint (zelfde logica als Water).
     const mw = num(load("hf_water_weight", ""));
@@ -90,7 +92,8 @@ export default function Today({ lang, week, onGoPlan, session, plus, onRebalance
   };
   const isToday = d === todayISO();
   const idx = jsDayToIdx(new Date(d + "T12:00:00").getDay());
-  const day = week && week.days && week.days.length ? (week.days[idx] || week.days[0]) : null;
+  const tmpl = week && week.days && week.days.length ? (week.days[idx] || week.days[0]) : null;
+  const day = over || tmpl;
 
   function toggle(i) { const next = { ...eaten, [i]: !eaten[i] }; setEaten(next); save("hf_eaten_" + d, next); }
 
@@ -149,9 +152,13 @@ export default function Today({ lang, week, onGoPlan, session, plus, onRebalance
     const snapGoal = (day.goal) || { kcal: plannedTotal, p: sumPlan("p"), c: sumPlan("c"), f: sumPlan("f") };
     const newMeals = day.m.map((m, i) => eaten[i] ? m : { ...m, kcal: R(num(m.kcal) * f), p: R(num(m.p) * f), c: R(num(m.c) * f), f: R(num(m.f) * f), ing: (m.ing || []).map((g) => ({ ...g, g: R(num(g.g) * f) })) });
     setUndo({ meals: day.m, goal: day.goal || null });
-    onRebalance(idx, newMeals, snapGoal);
+    applyDayMeals(newMeals, snapGoal);
   }
-  function doUndo() { if (!undo || !onRebalance) return; onRebalance(idx, undo.meals, undo.goal); setUndo(null); }
+  function applyDayMeals(newMeals, goal) {
+    if (over) { const nd = { ...over, m: newMeals, goal: goal || over.goal }; save("hf_dayover_" + d, nd); setOver(nd); }
+    else if (onRebalance) onRebalance(idx, newMeals, goal);
+  }
+  function doUndo() { if (!undo) return; applyDayMeals(undo.meals, undo.goal); setUndo(null); }
 
   function statusOf(c, target) {
     if (!target) return { label: "—", color: MUTED };
@@ -199,6 +206,7 @@ export default function Today({ lang, week, onGoPlan, session, plus, onRebalance
               <div style={label}>{t("yourDay")}</div>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <Ring pct={pct} />
+                {day.race && <div style={{ fontSize: 9.5, color: PAPER, background: EMBER, borderRadius: 5, padding: "2px 7px", letterSpacing: 1, fontWeight: 700, ...disp }}>{day.race}</div>}
                 <div style={{ fontSize: 9.5, color: day.train ? EMBER : MUTED, border: `1px solid ${day.train ? EMBER : LINE}`, borderRadius: 5, padding: "2px 6px", letterSpacing: 1, fontWeight: 700 }}>{day.train ? t("train") : t("rest")}</div>
               </div>
             </div>

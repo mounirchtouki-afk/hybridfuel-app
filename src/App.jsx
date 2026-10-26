@@ -1100,7 +1100,7 @@ export default function App() {
         {tab === "water" && (hasBasis ? <Water lang={lang} session={session} week={week} /> : <Locked />)}
         {tab === "producten" && (hasPro ? <Products embedded lang={lang} session={session} /> : <Locked pro />)}
         {tab === "recipes" && <Recipes lang={lang} session={session} />}
-        {tab === "race" && (hasPlus ? <RaceProtocol lang={lang} weight={weight} session={session} /> : <Locked pro />)}
+        {tab === "race" && (hasPlus ? <RaceProtocol lang={lang} weight={weight} session={session} week={week} /> : <Locked pro />)}
       </div>
 
       {/* BOTTOM NAV */}

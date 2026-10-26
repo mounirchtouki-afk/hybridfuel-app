@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, SAGE, disp, num, input, label, sectionTitle, load, save } from "../shared.js";
+import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, SAGE, disp, num, input, label, sectionTitle, load, save, jsDayToIdx } from "../shared.js";
 
 const T = {
   title: { nl: "Race Protocol", en: "Race Protocol" },
@@ -28,13 +28,22 @@ const T = {
   perDay: { nl: "per dag", en: "per day" },
   gCarb: { nl: "g koolhydraten", en: "g carbs" },
   start: { nl: "START", en: "START" },
+  linkTitle: { nl: "Koppel aan je dagboek", en: "Link to your diary" },
+  linkBtn: { nl: "Koppel carb-laden aan mijn dagboek", en: "Link carb-load to my diary" },
+  linkNote: { nl: "Zet T-2, T-1 (carb-laaddagen) en de racedag in je Dagboek. De laatste 2 dagen zijn de échte load — eerder in de week taper je en eet je normaal.", en: "Adds T-2, T-1 (carb-load days) and race day to your Diary. The last 2 days are the real load — earlier in the week you taper and eat normally." },
+  linkDone: { nl: "Gekoppeld aan je dagboek ✓ — T-2, T-1 en de racedag staan erin.", en: "Linked to your diary ✓ — T-2, T-1 and race day are in." },
+  unlinkBtn: { nl: "Ontkoppelen", en: "Unlink" },
+  linkNoPlan: { nl: "Maak eerst je weekplan aan om te kunnen koppelen.", en: "Create your week plan first to link." },
+  loadDayLbl: { nl: "CARB-LAAD", en: "CARB-LOAD" },
+  raceDayLbl: { nl: "RACEDAG", en: "RACE DAY" },
 };
 
 const WD = { nl: ["zo", "ma", "di", "wo", "do", "vr", "za"], en: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] };
 
-export default function RaceProtocol({ lang, weight, session }) {
+export default function RaceProtocol({ lang, weight, session, week }) {
   const t = (k) => (T[k] ? T[k][lang] : k);
   const saved = load("hf_race", {});
+  const [linked, setLinked] = useState(() => load("hf_race_linked", []));
   const [date, setDate] = useState(saved.date || "");
   const [time, setTime] = useState(saved.time || "10:00");
   const [w, setW] = useState(saved.weight || String(num(weight) || 80));
@@ -62,6 +71,38 @@ export default function RaceProtocol({ lang, weight, session }) {
   // Herstel
   const recCarbs = Math.round(kg * 1);
   const recProt = Math.round(kg * 0.3);
+
+  // ===== Koppelen aan Dagboek (datum-specifieke dagen) =====
+  const hasPlan = !!(week && week.days && week.days.length);
+  function isoShift(baseISO, delta) { const dt = new Date(baseISO + "T12:00:00"); dt.setDate(dt.getDate() + delta); return dt.getFullYear() + "-" + String(dt.getMonth() + 1).padStart(2, "0") + "-" + String(dt.getDate()).padStart(2, "0"); }
+  function tmplDay(iso) { if (!hasPlan) return null; const i = jsDayToIdx(new Date(iso + "T12:00:00").getDay()); return week.days[i] || week.days[0]; }
+  function linkDiary() {
+    if (!date || !hasPlan) return;
+    const done = [];
+    [2, 1].forEach((off) => {
+      const iso = isoShift(date, -off);
+      const base = tmplDay(iso);
+      const baseMeals = base ? base.m.map((m) => ({ ...m, ing: (m.ing || []).map((g) => ({ ...g })) })) : [];
+      const baseC = baseMeals.reduce((a, m) => a + num(m.c), 0);
+      const addC = Math.max(0, loadCarbs - baseC);
+      const extra = { t: t("loadDayLbl"), n: lang === "nl" ? "Extra koolhydraten (carb-laden)" : "Extra carbs (carb-load)", kcal: Math.round(addC * 4), p: 0, c: addC, f: 0, ing: [{ n: lang === "nl" ? "rijst / pasta / aardappel / fruit" : "rice / pasta / potato / fruit", g: addC }] };
+      const meals = addC > 0 ? [...baseMeals, extra] : baseMeals;
+      const sum = (k) => meals.reduce((a, m) => a + num(m[k]), 0);
+      save("hf_dayover_" + iso, { d: base ? base.d : "", train: false, race: t("loadDayLbl"), m: meals, goal: { kcal: sum("kcal"), p: sum("p"), c: sum("c"), f: sum("f") } });
+      done.push(iso);
+    });
+    const raceMeals = [
+      { t: lang === "nl" ? "ONTBIJT" : "BREAKFAST", n: lang === "nl" ? "Race-ontbijt (3,5 u vóór)" : "Race breakfast (3.5h before)", kcal: Math.round(bfastCarbs * 4 + 80), p: 10, c: bfastCarbs, f: 3, ing: [{ n: lang === "nl" ? "havermout/bagel + banaan + honing" : "oats/bagel + banana + honey", g: bfastCarbs }] },
+      { t: lang === "nl" ? "VLAK VOOR" : "PRE-RACE", n: lang === "nl" ? "Laatste tanken (1 u vóór)" : "Final top-up (1h before)", kcal: 120, p: 0, c: 30, f: 0, ing: [] },
+      { t: "GEL", n: lang === "nl" ? "Gel + slokken (15 min vóór)" : "Gel + sips (15 min before)", kcal: 100, p: 0, c: 25, f: 0, ing: [] },
+      { t: lang === "nl" ? "HERSTEL" : "RECOVERY", n: lang === "nl" ? "Herstelmaaltijd (binnen 2 u)" : "Recovery meal (within 2h)", kcal: Math.round(recCarbs * 4 + recProt * 4), p: recProt, c: recCarbs, f: 8, ing: [] },
+    ];
+    const rsum = (k) => raceMeals.reduce((a, m) => a + num(m[k]), 0);
+    save("hf_dayover_" + date, { d: "", train: true, race: t("raceDayLbl"), m: raceMeals, goal: { kcal: rsum("kcal"), p: rsum("p"), c: rsum("c"), f: rsum("f") } });
+    done.push(date);
+    save("hf_race_linked", done); setLinked(done);
+  }
+  function unlinkDiary() { linked.forEach((iso) => { try { localStorage.removeItem("hf_dayover_" + iso); } catch (e) {} }); save("hf_race_linked", []); setLinked([]); }
 
   // Klok-tijden rond de start
   const startDt = (date && time) ? new Date(date + "T" + time + ":00") : null;
@@ -198,6 +239,24 @@ export default function RaceProtocol({ lang, weight, session }) {
               <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: MUTED }}>{lang === "nl" ? "Natrium (per uur)" : "Sodium (per hour)"}</span><span>{sodium}</span></div>
             </div>
             <div style={{ fontSize: 11, color: MUTED, marginTop: 10, lineHeight: 1.5 }}>{lang === "nl" ? "Drink op dorst, niet overmatig. Heldere-gele plas vóór de start = goed gehydrateerd." : "Drink to thirst, don't overdo it. Pale-yellow urine before the start = well hydrated."}</div>
+          </div>
+
+          {/* Koppel aan dagboek */}
+          <div style={{ ...card, border: `1px solid ${EMBER}`, backgroundImage: "radial-gradient(120% 90% at 0% 0%, rgba(225,29,72,0.13), transparent 60%)" }}>
+            <div style={capTitle}>{t("linkTitle")}</div>
+            {!hasPlan ? (
+              <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.5 }}>{t("linkNoPlan")}</div>
+            ) : linked.length ? (
+              <>
+                <div style={{ fontSize: 12.5, color: PAPER, lineHeight: 1.5, marginBottom: 12 }}>{t("linkDone")}</div>
+                <button onClick={unlinkDiary} style={{ background: "transparent", color: EMBER, border: `1px solid ${EMBER}`, borderRadius: 9, padding: "9px 16px", ...disp, fontWeight: 700, fontSize: 12.5, letterSpacing: 0.5, cursor: "pointer" }}>{t("unlinkBtn")}</button>
+              </>
+            ) : (
+              <>
+                <div style={{ fontSize: 11.5, color: MUTED, lineHeight: 1.55, marginBottom: 12 }}>{t("linkNote")}</div>
+                <button onClick={linkDiary} style={{ background: EMBER, color: PAPER, border: "none", borderRadius: 9, padding: "11px 18px", ...disp, fontWeight: 700, fontSize: 13, letterSpacing: 0.5, cursor: "pointer" }}>{t("linkBtn")}</button>
+              </>
+            )}
           </div>
 
           <div style={{ fontSize: 10.5, color: MUTED, lineHeight: 1.6, padding: "2px 2px 6px" }}>{t("disclaimer")}</div>
