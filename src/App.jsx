@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, SAGE, load, save, genSteps, todayISO } from "./shared.js";
 import Today from "./views/Today.jsx";
 import Dashboard from "./views/Dashboard.jsx";
@@ -158,7 +158,12 @@ const TXT = {
   tabPlan: { nl: "Plan", en: "Plan" },
   tabShop: { nl: "Boodschappen", en: "Shopping list" },
   editPlan: { nl: "Aanpassen", en: "Edit" },
-  editDone: { nl: "Klaar", en: "Done" },
+  editDone: { nl: "Opslaan", en: "Save" },
+  savedFlash: { nl: "Opgeslagen", en: "Saved" },
+  toDashboard: { nl: "Naar dashboard", en: "To dashboard" },
+  logoutTitle: { nl: "Weet je zeker dat je wilt uitloggen?", en: "Are you sure you want to log out?" },
+  logoutYes: { nl: "Ja, uitloggen", en: "Yes, log out" },
+  logoutNo: { nl: "Nee, blijf", en: "No, stay" },
   addMeal: { nl: "+ Maaltijd", en: "+ Meal" },
   addIngr: { nl: "+ Ingrediënt", en: "+ Ingredient" },
   addProd: { nl: "+ Uit producten", en: "+ From products" },
@@ -370,6 +375,8 @@ export default function App() {
   const [session, setSession] = useState(null);
   const [showAuth, setShowAuth] = useState(false);
   const [authRecovery, setAuthRecovery] = useState(false);
+  const [showLogout, setShowLogout] = useState(false);
+  const [saveFlash, setSaveFlash] = useState(false);
   const [subTier, setSubTier] = useState("free");
   const [installEvt, setInstallEvt] = useState(null);
   const [installDismissed, setInstallDismissed] = useState(() => load("hf_install_dismissed", false));
@@ -395,6 +402,39 @@ export default function App() {
       }
     } catch (e) { setDevMode(false); }
   }, []);
+
+  // Opslag-bevestiging (toast met "Naar dashboard").
+  const flashSaved = () => { setSaveFlash(true); setTimeout(() => setSaveFlash(false), 4500); };
+
+  // --- Terug-knop (telefoon/PWA): altijd terug naar het dashboard, nooit de app
+  // uit. Eerst open overlays sluiten, dan naar dashboard; al op het dashboard →
+  // uitlog-bevestiging (ja/nee). We houden altijd één "trap"-state op de stack.
+  const navRef = useRef({});
+  const persistRef = useRef(() => {});
+  useEffect(() => {
+    try { history.pushState({ hf: true }, ""); } catch (e) {}
+    const onPop = () => {
+      try { history.pushState({ hf: true }, ""); } catch (e) {} // meteen her-armeren: nooit per ongeluk de app uit
+      const s = navRef.current || {};
+      if (s.showLogout) { setShowLogout(false); return; }
+      if (s.fab) { setFab(false); return; }
+      if (s.showMore) { setShowMore(false); return; }
+      if (s.movePlan) { setMovePlan(null); return; }
+      if (s.copyPick) { setCopyPick(null); return; }
+      if (s.recipePick != null) { setRecipePick(null); return; }
+      if (s.showBuilder) { setShowBuilder(false); return; }
+      if (s.showProducts) { setShowProducts(false); setPickTarget(null); setFabScan(false); return; }
+      if (s.showReminders) { setShowReminders(false); return; }
+      if (s.showAuth) { setShowAuth(false); setAuthRecovery(false); return; }
+      if (s.planEdit) { try { persistRef.current(); } catch (e) {} setPlanEdit(false); flashSaved(); return; }
+      if (s.tab !== "dashboard") { setTab("dashboard"); try { window.scrollTo(0, 0); } catch (e) {} return; }
+      setShowLogout(true); // al op het dashboard → uitlog-check
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+
+  function confirmLogout() { setShowLogout(false); try { if (supabase) supabase.auth.signOut(); } catch (e) {} setTab("dashboard"); }
 
   // Toegang per laag. Eenmalig betaald (unlocked) = Basis-niveau. Dev-modus = alles.
   const hasBasis = devMode || unlocked || subTier === "basis" || subTier === "pro";
@@ -740,7 +780,10 @@ export default function App() {
   }
   const removeMeal = (di, mi) => mutDay(di, (d) => { d.m = d.m.filter((_, j) => j !== mi); return d; });
   const addMealTo = (di) => mutDay(di, (d) => { d.m = [...d.m, { t: "EXTRA", n: "", kcal: 0, p: 0, c: 0, f: 0, ing: [] }]; return d; });
-  function toggleEdit() { if (planEdit) persistPlanCloud(); setPlanEdit(!planEdit); }
+  function toggleEdit() { if (planEdit) { persistPlanCloud(); flashSaved(); } setPlanEdit(!planEdit); }
+  // Refs voor de terug-knop up-to-date houden (de popstate-listener leest hieruit).
+  navRef.current = { tab, showMore, showReminders, showAuth, showBuilder, showProducts, movePlan, copyPick, recipePick, fab, planEdit, showLogout };
+  persistRef.current = persistPlanCloud;
   function copyDayTo(fromDi, toDi) {
     if (!week || fromDi === toDi) return;
     const meals = week.days[fromDi].m.map((mm) => ({ ...mm, ing: (mm.ing || []).map((g) => ({ ...g })) }));
@@ -1372,7 +1415,7 @@ export default function App() {
       {showReminders && <Reminders lang={lang} onClose={() => setShowReminders(false)} />}
       {showAuth && <Auth lang={lang} session={session} tier={subTier} recovery={authRecovery} onClose={() => { setShowAuth(false); setAuthRecovery(false); }} />}
       {showProducts && <Products lang={lang} session={session} autoScan={fabScan} onClose={() => { setShowProducts(false); setPickTarget(null); setFabScan(false); }} onPick={pickTarget ? (prod) => { addProductIng(pickTarget.di, pickTarget.mi, prod); setShowProducts(false); setPickTarget(null); } : fabScan ? (prod) => { addTodayProduct(prod); setShowProducts(false); setFabScan(false); } : null} />}
-      {showBuilder && <RecipeBuilder lang={lang} session={session} onClose={() => setShowBuilder(false)} onSaved={() => {}} />}
+      {showBuilder && <RecipeBuilder lang={lang} session={session} onClose={() => setShowBuilder(false)} onSaved={() => flashSaved()} />}
 
       {copyPick && (
         <div onClick={() => setCopyPick(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 70, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
@@ -1389,6 +1432,29 @@ export default function App() {
       )}
       {recipePick !== null && <RecipePicker di={recipePick} onClose={() => setRecipePick(null)} />}
       {movePlan && <MovePlan scope={movePlan.scope} di={movePlan.di} onClose={() => setMovePlan(null)} />}
+
+      {/* Opgeslagen-bevestiging met "Naar dashboard" */}
+      {saveFlash && (
+        <div style={{ position: "fixed", left: "50%", transform: "translateX(-50%)", bottom: consentH + 96, zIndex: 80, display: "flex", alignItems: "center", gap: 12, background: INK2, border: `1px solid ${SAGE}`, borderRadius: 12, padding: "11px 14px", boxShadow: "0 10px 30px rgba(0,0,0,0.5)", maxWidth: "92vw" }}>
+          <span style={{ color: SAGE, fontSize: 16, fontWeight: 800 }}>✓</span>
+          <span style={{ fontSize: 13.5, color: PAPER, fontWeight: 600 }}>{T("savedFlash")}</span>
+          <div onClick={() => { setSaveFlash(false); setPlanEdit(false); setTab("dashboard"); try { window.scrollTo(0, 0); } catch (e) {} }} style={{ cursor: "pointer", marginLeft: 4, background: EMBER, color: PAPER, borderRadius: 8, padding: "7px 12px", fontSize: 12.5, fontWeight: 700, ...disp, letterSpacing: 0.3, whiteSpace: "nowrap" }}>{T("toDashboard")} →</div>
+          <div onClick={() => setSaveFlash(false)} style={{ cursor: "pointer", color: MUTED, fontSize: 15, padding: "0 2px" }}>×</div>
+        </div>
+      )}
+
+      {/* Uitlog-bevestiging (vanaf dashboard met de terug-knop) */}
+      {showLogout && (
+        <div onClick={() => setShowLogout(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 90, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ background: INK, border: `1px solid ${LINE}`, borderRadius: 18, width: "100%", maxWidth: 360, padding: 22, textAlign: "center", backgroundImage: "radial-gradient(130% 70% at 50% -10%, rgba(225,29,72,0.14), transparent 60%)" }}>
+            <div style={{ ...disp, fontWeight: 700, fontSize: 18, marginBottom: 18, lineHeight: 1.3 }}>{T("logoutTitle")}</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <div onClick={confirmLogout} style={{ cursor: "pointer", background: EMBER, color: PAPER, padding: "13px 0", borderRadius: 10, ...disp, fontWeight: 700, fontSize: 15, letterSpacing: 0.5 }}>{T("logoutYes")}</div>
+              <div onClick={() => setShowLogout(false)} style={{ cursor: "pointer", border: `1px solid ${LINE}`, color: PAPER, padding: "13px 0", borderRadius: 10, ...disp, fontWeight: 700, fontSize: 15, letterSpacing: 0.5 }}>{T("logoutNo")}</div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
