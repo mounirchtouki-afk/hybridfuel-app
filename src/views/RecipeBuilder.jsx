@@ -1,5 +1,5 @@
 import React, { useState, useRef } from "react";
-import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, disp, num, input, label, sectionTitle, primaryBtn, ghostBtn, load, save } from "../shared.js";
+import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, disp, num, input, label, sectionTitle, primaryBtn, ghostBtn, load, save, genSteps } from "../shared.js";
 import { supabase } from "../supabaseClient.js";
 import Products from "./Products.jsx";
 
@@ -20,6 +20,7 @@ const T = {
   noIngr: { nl: "Voeg ingrediënten toe — de voedingswaarde wordt automatisch berekend.", en: "Add ingredients — nutrition is calculated automatically." },
   steps: { nl: "Bereidingswijze", en: "Preparation" },
   stepsPh: { nl: "Beschrijf de stappen…", en: "Describe the steps…" },
+  genSteps: { nl: "⚡ Genereer uit ingrediënten", en: "⚡ Generate from ingredients" },
   total: { nl: "Totaal", en: "Total" },
   saveBtn: { nl: "Recept opslaan", en: "Save recipe" },
   cancel: { nl: "Annuleren", en: "Cancel" },
@@ -152,7 +153,10 @@ export default function RecipeBuilder({ lang, session, onClose, onSaved }) {
 
         {/* Bereidingswijze */}
         <div style={{ marginBottom: 16 }}>
-          <label style={label}>{t("steps")}</label>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <label style={label}>{t("steps")}</label>
+            {ings.length > 0 && <span onClick={() => setSteps(genSteps(ings.map((x) => ({ name: x.name, g: x.grams })), lang))} style={{ cursor: "pointer", fontSize: 11.5, color: EMBER, fontWeight: 700, marginBottom: 6 }}>{t("genSteps")}</span>}
+          </div>
           <textarea value={steps} onChange={(e) => setSteps(e.target.value)} placeholder={t("stepsPh")} rows={5} style={{ ...input, resize: "vertical", lineHeight: 1.5 }} />
         </div>
 

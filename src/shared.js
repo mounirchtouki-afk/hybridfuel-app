@@ -33,3 +33,45 @@ export const fmtDate = (iso, lang) => {
   try { const [y, m, d] = iso.split("-").map(Number); return new Date(y, m - 1, d).toLocaleDateString(lang === "nl" ? "nl-NL" : "en-GB", { day: "numeric", month: "short" }); }
   catch (e) { return iso; }
 };
+
+// ===== Auto-bereidingswijze op basis van ingrediënten (regelgebaseerd) =====
+export function classifyIngr(name) {
+  const n = (name || "").toLowerCase();
+  if (/chicken|kip|beef|rund|gehakt|steak|biefstuk|turkey|kalkoen|pork|varken|\begg|\bei\b|eieren|tofu|tempeh|salmon|zalm|tuna|tonijn|\bfish|\bvis\b|shrimp|garnaal|\bham\b|bacon|worst|mince/.test(n)) return "protein";
+  if (/rice|rijst|pasta|noodle|noedel|spaghetti|bread|brood|bagel|\boat|havermout|potato|aardappel|quinoa|couscous|tortilla|wrap|cracker|cereal|ontbijtgran/.test(n)) return "grain";
+  if (/banana|banaan|apple|appel|berry|berries|\bbes|bosbes|blueberr|strawberr|aardbei|mango|orange|sinaasappel|peach|perzik|pear|peer|grape|druif|\bfruit/.test(n)) return "fruit";
+  if (/broccoli|spinach|spinazie|pepper|paprika|onion|\bui\b|garlic|knoflook|tomato|tomaat|carrot|wortel|courgette|zucchini|cucumber|komkommer|lettuce|\bsla\b|avocado|mushroom|champignon|kale|boon|\bbean|\bpea\b|erwt|groente|\bveg/.test(n)) return "veg";
+  if (/yog|yoghurt|yogurt|quark|kwark|skyr|cheese|kaas|cottage|milk|melk|cream|room|butter|boter/.test(n)) return "dairy";
+  if (/\bnut|noot|noten|peanut|pinda|almond|amandel|cashew|walnoot|seed|zaad|zaden|\bchia\b|lijnzaad/.test(n)) return "nuts";
+  if (/oil|olie|sauce|saus|soy|soja|pesto|honey|honing|syrup|stroop|vinegar|azijn|mayo|mustard|mosterd|dressing|spice|kruid|salt|zout|pepper/.test(n)) return "sauce";
+  return "other";
+}
+export function genSteps(items, lang) {
+  const nl = lang !== "en";
+  const norm = (items || []).map((i) => ({ name: i.name || i.n || "", g: Math.round(parseFloat(i.g != null ? i.g : i.grams) || 0), cat: classifyIngr(i.name || i.n || "") })).filter((i) => i.name);
+  if (!norm.length) return "";
+  const lbl = (i) => (i.g ? i.g + "g " : "") + i.name;
+  const of = (cat) => norm.filter((i) => i.cat === cat).map(lbl);
+  const join = (arr) => arr.join(nl ? " en " : " and ");
+  const prot = of("protein"), grain = of("grain"), veg = of("veg"), fruit = of("fruit"), dairy = of("dairy"), nuts = of("nuts"), sauce = of("sauce"), other = of("other");
+  const steps = [];
+  const cooking = prot.length > 0;
+  const breakfasty = dairy.length > 0 && !cooking && (fruit.length || nuts.length || grain.length);
+  if (breakfasty) {
+    steps.push(nl ? `Doe ${join(dairy)} in een kom.` : `Add ${join(dairy)} to a bowl.`);
+    if (grain.length) steps.push(nl ? `Roer ${join(grain)} erdoor.` : `Stir in ${join(grain)}.`);
+    if (fruit.length || nuts.length) steps.push(nl ? `Top met ${join([...fruit, ...nuts])}.` : `Top with ${join([...fruit, ...nuts])}.`);
+    if (sauce.length) steps.push(nl ? `Maak af met ${join(sauce)} en serveer.` : `Finish with ${join(sauce)} and serve.`);
+    else steps.push(nl ? `Serveer direct.` : `Serve right away.`);
+  } else {
+    if (grain.length) steps.push(nl ? `Kook ${join(grain)} volgens de verpakking en houd warm.` : `Cook ${join(grain)} per the package and keep warm.`);
+    if (prot.length) steps.push(nl ? `Kruid ${join(prot)} en bak of gril gaar.` : `Season ${join(prot)} and pan-fry or grill until done.`);
+    if (veg.length) steps.push(nl ? `Snijd ${join(veg)} en bak kort aan of stoom beetgaar.` : `Chop ${join(veg)} and sauté briefly or steam until tender.`);
+    if (dairy.length) steps.push(nl ? `Roer ${join(dairy)} erdoor voor romigheid.` : `Stir in ${join(dairy)} for creaminess.`);
+    if (fruit.length) steps.push(nl ? `Voeg ${join(fruit)} op het laatst toe.` : `Add ${join(fruit)} at the end.`);
+    if (nuts.length) steps.push(nl ? `Strooi ${join(nuts)} erover.` : `Scatter ${join(nuts)} on top.`);
+    if (other.length) steps.push(nl ? `Voeg ${join(other)} toe.` : `Add ${join(other)}.`);
+    steps.push(nl ? `Breng op smaak met ${sauce.length ? join(sauce) + ", " : ""}zout en peper, en serveer alles samen.` : `Season with ${sauce.length ? join(sauce) + ", " : ""}salt and pepper, and serve together.`);
+  }
+  return steps.map((s, i) => (i + 1) + ". " + s).join("\n");
+}

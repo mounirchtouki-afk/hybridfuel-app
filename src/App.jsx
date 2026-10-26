@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, SAGE, load, save } from "./shared.js";
+import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, SAGE, load, save, genSteps } from "./shared.js";
 import Today from "./views/Today.jsx";
 import Tracker from "./views/Tracker.jsx";
 import Water from "./views/Water.jsx";
@@ -678,7 +678,7 @@ export default function App() {
     const m = week && week.days[di] && week.days[di].m[mi];
     if (!m) return;
     const ingredients = (m.ing || []).map((g) => { const mm = ingMacros(g) || {}; return { name: g.n, grams: num(g.g), kcal: mm.kcal || 0, p: mm.p || 0, c: mm.c || 0, f: mm.f || 0 }; });
-    const rec = { name: m.n || "Recept", type: "dinner", ingredients, macros: { kcal: num(m.kcal), p: num(m.p), c: num(m.c), f: num(m.f) }, image_url: null, steps: null };
+    const rec = { name: m.n || "Recept", type: "dinner", ingredients, macros: { kcal: num(m.kcal), p: num(m.p), c: num(m.c), f: num(m.f) }, image_url: null, steps: genSteps((m.ing || []).map((g) => ({ name: g.n, g: g.g })), lang) || null };
     try {
       if (supabase && session) await supabase.from("recipes").insert({ user_id: session.user.id, ...rec, is_system: false });
       else { const all = load("hf_recipes", []); save("hf_recipes", [...all, { id: "l" + Date.now(), ...rec }]); }
