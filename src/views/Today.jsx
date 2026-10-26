@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, SAGE, disp, num, card, label, sectionTitle, primaryBtn, WD, jsDayToIdx, load, save, todayISO, fmtDate } from "../shared.js";
+import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, SAGE, disp, num, card, label, input, sectionTitle, primaryBtn, WD, jsDayToIdx, load, save, todayISO, fmtDate } from "../shared.js";
 import { supabase } from "../supabaseClient.js";
 import Products from "./Products.jsx";
+import { RECIPES } from "../recipes.js";
 
 const T = {
   title: { nl: "Dagboek", en: "Diary" },
@@ -17,8 +18,8 @@ const T = {
   today: { nl: "Vandaag", en: "Today" },
   planned: { nl: "Uit je plan", en: "From your plan" },
   extra: { nl: "Extra gelogd", en: "Extra logged" },
-  addItem: { nl: "+ Iets toevoegen (scan / product)", en: "+ Add something (scan / product)" },
-  noExtra: { nl: "Snel iets anders gegeten? Scan het of kies een product en zet het in deze dag.", en: "Ate something else? Scan it or pick a product and add it to this day." },
+  addItem: { nl: "+ Iets toevoegen", en: "+ Add something" },
+  noExtra: { nl: "Snel iets anders gegeten? Kies een recept, zoek een product of scan het en zet het in deze dag.", en: "Ate something else? Pick a recipe, search a product or scan it and add it to this day." },
   g: { nl: "g", en: "g" },
   yourDay: { nl: "Je dag", en: "Your day" },
   onpoint: { nl: "on point", en: "on point" },
@@ -107,6 +108,18 @@ export default function Today({ lang, week, onGoPlan, session, plus, onRebalance
         .then(({ data }) => { if (data) setExtras((e) => [...e, { ...data, per100: p1 }]); }, () => {});
     } else {
       persistExtras([...extras, { id: "l" + Date.now(), ...row }]);
+    }
+    setShowAdd(false);
+  }
+  function addFromRecipe(r) {
+    const name = typeof r.name === "string" ? r.name : (r.name[lang] || r.name.en);
+    const m = r.macros || {};
+    const rec = { item: name, kcal: Math.round(num(m.kcal)), p: Math.round(num(m.p)), c: Math.round(num(m.c)), f: Math.round(num(m.f)) };
+    if (cloud) {
+      supabase.from("food_logs").insert({ user_id: session.user.id, date: d, item: rec.item, grams: null, kcal: rec.kcal, p: rec.p, c: rec.c, f: rec.f, source: "recipe" }).select("id,item,grams,kcal,p,c,f").single()
+        .then(({ data }) => { if (data) setExtras((e) => [...e, { ...data }]); }, () => {});
+    } else {
+      persistExtras([...extras, { id: "l" + Date.now(), grams: null, ...rec }]);
     }
     setShowAdd(false);
   }
@@ -290,7 +303,86 @@ export default function Today({ lang, week, onGoPlan, session, plus, onRebalance
         </>
       )}
 
-      {showAdd && <Products lang={lang} session={session} onClose={() => setShowAdd(false)} onPick={addFromProduct} />}
+      {showAdd && <AddExtra lang={lang} session={session} onClose={() => setShowAdd(false)} onPickProduct={addFromProduct} onPickRecipe={addFromRecipe} />}
+    </div>
+  );
+}
+
+function AddExtra({ lang, session, onClose, onPickProduct, onPickRecipe }) {
+  const cloud = !!(session && supabase);
+  const [tab, setTab] = useState("recipe");
+  const [mine, setMine] = useState(() => (cloud ? [] : load("hf_recipes", [])));
+  const [q, setQ] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    if (cloud) {
+      supabase.from("recipes").select("id,name,type,macros").eq("user_id", session.user.id).order("created_at", { ascending: false })
+        .then(({ data }) => { if (active && data) setMine(data); }, () => {});
+    }
+    return () => { active = false; };
+  }, [session]);
+
+  const L = {
+    title: lang === "nl" ? "Toevoegen aan deze dag" : "Add to this day",
+    tabRec: lang === "nl" ? "Recepten" : "Recipes",
+    tabProd: lang === "nl" ? "Producten" : "Products",
+    search: lang === "nl" ? "Zoek in recepten…" : "Search recipes…",
+    mine: lang === "nl" ? "Mijn recepten" : "My recipes",
+    lib: lang === "nl" ? "Receptenbibliotheek" : "Recipe library",
+    none: lang === "nl" ? "Geen recept gevonden." : "No recipe found.",
+    pick: lang === "nl" ? "Kies" : "Pick",
+  };
+
+  const rname = (r) => (typeof r.name === "string" ? r.name : (r.name[lang] || r.name.en));
+  const needle = q.trim().toLowerCase();
+  const match = (r) => !needle || rname(r).toLowerCase().includes(needle);
+  const mineF = mine.filter(match);
+  const libF = RECIPES.filter(match);
+
+  const row = (r, key) => {
+    const m = r.macros || {};
+    return (
+      <div key={key} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: `1px solid ${LINE}` }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 13.5, fontWeight: 600, color: PAPER }}>{rname(r)}</div>
+          <div style={{ fontSize: 11, color: MUTED, marginTop: 1 }}>{Math.round(num(m.kcal))} kcal · {Math.round(num(m.p))}p/{Math.round(num(m.c))}c/{Math.round(num(m.f))}f</div>
+        </div>
+        <div onClick={() => onPickRecipe(r)} style={{ cursor: "pointer", fontSize: 12, fontWeight: 700, color: EMBER, border: `1px solid ${EMBER}`, borderRadius: 7, padding: "5px 11px", ...disp, letterSpacing: 0.3 }}>{L.pick}</div>
+      </div>
+    );
+  };
+
+  const recipeTab = (
+    <>
+      <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={L.search} style={{ ...input, marginBottom: 14 }} />
+      {mineF.length > 0 && (
+        <div style={{ marginBottom: 14 }}>
+          <div style={{ ...disp, fontSize: 11.5, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", color: EMBER, marginBottom: 6 }}>{L.mine}</div>
+          {mineF.map((r, i) => row(r, "m" + (r.id || i)))}
+        </div>
+      )}
+      <div>
+        <div style={{ ...disp, fontSize: 11.5, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", color: MUTED, marginBottom: 6 }}>{L.lib}</div>
+        {libF.length ? libF.map((r, i) => row(r, "l" + (r.id || i))) : <div style={{ fontSize: 12.5, color: MUTED }}>{L.none}</div>}
+      </div>
+    </>
+  );
+
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 65, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ position: "relative", background: INK, border: `1px solid ${LINE}`, borderRadius: 20, width: "100%", maxWidth: 440, maxHeight: "90vh", overflowY: "auto", padding: 22, boxShadow: "0 24px 70px rgba(0,0,0,.65)", backgroundImage: "radial-gradient(130% 70% at 92% -10%, rgba(225,29,72,0.13), transparent 58%)" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+          <div style={sectionTitle}>{L.title}</div>
+          <div onClick={onClose} style={{ cursor: "pointer", color: MUTED, fontSize: 17, width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 9, border: `1px solid ${LINE}` }}>×</div>
+        </div>
+        <div style={{ display: "flex", gap: 6, background: INK2, border: `1px solid ${LINE}`, borderRadius: 10, padding: 4, marginBottom: 16 }}>
+          {[["recipe", L.tabRec], ["product", L.tabProd]].map(([k, lbl]) => (
+            <div key={k} onClick={() => setTab(k)} style={{ flex: 1, textAlign: "center", cursor: "pointer", ...disp, fontWeight: 700, fontSize: 13, letterSpacing: 0.3, padding: "9px 0", borderRadius: 7, background: tab === k ? EMBER : "transparent", color: tab === k ? PAPER : MUTED }}>{lbl}</div>
+          ))}
+        </div>
+        {tab === "recipe" ? recipeTab : <Products lang={lang} session={session} embedded onPick={onPickProduct} />}
+      </div>
     </div>
   );
 }
