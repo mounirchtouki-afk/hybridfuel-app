@@ -763,9 +763,9 @@ export default function App() {
   const chipS = (on) => ({ padding: "7px 12px", borderRadius: 20, border: `1px solid ${on ? EMBER : LINE}`, background: on ? "rgba(225,29,72,0.14)" : "transparent", fontSize: 12.5, fontWeight: 600, cursor: "pointer" });
   const segS = (on) => ({ flex: 1, textAlign: "center", padding: "9px 4px", borderRadius: 8, border: `1px solid ${on ? EMBER : LINE}`, background: on ? "rgba(225,29,72,0.12)" : "transparent", fontSize: 12, fontWeight: 600, cursor: "pointer" });
   const dayChip = (on) => ({ flex: 1, textAlign: "center", padding: "9px 2px", borderRadius: 8, border: `1px solid ${on ? EMBER : LINE}`, background: on ? "rgba(225,29,72,0.16)" : "transparent", color: on ? PAPER : MUTED, fontSize: 12, fontWeight: 700, cursor: "pointer", ...disp, letterSpacing: 0.5 });
-  const flagBtn = (on) => ({ display: "flex", alignItems: "center", cursor: "pointer", padding: "5px 7px", borderRadius: 7, border: `1px solid ${on ? EMBER : LINE}`, background: on ? "rgba(225,29,72,0.14)" : "transparent", opacity: on ? 1 : 0.5, transition: "opacity .15s, border-color .15s" });
-  const FlagNL = <svg width="22" height="15" viewBox="0 0 9 6" style={{ borderRadius: 2, display: "block" }}><rect width="9" height="6" fill="#fff" /><rect width="9" height="2" fill="#AE1C28" /><rect y="4" width="9" height="2" fill="#21468B" /></svg>;
-  const FlagGB = <svg width="22" height="15" viewBox="0 0 60 30" style={{ borderRadius: 2, display: "block" }}><clipPath id="gbc"><rect width="60" height="30" /></clipPath><g clipPath="url(#gbc)"><rect width="60" height="30" fill="#012169" /><path d="M0,0 60,30 M60,0 0,30" stroke="#fff" strokeWidth="6" /><path d="M0,0 60,30 M60,0 0,30" stroke="#C8102E" strokeWidth="4" /><path d="M30,0 V30 M0,15 H60" stroke="#fff" strokeWidth="10" /><path d="M30,0 V30 M0,15 H60" stroke="#C8102E" strokeWidth="6" /></g></svg>;
+  const flagBtn = (on) => ({ display: "flex", alignItems: "center", cursor: "pointer", padding: "4px 5px", borderRadius: 6, border: `1px solid ${on ? EMBER : LINE}`, background: on ? "rgba(225,29,72,0.14)" : "transparent", opacity: on ? 1 : 0.5, transition: "opacity .15s, border-color .15s" });
+  const FlagNL = <svg width="18" height="12" viewBox="0 0 9 6" style={{ borderRadius: 2, display: "block" }}><rect width="9" height="6" fill="#fff" /><rect width="9" height="2" fill="#AE1C28" /><rect y="4" width="9" height="2" fill="#21468B" /></svg>;
+  const FlagGB = <svg width="18" height="12" viewBox="0 0 60 30" style={{ borderRadius: 2, display: "block" }}><clipPath id="gbc"><rect width="60" height="30" /></clipPath><g clipPath="url(#gbc)"><rect width="60" height="30" fill="#012169" /><path d="M0,0 60,30 M60,0 0,30" stroke="#fff" strokeWidth="6" /><path d="M0,0 60,30 M60,0 0,30" stroke="#C8102E" strokeWidth="4" /><path d="M30,0 V30 M0,15 H60" stroke="#fff" strokeWidth="10" /><path d="M30,0 V30 M0,15 H60" stroke="#C8102E" strokeWidth="6" /></g></svg>;
 
   // ====== DAG-EDITOR (Pro) ======
   const R = (x) => Math.round(num(x));
@@ -1204,22 +1204,24 @@ export default function App() {
       <div className="hf-glow" aria-hidden="true" />
 
       {/* HEADER */}
-      <div style={{ borderBottom: `1px solid ${LINE}`, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, position: "sticky", top: 0, background: `radial-gradient(130% 320% at 94% 0%, rgba(225,29,72,0.16), ${INK} 58%), ${INK}`, zIndex: 20 }}>
-        <div style={{ width: 32, height: 32, borderRadius: 8, background: EMBER, display: "flex", alignItems: "center", justifyContent: "center", ...disp, fontWeight: 700, color: INK, fontSize: 19 }}>H</div>
+      <div style={{ borderBottom: `1px solid ${LINE}`, padding: "12px 14px", display: "flex", alignItems: "center", gap: 8, position: "sticky", top: 0, background: `radial-gradient(130% 320% at 94% 0%, rgba(225,29,72,0.16), ${INK} 58%), ${INK}`, zIndex: 20 }}>
+        <div style={{ width: 30, height: 30, borderRadius: 8, background: EMBER, display: "flex", alignItems: "center", justifyContent: "center", ...disp, fontWeight: 700, color: INK, fontSize: 18, flexShrink: 0 }}>H</div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ ...disp, fontWeight: 700, fontSize: 19, letterSpacing: 0.5, lineHeight: 1, display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{ ...disp, fontWeight: 700, fontSize: 17.5, letterSpacing: 0.4, lineHeight: 1.05, whiteSpace: "nowrap" }}>
             <span>HYBRIDFUEL<span style={{ color: EMBER }}>CO</span></span>
-            {devMode && <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: 1, color: INK, background: EMBER, borderRadius: 4, padding: "2px 6px" }}>DEV</span>}
           </div>
-          <div style={{ fontSize: 10, color: MUTED, letterSpacing: 1, textTransform: "uppercase", marginTop: 3 }}>{T("tagline")}</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 3, minWidth: 0 }}>
+            {devMode && <span style={{ flexShrink: 0, fontSize: 8, fontWeight: 700, letterSpacing: 1, color: INK, background: EMBER, borderRadius: 4, padding: "1px 4px", ...disp }}>DEV</span>}
+            <span style={{ fontSize: 9.5, color: MUTED, letterSpacing: 1, textTransform: "uppercase", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{T("tagline")}</span>
+          </div>
         </div>
-        <div onClick={() => setShowAuth(true)} title="Account" style={{ cursor: "pointer", padding: 6, display: "flex", alignItems: "center" }}>
-          <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke={session ? EMBER : MUTED} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 4-6.5 8-6.5s8 2.5 8 6.5" /></svg>
+        <div onClick={() => setShowReminders(true)} title="Reminders" style={{ cursor: "pointer", width: 32, height: 32, borderRadius: "50%", border: `1px solid ${LINE}`, background: "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={MUTED} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0" /></svg>
         </div>
-        <div onClick={() => setShowReminders(true)} title="Reminders" style={{ cursor: "pointer", padding: 6, display: "flex", alignItems: "center" }}>
-          <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke={MUTED} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0" /></svg>
+        <div onClick={() => setShowAuth(true)} title={session ? "Account" : (lang === "nl" ? "Inloggen" : "Log in")} style={{ cursor: "pointer", width: 32, height: 32, borderRadius: "50%", border: `1px solid ${session ? LINE : EMBER}`, background: session ? "transparent" : "rgba(225,29,72,0.14)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={session ? PAPER : EMBER} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 4-6.5 8-6.5s8 2.5 8 6.5" /></svg>
         </div>
-        <div style={{ display: "flex", gap: 6 }}>
+        <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
           <div onClick={() => setLang("nl")} style={flagBtn(lang === "nl")} title="Nederlands">{FlagNL}</div>
           <div onClick={() => setLang("en")} style={flagBtn(lang === "en")} title="English">{FlagGB}</div>
         </div>
