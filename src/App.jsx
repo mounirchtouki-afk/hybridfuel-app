@@ -1014,7 +1014,7 @@ export default function App() {
         {tab === "tracker" && (hasBasis ? <Tracker lang={lang} height={height} session={session} /> : <Locked />)}
         {tab === "water" && (hasBasis ? <Water lang={lang} session={session} week={week} /> : <Locked />)}
         {tab === "producten" && (hasPro ? <Products embedded lang={lang} session={session} /> : <Locked pro />)}
-        {tab === "recipes" && <Recipes lang={lang} />}
+        {tab === "recipes" && <Recipes lang={lang} session={session} />}
       </div>
 
       {/* BOTTOM NAV */}

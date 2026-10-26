@@ -67,6 +67,7 @@ create table if not exists public.recipes (
   ingredients jsonb,                -- [ { name, grams, kcal, p, c, f } ]
   macros      jsonb,                -- { kcal, p, c, f, fiber }
   image_url   text,
+  steps       text,
   is_system   boolean default false,
   created_at  timestamptz default now(),
   updated_at  timestamptz default now()
