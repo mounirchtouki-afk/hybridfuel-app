@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, SAGE, load, save, genSteps } from "./shared.js";
+import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, SAGE, load, save, genSteps, todayISO } from "./shared.js";
 import Today from "./views/Today.jsx";
+import RecipeBuilder from "./views/RecipeBuilder.jsx";
 import Tracker from "./views/Tracker.jsx";
 import Water from "./views/Water.jsx";
 import Products from "./views/Products.jsx";
@@ -292,6 +293,9 @@ export default function App() {
   const [copyPick, setCopyPick] = useState(null);
   const [recipePick, setRecipePick] = useState(null);
   const [savedMsg, setSavedMsg] = useState(null);
+  const [fab, setFab] = useState(false);
+  const [showBuilder, setShowBuilder] = useState(false);
+  const [fabScan, setFabScan] = useState(false);
   const [view, setView] = useState("plan");
   const [checked, setChecked] = useState({});
   const [loading, setLoading] = useState(false);
@@ -628,6 +632,17 @@ export default function App() {
     const nw = { ...week, days: week.days.map((dd, i) => i === di ? { ...dd, m: newMeals, goal: goal || dd.goal } : dd) };
     applyWeek(nw); persistPlanCloud();
   }
+  // Snel een (gescand) product aan het Dagboek van vandaag loggen — via de + knop.
+  function addTodayProduct(product) {
+    const d = todayISO(), g = 100, p1 = product.per_100 || {};
+    const calc = (k) => Math.round(num(p1[k]) * g / 100);
+    const row = { item: product.name, grams: g, kcal: calc("kcal"), p: calc("p"), c: calc("c"), f: calc("f") };
+    if (supabase && session) {
+      supabase.from("food_logs").insert({ user_id: session.user.id, date: d, item: row.item, grams: g, kcal: row.kcal, p: row.p, c: row.c, f: row.f, source: "product" }).then(() => {}, () => {});
+    } else {
+      const key = "hf_food_" + d, cur = load(key, []); save(key, [...cur, { id: "l" + Date.now(), ...row }]);
+    }
+  }
   function mutDay(di, fn) {
     if (!week) return;
     const nw = { ...week, days: week.days.map((d, i) => i === di ? fn({ ...d, m: d.m.map((mm) => ({ ...mm, ing: (mm.ing || []).map((g) => ({ ...g })) })) }) : d) };
@@ -830,6 +845,12 @@ export default function App() {
   const hasCycle = targets && targets.trainingCount > 0 && targets.trainingCount < 7 && targets.train && targets.rest;
 
   const NAV = [["plan", "navPlan"], ["today", "navToday"], ["tracker", "navTracker"], ["water", "navWater"], ["producten", "navProducts"], ["recipes", "navRecipes"], ["race", "navRace"]];
+  const fabAct = (label, icon, onClick) => (
+    <div onClick={onClick} style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
+      <span style={{ background: INK2, border: `1px solid ${LINE}`, color: PAPER, fontSize: 12.5, fontWeight: 600, padding: "7px 12px", borderRadius: 9, whiteSpace: "nowrap", boxShadow: "0 4px 14px rgba(0,0,0,.45)" }}>{label}</span>
+      <div style={{ width: 46, height: 46, borderRadius: "50%", background: INK2, border: `1px solid ${EMBER}`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 14px rgba(0,0,0,.45)", flexShrink: 0 }}>{icon}</div>
+    </div>
+  );
 
   return (
     <div style={{ minHeight: "100vh", background: INK, position: "relative", color: PAPER, fontFamily: "Inter, sans-serif", paddingBottom: 76 + consentH }}>
@@ -1113,6 +1134,22 @@ export default function App() {
         {tab === "race" && (hasPlus ? <RaceProtocol lang={lang} weight={weight} session={session} week={week} /> : <Locked pro />)}
       </div>
 
+      {/* QUICK-ADD + */}
+      {fab && <div onClick={() => setFab(false)} style={{ position: "fixed", inset: 0, zIndex: 39 }} />}
+      <div style={{ position: "fixed", right: 16, bottom: consentH + 76, zIndex: 41, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 12 }}>
+        {fab && (
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 12 }}>
+            {fabAct(lang === "nl" ? "Recept maken" : "Create recipe", <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4v6a3 3 0 006 0V4M7 4v16" /><path d="M17 4c-1.5 0-2.5 2-2.5 5s1 4 2.5 4 2.5-1 2.5-4-1-5-2.5-5zM17 13v7" /></svg>, () => { setFab(false); setShowBuilder(true); })}
+            {fabAct(lang === "nl" ? "Gewicht loggen" : "Log weight", <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M4 18l5-6 4 3 6-8" /><path d="M4 21h16" /></svg>, () => { setFab(false); if (!hasBasis) { setShowAuth(true); return; } setTab("tracker"); try { window.scrollTo(0, 0); } catch (e) {} })}
+            {fabAct(lang === "nl" ? "Water toevoegen" : "Add water", <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3c3.5 4.2 6 7.3 6 10.3A6 6 0 016 13.3C6 10.3 8.5 7.2 12 3z" /></svg>, () => { setFab(false); if (!hasBasis) { setShowAuth(true); return; } setTab("water"); try { window.scrollTo(0, 0); } catch (e) {} })}
+            {fabAct(lang === "nl" ? "Scan / log eten" : "Scan / log food", <svg width="20" height="20" viewBox="0 0 24 24" fill={EMBER} aria-hidden="true"><rect x="3" y="5" width="1.7" height="14" /><rect x="6" y="5" width="1" height="14" /><rect x="8.5" y="5" width="2" height="14" /><rect x="12" y="5" width="1" height="14" /><rect x="14.6" y="5" width="1.7" height="14" /><rect x="17.6" y="5" width="1" height="14" /><rect x="20" y="5" width="1.4" height="14" /></svg>, () => { setFab(false); if (!hasPro) { setShowAuth(true); return; } setFabScan(true); setShowProducts(true); })}
+          </div>
+        )}
+        <div onClick={() => setFab(!fab)} title="+" style={{ width: 56, height: 56, borderRadius: "50%", background: EMBER, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 8px 24px rgba(225,29,72,0.45)", cursor: "pointer", transition: "transform .2s", transform: fab ? "rotate(45deg)" : "none" }}>
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={PAPER} strokeWidth="2.4" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+        </div>
+      </div>
+
       {/* BOTTOM NAV */}
       <div style={{ position: "fixed", left: 0, right: 0, bottom: consentH, background: INK, borderTop: `1px solid ${LINE}`, display: "flex", zIndex: 30, paddingBottom: "env(safe-area-inset-bottom)", transition: "bottom .2s" }}>
         {NAV.map(([id, key]) => {
@@ -1128,7 +1165,8 @@ export default function App() {
 
       {showReminders && <Reminders lang={lang} onClose={() => setShowReminders(false)} />}
       {showAuth && <Auth lang={lang} session={session} tier={subTier} recovery={authRecovery} onClose={() => { setShowAuth(false); setAuthRecovery(false); }} />}
-      {showProducts && <Products lang={lang} session={session} onClose={() => { setShowProducts(false); setPickTarget(null); }} onPick={pickTarget ? (prod) => { addProductIng(pickTarget.di, pickTarget.mi, prod); setShowProducts(false); setPickTarget(null); } : null} />}
+      {showProducts && <Products lang={lang} session={session} autoScan={fabScan} onClose={() => { setShowProducts(false); setPickTarget(null); setFabScan(false); }} onPick={pickTarget ? (prod) => { addProductIng(pickTarget.di, pickTarget.mi, prod); setShowProducts(false); setPickTarget(null); } : fabScan ? (prod) => { addTodayProduct(prod); setShowProducts(false); setFabScan(false); } : null} />}
+      {showBuilder && <RecipeBuilder lang={lang} session={session} onClose={() => setShowBuilder(false)} onSaved={() => {}} />}
 
       {copyPick && (
         <div onClick={() => setCopyPick(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 70, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>

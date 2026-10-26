@@ -81,7 +81,7 @@ const PlusIcon = ({ c }) => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2.2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
 );
 
-export default function Products({ lang, session, onClose, onPick, embedded }) {
+export default function Products({ lang, session, onClose, onPick, embedded, autoScan }) {
   const t = (k) => (T[k] ? T[k][lang] : k);
   const cloud = !!(session && supabase);
   const [items, setItems] = useState(() => (cloud ? [] : load("hf_products", [])));
@@ -105,6 +105,9 @@ export default function Products({ lang, session, onClose, onPick, embedded }) {
     }
     return () => { active = false; stopScan(); };
   }, [session]);
+
+  // Vanaf de + knop: scanner direct starten.
+  useEffect(() => { if (autoScan) startScan(); /* eslint-disable-next-line */ }, []);
 
   function stopScan() {
     try { if (readerRef.current) { readerRef.current.reset(); readerRef.current = null; } } catch (e) {}
