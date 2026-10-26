@@ -190,6 +190,12 @@ const TXT = {
   movePlannedLbl: { nl: "Op de kalender gezet", en: "Placed on calendar" },
   moveClear: { nl: "Wissen", en: "Clear" },
   saveAsRecipe: { nl: "Bewaar als recept", en: "Save as recipe" },
+  editVals: { nl: "Waarden bewerken", en: "Edit values" },
+  toProduct: { nl: "Bewaar in producten", en: "Save to products" },
+  linkedTag: { nl: "gekoppeld", en: "linked" },
+  per100Hint: { nl: "Voedingswaarde per 100 g. Dit ingrediënt komt in je producten en blijft gekoppeld — pas je het daar aan, dan verandert het hier mee.", en: "Nutrition per 100 g. This ingredient goes to your products and stays linked — change it there and it updates here." },
+  ingName: { nl: "Naam", en: "Name" },
+  cancelShort: { nl: "Annuleer", en: "Cancel" },
   savedAsRecipe: { nl: "Opgeslagen ✓", en: "Saved ✓" },
   copyToTitle: { nl: "Kopieer naar…", en: "Copy to…" },
   copyDayToLbl: { nl: "Kopieer de hele dag (alle maaltijden) naar:", en: "Copy the whole day (all meals) to:" },
@@ -800,7 +806,13 @@ export default function App() {
       if (j !== mi) return mm;
       const ing = mm.ing || [], old = ing[ii], next = { ...old, ...patch };
       const na = { ...mm, ing: ing.map((g, k) => k === ii ? next : g) };
-      if (old && old.per100 && ("g" in patch)) { const a = ingMacros(old) || {}, b = ingMacros(next) || {}; na.kcal = R(num(mm.kcal) + (b.kcal || 0) - (a.kcal || 0)); na.p = R(num(mm.p) + (b.p || 0) - (a.p || 0)); na.c = R(num(mm.c) + (b.c || 0) - (a.c || 0)); na.f = R(num(mm.f) + (b.f || 0) - (a.f || 0)); }
+      // Alleen bijstellen als het ingrediënt al gekoppeld was (per100). De EERSTE
+      // keer per100 toekennen (bv. "bewaar in producten") laat het dagtotaal
+      // ongemoeid: je legt alleen vast wat er al in de maaltijd zat.
+      if (old && old.per100 && next && next.per100) {
+        const a = ingMacros(old) || {}, b = ingMacros(next) || {};
+        na.kcal = R(num(mm.kcal) + (b.kcal || 0) - (a.kcal || 0)); na.p = R(num(mm.p) + (b.p || 0) - (a.p || 0)); na.c = R(num(mm.c) + (b.c || 0) - (a.c || 0)); na.f = R(num(mm.f) + (b.f || 0) - (a.f || 0));
+      }
       return na;
     });
     return d;
@@ -820,7 +832,7 @@ export default function App() {
     mutDay(di, (d) => {
       d.m = d.m.map((mm, j) => {
         if (j !== mi) return mm;
-        const ing = { n: product.name, g: 100, per100: product.per_100 || {} };
+        const ing = { n: product.name, g: 100, per100: product.per_100 || {}, pid: product.id || null };
         const a = ingMacros(ing) || {};
         return { ...mm, ing: [...(mm.ing || []), ing], kcal: R(num(mm.kcal) + (a.kcal || 0)), p: R(num(mm.p) + (a.p || 0)), c: R(num(mm.c) + (a.c || 0)), f: R(num(mm.f) + (a.f || 0)) };
       });
@@ -831,7 +843,7 @@ export default function App() {
   const addMealTo = (di) => mutDay(di, (d) => { d.m = [...d.m, { t: "EXTRA", n: "", kcal: 0, p: 0, c: 0, f: 0, ing: [] }]; return d; });
   // Voeg een product toe als een NIEUWE maaltijd (dag-niveau "Uit producten").
   function addProductAsMeal(di, product) {
-    const ing = { n: product.name, g: 100, per100: product.per_100 || {} };
+    const ing = { n: product.name, g: 100, per100: product.per_100 || {}, pid: product.id || null };
     const a = ingMacros(ing) || {};
     const meal = { t: (lang === "nl" ? "PRODUCT" : "PRODUCT"), n: product.name, kcal: R(a.kcal || 0), p: R(a.p || 0), c: R(a.c || 0), f: R(a.f || 0), ing: [ing], src: "product" };
     mutDay(di, (d) => { d.m = [...d.m, meal]; return d; });
@@ -899,6 +911,44 @@ export default function App() {
       if (supabase && session) await supabase.from("recipes").insert({ user_id: session.user.id, ...rec, is_system: false });
       else { const all = load("hf_recipes", []); save("hf_recipes", [...all, { id: "l" + Date.now(), ...rec }]); }
       setSavedMsg(di + ":" + mi); setTimeout(() => setSavedMsg(null), 1800);
+    } catch (e) {}
+  }
+  // Bewaar één ingrediënt als product (op verzoek) en koppel het (pid).
+  async function saveIngProduct(di, mi, ii, per100, name) {
+    const nm = (name || "").trim() || "Product";
+    const p100 = { kcal: R(num(per100.kcal)), p: R(num(per100.p)), c: R(num(per100.c)), f: R(num(per100.f)) };
+    let newId = "l" + Date.now();
+    try {
+      if (supabase && session) {
+        const { data } = await supabase.from("products").insert({ user_id: session.user.id, name: nm, brand: null, barcode: null, per_100: p100, category: null, unit: "g" }).select("id").single();
+        if (data && data.id) newId = data.id;
+      } else {
+        const all = load("hf_products", []);
+        save("hf_products", [...all, { id: newId, name: nm, brand: null, barcode: null, per_100: p100, category: null }]);
+      }
+    } catch (e) {}
+    patchIng(di, mi, ii, { n: nm, per100: p100, pid: newId });
+  }
+  // Een product is aangepast → werk alle gekoppelde ingrediënten in het
+  // weekschema én in de datum-afwijkingen bij (waarden gaan automatisch mee).
+  function propagateProduct(product) {
+    if (!product || product.id == null) return;
+    const pid = product.id, np = product.per_100 || {}, nm = product.name;
+    const fixMeals = (meals) => meals.map((mm) => {
+      if (!(mm.ing || []).some((g) => g.pid === pid)) return mm;
+      const ing = (mm.ing || []).map((g) => (g.pid === pid ? { ...g, n: nm != null ? nm : g.n, per100: np } : g));
+      let dk = 0, dp = 0, dc = 0, df = 0;
+      (mm.ing || []).forEach((g, k) => { if (g.pid !== pid) return; const a = ingMacros(g) || {}, b = ingMacros(ing[k]) || {}; dk += (b.kcal || 0) - (a.kcal || 0); dp += (b.p || 0) - (a.p || 0); dc += (b.c || 0) - (a.c || 0); df += (b.f || 0) - (a.f || 0); });
+      return { ...mm, ing, kcal: R(num(mm.kcal) + dk), p: R(num(mm.p) + dp), c: R(num(mm.c) + dc), f: R(num(mm.f) + df) };
+    });
+    if (week) applyWeek({ ...week, days: week.days.map((d) => ({ ...d, m: fixMeals(d.m.map((mm) => ({ ...mm, ing: (mm.ing || []).map((g) => ({ ...g })) }))) })) });
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (!key || key.indexOf("hf_dayover_") !== 0) continue;
+        const ov = load(key, null); if (!ov || !ov.m) continue;
+        save(key, { ...ov, m: fixMeals(ov.m.map((mm) => ({ ...mm, ing: (mm.ing || []).map((g) => ({ ...g })) }))) });
+      }
     } catch (e) {}
   }
   function RecipePicker({ di, onClose }) {
@@ -1038,6 +1088,8 @@ export default function App() {
     const [addOpen, setAddOpen] = useState(false);
     const [openMeal, setOpenMeal] = useState(null);
     const [dayMenu, setDayMenu] = useState(false);
+    const [valMeal, setValMeal] = useState(null);
+    const [ingForm, setIngForm] = useState(null);
     const tot = day.m.reduce((a, m) => ({ kcal: a.kcal + num(m.kcal), p: a.p + num(m.p), c: a.c + num(m.c), f: a.f + num(m.f) }), { kcal: 0, p: 0, c: 0, f: 0 });
     const Dots = () => (<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.7" /><circle cx="12" cy="12" r="1.7" /><circle cx="12" cy="19" r="1.7" /></svg>);
     const sqBtn = (on) => ({ cursor: "pointer", width: 30, height: 30, borderRadius: 7, border: `1px solid ${on ? EMBER : LINE}`, color: on ? EMBER : MUTED, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 });
@@ -1060,6 +1112,15 @@ export default function App() {
     const icSave = <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21l-7-4-7 4V5a2 2 0 012-2h10a2 2 0 012 2z" /></svg>;
     const icTrash = <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14" /></svg>;
     const icDate = <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 9h18M8 3v4M16 3v4" /></svg>;
+    const icEdit = <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z" /></svg>;
+    const miniIn = { background: INK, border: `1px solid ${LINE}`, color: PAPER, padding: "7px 6px", borderRadius: 7, fontSize: 12, outline: "none", width: "100%", textAlign: "center" };
+    const valEditor = (mi, obj, onPatch) => (
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 6, marginBottom: 8 }}>
+        {[["kcal", "kcal"], ["p", "P"], ["c", "C"], ["f", "F"]].map(([k, lbl]) => (
+          <div key={k}><input value={obj[k]} onChange={(e) => onPatch(k, e.target.value)} inputMode="numeric" placeholder={lbl} style={miniIn} /><div style={{ fontSize: 8.5, color: MUTED, textAlign: "center", marginTop: 2 }}>{lbl}</div></div>
+        ))}
+      </div>
+    );
     return (
       <div style={{ background: INK2, border: `1px solid ${LINE}`, borderRadius: 12, overflow: "hidden" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "11px 14px", background: INK, borderBottom: `1px solid ${LINE}` }}>
@@ -1089,12 +1150,29 @@ export default function App() {
                   <div onClick={() => scaleMeal(di, mi, 1.1)} style={{ ...sqBtn(false), color: EMBER, fontSize: 18, fontWeight: 700 }}>+</div>
                   <div onClick={() => setOpenMeal(openMeal === mi ? null : mi)} style={sqBtn(openMeal === mi)}><Dots /></div>
                 </div>
+                {valMeal === mi && valEditor(mi, m, (k, v) => patchMeal(di, mi, { [k]: num(v) }))}
                 {(m.ing || []).map((ing, ii) => (
-                  <div key={ii} style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 6 }}>
-                    <input value={ing.n} onChange={(e) => patchIng(di, mi, ii, { n: e.target.value })} placeholder={T("ingrNamePh")} style={{ ...sIn, flex: 1 }} />
-                    <input value={ing.g} onChange={(e) => patchIng(di, mi, ii, { g: num(e.target.value) })} inputMode="numeric" style={{ ...sIn, width: 58, textAlign: "right" }} />
-                    <span style={{ fontSize: 11, color: MUTED }}>g</span>
-                    <div onClick={() => removeIngr(di, mi, ii)} style={{ cursor: "pointer", color: MUTED, fontSize: 15, padding: "0 2px" }}>×</div>
+                  <div key={ii} style={{ marginBottom: 6 }}>
+                    <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                      <input value={ing.n} onChange={(e) => patchIng(di, mi, ii, { n: e.target.value })} placeholder={T("ingrNamePh")} style={{ ...sIn, flex: 1 }} />
+                      <input value={ing.g} onChange={(e) => patchIng(di, mi, ii, { g: num(e.target.value) })} inputMode="numeric" style={{ ...sIn, width: 52, textAlign: "right" }} />
+                      <span style={{ fontSize: 11, color: MUTED }}>g</span>
+                      {ing.pid
+                        ? <span style={{ fontSize: 8, color: SAGE, border: `1px solid ${SAGE}`, borderRadius: 4, padding: "1px 4px", letterSpacing: 0.3, fontWeight: 700, ...disp, whiteSpace: "nowrap" }}>{T("linkedTag")}</span>
+                        : <div onClick={() => setIngForm({ mi, ii, name: ing.n || "", kcal: (ing.per100 && ing.per100.kcal) || "", p: (ing.per100 && ing.per100.p) || "", c: (ing.per100 && ing.per100.c) || "", f: (ing.per100 && ing.per100.f) || "" })} title={T("toProduct")} style={{ cursor: "pointer", color: MUTED, display: "flex", padding: "0 1px" }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21l-7-4-7 4V5a2 2 0 012-2h10a2 2 0 012 2z" /></svg></div>}
+                      <div onClick={() => removeIngr(di, mi, ii)} style={{ cursor: "pointer", color: MUTED, fontSize: 15, padding: "0 2px" }}>×</div>
+                    </div>
+                    {ingForm && ingForm.mi === mi && ingForm.ii === ii && (
+                      <div style={{ background: "#121212", border: `1px solid ${LINE}`, borderRadius: 10, padding: 10, marginTop: 6 }}>
+                        <div style={{ fontSize: 10.5, color: MUTED, lineHeight: 1.5, marginBottom: 8 }}>{T("per100Hint")}</div>
+                        <input value={ingForm.name} onChange={(e) => setIngForm({ ...ingForm, name: e.target.value })} placeholder={T("ingName")} style={{ ...miniIn, textAlign: "left", marginBottom: 8 }} />
+                        {valEditor(mi, ingForm, (k, v) => setIngForm({ ...ingForm, [k]: v }))}
+                        <div style={{ display: "flex", gap: 8 }}>
+                          <div onClick={() => { saveIngProduct(di, mi, ii, { kcal: ingForm.kcal, p: ingForm.p, c: ingForm.c, f: ingForm.f }, ingForm.name); setIngForm(null); }} style={{ flex: 1, textAlign: "center", cursor: "pointer", background: EMBER, color: PAPER, borderRadius: 8, padding: "9px 0", ...disp, fontWeight: 700, fontSize: 12.5, letterSpacing: 0.3 }}>{T("toProduct")}</div>
+                          <div onClick={() => setIngForm(null)} style={{ cursor: "pointer", color: MUTED, fontSize: 12, fontWeight: 600, padding: "9px 12px", border: `1px solid ${LINE}`, borderRadius: 8 }}>{T("cancelShort")}</div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
                 <div style={{ fontSize: 10.5, color: MUTED, marginTop: 6, textAlign: "right" }}>{m.kcal} kcal · {m.p}p/{m.c}c/{m.f}f</div>
@@ -1102,6 +1180,7 @@ export default function App() {
               {openMeal === mi && (
                 <div style={{ background: "#121212", borderTop: `1px solid ${LINE}` }}>
                   {miniAct(icPlus, T("addIngr").replace("+ ", ""), () => addIngr(di, mi))}
+                  {miniAct(icEdit, T("editVals"), () => { setValMeal(valMeal === mi ? null : mi); setOpenMeal(null); })}
                   {miniAct(icBar, T("addProd").replace("+ ", ""), () => { setOpenMeal(null); setPickTarget({ di, mi }); setShowProducts(true); })}
                   {miniAct(icCopy, T("copyMeal"), () => { setOpenMeal(null); setCopyPick({ kind: "meal", di, mi }); })}
                   {miniAct(icSave, savedMsg === di + ":" + mi ? T("savedAsRecipe") : T("saveAsRecipe"), () => saveMealAsRecipe(di, mi))}
@@ -1505,7 +1584,7 @@ export default function App() {
         {tab === "today" && (hasBasis ? <Today lang={lang} week={week} session={session} plus={hasPlus} onRebalance={rebalanceDay} onGoPlan={() => setTab("plan")} /> : <Locked />)}
         {tab === "tracker" && (hasBasis ? <Tracker lang={lang} height={height} session={session} /> : <Locked />)}
         {tab === "water" && (hasBasis ? <Water lang={lang} session={session} week={week} /> : <Locked />)}
-        {tab === "producten" && (hasPro ? <Products embedded lang={lang} session={session} /> : <Locked pro />)}
+        {tab === "producten" && (hasPro ? <Products embedded lang={lang} session={session} onProductChange={propagateProduct} /> : <Locked pro />)}
         {tab === "recipes" && <Recipes lang={lang} session={session} />}
         {tab === "race" && (hasPlus ? <RaceProtocol lang={lang} weight={weight} session={session} week={week} /> : <Locked pro />)}
         {tab === "training" && (hasBasis ? <Training lang={lang} weight={weight} session={session} /> : <Locked />)}

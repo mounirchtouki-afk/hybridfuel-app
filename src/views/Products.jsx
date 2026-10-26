@@ -31,6 +31,9 @@ const T = {
   searchPh: { nl: "Zoek in je producten…", en: "Search your products…" },
   catLabel: { nl: "Categorie", en: "Category" },
   catAuto: { nl: "Automatisch (op naam)", en: "Automatic (by name)" },
+  editTitle: { nl: "Product bewerken", en: "Edit product" },
+  save: { nl: "Opslaan", en: "Save" },
+  editProp: { nl: "Aangepast — je plan is bijgewerkt op de gekoppelde items.", en: "Updated — your plan was refreshed on the linked items." },
 };
 
 const CATS = {
@@ -81,7 +84,7 @@ const PlusIcon = ({ c }) => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2.2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
 );
 
-export default function Products({ lang, session, onClose, onPick, embedded, autoScan }) {
+export default function Products({ lang, session, onClose, onPick, embedded, autoScan, onProductChange }) {
   const t = (k) => (T[k] ? T[k][lang] : k);
   const cloud = !!(session && supabase);
   const [items, setItems] = useState(() => (cloud ? [] : load("hf_products", [])));
@@ -89,6 +92,8 @@ export default function Products({ lang, session, onClose, onPick, embedded, aut
   const [kc, setKc] = useState(""), [pr, setPr] = useState(""), [cb, setCb] = useState(""), [ft, setFt] = useState("");
   const [cat, setCat] = useState("");
   const [adding, setAdding] = useState(false);
+  const [editId, setEditId] = useState(null);
+  const [propMsg, setPropMsg] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [msg, setMsg] = useState("");
   const [looking, setLooking] = useState(false);
@@ -114,7 +119,13 @@ export default function Products({ lang, session, onClose, onPick, embedded, aut
     try { const v = videoRef.current; if (v && v.srcObject) { v.srcObject.getTracks().forEach((tk) => tk.stop()); v.srcObject = null; } } catch (e) {}
   }
   function resetForm() { setNm(""); setBr(""); setBc(""); setKc(""); setPr(""); setCb(""); setFt(""); setCat(""); setMsg(""); setManualBc(""); }
-  function closeAdd() { stopScan(); setScanning(false); setAdding(false); resetForm(); }
+  function closeAdd() { stopScan(); setScanning(false); setAdding(false); setEditId(null); resetForm(); }
+  function startEdit(it) {
+    setEditId(it.id); setScanning(false); setMsg("");
+    setNm(it.name || ""); setBr(it.brand || ""); setBc(it.barcode || "");
+    const p = it.per_100 || {}; setKc(p.kcal != null ? p.kcal : ""); setPr(p.p != null ? p.p : ""); setCb(p.c != null ? p.c : ""); setFt(p.f != null ? p.f : "");
+    setCat(it.category || ""); setAdding(true);
+  }
 
   async function startScan() {
     setMsg(""); setAdding(true); setScanning(true);
@@ -152,6 +163,16 @@ export default function Products({ lang, session, onClose, onPick, embedded, aut
     const per_100 = { kcal: Math.round(num(kc)), p: Math.round(num(pr)), c: Math.round(num(cb)), f: Math.round(num(ft)) };
     const barcode = bc.trim() || null;
     const category = cat || null;
+    if (editId) {
+      const patch = { name, brand: br.trim() || null, barcode, per_100, category };
+      const next = items.map((x) => x.id === editId ? { ...x, ...patch } : x).sort((a, b) => a.name.localeCompare(b.name));
+      setItems(next);
+      if (cloud) supabase.from("products").update(patch).eq("id", editId).then(() => {}, () => {});
+      else save("hf_products", next);
+      if (onProductChange) { onProductChange({ id: editId, ...patch }); setPropMsg(true); setTimeout(() => setPropMsg(false), 2600); }
+      closeAdd();
+      return;
+    }
     if (cloud) {
       supabase.from("products").insert({ user_id: session.user.id, name, brand: br.trim() || null, barcode, per_100, category, unit: "g" }).select("id,name,brand,barcode,per_100,category").single()
         .then(({ data }) => { if (data) setItems((p) => [...p, data].sort((a, b) => a.name.localeCompare(b.name))); }, () => {});
@@ -220,7 +241,7 @@ export default function Products({ lang, session, onClose, onPick, embedded, aut
         <div>{macroIn(ft, setFt, "g")}<div style={{ fontSize: 9.5, color: MUTED, textAlign: "center", marginTop: 3 }}>{t("fat")}</div></div>
       </div>
       <div style={{ display: "flex", gap: 8 }}>
-        <button onClick={add} style={{ ...primaryBtn, flex: 1 }}>{t("add")}</button>
+        <button onClick={add} style={{ ...primaryBtn, flex: 1 }}>{editId ? t("save") : t("add")}</button>
         <button onClick={closeAdd} style={{ ...ghostBtn }}>{t("cancel")}</button>
       </div>
     </div>
@@ -228,6 +249,7 @@ export default function Products({ lang, session, onClose, onPick, embedded, aut
 
   const body = (
     <>
+      {propMsg && <div style={{ fontSize: 12, color: "#4ADE80", lineHeight: 1.5, marginBottom: 12, background: "rgba(74,222,128,0.1)", border: `1px solid rgba(74,222,128,0.3)`, borderRadius: 10, padding: "9px 12px" }}>{t("editProp")}</div>}
       <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.5, marginBottom: 14 }}>{t("intro")}</div>
 
       {/* Compacte acties */}
@@ -258,6 +280,7 @@ export default function Products({ lang, session, onClose, onPick, embedded, aut
                 {CAT_ORDER.map((c) => <option key={c} value={c}>{CATS[c][lang]}</option>)}
               </select>}
               {onPick && <div onClick={() => onPick(it)} style={{ cursor: "pointer", fontSize: 12, fontWeight: 700, color: EMBER, border: `1px solid ${EMBER}`, borderRadius: 7, padding: "5px 11px", ...disp, letterSpacing: 0.3 }}>{t("pick")}</div>}
+              {!onPick && <div onClick={() => startEdit(it)} title={t("editTitle")} style={{ cursor: "pointer", color: MUTED, display: "flex", padding: "0 3px" }}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z" /></svg></div>}
               <div onClick={() => del(it.id)} style={{ cursor: "pointer", color: MUTED, fontSize: 16, padding: "0 4px" }}>×</div>
             </div>
           ))}
