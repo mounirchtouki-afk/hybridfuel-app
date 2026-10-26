@@ -187,7 +187,7 @@ const TXT = {
   xSheetShop: { nl: "Boodschappen", en: "Shopping" },
   // App-navigatie + PWA
   navPlan: { nl: "Plan", en: "Plan" },
-  navToday: { nl: "Vandaag", en: "Today" },
+  navToday: { nl: "Dagboek", en: "Diary" },
   navTracker: { nl: "Tracker", en: "Tracker" },
   navWater: { nl: "Water", en: "Water" },
   navProducts: { nl: "Producten", en: "Products" },
@@ -451,6 +451,7 @@ export default function App() {
     setError(""); setStarted(true); setView("plan"); setChecked({}); setWeek(null); setLockReason(""); setPlanEmail("");
     const intake = currentIntake();
     try { localStorage.setItem("hf_intake", JSON.stringify(intake)); } catch (e) {}
+    if (devMode) { await computeFree(intake); setWeek(demoWeek(lang)); return; } // dev: demo-plan zonder server
     if (hasBasis) await generatePaid(intake); else await computeFree(intake);
   }
 
@@ -1007,7 +1008,7 @@ export default function App() {
         )}
 
         {/* ====== OTHER TABS ====== */}
-        {tab === "today" && (hasBasis ? <Today lang={lang} week={week} onGoPlan={() => setTab("plan")} /> : <Locked />)}
+        {tab === "today" && (hasBasis ? <Today lang={lang} week={week} session={session} onGoPlan={() => setTab("plan")} /> : <Locked />)}
         {tab === "tracker" && (hasBasis ? <Tracker lang={lang} height={height} session={session} /> : <Locked />)}
         {tab === "water" && (hasBasis ? <Water lang={lang} session={session} week={week} /> : <Locked />)}
         {tab === "producten" && (hasPro ? <Products embedded lang={lang} session={session} /> : <Locked pro />)}
