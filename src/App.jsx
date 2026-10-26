@@ -614,6 +614,11 @@ export default function App() {
   const R = (x) => Math.round(num(x));
   function applyWeek(nw) { setWeek(nw); try { localStorage.setItem("hf_lastplan", JSON.stringify({ targets, week: nw })); } catch (e) {} }
   function persistPlanCloud() { if (supabase && session && week && week.days) supabase.from("plans").insert({ user_id: session.user.id, targets, week, is_active: true }).then(() => {}, () => {}); }
+  function rebalanceDay(di, newMeals, goal) {
+    if (!week || !week.days) return;
+    const nw = { ...week, days: week.days.map((dd, i) => i === di ? { ...dd, m: newMeals, goal: goal || dd.goal } : dd) };
+    applyWeek(nw); persistPlanCloud();
+  }
   function mutDay(di, fn) {
     if (!week) return;
     const nw = { ...week, days: week.days.map((d, i) => i === di ? fn({ ...d, m: d.m.map((mm) => ({ ...mm, ing: (mm.ing || []).map((g) => ({ ...g })) })) }) : d) };
@@ -1090,7 +1095,7 @@ export default function App() {
         )}
 
         {/* ====== OTHER TABS ====== */}
-        {tab === "today" && (hasBasis ? <Today lang={lang} week={week} session={session} onGoPlan={() => setTab("plan")} /> : <Locked />)}
+        {tab === "today" && (hasBasis ? <Today lang={lang} week={week} session={session} plus={hasPlus} onRebalance={rebalanceDay} onGoPlan={() => setTab("plan")} /> : <Locked />)}
         {tab === "tracker" && (hasBasis ? <Tracker lang={lang} height={height} session={session} /> : <Locked />)}
         {tab === "water" && (hasBasis ? <Water lang={lang} session={session} week={week} /> : <Locked />)}
         {tab === "producten" && (hasPro ? <Products embedded lang={lang} session={session} /> : <Locked pro />)}

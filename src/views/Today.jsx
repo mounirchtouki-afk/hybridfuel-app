@@ -29,6 +29,12 @@ const T = {
   carbLbl: { nl: "Koolhydraten", en: "Carbs" },
   fatLbl: { nl: "Vet", en: "Fat" },
   waterLbl: { nl: "Water", en: "Water" },
+  hpTitle: { nl: "Leven gebeurt", en: "Life happens" },
+  hpBtn: { nl: "Herbalanceer de rest van mijn dag", en: "Rebalance the rest of my day" },
+  hpNote: { nl: "De app schaalt je nog niet-afgevinkte maaltijden zodat je dag alsnog op je doel landt.", en: "The app scales your unchecked meals so your day still lands on target." },
+  hpDone: { nl: "Dag aangepast ✓ — resterende maaltijden geschaald.", en: "Day adjusted ✓ — remaining meals scaled." },
+  hpUndo: { nl: "Ongedaan maken", en: "Undo" },
+  hpNoRoom: { nl: "Geen maaltijden meer open om te schalen. Pak het morgen terug.", en: "No meals left to scale. Pick it up tomorrow." },
 };
 
 function Ring({ pct }) {
@@ -43,7 +49,7 @@ function Ring({ pct }) {
   );
 }
 
-export default function Today({ lang, week, onGoPlan, session }) {
+export default function Today({ lang, week, onGoPlan, session, plus, onRebalance }) {
   const t = (k) => (T[k] ? T[k][lang] : k);
   const cloud = !!(session && supabase);
   const [d, setD] = useState(todayISO());
@@ -52,9 +58,11 @@ export default function Today({ lang, week, onGoPlan, session }) {
   const [showAdd, setShowAdd] = useState(false);
   const [waterMl, setWaterMl] = useState(0);
   const [weightKg, setWeightKg] = useState(0);
+  const [undo, setUndo] = useState(null);
 
   useEffect(() => {
     setEaten(load("hf_eaten_" + d, {}));
+    setUndo(null);
     let active = true;
     // Handmatig gewicht uit de Water-tab wint (zelfde logica als Water).
     const mw = num(load("hf_water_weight", ""));
@@ -127,6 +135,24 @@ export default function Today({ lang, week, onGoPlan, session }) {
   const cons = (k) => sumEatenPlan(k) + sumExtra(k);
   const waterGoal = weightKg > 0 ? Math.round((35 * weightKg + (day && day.train ? 500 : 0)) / 50) * 50 : 0;
 
+  // ===== "Leven gebeurt"-herplanner =====
+  const R = (x) => Math.round(num(x));
+  const remIdx = day ? day.m.map((m, i) => i).filter((i) => !eaten[i]) : [];
+  const remKcal = remIdx.reduce((a, i) => a + num(day.m[i].kcal), 0);
+  const goalKcal = (day && day.goal && day.goal.kcal) || plannedTotal;
+  const projDiff = day ? Math.round((consumed + remKcal) - goalKcal) : 0; // >0 = koers boven doel
+  const canRebalance = !!(plus && day && onRebalance && remIdx.length > 0 && Math.abs(projDiff) >= 60);
+  function doRebalance() {
+    if (!day || !onRebalance || remKcal <= 0) return;
+    let f = (goalKcal - consumed) / remKcal;
+    f = Math.max(0.35, Math.min(1.4, f));
+    const snapGoal = (day.goal) || { kcal: plannedTotal, p: sumPlan("p"), c: sumPlan("c"), f: sumPlan("f") };
+    const newMeals = day.m.map((m, i) => eaten[i] ? m : { ...m, kcal: R(num(m.kcal) * f), p: R(num(m.p) * f), c: R(num(m.c) * f), f: R(num(m.f) * f), ing: (m.ing || []).map((g) => ({ ...g, g: R(num(g.g) * f) })) });
+    setUndo({ meals: day.m, goal: day.goal || null });
+    onRebalance(idx, newMeals, snapGoal);
+  }
+  function doUndo() { if (!undo || !onRebalance) return; onRebalance(idx, undo.meals, undo.goal); setUndo(null); }
+
   function statusOf(c, target) {
     if (!target) return { label: "—", color: MUTED };
     const r = c / target;
@@ -185,6 +211,32 @@ export default function Today({ lang, week, onGoPlan, session }) {
             </div>
             <div style={{ fontSize: 11.5, color: allDone ? "#4ADE80" : MUTED, marginTop: 10 }}>{allDone ? t("done") : t("tapHint")}</div>
           </div>
+
+          {/* "Leven gebeurt"-herplanner (Plus) */}
+          {plus && day && (undo || canRebalance) && (
+            <div style={{ border: `1px solid ${EMBER}`, borderRadius: 14, padding: 15, backgroundImage: "radial-gradient(120% 90% at 100% 0%, rgba(225,29,72,0.14), transparent 62%)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 7 }}>
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 2.6-6.4M3 4v4h4" /></svg>
+                <div style={{ ...disp, fontSize: 13.5, fontWeight: 700, letterSpacing: 0.5, textTransform: "uppercase", color: EMBER }}>{t("hpTitle")}</div>
+              </div>
+              {undo ? (
+                <>
+                  <div style={{ fontSize: 12.5, color: PAPER, lineHeight: 1.5, marginBottom: 12 }}>{t("hpDone")}</div>
+                  <button onClick={doUndo} style={{ background: "transparent", color: EMBER, border: `1px solid ${EMBER}`, borderRadius: 9, padding: "9px 16px", ...disp, fontWeight: 700, fontSize: 12.5, letterSpacing: 0.5, cursor: "pointer" }}>{t("hpUndo")}</button>
+                </>
+              ) : (
+                <>
+                  <div style={{ fontSize: 12.5, color: PAPER, lineHeight: 1.5, marginBottom: 4 }}>
+                    {lang === "nl"
+                      ? `Zoals je dag nu loopt, kom je ~${Math.abs(projDiff)} kcal ${projDiff > 0 ? "bóven" : "ónder"} je doel uit.`
+                      : `As your day is going, you'll end ~${Math.abs(projDiff)} kcal ${projDiff > 0 ? "over" : "under"} target.`}
+                  </div>
+                  <div style={{ fontSize: 11, color: MUTED, lineHeight: 1.5, marginBottom: 12 }}>{t("hpNote")}</div>
+                  <button onClick={doRebalance} style={{ background: EMBER, color: PAPER, border: "none", borderRadius: 9, padding: "11px 18px", ...disp, fontWeight: 700, fontSize: 13, letterSpacing: 0.5, cursor: "pointer" }}>{t("hpBtn")}</button>
+                </>
+              )}
+            </div>
+          )}
 
           <div>
             <div style={{ ...label, marginBottom: 10 }}>{t("planned")}</div>
