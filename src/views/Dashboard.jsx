@@ -20,9 +20,16 @@ const T = {
   dayTomorrow: { nl: "morgen", en: "tomorrow" },
   dayToday: { nl: "vandaag", en: "today" },
   menu: { nl: "Vandaag op het menu", en: "Today's menu" },
+  extraLogged: { nl: "Extra gelogd", en: "Logged extra" },
+  extra: { nl: "Extra", en: "Extra" },
   noPlan: { nl: "Nog geen plan — maak je weekplan aan.", en: "No plan yet — build your week plan." },
   train: { nl: "Training", en: "Training" },
   rest: { nl: "Rust", en: "Rest" },
+  customize: { nl: "Aanpassen", en: "Customize" },
+  doneTxt: { nl: "Klaar", en: "Done" },
+  custHint: { nl: "Kies wat je op je dashboard ziet.", en: "Choose what you see on your dashboard." },
+  planRace: { nl: "Plan je Hyrox", en: "Plan your Hyrox" },
+  planRaceSub: { nl: "Stel je Race Protocol in voor race-dag.", en: "Set up your Race Protocol for race day." },
 };
 
 function Ring({ pct, size = 58 }) {
@@ -45,6 +52,9 @@ export default function Dashboard({ lang, session, week, targets, onGo }) {
   const [waterMl, setWaterMl] = useState(0);
   const [weightKg, setWeightKg] = useState(0);
   const [race] = useState(() => load("hf_race", {}));
+  const [prefs, setPrefs] = useState(() => load("hf_dash", null) || { water: true, weight: true, race: true, menu: true });
+  const [cust, setCust] = useState(false);
+  const setPref = (k, v) => { const n = { ...prefs, [k]: v }; setPrefs(n); save("hf_dash", n); };
 
   useEffect(() => {
     let active = true;
@@ -52,7 +62,7 @@ export default function Dashboard({ lang, session, week, targets, onGo }) {
     const mw = num(load("hf_water_weight", ""));
     if (mw > 0) setWeightKg(mw);
     if (cloud) {
-      supabase.from("food_logs").select("kcal,p,c,f").eq("user_id", session.user.id).eq("date", d).then(({ data }) => { if (active && data) setExtras(data); }, () => {});
+      supabase.from("food_logs").select("id,item,kcal,p,c,f").eq("user_id", session.user.id).eq("date", d).then(({ data }) => { if (active && data) setExtras(data); }, () => {});
       supabase.from("water_logs").select("ml").eq("user_id", session.user.id).eq("date", d).then(({ data }) => { if (active) setWaterMl((data && data[0] && data[0].ml) || 0); }, () => {});
       if (mw <= 0) supabase.from("weights").select("kg").eq("user_id", session.user.id).order("date", { ascending: false }).limit(1).then(({ data }) => { if (active && data && data[0]) setWeightKg(Number(data[0].kg)); }, () => {});
     } else {
@@ -89,14 +99,45 @@ export default function Dashboard({ lang, session, week, targets, onGo }) {
       {sub && <div style={{ fontSize: 10.5, color: MUTED, marginTop: 3 }}>{sub}</div>}
     </div>
   );
+  const Toggle = ({ on, onClick }) => (
+    <div onClick={onClick} style={{ width: 42, height: 24, borderRadius: 12, background: on ? EMBER : LINE, position: "relative", cursor: "pointer", flexShrink: 0, transition: "background .15s" }}>
+      <div style={{ position: "absolute", top: 2, left: on ? 20 : 2, width: 20, height: 20, borderRadius: "50%", background: PAPER, transition: "left .15s" }} />
+    </div>
+  );
+  const custRow = (k, label) => (
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 0", borderBottom: `1px solid ${LINE}` }}>
+      <span style={{ fontSize: 13, color: PAPER, fontWeight: 600 }}>{label}</span>
+      <Toggle on={!!prefs[k]} onClick={() => setPref(k, !prefs[k])} />
+    </div>
+  );
 
   return (
     <div style={{ display: "grid", gap: 16 }}>
       {/* Greeting */}
-      <div>
-        <div style={{ ...disp, fontSize: 24, fontWeight: 700, letterSpacing: -0.3 }}>{greet}, <span style={{ color: EMBER, textTransform: "capitalize" }}>{name}</span></div>
-        <div style={{ fontSize: 12.5, color: MUTED, marginTop: 3 }}>{t("sub")}</div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ ...disp, fontSize: 24, fontWeight: 700, letterSpacing: -0.3 }}>{greet}, <span style={{ color: EMBER, textTransform: "capitalize" }}>{name}</span></div>
+          <div style={{ fontSize: 12.5, color: MUTED, marginTop: 3 }}>{t("sub")}</div>
+        </div>
+        <div onClick={() => setCust(!cust)} style={{ cursor: "pointer", flexShrink: 0, display: "flex", alignItems: "center", gap: 5, border: `1px solid ${cust ? EMBER : LINE}`, color: cust ? EMBER : MUTED, borderRadius: 8, padding: "6px 10px", fontSize: 11.5, fontWeight: 600, marginTop: 4 }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z" /></svg>
+          {cust ? t("doneTxt") : t("customize")}
+        </div>
       </div>
+
+      {/* Aanpas-paneel */}
+      {cust && (
+        <div style={{ background: INK2, border: `1px solid ${EMBER}`, borderRadius: 14, padding: "6px 14px 10px" }}>
+          <div style={{ fontSize: 11.5, color: MUTED, lineHeight: 1.4, margin: "10px 0 2px" }}>{t("custHint")}</div>
+          {custRow("water", t("water"))}
+          {custRow("weight", t("weight"))}
+          {custRow("race", t("race") + " (Race Protocol)")}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 0" }}>
+            <span style={{ fontSize: 13, color: PAPER, fontWeight: 600 }}>{t("menu")}</span>
+            <Toggle on={!!prefs.menu} onClick={() => setPref("menu", !prefs.menu)} />
+          </div>
+        </div>
+      )}
 
       {/* Vandaag — grote kaart */}
       <div onClick={() => onGo("today")} style={{ cursor: "pointer", borderRadius: 18, padding: 18, background: `linear-gradient(135deg, ${EMBER} 0%, #9f1239 100%)`, position: "relative", overflow: "hidden" }}>
@@ -111,13 +152,15 @@ export default function Dashboard({ lang, session, week, targets, onGo }) {
       </div>
 
       {/* Water + Gewicht */}
-      <div style={{ display: "flex", gap: 12 }}>
-        {smallCard(t("water"), waterGoal ? `${Math.round(waterMl / 100) / 10}L` : "—", waterGoal ? `/ ${Math.round(waterGoal / 100) / 10}L` : "", () => onGo("water"), EMBER_SOFT)}
-        {smallCard(t("weight"), weightKg > 0 ? `${weightKg} kg` : "—", weightKg > 0 ? "" : t("noWeight"), () => onGo("tracker"))}
-      </div>
+      {(prefs.water || prefs.weight) && (
+        <div style={{ display: "flex", gap: 12 }}>
+          {prefs.water && smallCard(t("water"), waterGoal ? `${Math.round(waterMl / 100) / 10}L` : "—", waterGoal ? `/ ${Math.round(waterGoal / 100) / 10}L` : "", () => onGo("water"), EMBER_SOFT)}
+          {prefs.weight && smallCard(t("weight"), weightKg > 0 ? `${weightKg} kg` : "—", weightKg > 0 ? "" : t("noWeight"), () => onGo("tracker"))}
+        </div>
+      )}
 
-      {/* Race-aftelling */}
-      {cd !== null && (
+      {/* Race-aftelling of uitnodiging */}
+      {prefs.race && (cd !== null ? (
         <div onClick={() => onGo("race")} style={{ cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", background: INK2, border: `1px solid ${EMBER}`, borderRadius: 14, padding: "14px 16px", backgroundImage: "radial-gradient(120% 90% at 100% 0%, rgba(225,29,72,0.16), transparent 60%)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="13" r="8" /><path d="M12 13V8.5M12 3.5V2M9.5 2h5" /></svg>
@@ -128,23 +171,40 @@ export default function Dashboard({ lang, session, week, targets, onGo }) {
             <div style={{ fontSize: 9.5, color: MUTED, letterSpacing: 1, textTransform: "uppercase" }}>{cd === 1 ? t("dayTomorrow") : cd <= 0 ? t("dayToday") : t("days")}</div>
           </div>
         </div>
-      )}
+      ) : (
+        <div onClick={() => onGo("race")} style={{ cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", background: INK2, border: `1px dashed ${LINE}`, borderRadius: 14, padding: "14px 16px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="13" r="8" /><path d="M12 13V8.5M12 3.5V2M9.5 2h5" /></svg>
+            <div style={{ minWidth: 0 }}><div style={{ ...disp, fontWeight: 700, fontSize: 14.5 }}>{t("planRace")}</div><div style={{ fontSize: 10.5, color: MUTED, marginTop: 1 }}>{t("planRaceSub")}</div></div>
+          </div>
+          <div style={{ color: EMBER, fontSize: 22, fontWeight: 300, flexShrink: 0, paddingLeft: 8 }}>›</div>
+        </div>
+      ))}
 
-      {/* Vandaag op het menu */}
-      {day && day.m.length > 0 && (
+      {/* Vandaag op het menu + extra gelogd */}
+      {prefs.menu && ((day && day.m.length > 0) || extras.length > 0) && (
         <div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
             <div style={{ ...disp, fontSize: 11.5, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", color: EMBER }}>{t("menu")}</div>
-            <div style={{ fontSize: 9.5, color: day.train ? EMBER : MUTED, border: `1px solid ${day.train ? EMBER : LINE}`, borderRadius: 5, padding: "2px 7px", letterSpacing: 1, fontWeight: 700 }}>{day.train ? t("train") : t("rest")}</div>
+            {day && <div style={{ fontSize: 9.5, color: day.train ? EMBER : MUTED, border: `1px solid ${day.train ? EMBER : LINE}`, borderRadius: 5, padding: "2px 7px", letterSpacing: 1, fontWeight: 700 }}>{day.train ? t("train") : t("rest")}</div>}
           </div>
           <div style={{ display: "grid", gap: 8 }}>
-            {day.m.map((m, i) => (
+            {day && day.m.map((m, i) => (
               <div key={i} onClick={() => onGo("today")} style={{ cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", background: INK2, border: `1px solid ${eaten[i] ? EMBER : LINE}`, borderRadius: 12, padding: "11px 14px", opacity: eaten[i] ? 0.7 : 1 }}>
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontSize: 9.5, color: EMBER, letterSpacing: 1, textTransform: "uppercase", fontWeight: 600 }}>{m.t}</div>
                   <div style={{ fontSize: 13.5, fontWeight: 500, color: PAPER, textDecoration: eaten[i] ? "line-through" : "none" }}>{m.n}</div>
                 </div>
                 <div style={{ fontSize: 11.5, color: MUTED, whiteSpace: "nowrap", paddingLeft: 10 }}><span style={{ color: PAPER, fontWeight: 600 }}>{m.kcal}</span> kcal</div>
+              </div>
+            ))}
+            {extras.map((x, i) => (
+              <div key={"x" + (x.id || i)} onClick={() => onGo("today")} style={{ cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", background: INK2, border: `1px dashed ${SAGE}`, borderRadius: 12, padding: "11px 14px" }}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 9.5, color: SAGE, letterSpacing: 1, textTransform: "uppercase", fontWeight: 600 }}>{t("extra")}</div>
+                  <div style={{ fontSize: 13.5, fontWeight: 500, color: PAPER }}>{x.item || x.name || t("extraLogged")}</div>
+                </div>
+                <div style={{ fontSize: 11.5, color: MUTED, whiteSpace: "nowrap", paddingLeft: 10 }}><span style={{ color: PAPER, fontWeight: 600 }}>{num(x.kcal)}</span> kcal</div>
               </div>
             ))}
           </div>
