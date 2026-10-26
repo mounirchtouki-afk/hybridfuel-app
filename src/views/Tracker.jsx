@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, SAGE, disp, num, card, label, input, sectionTitle, primaryBtn, load, save, todayISO, fmtDate, kgShow, kgStore, bUnit } from "../shared.js";
+import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, SAGE, disp, num, card, label, input, sectionTitle, primaryBtn, load, save, todayISO, fmtDate, kgShow, kgStore, bUnit, cmToFtIn, ftInToCm } from "../shared.js";
 import { supabase } from "../supabaseClient.js";
 
 const T = {
@@ -133,8 +133,10 @@ export default function Tracker({ lang, height: appHeight, session, units }) {
           <div><label style={label}>{(lang === "nl" ? "Gewicht" : "Weight")} ({bu})</label><input style={input} value={kg} onChange={(e) => setKg(e.target.value)} inputMode="decimal" placeholder={units === "imperial" ? "190" : "87.0"} /></div>
         </div>
         <div style={{ marginBottom: 12 }}>
-          <label style={label}>{t("heightCm")}</label>
-          <input style={input} value={height} onChange={(e) => setH(e.target.value)} inputMode="numeric" placeholder="190" />
+          <label style={label}>{(lang === "nl" ? "Lengte" : "Height")} ({units === "imperial" ? "ft/in" : "cm"})</label>
+          {units === "imperial"
+            ? (() => { const fi = cmToFtIn(height); return (<div style={{ display: "flex", gap: 8 }}><input style={{ ...input, textAlign: "center" }} value={fi.ft} onChange={(e) => setH(String(ftInToCm(e.target.value, fi.in)))} inputMode="numeric" placeholder="6" /><input style={{ ...input, textAlign: "center" }} value={fi.in} onChange={(e) => setH(String(ftInToCm(fi.ft, e.target.value)))} inputMode="numeric" placeholder="3" /></div>); })()
+            : <input style={input} value={height} onChange={(e) => setH(e.target.value)} inputMode="numeric" placeholder="190" />}
           {!(h > 0) && <div style={{ fontSize: 11, color: MUTED, marginTop: 5 }}>{t("needHeight")}</div>}
         </div>
         <button onClick={addLog} style={primaryBtn}>{t("logBtn")}</button>

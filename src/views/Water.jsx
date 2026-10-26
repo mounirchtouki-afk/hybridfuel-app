@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, disp, num, card, label, input, sectionTitle, load, save, todayISO, jsDayToIdx } from "../shared.js";
+import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, disp, num, card, label, input, sectionTitle, load, save, todayISO, jsDayToIdx, mlShow, vUnit, kgShow, kgStore, bUnit, FLOZ_ML } from "../shared.js";
 import { supabase } from "../supabaseClient.js";
 
 const T = {
@@ -37,8 +37,9 @@ function Ring({ pct }) {
   );
 }
 
-export default function Water({ lang, session, week }) {
+export default function Water({ lang, session, week, units }) {
   const t = (k) => (T[k] ? T[k][lang] : k);
+  const vu = vUnit(units), bu = bUnit(units);
   const today = todayISO();
   const cloud = !!(session && supabase);
 
@@ -82,9 +83,16 @@ export default function Water({ lang, session, week }) {
   const add = (d) => persist(Math.max(0, ml + d));
   const setKgManual = (v) => { setManualKg(v); save("hf_water_weight", v); };
 
-  const addBtn = (lbl, d, sub) => (
-    <div onClick={() => add(d)} style={{ flex: 1, background: INK, border: `1px solid ${LINE}`, borderRadius: 12, padding: "12px 6px", textAlign: "center", cursor: "pointer" }}>
-      <div style={{ ...disp, fontSize: 18, fontWeight: 700, color: EMBER }}>+{d}</div>
+  // Snelknoppen per eenheidssysteem: metrisch 250/500/750 ml, imperiaal 8/16/24 fl oz.
+  const addMl = (a) => (units === "imperial" ? Math.round(a * FLOZ_ML) : a);
+  const quick = units === "imperial"
+    ? [[8, t("glass")], [16, t("bottle")], [24, t("big")]]
+    : [[250, t("glass")], [500, t("bottle")], [750, t("big")]];
+  const undoMl = addMl(quick[0][0]);
+
+  const addBtn = (lbl, dispAmt) => (
+    <div onClick={() => add(addMl(dispAmt))} style={{ flex: 1, background: INK, border: `1px solid ${LINE}`, borderRadius: 12, padding: "12px 6px", textAlign: "center", cursor: "pointer" }}>
+      <div style={{ ...disp, fontSize: 18, fontWeight: 700, color: EMBER }}>+{dispAmt}</div>
       <div style={{ fontSize: 10.5, color: MUTED, fontWeight: 600, marginTop: 1 }}>{lbl}</div>
     </div>
   );
@@ -100,15 +108,15 @@ export default function Water({ lang, session, week }) {
         <div style={{ position: "relative", width: 180, height: 180 }}>
           <Ring pct={pct} />
           <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-            <div style={{ ...disp, fontSize: 32, fontWeight: 700, color: PAPER, lineHeight: 1 }}>{(ml / 1000).toFixed(ml % 1000 === 0 ? 0 : 1)}<span style={{ fontSize: 15, color: MUTED }}>/{goal > 0 ? (goal / 1000).toFixed(goal % 1000 === 0 ? 0 : 1) + "L" : "—"}</span></div>
+            <div style={{ ...disp, fontSize: 32, fontWeight: 700, color: PAPER, lineHeight: 1 }}>{mlShow(ml, units)}<span style={{ fontSize: 15, color: MUTED }}>/{goal > 0 ? mlShow(goal, units) + vu : "—"}</span></div>
             <div style={{ fontSize: 11.5, color: pct >= 1 ? EMBER_SOFT : MUTED, marginTop: 6, fontWeight: 600, textAlign: "center", padding: "0 20px" }}>
-              {goal <= 0 ? t("weightQ") : (pct >= 1 ? t("done") : leftMl + " ml " + t("left"))}
+              {goal <= 0 ? t("weightQ") : (pct >= 1 ? t("done") : mlShow(leftMl, units) + " " + vu + " " + t("left"))}
             </div>
           </div>
         </div>
         {goal > 0 && (
           <div style={{ fontSize: 11, color: MUTED, marginTop: 14, textAlign: "center" }}>
-            {t("goal")}: <span style={{ color: PAPER, fontWeight: 600 }}>{goal} ml</span> · {t("basedOn")} {effKg} kg{train ? " " + t("trainBonus") : ""}
+            {t("goal")}: <span style={{ color: PAPER, fontWeight: 600 }}>{mlShow(goal, units)} {vu}</span> · {t("basedOn")} {kgShow(effKg, units)} {bu}{train ? " " + t("trainBonus") : ""}
           </div>
         )}
       </div>
@@ -116,22 +124,20 @@ export default function Water({ lang, session, week }) {
       <div style={card}>
           <div style={{ ...label, marginBottom: 12 }}>{t("add")}</div>
           <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
-            {addBtn(t("glass"), GLASS)}
-            {addBtn(t("bottle"), BOTTLE)}
-            {addBtn(t("big"), BIG)}
+            {quick.map(([a, l]) => <React.Fragment key={a}>{addBtn(l, a)}</React.Fragment>)}
           </div>
           <div style={{ display: "flex", gap: 10 }}>
-            <div onClick={() => add(-GLASS)} style={{ flex: 1, textAlign: "center", padding: "9px 0", borderRadius: 8, border: `1px solid ${LINE}`, color: MUTED, fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}>− {t("undo")}</div>
+            <div onClick={() => add(-undoMl)} style={{ flex: 1, textAlign: "center", padding: "9px 0", borderRadius: 8, border: `1px solid ${LINE}`, color: MUTED, fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}>− {t("undo")}</div>
             <div onClick={() => persist(0)} style={{ flex: 1, textAlign: "center", padding: "9px 0", borderRadius: 8, border: `1px solid ${LINE}`, color: MUTED, fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}>{t("reset")}</div>
           </div>
         </div>
 
       <div style={card}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-          <span style={{ fontSize: 13, color: PAPER, fontWeight: 600 }}>{t("weightKg")}</span>
+          <span style={{ fontSize: 13, color: PAPER, fontWeight: 600 }}>{(lang === "nl" ? "Gewicht" : "Weight")} ({bu})</span>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <input value={manualKg !== "" ? manualKg : (kg > 0 ? String(kg) : "")} onChange={(e) => setKgManual(e.target.value)} inputMode="decimal" placeholder="87" style={{ width: 64, textAlign: "right", background: INK, border: `1px solid ${LINE}`, color: PAPER, padding: "7px 8px", borderRadius: 8, fontSize: 14, outline: "none" }} />
-            <span style={{ fontSize: 12, color: MUTED }}>kg</span>
+            <input value={manualKg !== "" ? kgShow(num(manualKg), units) : (kg > 0 ? kgShow(kg, units) : "")} onChange={(e) => setKgManual(String(kgStore(e.target.value, units)))} inputMode="decimal" placeholder={units === "imperial" ? "190" : "87"} style={{ width: 64, textAlign: "right", background: INK, border: `1px solid ${LINE}`, color: PAPER, padding: "7px 8px", borderRadius: 8, fontSize: 14, outline: "none" }} />
+            <span style={{ fontSize: 12, color: MUTED }}>{bu}</span>
           </div>
         </div>
         <div style={{ height: 1, background: LINE, marginBottom: 14 }} />

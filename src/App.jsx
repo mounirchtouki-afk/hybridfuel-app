@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, SAGE, load, save, genSteps, todayISO, macroLetters, wUnit, bUnit, gShow, gStore, kgShow, kgStore } from "./shared.js";
+import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, SAGE, load, save, genSteps, todayISO, macroLetters, wUnit, bUnit, gShow, gStore, kgShow, kgStore, cmToFtIn, ftInToCm } from "./shared.js";
 import Today from "./views/Today.jsx";
 import Dashboard from "./views/Dashboard.jsx";
 import RecipeBuilder from "./views/RecipeBuilder.jsx";
@@ -141,7 +141,7 @@ const TXT = {
   emptyBody: { nl: "Vul je gegevens in. Je krijgt gratis je persoonlijke macro's en trainings/rust-verdeling. Het volledige maaltijdplan ontgrendel je daarna.", en: "Enter your stats. You'll get your personal macros and training/rest split for free. Unlock the full meal plan after that." },
   dailyTargets: { nl: "Dagdoelen (weekgemiddelde)", en: "Daily targets (weekly average)" },
   maintenance: { nl: "Onderhoud", en: "Maintenance" },
-  statsHint: { nl: "Vul naar waarheid in — lengte in cm, gewicht in kg. Hierop baseren we je macro's en je BMI.", en: "Enter accurately — height in cm, weight in kg. Your macros and BMI are based on these." },
+  statsHint: { nl: "Vul naar waarheid in. Hierop baseren we je macro's en je BMI.", en: "Enter accurately. Your macros and BMI are based on these." },
   bmiNote: { nl: "BMI = gewicht ÷ lengte². Ruwe maat (spiermassa telt niet mee); we gebruiken 'm alleen als ondergrens tegen onverantwoord afvallen.", en: "BMI = weight ÷ height². A rough measure (muscle isn't counted); we only use it as a floor against unsafe fat loss." },
   below: { nl: "onder", en: "below" },
   above: { nl: "boven", en: "above" },
@@ -1406,7 +1406,9 @@ export default function App() {
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 14 }}>
                 <div><label style={label}>{T("age")}</label><input style={input} value={age} onChange={(e) => setAge(e.target.value)} inputMode="numeric" /></div>
-                <div><label style={label}>{T("height")}</label><input style={input} value={height} onChange={(e) => setHeight(e.target.value)} inputMode="numeric" /></div>
+                <div><label style={label}>{T("height")} ({units === "imperial" ? "ft/in" : "cm"})</label>{units === "imperial"
+                  ? (() => { const fi = cmToFtIn(height); return (<div style={{ display: "flex", gap: 4 }}><input style={{ ...input, textAlign: "center", padding: "11px 4px" }} value={fi.ft} onChange={(e) => setHeight(String(ftInToCm(e.target.value, fi.in)))} inputMode="numeric" /><input style={{ ...input, textAlign: "center", padding: "11px 4px" }} value={fi.in} onChange={(e) => setHeight(String(ftInToCm(fi.ft, e.target.value)))} inputMode="numeric" /></div>); })()
+                  : <input style={input} value={height} onChange={(e) => setHeight(e.target.value)} inputMode="numeric" />}</div>
                 <div><label style={label}>{T("weight")} ({bUnit(units)})</label><input style={input} value={kgShow(weight, units)} onChange={(e) => setWeight(String(kgStore(e.target.value, units)))} inputMode="numeric" /></div>
               </div>
               <div style={{ marginBottom: 14 }}>

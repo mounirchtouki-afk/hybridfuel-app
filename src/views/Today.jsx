@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, SAGE, disp, num, card, label, input, sectionTitle, primaryBtn, WD, jsDayToIdx, load, save, todayISO, fmtDate, macroLetters, gShow, gStore, wUnit } from "../shared.js";
+import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, SAGE, disp, num, card, label, input, sectionTitle, primaryBtn, WD, jsDayToIdx, load, save, todayISO, fmtDate, macroLetters, gShow, gStore, wUnit, mlShow, vUnit } from "../shared.js";
 import { supabase } from "../supabaseClient.js";
 import Products from "./Products.jsx";
 import { RECIPES } from "../recipes.js";
@@ -249,7 +249,7 @@ export default function Today({ lang, week, onGoPlan, session, plus, units, onRe
             </div>
             {block(t("kcalLbl"), consumed, goal, "")}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 8 }}>
-              {block(t("waterLbl"), waterMl, waterGoal, " ml")}
+              {units === "imperial" ? block(t("waterLbl"), mlShow(waterMl, units), mlShow(waterGoal, units), " fl oz") : block(t("waterLbl"), waterMl, waterGoal, " ml")}
               {block(t("protLbl"), cons("p"), sumPlan("p"), "g")}
               {block(t("carbLbl"), cons("c"), sumPlan("c"), "g")}
               {block(t("fatLbl"), cons("f"), sumPlan("f"), "g")}

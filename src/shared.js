@@ -25,6 +25,19 @@ export const kgShow = (kg, u) => (u === "imperial" ? Math.round(num(kg) * LB_KG 
 // invoer in actieve eenheid -> opslag in kg
 export const kgStore = (v, u) => (u === "imperial" ? Math.round(num(v) / LB_KG * 100) / 100 : num(v));
 
+// Lengte: cm <-> ft/in (imperial) of cm (metrisch). Intern altijd cm.
+export const INCH_CM = 2.54;
+export const cmToFtIn = (cm) => { const ti = Math.round(num(cm) / INCH_CM); return { ft: Math.floor(ti / 12), in: ti % 12 }; };
+export const ftInToCm = (ft, inch) => Math.round((num(ft) * 12 + num(inch)) * INCH_CM);
+
+// Volume (water): ml <-> fl oz (imperial) of L (metrisch). Intern altijd ml.
+export const FLOZ_ML = 29.5735;
+export const vUnit = (u) => (u === "imperial" ? "fl oz" : "L");
+export const mlShow = (ml, u) => (u === "imperial" ? Math.round(num(ml) / FLOZ_ML) : Math.round(num(ml) / 100) / 10); // L op 0,1
+export const mlStore = (v, u) => (u === "imperial" ? Math.round(num(v) * FLOZ_ML) : Math.round(num(v) * 1000));
+// Eén "glas" per eenheidssysteem (voor snelle water-knoppen): 250 ml of 8 fl oz.
+export const glassMl = (u) => (u === "imperial" ? Math.round(8 * FLOZ_ML) : 250);
+
 export const WD = {
   nl: ["Ma", "Di", "Wo", "Do", "Vr", "Za", "Zo"],
   en: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
