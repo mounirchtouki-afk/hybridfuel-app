@@ -13,6 +13,7 @@ import { RECIPES, snackOptions } from "./recipes.js";
 import Reminders, { checkReminders } from "./views/Reminders.jsx";
 import Auth from "./views/Auth.jsx";
 import { supabase } from "./supabaseClient.js";
+import { Dropdown, MultiDropdown } from "./ui.jsx";
 
 // ===== Dev-modus demo-plan (alleen voor review op preview/localhost) =====
 const DEMO_TARGETS = { kcal: 2400, protein: 180, carbs: 240, fat: 70, bmi: 24.1, train: { kcal: 2600 }, rest: { kcal: 2200 } };
@@ -114,6 +115,8 @@ const TXT = {
   yourStats: { nl: "Jouw gegevens", en: "Your stats" },
   man: { nl: "Man", en: "Male" },
   woman: { nl: "Vrouw", en: "Female" },
+  sexLbl: { nl: "Geslacht", en: "Sex" },
+  pickMulti: { nl: "Kies (meerdere mogelijk)…", en: "Choose (multiple)…" },
   age: { nl: "Leeftijd", en: "Age" },
   height: { nl: "Lengte", en: "Height" },
   weight: { nl: "Gewicht", en: "Weight" },
@@ -1116,10 +1119,9 @@ export default function App() {
               <div style={{ ...disp, fontSize: 15, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 6, color: EMBER }}>{T("yourStats")}</div>
               <div style={{ fontSize: 11, color: MUTED, lineHeight: 1.5, marginBottom: 14 }}>{T("statsHint")}</div>
 
-              <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
-                {[["male", T("man")], ["female", T("woman")]].map(([id, lbl]) => (
-                  <div key={id} onClick={() => setSex(id)} style={{ ...segS(sex === id), padding: "10px 0" }}>{lbl}</div>
-                ))}
+              <div style={{ marginBottom: 14 }}>
+                <label style={label}>{T("sexLbl")}</label>
+                <Dropdown value={sex} onChange={setSex} options={[{ id: "male", label: T("man") }, { id: "female", label: T("woman") }]} />
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 14 }}>
                 <div><label style={label}>{T("age")}</label><input style={input} value={age} onChange={(e) => setAge(e.target.value)} inputMode="numeric" /></div>
@@ -1134,9 +1136,7 @@ export default function App() {
               </div>
               <div style={{ marginBottom: 14 }}>
                 <label style={label}>{T("goal")}</label>
-                <div style={{ display: "flex", gap: 8 }}>
-                  {GOALS.map((g) => <div key={g.id} onClick={() => setGoal(g.id)} style={segS(goal === g.id)}>{g[lang]}</div>)}
-                </div>
+                <Dropdown value={goal} onChange={setGoal} options={GOALS.map((g) => ({ id: g.id, label: g[lang] }))} />
               </div>
               <div style={{ marginBottom: 14 }}>
                 <label style={label}>{T("diet")}</label>
@@ -1157,15 +1157,11 @@ export default function App() {
               </div>
               <div style={{ marginBottom: 14 }}>
                 <label style={label}>{T("goToProteins")}</label>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
-                  {PROTEINS.map((p) => <div key={p.id} onClick={() => toggle(p.id, proteins, setProteins)} style={chipS(proteins.includes(p.id))}>{p[lang]}</div>)}
-                </div>
+                <MultiDropdown values={proteins} onChange={setProteins} options={PROTEINS.map((p) => ({ id: p.id, label: p[lang] }))} placeholder={T("pickMulti")} />
               </div>
               <div style={{ marginBottom: 16 }}>
                 <label style={label}>{T("cuisine")}</label>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
-                  {CUISINES.map((c) => <div key={c.id} onClick={() => toggle(c.id, cuisines, setCuisines)} style={chipS(cuisines.includes(c.id))}>{c[lang]}</div>)}
-                </div>
+                <MultiDropdown values={cuisines} onChange={setCuisines} options={CUISINES.map((c) => ({ id: c.id, label: c[lang] }))} placeholder={T("pickMulti")} />
               </div>
 
               <div style={{ height: 1, background: LINE, margin: "2px 0 16px" }} />
@@ -1179,17 +1175,13 @@ export default function App() {
 
               <div style={{ marginBottom: snacks > 0 ? 14 : 18 }}>
                 <label style={label}>{T("snacksLbl")}</label>
-                <div style={{ display: "flex", gap: 8 }}>
-                  {[0, 1, 2, 3].map((n) => <div key={n} onClick={() => setSnacks(n)} style={segS(snacks === n)}>{n}</div>)}
-                </div>
+                <Dropdown value={snacks} onChange={setSnacks} options={[0, 1, 2, 3].map((n) => ({ id: n, label: String(n) }))} />
                 <div style={{ fontSize: 11, color: MUTED, lineHeight: 1.5, marginTop: 8 }}>{T("snacksHint")}</div>
               </div>
               {snacks > 0 && (
                 <div style={{ marginBottom: 18 }}>
                   <label style={label}>{T("snackLikesLbl")}</label>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
-                    {SNACKS.map((s) => <div key={s.id} onClick={() => toggle(s.id, snackLikes, setSnackLikes)} style={chipS(snackLikes.includes(s.id))}>{s[lang]}</div>)}
-                  </div>
+                  <MultiDropdown values={snackLikes} onChange={setSnackLikes} options={SNACKS.map((s) => ({ id: s.id, label: s[lang] }))} placeholder={T("pickMulti")} />
                 </div>
               )}
 

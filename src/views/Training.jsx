@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, SAGE, disp, num, load, save, todayISO, label, sectionTitle, WD, jsDayToIdx } from "../shared.js";
 import { EXERCISES, WORKOUT_CATS, INTENSITY, kcalFor } from "../workouts.js";
+import { Dropdown } from "../ui.jsx";
 
 const T = {
   title: { nl: "Training", en: "Training" },
@@ -12,9 +13,14 @@ const T = {
   sessions: { nl: "sessies", en: "sessions" },
   add: { nl: "+ Sessie toevoegen", en: "+ Add session" },
   pickExercise: { nl: "Kies een oefening", en: "Pick an exercise" },
+  searchPh: { nl: "Zoek een oefening…", en: "Search an exercise…" },
   own: { nl: "+ Eigen oefening", en: "+ Custom exercise" },
   ownName: { nl: "Naam van de oefening", en: "Exercise name" },
+  pickCat: { nl: "Categorie", en: "Category" },
   intensity: { nl: "Intensiteit", en: "Intensity" },
+  addCustom: { nl: "Oefening toevoegen", en: "Add exercise" },
+  change: { nl: "Wissel", en: "Change" },
+  back: { nl: "‹ Terug", en: "‹ Back" },
   minutes: { nl: "Minuten", en: "Minutes" },
   timer: { nl: "Timer", en: "Timer" },
   start: { nl: "Start", en: "Start" },
@@ -28,12 +34,10 @@ const T = {
   empty: { nl: "Nog geen training vandaag. Voeg je eerste sessie toe.", en: "No training yet today. Add your first session." },
   min: { nl: "min", en: "min" },
   disclaimer: { nl: "Verbranding is een schatting (op basis van intensiteit, gewicht en tijd) en wordt niet van je voedingsdoelen afgetrokken.", en: "Burn is an estimate (based on intensity, bodyweight and time) and is not subtracted from your nutrition targets." },
-  // Weekschema
   weekHint: { nl: "Plan per dag je sessies. Je kunt de hele week of een dag naar een andere datum verplaatsen of kopiëren.", en: "Plan your sessions per day. Move or copy the whole week or a single day to another date." },
   move: { nl: "Verplaats / kopieer", en: "Move / copy" },
   addPlan: { nl: "+ Sessie", en: "+ Session" },
   rest: { nl: "Rustdag", en: "Rest day" },
-  // Move modal
   moveTitle: { nl: "Verplaats of kopieer", en: "Move or copy" },
   moveWeekScope: { nl: "Hele week", en: "Whole week" },
   actCopy: { nl: "Kopiëren", en: "Copy" },
@@ -49,6 +53,7 @@ const T = {
 
 const isoAdd = (iso, n) => { const dt = new Date(iso + "T12:00:00"); dt.setDate(dt.getDate() + n); return dt.toISOString().slice(0, 10); };
 const mondayISO = (iso) => { const dt = new Date(iso + "T12:00:00"); const wd = (dt.getDay() + 6) % 7; dt.setDate(dt.getDate() - wd); return dt.toISOString().slice(0, 10); };
+const metWord = (lang, met) => { const i = [...INTENSITY].reverse().find((x) => met >= x.met) || INTENSITY[0]; return i[lang]; };
 
 function bodyKg(weightProp) {
   const mw = num(load("hf_water_weight", ""));
@@ -68,15 +73,12 @@ export default function Training({ lang, session, weight }) {
   const [tab, setTab] = useState("today");
   const [list, setList] = useState(() => load("hf_workouts_" + d, []));
   const [plan, setPlan] = useState(loadPlan);
-  const [planAdd, setPlanAdd] = useState(null); // dayIdx voor weekschema-toevoeging
-  const [move, setMove] = useState(null);        // {scope:"week"|"day", di}
+  const [planAdd, setPlanAdd] = useState(null);
+  const [move, setMove] = useState(null);
 
-  // Add-panel (Vandaag loggen)
+  // Vandaag loggen
   const [adding, setAdding] = useState(false);
-  const [sel, setSel] = useState(null);
-  const [custom, setCustom] = useState(false);
-  const [cName, setCName] = useState("");
-  const [cMet, setCMet] = useState(7);
+  const [chosen, setChosen] = useState(null); // {name, met}
   const [mins, setMins] = useState("");
   const [kcalEdit, setKcalEdit] = useState(null);
   const [run, setRun] = useState(() => load("hf_workout_running", null));
@@ -92,28 +94,25 @@ export default function Training({ lang, session, weight }) {
   const todayIdx = jsDayToIdx(new Date(d + "T12:00:00").getDay());
   const plannedToday = (load("hf_trainover_" + d, null) || plan.days[todayIdx] || { items: [] }).items || [];
 
-  const curMet = custom ? num(cMet) : (sel ? sel.met : 0);
-  const curName = custom ? (cName.trim() || "Oefening") : (sel ? sel[lang] : "");
   const effMin = run ? Math.max(0, (Date.now() - run.start) / 60000) : num(mins);
-  const autoKcal = kcalFor(curMet, kg, effMin);
+  const autoKcal = chosen ? kcalFor(chosen.met, kg, effMin) : 0;
   const showKcal = kcalEdit != null ? kcalEdit : autoKcal;
 
   function startTimer() { const r = { start: Date.now() }; setRun(r); save("hf_workout_running", r); }
   function stopTimer() { if (!run) return; const m = Math.max(1, Math.round((Date.now() - run.start) / 60000)); setMins(String(m)); setRun(null); try { localStorage.removeItem("hf_workout_running"); } catch (e) {} if (iv.current) clearInterval(iv.current); }
-  function resetPanel() { setSel(null); setCustom(false); setCName(""); setCMet(7); setMins(""); setKcalEdit(null); }
+  function resetPanel() { setChosen(null); setMins(""); setKcalEdit(null); }
   function persistLog(next) { setList(next); save("hf_workouts_" + d, next); }
   function addSession() {
     const m = run ? Math.max(1, Math.round((Date.now() - run.start) / 60000)) : num(mins);
-    if (!curName || m <= 0) return;
-    const kcal = kcalEdit != null ? num(kcalEdit) : kcalFor(curMet, kg, m);
-    persistLog([...list, { id: "w" + Date.now(), name: curName, met: curMet, min: m, kcal, ts: Date.now() }]);
+    if (!chosen || m <= 0) return;
+    const kcal = kcalEdit != null ? num(kcalEdit) : kcalFor(chosen.met, kg, m);
+    persistLog([...list, { id: "w" + Date.now(), name: chosen.name, met: chosen.met, min: m, kcal, ts: Date.now() }]);
     if (run) { setRun(null); try { localStorage.removeItem("hf_workout_running"); } catch (e) {} if (iv.current) clearInterval(iv.current); }
     resetPanel(); setAdding(false);
   }
   function delLog(id) { persistLog(list.filter((x) => x.id !== id)); }
   function logPlanned(it) { persistLog([...list, { id: "w" + Date.now(), name: it.name, met: it.met, min: it.min, kcal: it.kcal, ts: Date.now() }]); }
 
-  // Weekschema
   function persistPlan(next) { setPlan(next); save("hf_trainplan", next); }
   function addToDay(di, row) { const days = plan.days.map((dd, i) => i === di ? { items: [...dd.items, row] } : dd); persistPlan({ days }); }
   function delFromDay(di, id) { const days = plan.days.map((dd, i) => i === di ? { items: dd.items.filter((x) => x.id !== id) } : dd); persistPlan({ days }); }
@@ -126,65 +125,65 @@ export default function Training({ lang, session, weight }) {
   const totKcal = list.reduce((a, x) => a + num(x.kcal), 0);
   const totMin = list.reduce((a, x) => a + num(x.min), 0);
   const mmss = (ms) => { const s = Math.floor(ms / 1000); return String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0"); };
-  const groups = Object.keys(WORKOUT_CATS).map((c) => ({ cat: c, items: EXERCISES.filter((e) => e.cat === c) }));
   const sIn = { width: "100%", background: INK, border: `1px solid ${LINE}`, color: PAPER, padding: "11px 12px", fontFamily: "Inter, sans-serif", fontSize: 14, borderRadius: 8, outline: "none", boxSizing: "border-box" };
-  const seg = (on) => ({ flex: 1, textAlign: "center", cursor: "pointer", padding: "9px 4px", borderRadius: 8, border: `1px solid ${on ? EMBER : LINE}`, background: on ? "rgba(225,29,72,0.12)" : "transparent", color: on ? PAPER : MUTED, fontSize: 12.5, fontWeight: 700, ...disp, letterSpacing: 0.3 });
-  const tabBtn = (id, lbl) => (
-    <div onClick={() => setTab(id)} style={{ flex: 1, textAlign: "center", cursor: "pointer", padding: "9px 0", borderRadius: 8, background: tab === id ? EMBER : "transparent", color: PAPER, fontSize: 13.5, fontWeight: 700, ...disp, letterSpacing: 0.5 }}>{lbl}</div>
-  );
+  const tabBtn = (id, lbl) => <div onClick={() => setTab(id)} style={{ flex: 1, textAlign: "center", cursor: "pointer", padding: "9px 0", borderRadius: 8, background: tab === id ? EMBER : "transparent", color: PAPER, fontSize: 13.5, fontWeight: 700, ...disp, letterSpacing: 0.5 }}>{lbl}</div>;
+  const catOpts = Object.keys(WORKOUT_CATS).map((c) => ({ id: c, label: WORKOUT_CATS[c][lang] }));
+  const intOpts = INTENSITY.map((i) => ({ id: i.met, label: i[lang] }));
 
-  // --- Herbruikbare oefening-kiezer (modal) voor het weekschema ---
-  function ExercisePickModal({ onClose, onAdd }) {
-    const [s, setS] = useState(null);
+  // --- Uitklap-menu (accordion) voor oefeningen: zoekbalk + categorieën + eigen oefening (met categorie) ---
+  function ExAccordion({ onPick }) {
+    const [q, setQ] = useState("");
+    const [open, setOpen] = useState("hyrox");
     const [cust, setCust] = useState(false);
     const [nm, setNm] = useState("");
-    const [mt, setMt] = useState(7);
-    const [mn, setMn] = useState("");
-    const name = cust ? (nm.trim() || "Oefening") : (s ? s[lang] : "");
-    const met = cust ? num(mt) : (s ? s.met : 0);
-    const kc = kcalFor(met, kg, num(mn));
-    const addIt = () => { if (!name || num(mn) <= 0) return; onAdd({ id: "p" + Date.now(), name, met, min: num(mn), kcal: kc }); onClose(); };
-    return (
-      <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 74, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-        <div onClick={(e) => e.stopPropagation()} className="hf-modal" style={{ background: INK, border: `1px solid ${LINE}`, borderRadius: 18, width: "100%", maxWidth: 400, maxHeight: "88vh", overflowY: "auto", padding: 20 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-            <div style={{ ...disp, fontWeight: 700, fontSize: 16 }}>{s || cust ? name : t("pickExercise")}</div>
-            <div onClick={onClose} style={{ cursor: "pointer", color: MUTED, fontSize: 17, width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 9, border: `1px solid ${LINE}` }}>×</div>
+    const [cat, setCat] = useState("hyrox");
+    const [intens, setIntens] = useState(7);
+    const ql = q.trim().toLowerCase();
+    const cats = Object.keys(WORKOUT_CATS);
+    const match = (e) => e[lang].toLowerCase().includes(ql);
+    const catRow = (c) => {
+      const items = EXERCISES.filter((e) => e.cat === c && (!ql || match(e)));
+      if (ql && items.length === 0) return null;
+      const isOpen = ql ? true : open === c;
+      return (
+        <div key={c} style={{ borderBottom: `1px solid ${LINE}` }}>
+          <div onClick={() => !ql && setOpen(isOpen ? "" : c)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 14px", cursor: "pointer" }}>
+            <span style={{ ...disp, fontWeight: 700, fontSize: 12, letterSpacing: 1, textTransform: "uppercase", color: isOpen ? EMBER : PAPER, opacity: isOpen ? 1 : 0.85 }}>{WORKOUT_CATS[c][lang]}</span>
+            <span style={{ display: "flex", alignItems: "center", gap: 10 }}><span style={{ fontSize: 11, color: MUTED }}>{items.length}</span><span style={{ fontSize: 11, color: isOpen ? EMBER : MUTED, transform: isOpen ? "rotate(90deg)" : "none", transition: "transform .15s" }}>›</span></span>
           </div>
-          {!s && !cust && (
-            <div>
-              <div style={{ display: "grid", gap: 12, maxHeight: 300, overflowY: "auto" }} className="hf-modal">
-                {groups.map((g) => (
-                  <div key={g.cat}>
-                    <div style={{ fontSize: 10, letterSpacing: 1, textTransform: "uppercase", color: EMBER, fontWeight: 700, marginBottom: 6 }}>{WORKOUT_CATS[g.cat][lang]}</div>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                      {g.items.map((e) => <div key={e.id} onClick={() => setS(e)} style={{ cursor: "pointer", padding: "7px 11px", borderRadius: 9, border: `1px solid ${LINE}`, background: INK2, fontSize: 12.5, color: PAPER }}>{e[lang]}</div>)}
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div onClick={() => setCust(true)} style={{ cursor: "pointer", marginTop: 12, color: EMBER, fontSize: 13, fontWeight: 700, ...disp }}>{t("own")}</div>
+          {isOpen && items.map((e) => (
+            <div key={e.id} onClick={() => onPick({ name: e[lang], met: e.met })} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px 10px 24px", cursor: "pointer", borderTop: `1px solid ${LINE}` }}>
+              <span style={{ fontSize: 14, color: PAPER }}>{e[lang]}</span>
+              <span style={{ fontSize: 10, color: MUTED, border: `1px solid ${LINE}`, borderRadius: 5, padding: "2px 7px" }}>{metWord(lang, e.met)}</span>
             </div>
-          )}
-          {cust && (
-            <div style={{ marginBottom: 12 }}>
-              <label style={label}>{t("ownName")}</label>
-              <input value={nm} onChange={(e) => setNm(e.target.value)} placeholder={t("ownName")} style={{ ...sIn, marginBottom: 10 }} />
-              <label style={label}>{t("intensity")}</label>
-              <div style={{ display: "flex", gap: 7 }}>{INTENSITY.map((i) => <div key={i.id} onClick={() => setMt(i.met)} style={seg(num(mt) === i.met)}>{i[lang]}</div>)}</div>
-            </div>
-          )}
-          {(s || cust) && (
-            <div style={{ marginTop: 12 }}>
-              <label style={label}>{t("minutes")}</label>
-              <input value={mn} onChange={(e) => setMn(e.target.value.replace(/[^0-9]/g, ""))} inputMode="numeric" placeholder="20" style={{ ...sIn, marginBottom: 10 }} />
-              <div style={{ fontSize: 12, color: MUTED, marginBottom: 12 }}>{t("estBurn")}: <span style={{ color: EMBER_SOFT, fontWeight: 700 }}>~{kc} kcal</span></div>
-              <div style={{ display: "flex", gap: 10 }}>
-                <div onClick={onClose} style={{ cursor: "pointer", padding: "11px 16px", borderRadius: 9, border: `1px solid ${LINE}`, color: MUTED, fontSize: 13, fontWeight: 700, ...disp }}>{t("cancel")}</div>
-                <div onClick={addIt} style={{ cursor: "pointer", flex: 1, textAlign: "center", background: EMBER, color: PAPER, padding: "11px 0", borderRadius: 9, ...disp, fontWeight: 700, fontSize: 14 }}>{t("save")}</div>
-              </div>
-            </div>
-          )}
+          ))}
+        </div>
+      );
+    };
+    if (cust) {
+      return (
+        <div>
+          <label style={label}>{t("ownName")}</label>
+          <input value={nm} onChange={(e) => setNm(e.target.value)} placeholder={t("ownName")} style={{ ...sIn, marginBottom: 12 }} />
+          <label style={label}>{t("pickCat")}</label>
+          <div style={{ marginBottom: 12 }}><Dropdown value={cat} onChange={setCat} options={catOpts} /></div>
+          <label style={label}>{t("intensity")}</label>
+          <div style={{ marginBottom: 14 }}><Dropdown value={intens} onChange={setIntens} options={intOpts} /></div>
+          <div style={{ display: "flex", gap: 10 }}>
+            <div onClick={() => setCust(false)} style={{ cursor: "pointer", padding: "11px 16px", borderRadius: 9, border: `1px solid ${LINE}`, color: MUTED, fontSize: 13, fontWeight: 700, ...disp }}>{t("back")}</div>
+            <div onClick={() => { if (!nm.trim()) return; onPick({ name: nm.trim(), met: num(intens), cat }); }} style={{ cursor: "pointer", flex: 1, textAlign: "center", background: EMBER, color: PAPER, padding: "11px 0", borderRadius: 9, ...disp, fontWeight: 700, fontSize: 14 }}>{t("addCustom")}</div>
+          </div>
+        </div>
+      );
+    }
+    return (
+      <div>
+        <div style={{ marginBottom: 10 }}>
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("searchPh")} style={sIn} />
+        </div>
+        <div style={{ border: `1px solid ${LINE}`, borderRadius: 12, overflow: "hidden" }}>
+          {cats.map((c) => catRow(c))}
+          <div onClick={() => setCust(true)} style={{ padding: "12px 14px", color: EMBER, fontSize: 13, fontWeight: 700, ...disp, cursor: "pointer" }}>{t("own")}</div>
         </div>
       </div>
     );
@@ -196,6 +195,7 @@ export default function Training({ lang, session, weight }) {
     const [date, setDate] = useState(scope === "week" ? isoAdd(mondayISO(d), 7) : isoAdd(d, 1));
     const [done, setDone] = useState(false);
     const dIn = { ...sIn, colorScheme: "dark" };
+    const seg = (on) => ({ flex: 1, textAlign: "center", cursor: "pointer", padding: "9px 0", borderRadius: 8, border: `1px solid ${on ? EMBER : LINE}`, background: on ? "rgba(225,29,72,0.12)" : "transparent", color: on ? PAPER : MUTED, fontSize: 12.5, fontWeight: 700, ...disp });
     const radio = (on) => ({ display: "flex", alignItems: "center", gap: 9, cursor: "pointer", padding: "10px 12px", borderRadius: 10, border: `1px solid ${on ? EMBER : LINE}`, background: on ? "rgba(225,29,72,0.08)" : INK2 });
     const dot = (on) => ({ width: 16, height: 16, borderRadius: "50%", border: `2px solid ${on ? EMBER : MUTED}`, background: on ? EMBER : "transparent", flexShrink: 0 });
     const place = () => { if (scope === "week") { stampWeek(tgt === "next" ? isoAdd(mondayISO(d), 7) : mondayISO(date), act === "move"); } else { stampDay(di, date); } setDone(true); setTimeout(onClose, 900); };
@@ -230,6 +230,35 @@ export default function Training({ lang, session, weight }) {
     );
   }
 
+  // Modal voor een geplande sessie in het weekschema: oefening kiezen + minuten
+  function PlanAddModal({ di, onClose }) {
+    const [ch, setCh] = useState(null);
+    const [mn, setMn] = useState("");
+    const kc = ch ? kcalFor(ch.met, kg, num(mn)) : 0;
+    return (
+      <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 74, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+        <div onClick={(e) => e.stopPropagation()} className="hf-modal" style={{ background: INK, border: `1px solid ${LINE}`, borderRadius: 18, width: "100%", maxWidth: 400, maxHeight: "88vh", overflowY: "auto", padding: 20 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+            <div style={{ ...disp, fontWeight: 700, fontSize: 16 }}>{ch ? ch.name : t("pickExercise")} · {WD[lang === "nl" ? "nl" : "en"][di]}</div>
+            <div onClick={onClose} style={{ cursor: "pointer", color: MUTED, fontSize: 17, width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 9, border: `1px solid ${LINE}` }}>×</div>
+          </div>
+          {!ch ? <ExAccordion onPick={setCh} /> : (
+            <div>
+              <div onClick={() => setCh(null)} style={{ cursor: "pointer", fontSize: 11.5, color: MUTED, fontWeight: 600, marginBottom: 12 }}>‹ {t("change")}</div>
+              <label style={label}>{t("minutes")}</label>
+              <input value={mn} onChange={(e) => setMn(e.target.value.replace(/[^0-9]/g, ""))} inputMode="numeric" placeholder="20" style={{ ...sIn, marginBottom: 10 }} />
+              <div style={{ fontSize: 12, color: MUTED, marginBottom: 14 }}>{t("estBurn")}: <span style={{ color: EMBER_SOFT, fontWeight: 700 }}>~{kc} kcal</span></div>
+              <div style={{ display: "flex", gap: 10 }}>
+                <div onClick={onClose} style={{ cursor: "pointer", padding: "11px 16px", borderRadius: 9, border: `1px solid ${LINE}`, color: MUTED, fontSize: 13, fontWeight: 700, ...disp }}>{t("cancel")}</div>
+                <div onClick={() => { if (num(mn) <= 0) return; addToDay(di, { id: "p" + Date.now(), name: ch.name, met: ch.met, min: num(mn), kcal: kc }); onClose(); }} style={{ cursor: "pointer", flex: 1, textAlign: "center", background: EMBER, color: PAPER, padding: "11px 0", borderRadius: 9, ...disp, fontWeight: 700, fontSize: 14 }}>{t("save")}</div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ maxWidth: 560, margin: "0 auto", padding: "4px 0 10px" }}>
       <div style={{ ...sectionTitle, marginBottom: 4 }}>{t("title")}</div>
@@ -256,7 +285,6 @@ export default function Training({ lang, session, weight }) {
             </div>
           </div>
 
-          {/* Gepland vandaag */}
           {plannedToday.length > 0 && (
             <div style={{ marginBottom: 16 }}>
               <div style={{ ...label, marginBottom: 8 }}>{t("planned")}</div>
@@ -275,31 +303,15 @@ export default function Training({ lang, session, weight }) {
 
           {adding && (
             <div style={{ background: INK2, border: `1px solid ${LINE}`, borderRadius: 14, padding: 16, marginBottom: 16 }}>
-              {!sel && !custom && (
-                <div>
+              {!chosen ? (
+                <>
                   <div style={{ ...label, marginBottom: 8 }}>{t("pickExercise")}</div>
-                  <div style={{ display: "grid", gap: 12, maxHeight: 260, overflowY: "auto" }} className="hf-modal">
-                    {groups.map((g) => (
-                      <div key={g.cat}>
-                        <div style={{ fontSize: 10, letterSpacing: 1, textTransform: "uppercase", color: EMBER, fontWeight: 700, marginBottom: 6 }}>{WORKOUT_CATS[g.cat][lang]}</div>
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>{g.items.map((e) => <div key={e.id} onClick={() => setSel(e)} style={{ cursor: "pointer", padding: "7px 11px", borderRadius: 9, border: `1px solid ${LINE}`, background: INK, fontSize: 12.5, color: PAPER }}>{e[lang]}</div>)}</div>
-                      </div>
-                    ))}
-                  </div>
-                  <div onClick={() => setCustom(true)} style={{ cursor: "pointer", marginTop: 12, color: EMBER, fontSize: 13, fontWeight: 700, ...disp }}>{t("own")}</div>
-                </div>
-              )}
-              {custom && (
-                <div style={{ marginBottom: 12 }}>
-                  <label style={label}>{t("ownName")}</label>
-                  <input value={cName} onChange={(e) => setCName(e.target.value)} placeholder={t("ownName")} style={{ ...sIn, marginBottom: 10 }} />
-                  <label style={label}>{t("intensity")}</label>
-                  <div style={{ display: "flex", gap: 7 }}>{INTENSITY.map((i) => <div key={i.id} onClick={() => setCMet(i.met)} style={seg(num(cMet) === i.met)}>{i[lang]}</div>)}</div>
-                </div>
-              )}
-              {(sel || custom) && (
+                  <ExAccordion onPick={setChosen} />
+                  <div onClick={() => { resetPanel(); setAdding(false); }} style={{ cursor: "pointer", textAlign: "center", marginTop: 12, color: MUTED, fontSize: 12.5, fontWeight: 600 }}>{t("cancel")}</div>
+                </>
+              ) : (
                 <div>
-                  {sel && <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}><div style={{ ...disp, fontSize: 16, fontWeight: 700 }}>{sel[lang]}</div><div onClick={resetPanel} style={{ cursor: "pointer", fontSize: 11.5, color: MUTED, fontWeight: 600 }}>{t("pickExercise")}</div></div>}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}><div style={{ ...disp, fontSize: 16, fontWeight: 700 }}>{chosen.name}</div><div onClick={resetPanel} style={{ cursor: "pointer", fontSize: 11.5, color: MUTED, fontWeight: 600 }}>{t("change")}</div></div>
                   <label style={label}>{t("timer")}</label>
                   <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 12 }}>
                     {!run ? <div onClick={startTimer} style={{ cursor: "pointer", flex: 1, textAlign: "center", background: EMBER, color: PAPER, padding: "11px 0", borderRadius: 9, ...disp, fontWeight: 700 }}>▶ {t("start")}</div>
@@ -370,7 +382,7 @@ export default function Training({ lang, session, weight }) {
         </>
       )}
 
-      {planAdd !== null && <ExercisePickModal onClose={() => setPlanAdd(null)} onAdd={(row) => addToDay(planAdd, row)} />}
+      {planAdd !== null && <PlanAddModal di={planAdd} onClose={() => setPlanAdd(null)} />}
       {move && <MoveModal scope={move.scope} di={move.di} onClose={() => setMove(null)} />}
     </div>
   );
