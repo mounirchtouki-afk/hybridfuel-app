@@ -29,6 +29,8 @@ const T = {
   camErr: { nl: "Camera niet beschikbaar. Typ de barcode.", en: "Camera unavailable. Type the barcode." },
   scanErr: { nl: "Scanner kon niet laden. Typ de barcode.", en: "Scanner failed to load. Type the barcode." },
   searchPh: { nl: "Zoek in je producten…", en: "Search your products…" },
+  catLabel: { nl: "Categorie", en: "Category" },
+  catAuto: { nl: "Automatisch (op naam)", en: "Automatic (by name)" },
 };
 
 const CATS = {
@@ -85,6 +87,7 @@ export default function Products({ lang, session, onClose, onPick, embedded }) {
   const [items, setItems] = useState(() => (cloud ? [] : load("hf_products", [])));
   const [nm, setNm] = useState(""), [br, setBr] = useState(""), [bc, setBc] = useState("");
   const [kc, setKc] = useState(""), [pr, setPr] = useState(""), [cb, setCb] = useState(""), [ft, setFt] = useState("");
+  const [cat, setCat] = useState("");
   const [adding, setAdding] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [msg, setMsg] = useState("");
@@ -97,7 +100,7 @@ export default function Products({ lang, session, onClose, onPick, embedded }) {
   useEffect(() => {
     let active = true;
     if (cloud) {
-      supabase.from("products").select("id,name,brand,barcode,per_100").eq("user_id", session.user.id).order("name")
+      supabase.from("products").select("id,name,brand,barcode,per_100,category").eq("user_id", session.user.id).order("name")
         .then(({ data }) => { if (active && data) setItems(data); });
     }
     return () => { active = false; stopScan(); };
@@ -107,7 +110,7 @@ export default function Products({ lang, session, onClose, onPick, embedded }) {
     try { if (readerRef.current) { readerRef.current.reset(); readerRef.current = null; } } catch (e) {}
     try { const v = videoRef.current; if (v && v.srcObject) { v.srcObject.getTracks().forEach((tk) => tk.stop()); v.srcObject = null; } } catch (e) {}
   }
-  function resetForm() { setNm(""); setBr(""); setBc(""); setKc(""); setPr(""); setCb(""); setFt(""); setMsg(""); setManualBc(""); }
+  function resetForm() { setNm(""); setBr(""); setBc(""); setKc(""); setPr(""); setCb(""); setFt(""); setCat(""); setMsg(""); setManualBc(""); }
   function closeAdd() { stopScan(); setScanning(false); setAdding(false); resetForm(); }
 
   async function startScan() {
@@ -145,11 +148,12 @@ export default function Products({ lang, session, onClose, onPick, embedded }) {
     if (!name) return;
     const per_100 = { kcal: Math.round(num(kc)), p: Math.round(num(pr)), c: Math.round(num(cb)), f: Math.round(num(ft)) };
     const barcode = bc.trim() || null;
+    const category = cat || null;
     if (cloud) {
-      supabase.from("products").insert({ user_id: session.user.id, name, brand: br.trim() || null, barcode, per_100, unit: "g" }).select("id,name,brand,barcode,per_100").single()
+      supabase.from("products").insert({ user_id: session.user.id, name, brand: br.trim() || null, barcode, per_100, category, unit: "g" }).select("id,name,brand,barcode,per_100,category").single()
         .then(({ data }) => { if (data) setItems((p) => [...p, data].sort((a, b) => a.name.localeCompare(b.name))); }, () => {});
     } else {
-      const row = { id: "l" + Date.now(), name, brand: br.trim() || null, barcode, per_100 };
+      const row = { id: "l" + Date.now(), name, brand: br.trim() || null, barcode, per_100, category };
       const next = [...items, row].sort((a, b) => a.name.localeCompare(b.name));
       setItems(next); save("hf_products", next);
     }
@@ -161,6 +165,13 @@ export default function Products({ lang, session, onClose, onPick, embedded }) {
     if (cloud) { supabase.from("products").delete().eq("id", id).then(() => {}, () => {}); }
     else { save("hf_products", next); }
   }
+  function setCategory(id, c) {
+    const next = items.map((x) => x.id === id ? { ...x, category: c } : x);
+    setItems(next);
+    if (cloud) { supabase.from("products").update({ category: c }).eq("id", id).then(() => {}, () => {}); }
+    else { save("hf_products", next); }
+  }
+  const catFor = (it) => it.category || catOf(it.name);
 
   const macroIn = (val, set, ph) => <input value={val} onChange={(e) => set(e.target.value)} inputMode="numeric" placeholder={ph} style={{ ...input, textAlign: "center", padding: "9px 4px" }} />;
 
@@ -168,7 +179,7 @@ export default function Products({ lang, session, onClose, onPick, embedded }) {
   const needle = q.trim().toLowerCase();
   const filtered = items.filter((x) => !needle || (x.name && x.name.toLowerCase().includes(needle)) || (x.brand && x.brand.toLowerCase().includes(needle)));
   const grouped = {};
-  filtered.forEach((it) => { const c = catOf(it.name); (grouped[c] = grouped[c] || []).push(it); });
+  filtered.forEach((it) => { const c = catFor(it); (grouped[c] = grouped[c] || []).push(it); });
 
   const addCard = adding ? (
     <div style={{ background: INK2, border: `1px solid ${LINE}`, borderRadius: 14, padding: 14, marginBottom: 14 }}>
@@ -190,6 +201,13 @@ export default function Products({ lang, session, onClose, onPick, embedded }) {
       <div style={{ marginBottom: 10 }}>
         <label style={label}>{t("brand")}</label>
         <input value={br} onChange={(e) => setBr(e.target.value)} style={input} />
+      </div>
+      <div style={{ marginBottom: 10 }}>
+        <label style={label}>{t("catLabel")}</label>
+        <select value={cat} onChange={(e) => setCat(e.target.value)} style={{ ...input, appearance: "auto", WebkitAppearance: "auto" }}>
+          <option value="">{t("catAuto")}</option>
+          {CAT_ORDER.map((c) => <option key={c} value={c}>{CATS[c][lang]}</option>)}
+        </select>
       </div>
       <label style={label}>{t("per100")}</label>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 7, marginBottom: 12 }}>
@@ -233,6 +251,9 @@ export default function Products({ lang, session, onClose, onPick, embedded }) {
                 <div style={{ fontSize: 13.5, fontWeight: 600, color: PAPER }}>{it.name}{it.brand ? <span style={{ color: MUTED, fontWeight: 400 }}> · {it.brand}</span> : null}</div>
                 <div style={{ fontSize: 11, color: MUTED, marginTop: 1 }}>{(it.per_100 && it.per_100.kcal) || 0} kcal · {(it.per_100 && it.per_100.p) || 0}p/{(it.per_100 && it.per_100.c) || 0}c/{(it.per_100 && it.per_100.f) || 0}f <span style={{ opacity: 0.6 }}>/100g</span></div>
               </div>
+              {!onPick && <select value={catFor(it)} onChange={(e) => setCategory(it.id, e.target.value)} title={t("catLabel")} style={{ background: INK, border: `1px solid ${LINE}`, color: MUTED, borderRadius: 7, fontSize: 10.5, padding: "4px 5px", outline: "none", maxWidth: 104, appearance: "auto", WebkitAppearance: "auto", flexShrink: 0 }}>
+                {CAT_ORDER.map((c) => <option key={c} value={c}>{CATS[c][lang]}</option>)}
+              </select>}
               {onPick && <div onClick={() => onPick(it)} style={{ cursor: "pointer", fontSize: 12, fontWeight: 700, color: EMBER, border: `1px solid ${EMBER}`, borderRadius: 7, padding: "5px 11px", ...disp, letterSpacing: 0.3 }}>{t("pick")}</div>}
               <div onClick={() => del(it.id)} style={{ cursor: "pointer", color: MUTED, fontSize: 16, padding: "0 4px" }}>×</div>
             </div>

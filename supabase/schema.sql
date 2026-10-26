@@ -81,6 +81,7 @@ create table if not exists public.products (
   brand         text,
   barcode       text,
   per_100       jsonb,              -- { kcal, p, c, f, fiber } per 100 g/ml
+  category      text,               -- NULL = auto op naam (catOf), anders handmatig gekozen
   unit          text default 'g',
   created_at    timestamptz default now()
 );
