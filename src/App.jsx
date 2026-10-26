@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, SAGE, load, save, genSteps, todayISO, macroLetters } from "./shared.js";
+import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, SAGE, load, save, genSteps, todayISO, macroLetters, wUnit, bUnit, gShow, gStore, kgShow, kgStore } from "./shared.js";
 import Today from "./views/Today.jsx";
 import Dashboard from "./views/Dashboard.jsx";
 import RecipeBuilder from "./views/RecipeBuilder.jsx";
@@ -360,7 +360,7 @@ const LockIcon = ({ c, s = 24 }) => (
 );
 
 function EditDayCard({ day, di, api }) {
-const { T, ML, sIn, R, disp, mutDay, patchMeal, scaleMeal, patchIng, addIngr, removeIngr, removeMeal, addMealTo, saveMealAsRecipe, applyIngVals, saveIngProduct, setCopyPick, setMovePlan, setPickTarget, setShowProducts, setRecipePick, savedMsg } = api;
+const { T, ML, sIn, R, disp, mutDay, patchMeal, scaleMeal, patchIng, addIngr, removeIngr, removeMeal, addMealTo, saveMealAsRecipe, applyIngVals, saveIngProduct, setCopyPick, setMovePlan, setPickTarget, setShowProducts, setRecipePick, savedMsg, units } = api;
   const [addOpen, setAddOpen] = useState(false);
   const [openMeal, setOpenMeal] = useState(null);
   const [dayMenu, setDayMenu] = useState(false);
@@ -440,8 +440,8 @@ const { T, ML, sIn, R, disp, mutDay, patchMeal, scaleMeal, patchIng, addIngr, re
                 <div key={ii} style={{ marginBottom: 6 }}>
                   <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                     <input value={ing.n} onChange={(e) => patchIng(di, mi, ii, { n: e.target.value })} placeholder={T("ingrNamePh")} style={{ ...sIn, flex: 1 }} />
-                    <input value={ing.g} onChange={(e) => patchIng(di, mi, ii, { g: num(e.target.value) })} inputMode="numeric" style={{ ...sIn, width: 50, textAlign: "right" }} />
-                    <span style={{ fontSize: 11, color: MUTED }}>g</span>
+                    <input value={gShow(ing.g, units)} onChange={(e) => patchIng(di, mi, ii, { g: gStore(e.target.value, units) })} inputMode="numeric" style={{ ...sIn, width: 54, textAlign: "right" }} />
+                    <span style={{ fontSize: 11, color: MUTED }}>{wUnit(units)}</span>
                     {ing.pid && <span style={{ fontSize: 8, color: SAGE, border: `1px solid ${SAGE}`, borderRadius: 4, padding: "1px 4px", letterSpacing: 0.3, fontWeight: 700, ...disp, whiteSpace: "nowrap" }}>{T("linkedTag")}</span>}
                     <div onClick={() => isOpen ? setIngForm(null) : openForm()} title={T("editVals")} style={{ cursor: "pointer", color: isOpen ? EMBER : MUTED, display: "flex", padding: "0 1px" }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z" /></svg></div>
                     <div onClick={() => removeIngr(di, mi, ii)} style={{ cursor: "pointer", color: MUTED, fontSize: 15, padding: "0 2px" }}>×</div>
@@ -544,6 +544,8 @@ export default function App() {
   const [showAuth, setShowAuth] = useState(false);
   const [authRecovery, setAuthRecovery] = useState(false);
   const [showLogout, setShowLogout] = useState(false);
+  const [units, setUnits] = useState(() => load("hf_units", "metric"));
+  const setUnitsSave = (u) => { setUnits(u); try { save("hf_units", u); } catch (e) {} };
   const [saveFlash, setSaveFlash] = useState(false);
   const [showInstallHelp, setShowInstallHelp] = useState(false);
   const [subTier, setSubTier] = useState("free");
@@ -1272,7 +1274,7 @@ export default function App() {
                   <div style={{ fontSize: 13.5, fontWeight: 500 }}>{m.n}</div>
                   {m.ing && m.ing.length > 0 && (
                     <div style={{ fontSize: 11.5, color: MUTED, marginTop: 3, lineHeight: 1.5 }}>
-                      {m.ing.map((ing, ii) => <span key={ii}><span style={{ color: PAPER }}>{Math.round(num(ing.g))}g</span> {ing.n}{ii < m.ing.length - 1 ? " · " : ""}</span>)}
+                      {m.ing.map((ing, ii) => <span key={ii}><span style={{ color: PAPER }}>{gShow(ing.g, units)}{wUnit(units)}</span> {ing.n}{ii < m.ing.length - 1 ? " · " : ""}</span>)}
                     </div>
                   )}
                 </div>
@@ -1389,7 +1391,7 @@ export default function App() {
 
       <div style={{ maxWidth: 680, margin: "0 auto", padding: 16, position: "relative", zIndex: 1 }}>
 
-        {tab === "dashboard" && <Dashboard lang={lang} session={session} week={week} targets={targets} onGo={(x) => { setTab(x); try { window.scrollTo(0, 0); } catch (e) {} }} />}
+        {tab === "dashboard" && <Dashboard lang={lang} session={session} week={week} targets={targets} units={units} onGo={(x) => { setTab(x); try { window.scrollTo(0, 0); } catch (e) {} }} />}
 
         {/* ====== PLAN TAB ====== */}
         {tab === "plan" && (
@@ -1405,7 +1407,7 @@ export default function App() {
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 14 }}>
                 <div><label style={label}>{T("age")}</label><input style={input} value={age} onChange={(e) => setAge(e.target.value)} inputMode="numeric" /></div>
                 <div><label style={label}>{T("height")}</label><input style={input} value={height} onChange={(e) => setHeight(e.target.value)} inputMode="numeric" /></div>
-                <div><label style={label}>{T("weight")}</label><input style={input} value={weight} onChange={(e) => setWeight(e.target.value)} inputMode="numeric" /></div>
+                <div><label style={label}>{T("weight")} ({bUnit(units)})</label><input style={input} value={kgShow(weight, units)} onChange={(e) => setWeight(String(kgStore(e.target.value, units)))} inputMode="numeric" /></div>
               </div>
               <div style={{ marginBottom: 14 }}>
                 <label style={label}>{T("trainingLoad")}</label>
@@ -1555,7 +1557,7 @@ export default function App() {
                       </div>
 
                       {view === "plan" && planEdit && <div style={{ fontSize: 11.5, color: MUTED, marginBottom: 12, lineHeight: 1.5 }}>{T("editHint")}</div>}
-                      {view === "plan" && (<div style={{ display: "grid", gap: 12 }}>{week.days.map((day, di) => planEdit ? <EditDayCard key={di} day={day} di={di} api={{ T, ML, sIn, R, disp, mutDay, patchMeal, scaleMeal, patchIng, addIngr, removeIngr, removeMeal, addMealTo, saveMealAsRecipe, applyIngVals, saveIngProduct, setCopyPick, setMovePlan, setPickTarget, setShowProducts, setRecipePick, savedMsg }} /> : <DayCard key={di} day={day} />)}</div>)}
+                      {view === "plan" && (<div style={{ display: "grid", gap: 12 }}>{week.days.map((day, di) => planEdit ? <EditDayCard key={di} day={day} di={di} api={{ T, ML, sIn, R, disp, mutDay, patchMeal, scaleMeal, patchIng, addIngr, removeIngr, removeMeal, addMealTo, saveMealAsRecipe, applyIngVals, saveIngProduct, setCopyPick, setMovePlan, setPickTarget, setShowProducts, setRecipePick, savedMsg, units }} /> : <DayCard key={di} day={day} />)}</div>)}
                       {view === "shop" && (
                         <div style={{ display: "grid", gap: 12 }}>
                           <div style={{ fontSize: 12, color: MUTED }}>{T("shopHint")}</div>
@@ -1628,11 +1630,11 @@ export default function App() {
         )}
 
         {/* ====== OTHER TABS ====== */}
-        {tab === "today" && (hasBasis ? <Today lang={lang} week={week} session={session} plus={hasPlus} onRebalance={rebalanceDay} onGoPlan={() => setTab("plan")} /> : <Locked />)}
-        {tab === "tracker" && (hasBasis ? <Tracker lang={lang} height={height} session={session} /> : <Locked />)}
-        {tab === "water" && (hasBasis ? <Water lang={lang} session={session} week={week} /> : <Locked />)}
+        {tab === "today" && (hasBasis ? <Today lang={lang} week={week} session={session} plus={hasPlus} units={units} onRebalance={rebalanceDay} onGoPlan={() => setTab("plan")} /> : <Locked />)}
+        {tab === "tracker" && (hasBasis ? <Tracker lang={lang} height={height} session={session} units={units} /> : <Locked />)}
+        {tab === "water" && (hasBasis ? <Water lang={lang} session={session} week={week} units={units} /> : <Locked />)}
         {tab === "producten" && (hasPro ? <Products embedded lang={lang} session={session} onProductChange={propagateProduct} /> : <Locked pro />)}
-        {tab === "recipes" && <Recipes lang={lang} session={session} />}
+        {tab === "recipes" && <Recipes lang={lang} session={session} units={units} />}
         {tab === "race" && (hasPlus ? <RaceProtocol lang={lang} weight={weight} session={session} week={week} /> : <Locked pro />)}
         {tab === "training" && (hasBasis ? <Training lang={lang} weight={weight} session={session} /> : <Locked />)}
       </div>
@@ -1677,6 +1679,15 @@ export default function App() {
               {moreTile(<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 4-6.5 8-6.5s8 2.5 8 6.5" /></svg>, lang === "nl" ? "Account" : "Account", () => { setShowMore(false); setShowAuth(true); })}
               {moreTile(<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0" /></svg>, lang === "nl" ? "Herinneringen" : "Reminders", () => { setShowMore(false); setShowReminders(true); })}
             </div>
+            <div style={{ marginTop: 16, borderTop: `1px solid ${LINE}`, paddingTop: 14 }}>
+              <div style={{ fontSize: 10.5, letterSpacing: 1, textTransform: "uppercase", color: MUTED, fontWeight: 700, marginBottom: 8 }}>{lang === "nl" ? "Eenheden" : "Units"}</div>
+              <div style={{ display: "flex", gap: 6, background: INK2, border: `1px solid ${LINE}`, borderRadius: 10, padding: 4 }}>
+                {[["metric", lang === "nl" ? "Metrisch · g / kg" : "Metric · g / kg"], ["imperial", lang === "nl" ? "Imperiaal · oz / lb" : "Imperial · oz / lb"]].map(([u, lbl]) => (
+                  <div key={u} onClick={() => setUnitsSave(u)} style={{ flex: 1, textAlign: "center", cursor: "pointer", ...disp, fontWeight: 700, fontSize: 12.5, letterSpacing: 0.3, padding: "10px 0", borderRadius: 7, background: units === u ? EMBER : "transparent", color: units === u ? PAPER : MUTED }}>{lbl}</div>
+                ))}
+              </div>
+              <div style={{ fontSize: 10.5, color: MUTED, marginTop: 7, lineHeight: 1.5 }}>{lang === "nl" ? "Geldt voor gewichten in de hele app — altijd aanpasbaar." : "Applies to weights across the app — change it anytime."}</div>
+            </div>
           </div>
         </div>
       )}
@@ -1684,7 +1695,7 @@ export default function App() {
       {showReminders && <Reminders lang={lang} onClose={() => setShowReminders(false)} />}
       {showAuth && <Auth lang={lang} session={session} tier={subTier} recovery={authRecovery} onClose={() => { setShowAuth(false); setAuthRecovery(false); }} />}
       {showProducts && <Products lang={lang} session={session} autoScan={fabScan} onClose={() => { setShowProducts(false); setPickTarget(null); setFabScan(false); }} onPick={pickTarget ? (prod) => { if (pickTarget.mi == null) addProductAsMeal(pickTarget.di, prod); else addProductIng(pickTarget.di, pickTarget.mi, prod); setShowProducts(false); setPickTarget(null); } : fabScan ? (prod) => { addTodayProduct(prod); setShowProducts(false); setFabScan(false); } : null} />}
-      {showBuilder && <RecipeBuilder lang={lang} session={session} onClose={() => setShowBuilder(false)} onSaved={() => flashSaved()} />}
+      {showBuilder && <RecipeBuilder lang={lang} session={session} units={units} onClose={() => setShowBuilder(false)} onSaved={() => flashSaved()} />}
 
       {copyPick && (
         <div onClick={() => setCopyPick(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 70, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>

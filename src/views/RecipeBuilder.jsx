@@ -1,5 +1,5 @@
 import React, { useState, useRef } from "react";
-import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, disp, num, input, label, sectionTitle, primaryBtn, ghostBtn, load, save, genSteps, macroLetters } from "../shared.js";
+import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, disp, num, input, label, sectionTitle, primaryBtn, ghostBtn, load, save, genSteps, macroLetters, gShow, gStore, wUnit } from "../shared.js";
 import { supabase } from "../supabaseClient.js";
 import Products from "./Products.jsx";
 
@@ -27,7 +27,7 @@ const T = {
   g: { nl: "g", en: "g" },
 };
 
-export default function RecipeBuilder({ lang, session, onClose, onSaved }) {
+export default function RecipeBuilder({ lang, session, units, onClose, onSaved }) {
   const t = (k) => (T[k] ? T[k][lang] : k);
   const ml = macroLetters(lang);
   const cloud = !!(session && supabase);
@@ -138,8 +138,8 @@ export default function RecipeBuilder({ lang, session, onClose, onSaved }) {
               <div style={{ fontSize: 13, fontWeight: 600, color: PAPER }}>{x.name}</div>
               <div style={{ fontSize: 10.5, color: MUTED }}>{x.kcal} kcal · {x.p}{ml.p}/{x.c}{ml.c}/{x.f}{ml.f}</div>
             </div>
-            <input value={x.grams} onChange={(e) => setGrams(i, e.target.value)} inputMode="numeric" style={{ width: 54, textAlign: "right", background: INK, border: `1px solid ${LINE}`, color: PAPER, padding: "6px 7px", borderRadius: 7, fontSize: 12.5, outline: "none" }} />
-            <span style={{ fontSize: 11, color: MUTED }}>{t("g")}</span>
+            <input value={gShow(x.grams, units)} onChange={(e) => setGrams(i, gStore(e.target.value, units))} inputMode="numeric" style={{ width: 56, textAlign: "right", background: INK, border: `1px solid ${LINE}`, color: PAPER, padding: "6px 7px", borderRadius: 7, fontSize: 12.5, outline: "none" }} />
+            <span style={{ fontSize: 11, color: MUTED }}>{wUnit(units)}</span>
             <div onClick={() => delIng(i)} style={{ cursor: "pointer", color: MUTED, fontSize: 15, padding: "0 2px" }}>×</div>
           </div>
         ))}

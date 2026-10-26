@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, SAGE, disp, num, sectionTitle, chipS, primaryBtn, load, save, macroLetters } from "../shared.js";
+import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, SAGE, disp, num, sectionTitle, chipS, primaryBtn, load, save, macroLetters, gShow, wUnit } from "../shared.js";
 import { RECIPES } from "../recipes.js";
 import { supabase } from "../supabaseClient.js";
 import RecipeBuilder from "./RecipeBuilder.jsx";
@@ -22,7 +22,7 @@ const T = {
 const TYPE_ORDER = ["breakfast", "lunch", "dinner", "snack"];
 const TYPE_LBL = { breakfast: T.breakfast, lunch: T.lunch, dinner: T.dinner, snack: T.snack };
 
-export default function Recipes({ lang, session }) {
+export default function Recipes({ lang, session, units }) {
   const t = (k) => (T[k] ? T[k][lang] : k);
   const cloud = !!(session && supabase);
   const [filter, setFilter] = useState("all");
@@ -103,7 +103,7 @@ export default function Recipes({ lang, session }) {
                       <div style={{ display: "grid", gap: 6, marginBottom: r.steps ? 12 : 0 }}>
                         {(r.ingredients || []).map((x, i) => (
                           <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: PAPER }}>
-                            <span>{x.name}</span><span style={{ color: MUTED }}>{Math.round(num(x.grams))}g</span>
+                            <span>{x.name}</span><span style={{ color: MUTED }}>{gShow(x.grams, units)}{wUnit(units)}</span>
                           </div>
                         ))}
                       </div>
@@ -151,7 +151,7 @@ export default function Recipes({ lang, session }) {
                     <div style={{ display: "grid", gap: 6 }}>
                       {r.ing.map((x, i) => (
                         <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: PAPER }}>
-                          <span>{x[lang]}</span><span style={{ color: MUTED }}>{x.g}{typeof x.g === "number" ? "g" : ""}</span>
+                          <span>{x[lang]}</span><span style={{ color: MUTED }}>{typeof x.g === "number" ? gShow(x.g, units) + wUnit(units) : x.g}</span>
                         </div>
                       ))}
                     </div>

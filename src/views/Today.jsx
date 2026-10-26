@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, SAGE, disp, num, card, label, input, sectionTitle, primaryBtn, WD, jsDayToIdx, load, save, todayISO, fmtDate, macroLetters } from "../shared.js";
+import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, SAGE, disp, num, card, label, input, sectionTitle, primaryBtn, WD, jsDayToIdx, load, save, todayISO, fmtDate, macroLetters, gShow, gStore, wUnit } from "../shared.js";
 import { supabase } from "../supabaseClient.js";
 import Products from "./Products.jsx";
 import { RECIPES } from "../recipes.js";
@@ -55,7 +55,7 @@ function Ring({ pct }) {
   );
 }
 
-export default function Today({ lang, week, onGoPlan, session, plus, onRebalance }) {
+export default function Today({ lang, week, onGoPlan, session, plus, units, onRebalance }) {
   const t = (k) => (T[k] ? T[k][lang] : k);
   const ml = macroLetters(lang);
   const cloud = !!(session && supabase);
@@ -312,7 +312,7 @@ export default function Today({ lang, week, onGoPlan, session, plus, onRebalance
                       <div style={{ fontSize: 14, fontWeight: 500, textDecoration: on ? "line-through" : "none" }}>{m.n}</div>
                       {m.ing && m.ing.length > 0 && (
                         <div style={{ fontSize: 11.5, color: MUTED, marginTop: 3, lineHeight: 1.5 }}>
-                          {m.ing.map((ing, ii) => <span key={ii}><span style={{ color: on ? MUTED : PAPER }}>{Math.round(num(ing.g))}g</span> {ing.n}{ii < m.ing.length - 1 ? " · " : ""}</span>)}
+                          {m.ing.map((ing, ii) => <span key={ii}><span style={{ color: on ? MUTED : PAPER }}>{gShow(ing.g, units)}{wUnit(units)}</span> {ing.n}{ii < m.ing.length - 1 ? " · " : ""}</span>)}
                         </div>
                       )}
                     </div>
@@ -333,7 +333,7 @@ export default function Today({ lang, week, onGoPlan, session, plus, onRebalance
                     <div style={{ fontSize: 13.5, fontWeight: 600, color: PAPER }}>{x.item}</div>
                     <div style={{ fontSize: 11, color: MUTED, marginTop: 1 }}>{x.kcal} kcal · {x.p}{ml.p}/{x.c}{ml.c}/{x.f}{ml.f}</div>
                   </div>
-                  {x.per100 && <><input value={x.grams} onChange={(e) => setGrams(x.id, e.target.value)} inputMode="numeric" style={{ width: 52, textAlign: "right", background: INK, border: `1px solid ${LINE}`, color: PAPER, padding: "6px 7px", borderRadius: 7, fontSize: 12.5, outline: "none" }} /><span style={{ fontSize: 11, color: MUTED }}>{t("g")}</span></>}
+                  {x.per100 && <><input value={gShow(x.grams, units)} onChange={(e) => setGrams(x.id, gStore(e.target.value, units))} inputMode="numeric" style={{ width: 54, textAlign: "right", background: INK, border: `1px solid ${LINE}`, color: PAPER, padding: "6px 7px", borderRadius: 7, fontSize: 12.5, outline: "none" }} /><span style={{ fontSize: 11, color: MUTED }}>{wUnit(units)}</span></>}
                   <div onClick={() => delExtra(x.id)} style={{ cursor: "pointer", color: MUTED, fontSize: 16, padding: "0 2px" }}>×</div>
                 </div>
               ))}

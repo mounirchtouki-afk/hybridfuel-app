@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, SAGE, disp, num, sectionTitle, load, save, todayISO, WD, jsDayToIdx } from "../shared.js";
+import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, SAGE, disp, num, sectionTitle, load, save, todayISO, WD, jsDayToIdx, kgShow, bUnit } from "../shared.js";
 import { supabase } from "../supabaseClient.js";
 
 const T = {
@@ -48,7 +48,7 @@ function Ring({ pct, size = 58 }) {
   );
 }
 
-export default function Dashboard({ lang, session, week, targets, onGo }) {
+export default function Dashboard({ lang, session, week, targets, units, onGo }) {
   const t = (k) => (T[k] ? T[k][lang] : k);
   const cloud = !!(session && supabase);
   const d = todayISO();
@@ -166,7 +166,7 @@ export default function Dashboard({ lang, session, week, targets, onGo }) {
       {(prefs.water || prefs.weight) && (
         <div style={{ display: "flex", gap: 12 }}>
           {prefs.water && smallCard(t("water"), waterGoal ? `${Math.round(waterMl / 100) / 10}L` : "—", waterGoal ? `/ ${Math.round(waterGoal / 100) / 10}L` : "", () => onGo("water"), EMBER_SOFT)}
-          {prefs.weight && smallCard(t("weight"), weightKg > 0 ? `${weightKg} kg` : "—", weightKg > 0 ? "" : t("noWeight"), () => onGo("tracker"))}
+          {prefs.weight && smallCard(t("weight"), weightKg > 0 ? `${kgShow(weightKg, units)} ${bUnit(units)}` : "—", weightKg > 0 ? "" : t("noWeight"), () => onGo("tracker"))}
         </div>
       )}
 

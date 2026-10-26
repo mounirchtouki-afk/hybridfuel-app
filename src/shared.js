@@ -11,6 +11,20 @@ export const macroLetters = (lang) => (lang === "nl"
   ? { p: "e", c: "k", f: "v", P: "E", C: "K", F: "V" }
   : { p: "p", c: "c", f: "f", P: "P", C: "C", F: "F" });
 
+// Eenheden. Alles wordt intern METRISCH opgeslagen (gram, kg); we rekenen alleen
+// om voor weergave/invoer. imperial = ounce/pound.
+export const OZ_G = 28.3495, LB_KG = 2.20462;
+export const wUnit = (u) => (u === "imperial" ? "oz" : "g");       // voedingsgewicht
+export const bUnit = (u) => (u === "imperial" ? "lb" : "kg");      // lichaamsgewicht
+// gram -> weergave-getal (oz afgerond op 0,1; g op heel)
+export const gShow = (g, u) => (u === "imperial" ? Math.round(num(g) / OZ_G * 10) / 10 : Math.round(num(g)));
+// invoer-getal in de actieve eenheid -> opslag in gram
+export const gStore = (v, u) => (u === "imperial" ? Math.round(num(v) * OZ_G) : Math.round(num(v)));
+// kg -> weergave (lb op 0,1; kg op 0,1)
+export const kgShow = (kg, u) => (u === "imperial" ? Math.round(num(kg) * LB_KG * 10) / 10 : Math.round(num(kg) * 10) / 10);
+// invoer in actieve eenheid -> opslag in kg
+export const kgStore = (v, u) => (u === "imperial" ? Math.round(num(v) / LB_KG * 100) / 100 : num(v));
+
 export const WD = {
   nl: ["Ma", "Di", "Wo", "Do", "Vr", "Za", "Zo"],
   en: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],

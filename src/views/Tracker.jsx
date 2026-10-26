@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, SAGE, disp, num, card, label, input, sectionTitle, primaryBtn, load, save, todayISO, fmtDate } from "../shared.js";
+import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, SAGE, disp, num, card, label, input, sectionTitle, primaryBtn, load, save, todayISO, fmtDate, kgShow, kgStore, bUnit } from "../shared.js";
 import { supabase } from "../supabaseClient.js";
 
 const T = {
@@ -53,8 +53,9 @@ function Chart({ data }) {
   );
 }
 
-export default function Tracker({ lang, height: appHeight, session }) {
+export default function Tracker({ lang, height: appHeight, session, units }) {
   const t = (k) => (T[k] ? T[k][lang] : k);
+  const bu = bUnit(units);
   const [weights, setWeights] = useState(() => load("hf_weights", []));
   const [height, setHeight] = useState(() => load("hf_height", appHeight ? String(appHeight) : ""));
   const [d, setD] = useState(todayISO());
@@ -81,7 +82,7 @@ export default function Tracker({ lang, height: appHeight, session }) {
   const bmiColor = bmi == null ? MUTED : bmi < 18.5 ? EMBER_SOFT : bmi < 25 ? "#4ADE80" : bmi < 30 ? "#FACC15" : EMBER;
 
   function addLog() {
-    const v = num(kg);
+    const v = kgStore(num(kg), units);
     if (!(v > 0) || !d) return;
     const entry = { date: d, kg: Math.round(v * 10) / 10 };
     const next = [...weights.filter((w) => w.date !== d), entry];
@@ -113,8 +114,8 @@ export default function Tracker({ lang, height: appHeight, session }) {
       </div>
 
       <div style={{ display: "flex", gap: 10 }}>
-        {stat(t("current"), latest ? latest.kg + " " + t("kg") : "—", latest ? fmtDate(latest.date, lang) : null, EMBER)}
-        {stat(t("change"), change == null ? "—" : (change > 0 ? "+" : "") + change + " " + t("kg"), null, change == null ? MUTED : change <= 0 ? "#4ADE80" : EMBER_SOFT)}
+        {stat(t("current"), latest ? kgShow(latest.kg, units) + " " + bu : "—", latest ? fmtDate(latest.date, lang) : null, EMBER)}
+        {stat(t("change"), change == null ? "—" : (change > 0 ? "+" : "") + kgShow(change, units) + " " + bu, null, change == null ? MUTED : change <= 0 ? "#4ADE80" : EMBER_SOFT)}
         {stat(t("bmiLbl"), bmi == null ? "—" : bmi, bmiCat, bmiColor)}
       </div>
 
@@ -129,7 +130,7 @@ export default function Tracker({ lang, height: appHeight, session }) {
         <div style={{ ...label, marginBottom: 12 }}>{t("logTitle")}</div>
         <div style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr", gap: 10, marginBottom: 10 }}>
           <div><label style={label}>{t("date")}</label><input type="date" style={input} value={d} max={todayISO()} onChange={(e) => setD(e.target.value)} /></div>
-          <div><label style={label}>{t("weightKg")}</label><input style={input} value={kg} onChange={(e) => setKg(e.target.value)} inputMode="decimal" placeholder="87.0" /></div>
+          <div><label style={label}>{(lang === "nl" ? "Gewicht" : "Weight")} ({bu})</label><input style={input} value={kg} onChange={(e) => setKg(e.target.value)} inputMode="decimal" placeholder={units === "imperial" ? "190" : "87.0"} /></div>
         </div>
         <div style={{ marginBottom: 12 }}>
           <label style={label}>{t("heightCm")}</label>
@@ -149,8 +150,8 @@ export default function Tracker({ lang, height: appHeight, session }) {
           return (
             <div key={w.date} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: i < arr.length - 1 ? `1px solid ${LINE}` : "none" }}>
               <div style={{ width: 70, fontSize: 12, color: MUTED }}>{fmtDate(w.date, lang)}</div>
-              <div style={{ flex: 1, ...disp, fontSize: 16, fontWeight: 600 }}>{w.kg}<span style={{ fontSize: 11, color: MUTED, marginLeft: 3 }}>{t("kg")}</span></div>
-              <div style={{ fontSize: 12, fontWeight: 600, color: dc == null ? MUTED : dc <= 0 ? "#4ADE80" : EMBER_SOFT, width: 50, textAlign: "right" }}>{dc == null ? "" : (dc > 0 ? "+" : "") + dc}</div>
+              <div style={{ flex: 1, ...disp, fontSize: 16, fontWeight: 600 }}>{kgShow(w.kg, units)}<span style={{ fontSize: 11, color: MUTED, marginLeft: 3 }}>{bu}</span></div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: dc == null ? MUTED : dc <= 0 ? "#4ADE80" : EMBER_SOFT, width: 54, textAlign: "right" }}>{dc == null ? "" : (dc > 0 ? "+" : "") + kgShow(dc, units)}</div>
               <div onClick={() => del(w.date)} style={{ cursor: "pointer", color: MUTED, fontSize: 16, padding: "0 4px", lineHeight: 1 }} title="×">×</div>
             </div>
           );
