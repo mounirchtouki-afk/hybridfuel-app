@@ -46,12 +46,14 @@ async function setSub(userId, fields) {
   const url = supaBase();
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key || !userId) { console.warn("stripe-webhook: supabase niet geconfigureerd of geen userId"); return; }
-  const r = await fetch(url + "/rest/v1/subscriptions?user_id=eq." + encodeURIComponent(userId), {
-    method: "PATCH",
-    headers: { apikey: key, Authorization: "Bearer " + key, "Content-Type": "application/json", Prefer: "return=minimal" },
-    body: JSON.stringify({ ...fields, updated_at: new Date().toISOString() }),
+  // Upsert op user_id (unique): werkt de rij bij, of maakt 'm aan als de signup-trigger
+  // geen rij heeft gezet. Zo is de tier-update niet afhankelijk van de trigger.
+  const r = await fetch(url + "/rest/v1/subscriptions?on_conflict=user_id", {
+    method: "POST",
+    headers: { apikey: key, Authorization: "Bearer " + key, "Content-Type": "application/json", Prefer: "resolution=merge-duplicates,return=minimal" },
+    body: JSON.stringify({ user_id: userId, ...fields, updated_at: new Date().toISOString() }),
   });
-  if (!r.ok) { const txt = await r.text().catch(() => ""); console.error("supabase update faalde", r.status, txt); }
+  if (!r.ok) { const txt = await r.text().catch(() => ""); console.error("supabase upsert faalde", r.status, txt); }
 }
 
 async function stripeGet(path) {
