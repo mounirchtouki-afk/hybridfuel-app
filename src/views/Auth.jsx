@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, disp, input, label, sectionTitle, primaryBtn, ghostBtn } from "../shared.js";
 import { supabase, supaReady } from "../supabaseClient.js";
 
@@ -74,6 +74,8 @@ export default function Auth({ lang, session, tier, recovery, onClose }) {
   const [msg, setMsg] = useState("");
   const [billInterval, setBillInterval] = useState("month");
   const [subBusy, setSubBusy] = useState("");
+  // Oude afreken-/portaalfout niet laten blijven hangen zodra de laag actief wordt.
+  useEffect(() => { if (tier && tier !== "free") setErr(""); }, [tier]);
   const [panel, setPanel] = useState(""); // "" | email | pw | delete
   const [newEmail, setNewEmail] = useState("");
   const [newPw, setNewPw] = useState("");
