@@ -359,6 +359,137 @@ const LockIcon = ({ c, s = 24 }) => (
   <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={{ display: "block" }}><rect x="5" y="11" width="14" height="9" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg>
 );
 
+function EditDayCard({ day, di, api }) {
+const { T, ML, sIn, R, disp, mutDay, patchMeal, scaleMeal, patchIng, addIngr, removeIngr, removeMeal, addMealTo, saveMealAsRecipe, applyIngVals, saveIngProduct, setCopyPick, setMovePlan, setPickTarget, setShowProducts, setRecipePick, savedMsg } = api;
+  const [addOpen, setAddOpen] = useState(false);
+  const [openMeal, setOpenMeal] = useState(null);
+  const [dayMenu, setDayMenu] = useState(false);
+  const [valMeal, setValMeal] = useState(null);
+  const [ingForm, setIngForm] = useState(null);
+  const tot = day.m.reduce((a, m) => ({ kcal: a.kcal + num(m.kcal), p: a.p + num(m.p), c: a.c + num(m.c), f: a.f + num(m.f) }), { kcal: 0, p: 0, c: 0, f: 0 });
+  const Dots = () => (<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.7" /><circle cx="12" cy="12" r="1.7" /><circle cx="12" cy="19" r="1.7" /></svg>);
+  const sqBtn = (on) => ({ cursor: "pointer", width: 30, height: 30, borderRadius: 7, border: `1px solid ${on ? EMBER : LINE}`, color: on ? EMBER : MUTED, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 });
+  const miniAct = (icon, txt, onClick, danger) => (
+    <div onClick={onClick} style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: 9, padding: "9px 12px", borderTop: `1px solid ${LINE}` }}>
+      <span style={{ color: danger ? MUTED : EMBER, display: "flex" }}>{icon}</span>
+      <span style={{ fontSize: 12.5, color: danger ? MUTED : PAPER, fontWeight: 600 }}>{txt}</span>
+    </div>
+  );
+  const addOpt = (icon, title, sub, onClick) => (
+    <div onClick={onClick} style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: 11, padding: "12px 14px", borderTop: `1px solid ${LINE}` }}>
+      <span style={{ width: 30, height: 30, borderRadius: 8, background: INK2, border: `1px solid ${LINE}`, color: EMBER, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{icon}</span>
+      <div style={{ minWidth: 0 }}><div style={{ fontSize: 14, fontWeight: 600, color: PAPER }}>{title}</div><div style={{ fontSize: 11, color: MUTED, marginTop: 1 }}>{sub}</div></div>
+    </div>
+  );
+  const icRecipe = <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M4 5a2 2 0 012-2h13v16H6a2 2 0 00-2 2V5z" /><path d="M9 7h6M9 10h6" /></svg>;
+  const icPlus = <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>;
+  const icBar = <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="6" width="1.6" height="12" /><rect x="6" y="6" width="1" height="12" /><rect x="8.4" y="6" width="2" height="12" /><rect x="12" y="6" width="1" height="12" /><rect x="14.6" y="6" width="1.6" height="12" /><rect x="17.6" y="6" width="1" height="12" /><rect x="20" y="6" width="1.4" height="12" /></svg>;
+  const icCopy = <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15V5a2 2 0 012-2h10" /></svg>;
+  const icSave = <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21l-7-4-7 4V5a2 2 0 012-2h10a2 2 0 012 2z" /></svg>;
+  const icTrash = <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14" /></svg>;
+  const icDate = <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 9h18M8 3v4M16 3v4" /></svg>;
+  const icEdit = <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z" /></svg>;
+  const miniIn = { background: INK, border: `1px solid ${LINE}`, color: PAPER, padding: "7px 6px", borderRadius: 7, fontSize: 12, outline: "none", width: "100%", textAlign: "center" };
+  const seedPer100 = (m, ing) => {
+    if (ing.per100) return { kcal: ing.per100.kcal || "", p: ing.per100.p || "", c: ing.per100.c || "", f: ing.per100.f || "" };
+    const totG = (m.ing || []).reduce((a, x) => a + num(x.g), 0) || 1;
+    const per = (v) => R(num(v) * 100 / totG);
+    return { kcal: per(m.kcal), p: per(m.p), c: per(m.c), f: per(m.f) };
+  };
+  const valEditor = (mi, obj, onPatch) => (
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 6, marginBottom: 8 }}>
+      {[["kcal", "kcal"], ["p", ML.P], ["c", ML.C], ["f", ML.F]].map(([k, lbl]) => (
+        <div key={k}><input value={obj[k]} onChange={(e) => onPatch(k, e.target.value)} inputMode="numeric" placeholder={lbl} style={miniIn} /><div style={{ fontSize: 8.5, color: MUTED, textAlign: "center", marginTop: 2 }}>{lbl}</div></div>
+      ))}
+    </div>
+  );
+  return (
+    <div style={{ background: INK2, border: `1px solid ${LINE}`, borderRadius: 12, overflow: "hidden" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "11px 14px", background: INK, borderBottom: `1px solid ${LINE}` }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+          <div style={{ ...disp, fontWeight: 600, fontSize: 15, letterSpacing: 1, textTransform: "uppercase" }}>{day.d}</div>
+          <div onClick={() => mutDay(di, (d) => { d.train = !d.train; return d; })} style={{ cursor: "pointer", fontSize: 9.5, color: day.train ? EMBER : MUTED, border: `1px solid ${day.train ? EMBER : LINE}`, borderRadius: 5, padding: "2px 6px", letterSpacing: 1, fontWeight: 700 }}>{day.train ? T("trainTag") : T("restTag")}</div>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ fontSize: 11.5, color: MUTED }}><span style={{ color: PAPER, fontWeight: 600 }}>{tot.kcal}</span> kcal · {tot.p}{ML.p}/{tot.c}{ML.c}/{tot.f}{ML.f}</div>
+          <div onClick={() => { setDayMenu(!dayMenu); setOpenMeal(null); setAddOpen(false); }} style={{ ...sqBtn(dayMenu), width: 28, height: 28 }}><Dots /></div>
+        </div>
+      </div>
+      {dayMenu && (
+        <div style={{ background: "#121212", borderBottom: `1px solid ${LINE}` }}>
+          {miniAct(icCopy, T("copyDay"), () => { setDayMenu(false); setCopyPick({ kind: "day", di }); })}
+          {miniAct(icDate, T("toDate"), () => { setDayMenu(false); setMovePlan({ scope: "day", di }); })}
+        </div>
+      )}
+      <div style={{ padding: "4px 0" }}>
+        {day.m.map((m, mi) => (
+          <div key={mi} style={{ borderBottom: `1px solid ${LINE}` }}>
+            <div style={{ padding: "11px 14px" }}>
+              {m.src && <div style={{ display: "inline-block", fontSize: 8.5, color: PAPER, background: m.src === "product" ? SAGE : EMBER, borderRadius: 4, padding: "1px 6px", letterSpacing: 0.5, fontWeight: 700, ...disp, marginBottom: 6, textTransform: "uppercase" }}>{m.src === "product" ? "product" : T("fromDb")}</div>}
+              <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8 }}>
+                <input value={m.n} onChange={(e) => patchMeal(di, mi, { n: e.target.value })} placeholder={T("mealNamePh")} style={{ ...sIn, flex: 1 }} />
+                <div onClick={() => scaleMeal(di, mi, 0.9)} style={{ ...sqBtn(false), color: EMBER, fontSize: 18, fontWeight: 700 }}>−</div>
+                <div onClick={() => scaleMeal(di, mi, 1.1)} style={{ ...sqBtn(false), color: EMBER, fontSize: 18, fontWeight: 700 }}>+</div>
+                <div onClick={() => setOpenMeal(openMeal === mi ? null : mi)} style={sqBtn(openMeal === mi)}><Dots /></div>
+              </div>
+              {valMeal === mi && valEditor(mi, m, (k, v) => patchMeal(di, mi, { [k]: num(v) }))}
+              {(m.ing || []).map((ing, ii) => {
+                const openForm = () => { const s = seedPer100(m, ing); setIngForm({ mi, ii, name: ing.n || "", kcal: s.kcal, p: s.p, c: s.c, f: s.f }); };
+                const isOpen = ingForm && ingForm.mi === mi && ingForm.ii === ii;
+                return (
+                <div key={ii} style={{ marginBottom: 6 }}>
+                  <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                    <input value={ing.n} onChange={(e) => patchIng(di, mi, ii, { n: e.target.value })} placeholder={T("ingrNamePh")} style={{ ...sIn, flex: 1 }} />
+                    <input value={ing.g} onChange={(e) => patchIng(di, mi, ii, { g: num(e.target.value) })} inputMode="numeric" style={{ ...sIn, width: 50, textAlign: "right" }} />
+                    <span style={{ fontSize: 11, color: MUTED }}>g</span>
+                    {ing.pid && <span style={{ fontSize: 8, color: SAGE, border: `1px solid ${SAGE}`, borderRadius: 4, padding: "1px 4px", letterSpacing: 0.3, fontWeight: 700, ...disp, whiteSpace: "nowrap" }}>{T("linkedTag")}</span>}
+                    <div onClick={() => isOpen ? setIngForm(null) : openForm()} title={T("editVals")} style={{ cursor: "pointer", color: isOpen ? EMBER : MUTED, display: "flex", padding: "0 1px" }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z" /></svg></div>
+                    <div onClick={() => removeIngr(di, mi, ii)} style={{ cursor: "pointer", color: MUTED, fontSize: 15, padding: "0 2px" }}>×</div>
+                  </div>
+                  {isOpen && (
+                    <div style={{ background: "#121212", border: `1px solid ${LINE}`, borderRadius: 10, padding: 10, marginTop: 6 }}>
+                      <div style={{ fontSize: 10.5, color: MUTED, lineHeight: 1.5, marginBottom: 8 }}>{T("ingValsHint")}</div>
+                      <input value={ingForm.name} onChange={(e) => setIngForm({ ...ingForm, name: e.target.value })} placeholder={T("ingName")} style={{ ...miniIn, textAlign: "left", marginBottom: 8 }} />
+                      {valEditor(mi, ingForm, (k, v) => setIngForm({ ...ingForm, [k]: v }))}
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                        <div onClick={() => { applyIngVals(di, mi, ii, { kcal: ingForm.kcal, p: ingForm.p, c: ingForm.c, f: ingForm.f }, ingForm.name); setIngForm(null); }} style={{ flex: 1, minWidth: 90, textAlign: "center", cursor: "pointer", background: EMBER, color: PAPER, borderRadius: 8, padding: "9px 0", ...disp, fontWeight: 700, fontSize: 12.5, letterSpacing: 0.3 }}>{T("applyVals")}</div>
+                        {!ing.pid && <div onClick={() => { saveIngProduct(di, mi, ii, { kcal: ingForm.kcal, p: ingForm.p, c: ingForm.c, f: ingForm.f }, ingForm.name); setIngForm(null); }} style={{ cursor: "pointer", color: EMBER, border: `1px solid ${EMBER}`, borderRadius: 8, padding: "9px 12px", ...disp, fontWeight: 700, fontSize: 12, letterSpacing: 0.3 }}>{T("toProduct")}</div>}
+                        <div onClick={() => setIngForm(null)} style={{ cursor: "pointer", color: MUTED, fontSize: 12, fontWeight: 600, padding: "9px 12px", border: `1px solid ${LINE}`, borderRadius: 8 }}>{T("cancelShort")}</div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                );
+              })}
+              <div style={{ fontSize: 10.5, color: MUTED, marginTop: 6, textAlign: "right" }}>{m.kcal} kcal · {m.p}{ML.p}/{m.c}{ML.c}/{m.f}{ML.f}</div>
+            </div>
+            {openMeal === mi && (
+              <div style={{ background: "#121212", borderTop: `1px solid ${LINE}` }}>
+                {miniAct(icPlus, T("addIngr").replace("+ ", ""), () => addIngr(di, mi))}
+                {miniAct(icEdit, T("editVals"), () => { setValMeal(valMeal === mi ? null : mi); setOpenMeal(null); })}
+                {miniAct(icBar, T("addProd").replace("+ ", ""), () => { setOpenMeal(null); setPickTarget({ di, mi }); setShowProducts(true); })}
+                {miniAct(icCopy, T("copyMeal"), () => { setOpenMeal(null); setCopyPick({ kind: "meal", di, mi }); })}
+                {miniAct(icSave, savedMsg === di + ":" + mi ? T("savedAsRecipe") : T("saveAsRecipe"), () => saveMealAsRecipe(di, mi))}
+                {miniAct(icTrash, T("removeMealTxt"), () => { setOpenMeal(null); removeMeal(di, mi); }, true)}
+              </div>
+            )}
+          </div>
+        ))}
+        {!addOpen ? (
+          <div onClick={() => { setAddOpen(true); setOpenMeal(null); setDayMenu(false); }} style={{ cursor: "pointer", textAlign: "center", padding: "11px 0", color: EMBER, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.5 }}>+ {T("addTitle")}</div>
+        ) : (
+          <div style={{ background: "#121212" }}>
+            {addOpt(icRecipe, T("addFromDb"), T("addFromDbSub"), () => { setAddOpen(false); setRecipePick(di); })}
+            {addOpt(icPlus, T("addEmpty"), T("addEmptySub"), () => { setAddOpen(false); addMealTo(di); })}
+            {addOpt(icBar, T("addFromProd"), T("addFromProdSub"), () => { setAddOpen(false); setPickTarget({ di, mi: null }); setShowProducts(true); })}
+            <div onClick={() => setAddOpen(false)} style={{ cursor: "pointer", textAlign: "center", padding: "10px 0", color: MUTED, fontSize: 12, fontWeight: 600, borderTop: `1px solid ${LINE}` }}>{T("cancel")}</div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [lang, setLangState] = useState("en");
   const T = (k) => TXT[k][lang];
@@ -1109,136 +1240,6 @@ export default function App() {
     );
   }
 
-  function EditDayCard({ day, di }) {
-    const [addOpen, setAddOpen] = useState(false);
-    const [openMeal, setOpenMeal] = useState(null);
-    const [dayMenu, setDayMenu] = useState(false);
-    const [valMeal, setValMeal] = useState(null);
-    const [ingForm, setIngForm] = useState(null);
-    const tot = day.m.reduce((a, m) => ({ kcal: a.kcal + num(m.kcal), p: a.p + num(m.p), c: a.c + num(m.c), f: a.f + num(m.f) }), { kcal: 0, p: 0, c: 0, f: 0 });
-    const Dots = () => (<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.7" /><circle cx="12" cy="12" r="1.7" /><circle cx="12" cy="19" r="1.7" /></svg>);
-    const sqBtn = (on) => ({ cursor: "pointer", width: 30, height: 30, borderRadius: 7, border: `1px solid ${on ? EMBER : LINE}`, color: on ? EMBER : MUTED, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 });
-    const miniAct = (icon, txt, onClick, danger) => (
-      <div onClick={onClick} style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: 9, padding: "9px 12px", borderTop: `1px solid ${LINE}` }}>
-        <span style={{ color: danger ? MUTED : EMBER, display: "flex" }}>{icon}</span>
-        <span style={{ fontSize: 12.5, color: danger ? MUTED : PAPER, fontWeight: 600 }}>{txt}</span>
-      </div>
-    );
-    const addOpt = (icon, title, sub, onClick) => (
-      <div onClick={onClick} style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: 11, padding: "12px 14px", borderTop: `1px solid ${LINE}` }}>
-        <span style={{ width: 30, height: 30, borderRadius: 8, background: INK2, border: `1px solid ${LINE}`, color: EMBER, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{icon}</span>
-        <div style={{ minWidth: 0 }}><div style={{ fontSize: 14, fontWeight: 600, color: PAPER }}>{title}</div><div style={{ fontSize: 11, color: MUTED, marginTop: 1 }}>{sub}</div></div>
-      </div>
-    );
-    const icRecipe = <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M4 5a2 2 0 012-2h13v16H6a2 2 0 00-2 2V5z" /><path d="M9 7h6M9 10h6" /></svg>;
-    const icPlus = <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>;
-    const icBar = <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="6" width="1.6" height="12" /><rect x="6" y="6" width="1" height="12" /><rect x="8.4" y="6" width="2" height="12" /><rect x="12" y="6" width="1" height="12" /><rect x="14.6" y="6" width="1.6" height="12" /><rect x="17.6" y="6" width="1" height="12" /><rect x="20" y="6" width="1.4" height="12" /></svg>;
-    const icCopy = <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15V5a2 2 0 012-2h10" /></svg>;
-    const icSave = <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21l-7-4-7 4V5a2 2 0 012-2h10a2 2 0 012 2z" /></svg>;
-    const icTrash = <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14" /></svg>;
-    const icDate = <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 9h18M8 3v4M16 3v4" /></svg>;
-    const icEdit = <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z" /></svg>;
-    const miniIn = { background: INK, border: `1px solid ${LINE}`, color: PAPER, padding: "7px 6px", borderRadius: 7, fontSize: 12, outline: "none", width: "100%", textAlign: "center" };
-    const seedPer100 = (m, ing) => {
-      if (ing.per100) return { kcal: ing.per100.kcal || "", p: ing.per100.p || "", c: ing.per100.c || "", f: ing.per100.f || "" };
-      const totG = (m.ing || []).reduce((a, x) => a + num(x.g), 0) || 1;
-      const per = (v) => R(num(v) * 100 / totG);
-      return { kcal: per(m.kcal), p: per(m.p), c: per(m.c), f: per(m.f) };
-    };
-    const valEditor = (mi, obj, onPatch) => (
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 6, marginBottom: 8 }}>
-        {[["kcal", "kcal"], ["p", ML.P], ["c", ML.C], ["f", ML.F]].map(([k, lbl]) => (
-          <div key={k}><input value={obj[k]} onChange={(e) => onPatch(k, e.target.value)} inputMode="numeric" placeholder={lbl} style={miniIn} /><div style={{ fontSize: 8.5, color: MUTED, textAlign: "center", marginTop: 2 }}>{lbl}</div></div>
-        ))}
-      </div>
-    );
-    return (
-      <div style={{ background: INK2, border: `1px solid ${LINE}`, borderRadius: 12, overflow: "hidden" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "11px 14px", background: INK, borderBottom: `1px solid ${LINE}` }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-            <div style={{ ...disp, fontWeight: 600, fontSize: 15, letterSpacing: 1, textTransform: "uppercase" }}>{day.d}</div>
-            <div onClick={() => mutDay(di, (d) => { d.train = !d.train; return d; })} style={{ cursor: "pointer", fontSize: 9.5, color: day.train ? EMBER : MUTED, border: `1px solid ${day.train ? EMBER : LINE}`, borderRadius: 5, padding: "2px 6px", letterSpacing: 1, fontWeight: 700 }}>{day.train ? T("trainTag") : T("restTag")}</div>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ fontSize: 11.5, color: MUTED }}><span style={{ color: PAPER, fontWeight: 600 }}>{tot.kcal}</span> kcal · {tot.p}{ML.p}/{tot.c}{ML.c}/{tot.f}{ML.f}</div>
-            <div onClick={() => { setDayMenu(!dayMenu); setOpenMeal(null); setAddOpen(false); }} style={{ ...sqBtn(dayMenu), width: 28, height: 28 }}><Dots /></div>
-          </div>
-        </div>
-        {dayMenu && (
-          <div style={{ background: "#121212", borderBottom: `1px solid ${LINE}` }}>
-            {miniAct(icCopy, T("copyDay"), () => { setDayMenu(false); setCopyPick({ kind: "day", di }); })}
-            {miniAct(icDate, T("toDate"), () => { setDayMenu(false); setMovePlan({ scope: "day", di }); })}
-          </div>
-        )}
-        <div style={{ padding: "4px 0" }}>
-          {day.m.map((m, mi) => (
-            <div key={mi} style={{ borderBottom: `1px solid ${LINE}` }}>
-              <div style={{ padding: "11px 14px" }}>
-                {m.src && <div style={{ display: "inline-block", fontSize: 8.5, color: PAPER, background: m.src === "product" ? SAGE : EMBER, borderRadius: 4, padding: "1px 6px", letterSpacing: 0.5, fontWeight: 700, ...disp, marginBottom: 6, textTransform: "uppercase" }}>{m.src === "product" ? "product" : T("fromDb")}</div>}
-                <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8 }}>
-                  <input value={m.n} onChange={(e) => patchMeal(di, mi, { n: e.target.value })} placeholder={T("mealNamePh")} style={{ ...sIn, flex: 1 }} />
-                  <div onClick={() => scaleMeal(di, mi, 0.9)} style={{ ...sqBtn(false), color: EMBER, fontSize: 18, fontWeight: 700 }}>−</div>
-                  <div onClick={() => scaleMeal(di, mi, 1.1)} style={{ ...sqBtn(false), color: EMBER, fontSize: 18, fontWeight: 700 }}>+</div>
-                  <div onClick={() => setOpenMeal(openMeal === mi ? null : mi)} style={sqBtn(openMeal === mi)}><Dots /></div>
-                </div>
-                {valMeal === mi && valEditor(mi, m, (k, v) => patchMeal(di, mi, { [k]: num(v) }))}
-                {(m.ing || []).map((ing, ii) => {
-                  const openForm = () => { const s = seedPer100(m, ing); setIngForm({ mi, ii, name: ing.n || "", kcal: s.kcal, p: s.p, c: s.c, f: s.f }); };
-                  const isOpen = ingForm && ingForm.mi === mi && ingForm.ii === ii;
-                  return (
-                  <div key={ii} style={{ marginBottom: 6 }}>
-                    <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                      <input value={ing.n} onChange={(e) => patchIng(di, mi, ii, { n: e.target.value })} placeholder={T("ingrNamePh")} style={{ ...sIn, flex: 1 }} />
-                      <input value={ing.g} onChange={(e) => patchIng(di, mi, ii, { g: num(e.target.value) })} inputMode="numeric" style={{ ...sIn, width: 50, textAlign: "right" }} />
-                      <span style={{ fontSize: 11, color: MUTED }}>g</span>
-                      {ing.pid && <span style={{ fontSize: 8, color: SAGE, border: `1px solid ${SAGE}`, borderRadius: 4, padding: "1px 4px", letterSpacing: 0.3, fontWeight: 700, ...disp, whiteSpace: "nowrap" }}>{T("linkedTag")}</span>}
-                      <div onClick={() => isOpen ? setIngForm(null) : openForm()} title={T("editVals")} style={{ cursor: "pointer", color: isOpen ? EMBER : MUTED, display: "flex", padding: "0 1px" }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z" /></svg></div>
-                      <div onClick={() => removeIngr(di, mi, ii)} style={{ cursor: "pointer", color: MUTED, fontSize: 15, padding: "0 2px" }}>×</div>
-                    </div>
-                    {isOpen && (
-                      <div style={{ background: "#121212", border: `1px solid ${LINE}`, borderRadius: 10, padding: 10, marginTop: 6 }}>
-                        <div style={{ fontSize: 10.5, color: MUTED, lineHeight: 1.5, marginBottom: 8 }}>{T("ingValsHint")}</div>
-                        <input value={ingForm.name} onChange={(e) => setIngForm({ ...ingForm, name: e.target.value })} placeholder={T("ingName")} style={{ ...miniIn, textAlign: "left", marginBottom: 8 }} />
-                        {valEditor(mi, ingForm, (k, v) => setIngForm({ ...ingForm, [k]: v }))}
-                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                          <div onClick={() => { applyIngVals(di, mi, ii, { kcal: ingForm.kcal, p: ingForm.p, c: ingForm.c, f: ingForm.f }, ingForm.name); setIngForm(null); }} style={{ flex: 1, minWidth: 90, textAlign: "center", cursor: "pointer", background: EMBER, color: PAPER, borderRadius: 8, padding: "9px 0", ...disp, fontWeight: 700, fontSize: 12.5, letterSpacing: 0.3 }}>{T("applyVals")}</div>
-                          {!ing.pid && <div onClick={() => { saveIngProduct(di, mi, ii, { kcal: ingForm.kcal, p: ingForm.p, c: ingForm.c, f: ingForm.f }, ingForm.name); setIngForm(null); }} style={{ cursor: "pointer", color: EMBER, border: `1px solid ${EMBER}`, borderRadius: 8, padding: "9px 12px", ...disp, fontWeight: 700, fontSize: 12, letterSpacing: 0.3 }}>{T("toProduct")}</div>}
-                          <div onClick={() => setIngForm(null)} style={{ cursor: "pointer", color: MUTED, fontSize: 12, fontWeight: 600, padding: "9px 12px", border: `1px solid ${LINE}`, borderRadius: 8 }}>{T("cancelShort")}</div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  );
-                })}
-                <div style={{ fontSize: 10.5, color: MUTED, marginTop: 6, textAlign: "right" }}>{m.kcal} kcal · {m.p}{ML.p}/{m.c}{ML.c}/{m.f}{ML.f}</div>
-              </div>
-              {openMeal === mi && (
-                <div style={{ background: "#121212", borderTop: `1px solid ${LINE}` }}>
-                  {miniAct(icPlus, T("addIngr").replace("+ ", ""), () => addIngr(di, mi))}
-                  {miniAct(icEdit, T("editVals"), () => { setValMeal(valMeal === mi ? null : mi); setOpenMeal(null); })}
-                  {miniAct(icBar, T("addProd").replace("+ ", ""), () => { setOpenMeal(null); setPickTarget({ di, mi }); setShowProducts(true); })}
-                  {miniAct(icCopy, T("copyMeal"), () => { setOpenMeal(null); setCopyPick({ kind: "meal", di, mi }); })}
-                  {miniAct(icSave, savedMsg === di + ":" + mi ? T("savedAsRecipe") : T("saveAsRecipe"), () => saveMealAsRecipe(di, mi))}
-                  {miniAct(icTrash, T("removeMealTxt"), () => { setOpenMeal(null); removeMeal(di, mi); }, true)}
-                </div>
-              )}
-            </div>
-          ))}
-          {!addOpen ? (
-            <div onClick={() => { setAddOpen(true); setOpenMeal(null); setDayMenu(false); }} style={{ cursor: "pointer", textAlign: "center", padding: "11px 0", color: EMBER, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.5 }}>+ {T("addTitle")}</div>
-          ) : (
-            <div style={{ background: "#121212" }}>
-              {addOpt(icRecipe, T("addFromDb"), T("addFromDbSub"), () => { setAddOpen(false); setRecipePick(di); })}
-              {addOpt(icPlus, T("addEmpty"), T("addEmptySub"), () => { setAddOpen(false); addMealTo(di); })}
-              {addOpt(icBar, T("addFromProd"), T("addFromProdSub"), () => { setAddOpen(false); setPickTarget({ di, mi: null }); setShowProducts(true); })}
-              <div onClick={() => setAddOpen(false)} style={{ cursor: "pointer", textAlign: "center", padding: "10px 0", color: MUTED, fontSize: 12, fontWeight: 600, borderTop: `1px solid ${LINE}` }}>{T("cancel")}</div>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
-
   function DayCard({ day, sample }) {
     const tot = day.m.reduce((a, m) => ({ kcal: a.kcal + num(m.kcal), p: a.p + num(m.p), c: a.c + num(m.c), f: a.f + num(m.f) }), { kcal: 0, p: 0, c: 0, f: 0 });
     return (
@@ -1543,7 +1544,7 @@ export default function App() {
                       </div>
 
                       {view === "plan" && planEdit && <div style={{ fontSize: 11.5, color: MUTED, marginBottom: 12, lineHeight: 1.5 }}>{T("editHint")}</div>}
-                      {view === "plan" && (<div style={{ display: "grid", gap: 12 }}>{week.days.map((day, di) => planEdit ? <EditDayCard key={di} day={day} di={di} /> : <DayCard key={di} day={day} />)}</div>)}
+                      {view === "plan" && (<div style={{ display: "grid", gap: 12 }}>{week.days.map((day, di) => planEdit ? <EditDayCard key={di} day={day} di={di} api={{ T, ML, sIn, R, disp, mutDay, patchMeal, scaleMeal, patchIng, addIngr, removeIngr, removeMeal, addMealTo, saveMealAsRecipe, applyIngVals, saveIngProduct, setCopyPick, setMovePlan, setPickTarget, setShowProducts, setRecipePick, savedMsg }} /> : <DayCard key={di} day={day} />)}</div>)}
                       {view === "shop" && (
                         <div style={{ display: "grid", gap: 12 }}>
                           <div style={{ fontSize: 12, color: MUTED }}>{T("shopHint")}</div>
