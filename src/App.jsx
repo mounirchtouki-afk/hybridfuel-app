@@ -5,6 +5,7 @@ import Tracker from "./views/Tracker.jsx";
 import Water from "./views/Water.jsx";
 import Products from "./views/Products.jsx";
 import Recipes from "./views/Recipes.jsx";
+import { RECIPES } from "./recipes.js";
 import Reminders, { checkReminders } from "./views/Reminders.jsx";
 import Auth from "./views/Auth.jsx";
 import { supabase } from "./supabaseClient.js";
@@ -129,6 +130,17 @@ const TXT = {
   addMeal: { nl: "+ Maaltijd", en: "+ Meal" },
   addIngr: { nl: "+ Ingrediënt", en: "+ Ingredient" },
   addProd: { nl: "+ Uit producten", en: "+ From products" },
+  addRecipe: { nl: "+ Uit recepten", en: "+ From recipes" },
+  copyDay: { nl: "Kopieer dag", en: "Copy day" },
+  copyMeal: { nl: "Kopieer", en: "Copy" },
+  saveAsRecipe: { nl: "Bewaar als recept", en: "Save as recipe" },
+  savedAsRecipe: { nl: "Opgeslagen ✓", en: "Saved ✓" },
+  copyToTitle: { nl: "Kopieer naar…", en: "Copy to…" },
+  copyDayToLbl: { nl: "Kopieer de hele dag (alle maaltijden) naar:", en: "Copy the whole day (all meals) to:" },
+  copyMealToLbl: { nl: "Kopieer deze maaltijd naar:", en: "Copy this meal to:" },
+  pickRecipe: { nl: "Kies een recept", en: "Pick a recipe" },
+  noRecipes: { nl: "Nog geen eigen recepten. Maak er een aan onder Recepten.", en: "No recipes yet. Create one under Recipes." },
+  system: { nl: "van ons", en: "from us" },
   myProducts: { nl: "Producten", en: "Products" },
   mealNamePh: { nl: "Naam maaltijd", en: "Meal name" },
   ingrNamePh: { nl: "Ingrediënt", en: "Ingredient" },
@@ -274,6 +286,9 @@ export default function App() {
   const [planEdit, setPlanEdit] = useState(false);
   const [showProducts, setShowProducts] = useState(false);
   const [pickTarget, setPickTarget] = useState(null);
+  const [copyPick, setCopyPick] = useState(null);
+  const [recipePick, setRecipePick] = useState(null);
+  const [savedMsg, setSavedMsg] = useState(null);
   const [view, setView] = useState("plan");
   const [checked, setChecked] = useState({});
   const [loading, setLoading] = useState(false);
@@ -638,6 +653,61 @@ export default function App() {
   const removeMeal = (di, mi) => mutDay(di, (d) => { d.m = d.m.filter((_, j) => j !== mi); return d; });
   const addMealTo = (di) => mutDay(di, (d) => { d.m = [...d.m, { t: "EXTRA", n: "", kcal: 0, p: 0, c: 0, f: 0, ing: [] }]; return d; });
   function toggleEdit() { if (planEdit) persistPlanCloud(); setPlanEdit(!planEdit); }
+  function copyDayTo(fromDi, toDi) {
+    if (!week || fromDi === toDi) return;
+    const meals = week.days[fromDi].m.map((mm) => ({ ...mm, ing: (mm.ing || []).map((g) => ({ ...g })) }));
+    applyWeek({ ...week, days: week.days.map((d, i) => i === toDi ? { ...d, m: meals } : d) });
+  }
+  function copyMealTo(fromDi, mi, toDi) {
+    if (!week) return;
+    const meal = week.days[fromDi].m[mi];
+    const copy = { ...meal, ing: (meal.ing || []).map((g) => ({ ...g })) };
+    applyWeek({ ...week, days: week.days.map((d, i) => i === toDi ? { ...d, m: [...d.m, copy] } : d) });
+  }
+  function addRecipeToDay(di, meal) { mutDay(di, (d) => { d.m = [...d.m, meal]; return d; }); }
+  async function saveMealAsRecipe(di, mi) {
+    const m = week && week.days[di] && week.days[di].m[mi];
+    if (!m) return;
+    const ingredients = (m.ing || []).map((g) => { const mm = ingMacros(g) || {}; return { name: g.n, grams: num(g.g), kcal: mm.kcal || 0, p: mm.p || 0, c: mm.c || 0, f: mm.f || 0 }; });
+    const rec = { name: m.n || "Recept", type: "dinner", ingredients, macros: { kcal: num(m.kcal), p: num(m.p), c: num(m.c), f: num(m.f) }, image_url: null, steps: null };
+    try {
+      if (supabase && session) await supabase.from("recipes").insert({ user_id: session.user.id, ...rec, is_system: false });
+      else { const all = load("hf_recipes", []); save("hf_recipes", [...all, { id: "l" + Date.now(), ...rec }]); }
+      setSavedMsg(di + ":" + mi); setTimeout(() => setSavedMsg(null), 1800);
+    } catch (e) {}
+  }
+  function RecipePicker({ di, onClose }) {
+    const [mine, setMine] = useState(() => (supabase && session ? [] : load("hf_recipes", [])));
+    useEffect(() => {
+      let a = true;
+      if (supabase && session) supabase.from("recipes").select("id,name,type,ingredients,macros").eq("user_id", session.user.id).order("created_at", { ascending: false }).then(({ data }) => { if (a && data) setMine(data); });
+      return () => { a = false; };
+    }, []);
+    const toMealUser = (r) => ({ t: String(r.type || "maaltijd").toUpperCase(), n: r.name, kcal: num(r.macros && r.macros.kcal), p: num(r.macros && r.macros.p), c: num(r.macros && r.macros.c), f: num(r.macros && r.macros.f), ing: (r.ingredients || []).map((x) => ({ n: x.name, g: num(x.grams) })) });
+    const toMealSys = (r) => ({ t: "MAALTIJD", n: r.name[lang], kcal: num(r.macros.kcal), p: num(r.macros.p), c: num(r.macros.c), f: num(r.macros.f), ing: (r.ing || []).map((x) => ({ n: x[lang], g: num(x.g) })) });
+    const pick = (meal) => { addRecipeToDay(di, meal); onClose(); };
+    const Row = ({ title, sub, onClk }) => (
+      <div onClick={onClk} style={{ cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "11px 14px", borderRadius: 10, border: `1px solid ${LINE}`, background: INK2 }}>
+        <div style={{ minWidth: 0 }}><div style={{ fontSize: 13.5, fontWeight: 600, color: PAPER, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{title}</div><div style={{ fontSize: 10.5, color: MUTED, marginTop: 2 }}>{sub}</div></div>
+        <div style={{ color: EMBER, fontSize: 20, fontWeight: 700, flexShrink: 0 }}>+</div>
+      </div>
+    );
+    return (
+      <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 70, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+        <div onClick={(e) => e.stopPropagation()} style={{ background: INK, border: `1px solid ${LINE}`, borderRadius: 18, width: "100%", maxWidth: 400, maxHeight: "86vh", overflowY: "auto", padding: 20, backgroundImage: "radial-gradient(130% 70% at 92% -10%, rgba(225,29,72,0.12), transparent 58%)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+            <div style={{ ...disp, fontWeight: 700, fontSize: 16 }}>{T("pickRecipe")}</div>
+            <div onClick={onClose} style={{ cursor: "pointer", color: MUTED, fontSize: 17, width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 9, border: `1px solid ${LINE}` }}>×</div>
+          </div>
+          <div style={{ display: "grid", gap: 8 }}>
+            {mine.length === 0 && <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.5, padding: "2px 0 6px" }}>{T("noRecipes")}</div>}
+            {mine.map((r) => <Row key={"u" + r.id} title={r.name} sub={(num(r.macros && r.macros.kcal)) + " kcal · " + (r.ingredients ? r.ingredients.length : 0) + " ingr."} onClk={() => pick(toMealUser(r))} />)}
+            {RECIPES.map((r) => <Row key={"s" + r.id} title={r.name[lang]} sub={r.macros.kcal + " kcal · " + T("system")} onClk={() => pick(toMealSys(r))} />)}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const sIn = { background: INK, border: `1px solid ${LINE}`, color: PAPER, padding: "6px 8px", fontFamily: "Inter, sans-serif", fontSize: 12.5, borderRadius: 7, outline: "none", boxSizing: "border-box" };
 
@@ -649,6 +719,7 @@ export default function App() {
           <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
             <div style={{ ...disp, fontWeight: 600, fontSize: 15, letterSpacing: 1, textTransform: "uppercase" }}>{day.d}</div>
             <div onClick={() => mutDay(di, (d) => { d.train = !d.train; return d; })} style={{ cursor: "pointer", fontSize: 9.5, color: day.train ? EMBER : MUTED, border: `1px solid ${day.train ? EMBER : LINE}`, borderRadius: 5, padding: "2px 6px", letterSpacing: 1, fontWeight: 700 }}>{day.train ? T("trainTag") : T("restTag")}</div>
+            <div onClick={() => setCopyPick({ kind: "day", di })} style={{ cursor: "pointer", fontSize: 9.5, color: MUTED, border: `1px solid ${LINE}`, borderRadius: 5, padding: "2px 6px", letterSpacing: 0.5, fontWeight: 600 }}>{T("copyDay")}</div>
           </div>
           <div style={{ fontSize: 11.5, color: MUTED }}><span style={{ color: PAPER, fontWeight: 600 }}>{tot.kcal}</span> kcal · {tot.p}p/{tot.c}c/{tot.f}f</div>
         </div>
@@ -670,15 +741,20 @@ export default function App() {
                 </div>
               ))}
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 6, gap: 10, flexWrap: "wrap" }}>
-                <div style={{ display: "flex", gap: 14 }}>
+                <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
                   <div onClick={() => addIngr(di, mi)} style={{ cursor: "pointer", fontSize: 11.5, color: EMBER, fontWeight: 600 }}>{T("addIngr")}</div>
                   <div onClick={() => { setPickTarget({ di, mi }); setShowProducts(true); }} style={{ cursor: "pointer", fontSize: 11.5, color: EMBER, fontWeight: 600 }}>{T("addProd")}</div>
+                  <div onClick={() => setCopyPick({ kind: "meal", di, mi })} style={{ cursor: "pointer", fontSize: 11.5, color: MUTED, fontWeight: 600 }}>{T("copyMeal")}</div>
+                  <div onClick={() => saveMealAsRecipe(di, mi)} style={{ cursor: "pointer", fontSize: 11.5, color: savedMsg === di + ":" + mi ? EMBER : MUTED, fontWeight: 600 }}>{savedMsg === di + ":" + mi ? T("savedAsRecipe") : T("saveAsRecipe")}</div>
                 </div>
                 <div style={{ fontSize: 10.5, color: MUTED }}>{m.kcal} kcal · {m.p}p/{m.c}c/{m.f}f</div>
               </div>
             </div>
           ))}
-          <div onClick={() => addMealTo(di)} style={{ cursor: "pointer", textAlign: "center", padding: "10px 0", color: EMBER, fontSize: 12.5, fontWeight: 700, ...disp, letterSpacing: 0.5 }}>{T("addMeal")}</div>
+          <div style={{ display: "flex" }}>
+            <div onClick={() => addMealTo(di)} style={{ flex: 1, cursor: "pointer", textAlign: "center", padding: "10px 0", color: EMBER, fontSize: 12.5, fontWeight: 700, ...disp, letterSpacing: 0.5 }}>{T("addMeal")}</div>
+            <div onClick={() => setRecipePick(di)} style={{ flex: 1, cursor: "pointer", textAlign: "center", padding: "10px 0", color: EMBER, fontSize: 12.5, fontWeight: 700, ...disp, letterSpacing: 0.5, borderLeft: `1px solid ${LINE}` }}>{T("addRecipe")}</div>
+          </div>
         </div>
       </div>
     );
@@ -1033,6 +1109,21 @@ export default function App() {
       {showReminders && <Reminders lang={lang} onClose={() => setShowReminders(false)} />}
       {showAuth && <Auth lang={lang} session={session} tier={subTier} recovery={authRecovery} onClose={() => { setShowAuth(false); setAuthRecovery(false); }} />}
       {showProducts && <Products lang={lang} session={session} onClose={() => { setShowProducts(false); setPickTarget(null); }} onPick={pickTarget ? (prod) => { addProductIng(pickTarget.di, pickTarget.mi, prod); setShowProducts(false); setPickTarget(null); } : null} />}
+
+      {copyPick && (
+        <div onClick={() => setCopyPick(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 70, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ background: INK, border: `1px solid ${LINE}`, borderRadius: 18, width: "100%", maxWidth: 340, padding: 20, backgroundImage: "radial-gradient(130% 70% at 92% -10%, rgba(225,29,72,0.12), transparent 58%)" }}>
+            <div style={{ ...disp, fontWeight: 700, fontSize: 16, marginBottom: 4 }}>{T("copyToTitle")}</div>
+            <div style={{ fontSize: 12, color: MUTED, marginBottom: 14, lineHeight: 1.4 }}>{copyPick.kind === "day" ? T("copyDayToLbl") : T("copyMealToLbl")}</div>
+            <div style={{ display: "grid", gap: 8 }}>
+              {week && week.days.map((d, i) => i === copyPick.di ? null : (
+                <div key={i} onClick={() => { if (copyPick.kind === "day") copyDayTo(copyPick.di, i); else copyMealTo(copyPick.di, copyPick.mi, i); setCopyPick(null); }} style={{ cursor: "pointer", padding: "11px 14px", borderRadius: 10, border: `1px solid ${LINE}`, background: INK2, ...disp, fontWeight: 600, fontSize: 14, letterSpacing: 0.5, textTransform: "uppercase" }}>{d.d}</div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+      {recipePick !== null && <RecipePicker di={recipePick} onClose={() => setRecipePick(null)} />}
     </div>
   );
 }
