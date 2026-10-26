@@ -8,6 +8,7 @@ import Water from "./views/Water.jsx";
 import Products from "./views/Products.jsx";
 import Recipes from "./views/Recipes.jsx";
 import RaceProtocol from "./views/RaceProtocol.jsx";
+import Training from "./views/Training.jsx";
 import { RECIPES } from "./recipes.js";
 import Reminders, { checkReminders } from "./views/Reminders.jsx";
 import Auth from "./views/Auth.jsx";
@@ -999,7 +1000,7 @@ export default function App() {
   const safeText = lowBmi ? T("lowBmiWarn") : goal === "cut" ? T("safeCut") : goal === "gain" ? T("safeGain") : T("safeMaintain");
   const hasCycle = targets && targets.trainingCount > 0 && targets.trainingCount < 7 && targets.train && targets.rest;
 
-  const OVERFLOW = ["today", "tracker", "water", "producten", "race"]; // zitten onder "Meer"
+  const OVERFLOW = ["today", "tracker", "water", "producten", "race", "training"]; // zitten onder "Meer"
   const go = (x) => { setShowMore(false); setTab(x); try { window.scrollTo(0, 0); } catch (e) {} };
   const fabAct = (label, icon, onClick) => (
     <div onClick={onClick} style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
@@ -1320,6 +1321,7 @@ export default function App() {
         {tab === "producten" && (hasPro ? <Products embedded lang={lang} session={session} /> : <Locked pro />)}
         {tab === "recipes" && <Recipes lang={lang} session={session} />}
         {tab === "race" && (hasPlus ? <RaceProtocol lang={lang} weight={weight} session={session} week={week} /> : <Locked pro />)}
+        {tab === "training" && (hasBasis ? <Training lang={lang} weight={weight} session={session} /> : <Locked />)}
       </div>
 
       {/* QUICK-ADD + (centraal, verhoogd) */}
@@ -1357,6 +1359,7 @@ export default function App() {
               {moreTile(mIcon("water"), T("navWater"), () => go("water"))}
               {moreTile(mIcon("producten"), T("navProducts"), () => go("producten"))}
               {moreTile(mIcon("race"), T("navRace"), () => go("race"))}
+              {moreTile(<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M6.5 6.5l11 11M4 9l-1.5 1.5a1.5 1.5 0 000 2L4 14M20 9l1.5 1.5a1.5 1.5 0 010 2L20 14M7 4l1.5 1.5M17 20l-1.5-1.5" /></svg>, lang === "nl" ? "Training" : "Training", () => go("training"))}
               {moreTile(<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 4-6.5 8-6.5s8 2.5 8 6.5" /></svg>, lang === "nl" ? "Account" : "Account", () => { setShowMore(false); setShowAuth(true); })}
               {moreTile(<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0" /></svg>, lang === "nl" ? "Herinneringen" : "Reminders", () => { setShowMore(false); setShowReminders(true); })}
             </div>

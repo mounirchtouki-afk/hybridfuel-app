@@ -30,6 +30,11 @@ const T = {
   custHint: { nl: "Kies wat je op je dashboard ziet.", en: "Choose what you see on your dashboard." },
   planRace: { nl: "Plan je Hyrox", en: "Plan your Hyrox" },
   planRaceSub: { nl: "Stel je Race Protocol in voor race-dag.", en: "Set up your Race Protocol for race day." },
+  training: { nl: "Training", en: "Training" },
+  trainBurn: { nl: "verbrand (schatting)", en: "burned (est.)" },
+  trainMin: { nl: "min", en: "min" },
+  trainNone: { nl: "Nog geen training — log je sessie", en: "No training yet — log a session" },
+  sessions: { nl: "sessies", en: "sessions" },
 };
 
 function Ring({ pct, size = 58 }) {
@@ -52,13 +57,15 @@ export default function Dashboard({ lang, session, week, targets, onGo }) {
   const [waterMl, setWaterMl] = useState(0);
   const [weightKg, setWeightKg] = useState(0);
   const [race] = useState(() => load("hf_race", {}));
-  const [prefs, setPrefs] = useState(() => load("hf_dash", null) || { water: true, weight: true, race: true, menu: true });
+  const [prefs, setPrefs] = useState(() => ({ water: true, weight: true, race: true, menu: true, train: true, ...(load("hf_dash", null) || {}) }));
+  const [train, setTrain] = useState(() => load("hf_workouts_" + todayISO(), []));
   const [cust, setCust] = useState(false);
   const setPref = (k, v) => { const n = { ...prefs, [k]: v }; setPrefs(n); save("hf_dash", n); };
 
   useEffect(() => {
     let active = true;
     setEaten(load("hf_eaten_" + d, {}));
+    setTrain(load("hf_workouts_" + d, []));
     const mw = num(load("hf_water_weight", ""));
     if (mw > 0) setWeightKg(mw);
     if (cloud) {
@@ -87,6 +94,9 @@ export default function Dashboard({ lang, session, week, targets, onGo }) {
   const nMeals = day ? day.m.length : 0;
   const nDone = day ? day.m.filter((_, i) => eaten[i]).length : 0;
   const waterGoal = weightKg > 0 ? Math.round((35 * weightKg + (day && day.train ? 500 : 0)) / 50) * 50 : 0;
+
+  const trainKcal = train.reduce((a, x) => a + num(x.kcal), 0);
+  const trainMin = train.reduce((a, x) => a + num(x.min), 0);
 
   // Race-aftelling
   let cd = null;
@@ -132,6 +142,7 @@ export default function Dashboard({ lang, session, week, targets, onGo }) {
           {custRow("water", t("water"))}
           {custRow("weight", t("weight"))}
           {custRow("race", t("race") + " (Race Protocol)")}
+          {custRow("train", t("training"))}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 0" }}>
             <span style={{ fontSize: 13, color: PAPER, fontWeight: 600 }}>{t("menu")}</span>
             <Toggle on={!!prefs.menu} onClick={() => setPref("menu", !prefs.menu)} />
@@ -156,6 +167,25 @@ export default function Dashboard({ lang, session, week, targets, onGo }) {
         <div style={{ display: "flex", gap: 12 }}>
           {prefs.water && smallCard(t("water"), waterGoal ? `${Math.round(waterMl / 100) / 10}L` : "—", waterGoal ? `/ ${Math.round(waterGoal / 100) / 10}L` : "", () => onGo("water"), EMBER_SOFT)}
           {prefs.weight && smallCard(t("weight"), weightKg > 0 ? `${weightKg} kg` : "—", weightKg > 0 ? "" : t("noWeight"), () => onGo("tracker"))}
+        </div>
+      )}
+
+      {/* Training vandaag */}
+      {prefs.train && (
+        <div onClick={() => onGo("training")} style={{ cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", background: INK2, border: `1px solid ${LINE}`, borderRadius: 14, padding: "13px 16px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 11, minWidth: 0 }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6.5 6.5l11 11M4 9l-1.5 1.5a1.5 1.5 0 000 2L4 14M20 9l1.5 1.5a1.5 1.5 0 010 2L20 14M7 4l1.5 1.5M17 20l-1.5-1.5" /></svg>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ ...disp, fontWeight: 700, fontSize: 15 }}>{t("training")}</div>
+              <div style={{ fontSize: 10.5, color: MUTED, marginTop: 1 }}>{train.length > 0 ? `${trainMin} ${t("trainMin")} · ${train.length} ${t("sessions") || "sessies"}` : t("trainNone")}</div>
+            </div>
+          </div>
+          {train.length > 0 ? (
+            <div style={{ textAlign: "right" }}>
+              <div style={{ ...disp, fontSize: 22, fontWeight: 700, color: EMBER_SOFT, lineHeight: 1 }}>~{trainKcal}</div>
+              <div style={{ fontSize: 9.5, color: MUTED, letterSpacing: 0.5, textTransform: "uppercase" }}>{t("trainBurn")}</div>
+            </div>
+          ) : (<div style={{ color: EMBER, fontSize: 22, fontWeight: 300, flexShrink: 0, paddingLeft: 8 }}>›</div>)}
         </div>
       )}
 
