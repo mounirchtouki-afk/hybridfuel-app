@@ -40,13 +40,6 @@ function loadZxing() {
   });
 }
 
-const ScanIcon = ({ c = "#fff" }) => (
-  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2" />
-    <path d="M8 8.5v7M11 8.5v7M14 8.5v7M16.5 8.5v7" />
-  </svg>
-);
-
 export default function Products({ lang, session, onClose, onPick }) {
   const t = (k) => (T[k] ? T[k][lang] : k);
   const cloud = !!(session && supabase);
@@ -146,7 +139,7 @@ export default function Products({ lang, session, onClose, onPick }) {
             </div>
           ) : (
             <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-              <button onClick={startScan} style={{ ...primaryBtn, flex: 1, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 9 }}><ScanIcon c={PAPER} />{t("scan")}</button>
+              <button onClick={startScan} style={{ ...primaryBtn, flex: 1 }}>{t("scan")}</button>
             </div>
           )}
           {/* Handmatige barcode */}
