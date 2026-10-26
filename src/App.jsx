@@ -581,23 +581,34 @@ export default function App() {
   const navRef = useRef({});
   const persistRef = useRef(() => {});
   useEffect(() => {
-    try { history.pushState({ hf: true }, ""); } catch (e) {}
+    // Buffer van sentinel-entries: bij een snelle dubbele terug-druk verwerkt de
+    // browser meerdere pops vóór onze listener erbij kan → met één entry verliet
+    // je de app zonder uitlog-check. Met een buffer die zichzelf aanvult kan dat niet.
+    const BUF = 5;
+    const cnt = { n: 0 };
+    const push = () => { try { history.pushState({ hf: true }, ""); cnt.n++; } catch (e) {} };
+    const topUp = () => { let g = 0; while (cnt.n < BUF && g++ < BUF + 3) push(); };
+    topUp();
     const onPop = () => {
-      try { history.pushState({ hf: true }, ""); } catch (e) {} // meteen her-armeren: nooit per ongeluk de app uit
-      const s = navRef.current || {};
-      if (s.showLogout) { setShowLogout(false); return; }
-      if (s.fab) { setFab(false); return; }
-      if (s.showMore) { setShowMore(false); return; }
-      if (s.movePlan) { setMovePlan(null); return; }
-      if (s.copyPick) { setCopyPick(null); return; }
-      if (s.recipePick != null) { setRecipePick(null); return; }
-      if (s.showBuilder) { setShowBuilder(false); return; }
-      if (s.showProducts) { setShowProducts(false); setPickTarget(null); setFabScan(false); return; }
-      if (s.showReminders) { setShowReminders(false); return; }
-      if (s.showAuth) { setShowAuth(false); setAuthRecovery(false); return; }
-      if (s.planEdit) { try { persistRef.current(); } catch (e) {} setPlanEdit(false); flashSaved(); return; }
-      if (s.tab !== "dashboard") { setTab("dashboard"); try { window.scrollTo(0, 0); } catch (e) {} return; }
-      setShowLogout(true); // al op het dashboard → uitlog-check
+      cnt.n = Math.max(0, cnt.n - 1); // deze pop heeft er één verbruikt
+      const nav = navRef.current || {};
+      const s = nav;
+      // Eén "terug"-stap afhandelen én de status meteen bijwerken, zodat een
+      // volgende (snelle) terug-druk de juiste vervolgstap pakt.
+      if (s.showLogout) { setShowLogout(false); nav.showLogout = false; }
+      else if (s.fab) { setFab(false); nav.fab = false; }
+      else if (s.showMore) { setShowMore(false); nav.showMore = false; }
+      else if (s.movePlan) { setMovePlan(null); nav.movePlan = null; }
+      else if (s.copyPick) { setCopyPick(null); nav.copyPick = null; }
+      else if (s.recipePick != null) { setRecipePick(null); nav.recipePick = null; }
+      else if (s.showBuilder) { setShowBuilder(false); nav.showBuilder = false; }
+      else if (s.showProducts) { setShowProducts(false); setPickTarget(null); setFabScan(false); nav.showProducts = false; }
+      else if (s.showReminders) { setShowReminders(false); nav.showReminders = false; }
+      else if (s.showAuth) { setShowAuth(false); setAuthRecovery(false); nav.showAuth = false; }
+      else if (s.planEdit) { try { persistRef.current(); } catch (e) {} setPlanEdit(false); flashSaved(); nav.planEdit = false; }
+      else if (s.tab !== "dashboard") { setTab("dashboard"); nav.tab = "dashboard"; try { window.scrollTo(0, 0); } catch (e) {} }
+      else { setShowLogout(true); nav.showLogout = true; } // al op het dashboard → uitlog-check
+      topUp(); // buffer weer aanvullen
     };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
