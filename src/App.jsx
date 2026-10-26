@@ -1130,9 +1130,7 @@ export default function App() {
               </div>
               <div style={{ marginBottom: 14 }}>
                 <label style={label}>{T("trainingLoad")}</label>
-                <select style={input} value={activity} onChange={(e) => setActivity(e.target.value)}>
-                  {ACTIVITY.map((a) => <option key={a.id} value={a.id}>{a[lang]}</option>)}
-                </select>
+                <Dropdown value={activity} onChange={setActivity} options={ACTIVITY.map((a) => ({ id: a.id, label: a[lang] }))} />
               </div>
               <div style={{ marginBottom: 14 }}>
                 <label style={label}>{T("goal")}</label>
@@ -1140,9 +1138,7 @@ export default function App() {
               </div>
               <div style={{ marginBottom: 14 }}>
                 <label style={label}>{T("diet")}</label>
-                <select style={input} value={diet} onChange={(e) => setDiet(e.target.value)}>
-                  {DIETS.map((d) => <option key={d.id} value={d.id}>{d[lang]}</option>)}
-                </select>
+                <Dropdown value={diet} onChange={setDiet} options={DIETS.map((d) => ({ id: d.id, label: d[lang] }))} />
               </div>
               <div style={{ marginBottom: 16 }}>
                 <label style={label}>{T("avoid")}</label>
