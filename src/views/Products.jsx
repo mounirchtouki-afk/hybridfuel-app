@@ -40,7 +40,7 @@ function loadZxing() {
   });
 }
 
-export default function Products({ lang, session, onClose, onPick }) {
+export default function Products({ lang, session, onClose, onPick, embedded }) {
   const t = (k) => (T[k] ? T[k][lang] : k);
   const cloud = !!(session && supabase);
   const [items, setItems] = useState(() => (cloud ? [] : load("hf_products", [])));
@@ -120,13 +120,8 @@ export default function Products({ lang, session, onClose, onPick }) {
 
   const macroIn = (val, set, ph) => <input value={val} onChange={(e) => set(e.target.value)} inputMode="numeric" placeholder={ph} style={{ ...input, textAlign: "center", padding: "9px 4px" }} />;
 
-  return (
-    <div onClick={() => { stopScan(); onClose(); }} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 65, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ position: "relative", background: INK, border: `1px solid ${LINE}`, borderRadius: 20, width: "100%", maxWidth: 440, maxHeight: "90vh", overflowY: "auto", padding: 22, boxShadow: "0 24px 70px rgba(0,0,0,.65)", backgroundImage: "radial-gradient(130% 70% at 92% -10%, rgba(225,29,72,0.13), transparent 58%)" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-          <div style={sectionTitle}>{t("title")}</div>
-          <div onClick={() => { stopScan(); onClose(); }} style={{ cursor: "pointer", color: MUTED, fontSize: 17, width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 9, border: `1px solid ${LINE}` }}>×</div>
-        </div>
+  const body = (
+    <>
         <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.5, marginBottom: 16 }}>{t("intro")}</div>
 
         <div style={{ background: INK2, border: `1px solid ${LINE}`, borderRadius: 14, padding: 14, marginBottom: 16 }}>
@@ -180,6 +175,26 @@ export default function Products({ lang, session, onClose, onPick }) {
             <div onClick={() => del(it.id)} style={{ cursor: "pointer", color: MUTED, fontSize: 16, padding: "0 4px" }}>×</div>
           </div>
         ))}
+    </>
+  );
+
+  if (embedded) {
+    return (
+      <div style={{ display: "grid", gap: 0 }}>
+        <div style={sectionTitle}>{t("title")}</div>
+        <div style={{ marginTop: 14 }}>{body}</div>
+      </div>
+    );
+  }
+
+  return (
+    <div onClick={() => { stopScan(); onClose(); }} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 65, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ position: "relative", background: INK, border: `1px solid ${LINE}`, borderRadius: 20, width: "100%", maxWidth: 440, maxHeight: "90vh", overflowY: "auto", padding: 22, boxShadow: "0 24px 70px rgba(0,0,0,.65)", backgroundImage: "radial-gradient(130% 70% at 92% -10%, rgba(225,29,72,0.13), transparent 58%)" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+          <div style={sectionTitle}>{t("title")}</div>
+          <div onClick={() => { stopScan(); onClose(); }} style={{ cursor: "pointer", color: MUTED, fontSize: 17, width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 9, border: `1px solid ${LINE}` }}>×</div>
+        </div>
+        {body}
       </div>
     </div>
   );

@@ -190,6 +190,7 @@ const TXT = {
   navToday: { nl: "Vandaag", en: "Today" },
   navTracker: { nl: "Tracker", en: "Tracker" },
   navWater: { nl: "Water", en: "Water" },
+  navProducts: { nl: "Producten", en: "Products" },
   navRecipes: { nl: "Recepten", en: "Recipes" },
   install: { nl: "Installeer de app", en: "Install the app" },
   installHint: { nl: "Zet HybridFuelCo op je beginscherm — sneller, met herinneringen.", en: "Add HybridFuelCo to your home screen — faster, with reminders." },
@@ -241,6 +242,7 @@ const Icon = ({ name, on }) => {
   if (name === "today") return <svg width="23" height="23" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="16" rx="2" {...p} /><path d="M4 9h16M8 3v4M16 3v4" {...p} /><path d="M9 14l2 2 4-4" {...p} /></svg>;
   if (name === "tracker") return <svg width="23" height="23" viewBox="0 0 24 24"><path d="M4 18l5-6 4 3 6-8" {...p} /><path d="M4 21h16" {...p} /></svg>;
   if (name === "water") return <svg width="23" height="23" viewBox="0 0 24 24"><path d="M12 3c3.5 4.2 6 7.3 6 10.3A6 6 0 016 13.3C6 10.3 8.5 7.2 12 3z" {...p} /></svg>;
+  if (name === "producten") return <svg width="23" height="23" viewBox="0 0 24 24"><path d="M21 8l-9-5-9 5 9 5 9-5z" {...p} /><path d="M3 8v8l9 5 9-5V8M12 13v8" {...p} /></svg>;
   if (name === "recipes") return <svg width="23" height="23" viewBox="0 0 24 24"><path d="M4 4v6a3 3 0 006 0V4M7 4v16" {...p} /><path d="M17 4c-1.5 0-2.5 2-2.5 5s1 4 2.5 4 2.5-1 2.5-4-1-5-2.5-5zM17 13v7" {...p} /></svg>;
   return null;
 };
@@ -730,7 +732,7 @@ export default function App() {
   const safeText = lowBmi ? T("lowBmiWarn") : goal === "cut" ? T("safeCut") : goal === "gain" ? T("safeGain") : T("safeMaintain");
   const hasCycle = targets && targets.trainingCount > 0 && targets.trainingCount < 7 && targets.train && targets.rest;
 
-  const NAV = [["plan", "navPlan"], ["today", "navToday"], ["tracker", "navTracker"], ["water", "navWater"], ["recipes", "navRecipes"]];
+  const NAV = [["plan", "navPlan"], ["today", "navToday"], ["tracker", "navTracker"], ["water", "navWater"], ["producten", "navProducts"], ["recipes", "navRecipes"]];
 
   return (
     <div style={{ minHeight: "100vh", background: `radial-gradient(135% 95% at 90% -8%, rgba(225,29,72,0.22) 0%, rgba(150,30,18,0.07) 36%, ${INK} 66%), ${INK}`, backgroundAttachment: "fixed", backgroundRepeat: "no-repeat", color: PAPER, fontFamily: "Inter, sans-serif", paddingBottom: 76 + consentH }}>
@@ -1008,6 +1010,7 @@ export default function App() {
         {tab === "today" && (hasBasis ? <Today lang={lang} week={week} onGoPlan={() => setTab("plan")} /> : <Locked />)}
         {tab === "tracker" && (hasBasis ? <Tracker lang={lang} height={height} session={session} /> : <Locked />)}
         {tab === "water" && (hasBasis ? <Water lang={lang} session={session} week={week} /> : <Locked />)}
+        {tab === "producten" && (hasPro ? <Products embedded lang={lang} session={session} /> : <Locked pro />)}
         {tab === "recipes" && <Recipes lang={lang} />}
       </div>
 
