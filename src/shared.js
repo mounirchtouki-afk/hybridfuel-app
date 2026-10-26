@@ -6,6 +6,10 @@ export const INK = "#0A0A0A", INK2 = "#161616", EMBER = "#E11D48", EMBER_SOFT = 
 
 export const disp = { fontFamily: "Oswald, sans-serif" };
 export const num = (v, d = 0) => { const n = parseFloat(v); return isNaN(n) ? d : n; };
+// Macro-letters per taal: NL eiwit/koolhydraten/vet = e/k/v, EN protein/carbs/fat = p/c/f.
+export const macroLetters = (lang) => (lang === "nl"
+  ? { p: "e", c: "k", f: "v", P: "E", C: "K", F: "V" }
+  : { p: "p", c: "c", f: "f", P: "P", C: "C", F: "F" });
 
 export const WD = {
   nl: ["Ma", "Di", "Wo", "Do", "Vr", "Za", "Zo"],

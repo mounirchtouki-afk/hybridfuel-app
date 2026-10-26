@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, SAGE, load, save, genSteps, todayISO } from "./shared.js";
+import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, SAGE, load, save, genSteps, todayISO, macroLetters } from "./shared.js";
 import Today from "./views/Today.jsx";
 import Dashboard from "./views/Dashboard.jsx";
 import RecipeBuilder from "./views/RecipeBuilder.jsx";
@@ -478,6 +478,7 @@ export default function App() {
   const hasBasis = devMode || unlocked || subTier === "basis" || subTier === "pro";
   const hasPro = devMode || subTier === "pro";
   const hasPlus = devMode || subTier === "pro"; // Race Protocol — later evt. eigen Plus-laag
+  const ML = macroLetters(lang);
 
   useEffect(() => {
     try { const l = localStorage.getItem("hf_lang"); if (l === "nl" || l === "en") setLangState(l); } catch (e) {}
@@ -1146,7 +1147,7 @@ export default function App() {
     };
     const valEditor = (mi, obj, onPatch) => (
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 6, marginBottom: 8 }}>
-        {[["kcal", "kcal"], ["p", "P"], ["c", "C"], ["f", "F"]].map(([k, lbl]) => (
+        {[["kcal", "kcal"], ["p", ML.P], ["c", ML.C], ["f", ML.F]].map(([k, lbl]) => (
           <div key={k}><input value={obj[k]} onChange={(e) => onPatch(k, e.target.value)} inputMode="numeric" placeholder={lbl} style={miniIn} /><div style={{ fontSize: 8.5, color: MUTED, textAlign: "center", marginTop: 2 }}>{lbl}</div></div>
         ))}
       </div>
@@ -1159,7 +1160,7 @@ export default function App() {
             <div onClick={() => mutDay(di, (d) => { d.train = !d.train; return d; })} style={{ cursor: "pointer", fontSize: 9.5, color: day.train ? EMBER : MUTED, border: `1px solid ${day.train ? EMBER : LINE}`, borderRadius: 5, padding: "2px 6px", letterSpacing: 1, fontWeight: 700 }}>{day.train ? T("trainTag") : T("restTag")}</div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ fontSize: 11.5, color: MUTED }}><span style={{ color: PAPER, fontWeight: 600 }}>{tot.kcal}</span> kcal · {tot.p}p/{tot.c}c/{tot.f}f</div>
+            <div style={{ fontSize: 11.5, color: MUTED }}><span style={{ color: PAPER, fontWeight: 600 }}>{tot.kcal}</span> kcal · {tot.p}{ML.p}/{tot.c}{ML.c}/{tot.f}{ML.f}</div>
             <div onClick={() => { setDayMenu(!dayMenu); setOpenMeal(null); setAddOpen(false); }} style={{ ...sqBtn(dayMenu), width: 28, height: 28 }}><Dots /></div>
           </div>
         </div>
@@ -1209,7 +1210,7 @@ export default function App() {
                   </div>
                   );
                 })}
-                <div style={{ fontSize: 10.5, color: MUTED, marginTop: 6, textAlign: "right" }}>{m.kcal} kcal · {m.p}p/{m.c}c/{m.f}f</div>
+                <div style={{ fontSize: 10.5, color: MUTED, marginTop: 6, textAlign: "right" }}>{m.kcal} kcal · {m.p}{ML.p}/{m.c}{ML.c}/{m.f}{ML.f}</div>
               </div>
               {openMeal === mi && (
                 <div style={{ background: "#121212", borderTop: `1px solid ${LINE}` }}>
@@ -1248,7 +1249,7 @@ export default function App() {
             <div style={{ fontSize: 9.5, color: day.train ? EMBER : MUTED, border: `1px solid ${day.train ? EMBER : LINE}`, borderRadius: 5, padding: "2px 6px", letterSpacing: 1, fontWeight: 700 }}>{day.train ? T("trainTag") : T("restTag")}</div>
             {sample && <div style={{ fontSize: 9.5, color: PAPER, background: EMBER, borderRadius: 5, padding: "2px 7px", letterSpacing: 0.5, fontWeight: 700, ...disp }}>{T("freeSample")}</div>}
           </div>
-          <div style={{ fontSize: 11.5, color: MUTED }}><span style={{ color: PAPER, fontWeight: 600 }}>{tot.kcal}</span> kcal · {tot.p}p/{tot.c}c/{tot.f}f</div>
+          <div style={{ fontSize: 11.5, color: MUTED }}><span style={{ color: PAPER, fontWeight: 600 }}>{tot.kcal}</span> kcal · {tot.p}{ML.p}/{tot.c}{ML.c}/{tot.f}{ML.f}</div>
         </div>
         <div>
           {day.m.map((m, mi) => (
@@ -1263,7 +1264,7 @@ export default function App() {
                     </div>
                   )}
                 </div>
-                <div style={{ fontSize: 11, color: MUTED, textAlign: "right", whiteSpace: "nowrap" }}><span style={{ color: PAPER, fontWeight: 600 }}>{m.kcal}</span> kcal<br />{m.p}p/{m.c}c/{m.f}f</div>
+                <div style={{ fontSize: 11, color: MUTED, textAlign: "right", whiteSpace: "nowrap" }}><span style={{ color: PAPER, fontWeight: 600 }}>{m.kcal}</span> kcal<br />{m.p}{ML.p}/{m.c}{ML.c}/{m.f}{ML.f}</div>
               </div>
             </div>
           ))}

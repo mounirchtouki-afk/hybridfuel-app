@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, SAGE, disp, num, card, label, input, sectionTitle, primaryBtn, WD, jsDayToIdx, load, save, todayISO, fmtDate } from "../shared.js";
+import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, SAGE, disp, num, card, label, input, sectionTitle, primaryBtn, WD, jsDayToIdx, load, save, todayISO, fmtDate, macroLetters } from "../shared.js";
 import { supabase } from "../supabaseClient.js";
 import Products from "./Products.jsx";
 import { RECIPES } from "../recipes.js";
@@ -57,6 +57,7 @@ function Ring({ pct }) {
 
 export default function Today({ lang, week, onGoPlan, session, plus, onRebalance }) {
   const t = (k) => (T[k] ? T[k][lang] : k);
+  const ml = macroLetters(lang);
   const cloud = !!(session && supabase);
   const [d, setD] = useState(todayISO());
   const [eaten, setEaten] = useState({});
@@ -315,7 +316,7 @@ export default function Today({ lang, week, onGoPlan, session, plus, onRebalance
                         </div>
                       )}
                     </div>
-                    <div style={{ fontSize: 11, color: MUTED, textAlign: "right", whiteSpace: "nowrap" }}><span style={{ color: PAPER, fontWeight: 600 }}>{m.kcal}</span> kcal<br />{m.p}p/{m.c}c/{m.f}f</div>
+                    <div style={{ fontSize: 11, color: MUTED, textAlign: "right", whiteSpace: "nowrap" }}><span style={{ color: PAPER, fontWeight: 600 }}>{m.kcal}</span> kcal<br />{m.p}{ml.p}/{m.c}{ml.c}/{m.f}{ml.f}</div>
                   </div>
                 );
               })}
@@ -330,7 +331,7 @@ export default function Today({ lang, week, onGoPlan, session, plus, onRebalance
                 <div key={x.id} style={{ background: INK2, border: `1px solid ${LINE}`, borderRadius: 12, padding: "10px 12px", display: "flex", gap: 10, alignItems: "center" }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 13.5, fontWeight: 600, color: PAPER }}>{x.item}</div>
-                    <div style={{ fontSize: 11, color: MUTED, marginTop: 1 }}>{x.kcal} kcal · {x.p}p/{x.c}c/{x.f}f</div>
+                    <div style={{ fontSize: 11, color: MUTED, marginTop: 1 }}>{x.kcal} kcal · {x.p}{ml.p}/{x.c}{ml.c}/{x.f}{ml.f}</div>
                   </div>
                   {x.per100 && <><input value={x.grams} onChange={(e) => setGrams(x.id, e.target.value)} inputMode="numeric" style={{ width: 52, textAlign: "right", background: INK, border: `1px solid ${LINE}`, color: PAPER, padding: "6px 7px", borderRadius: 7, fontSize: 12.5, outline: "none" }} /><span style={{ fontSize: 11, color: MUTED }}>{t("g")}</span></>}
                   <div onClick={() => delExtra(x.id)} style={{ cursor: "pointer", color: MUTED, fontSize: 16, padding: "0 2px" }}>×</div>
@@ -436,6 +437,7 @@ function FeastPlanner({ lang, week, baseIso, onClose }) {
 
 function AddExtra({ lang, session, onClose, onPickProduct, onPickRecipe }) {
   const cloud = !!(session && supabase);
+  const ml = macroLetters(lang);
   const [tab, setTab] = useState("recipe");
   const [mine, setMine] = useState(() => (cloud ? [] : load("hf_recipes", [])));
   const [q, setQ] = useState("");
@@ -472,7 +474,7 @@ function AddExtra({ lang, session, onClose, onPickProduct, onPickRecipe }) {
       <div key={key} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: `1px solid ${LINE}` }}>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 13.5, fontWeight: 600, color: PAPER }}>{rname(r)}</div>
-          <div style={{ fontSize: 11, color: MUTED, marginTop: 1 }}>{Math.round(num(m.kcal))} kcal · {Math.round(num(m.p))}p/{Math.round(num(m.c))}c/{Math.round(num(m.f))}f</div>
+          <div style={{ fontSize: 11, color: MUTED, marginTop: 1 }}>{Math.round(num(m.kcal))} kcal · {Math.round(num(m.p))}{ml.p}/{Math.round(num(m.c))}{ml.c}/{Math.round(num(m.f))}{ml.f}</div>
         </div>
         <div onClick={() => onPickRecipe(r)} style={{ cursor: "pointer", fontSize: 12, fontWeight: 700, color: EMBER, border: `1px solid ${EMBER}`, borderRadius: 7, padding: "5px 11px", ...disp, letterSpacing: 0.3 }}>{L.pick}</div>
       </div>

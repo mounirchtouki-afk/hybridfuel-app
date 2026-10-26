@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, SAGE, disp, num, sectionTitle, chipS, primaryBtn, load, save } from "../shared.js";
+import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, SAGE, disp, num, sectionTitle, chipS, primaryBtn, load, save, macroLetters } from "../shared.js";
 import { RECIPES } from "../recipes.js";
 import { supabase } from "../supabaseClient.js";
 import RecipeBuilder from "./RecipeBuilder.jsx";
@@ -51,7 +51,7 @@ export default function Recipes({ lang, session }) {
 
   const macroBar = (m) => (
     <div style={{ display: "flex", gap: 0, borderTop: `1px solid ${LINE}` }}>
-      {[[m.kcal, "kcal", EMBER], [(m.p || 0) + "g", "P", PAPER], [(m.c || 0) + "g", "C", EMBER_SOFT], [(m.f || 0) + "g", "F", SAGE]].map(([v, k, c], i) => (
+      {[[m.kcal, "kcal", EMBER], [(m.p || 0) + "g", macroLetters(lang).P, PAPER], [(m.c || 0) + "g", macroLetters(lang).C, EMBER_SOFT], [(m.f || 0) + "g", macroLetters(lang).F, SAGE]].map(([v, k, c], i) => (
         <div key={k} style={{ flex: 1, textAlign: "center", padding: "9px 4px", borderLeft: i ? `1px solid ${LINE}` : "none" }}>
           <div style={{ ...disp, fontSize: 15, fontWeight: 600, color: c }}>{v}</div>
           <div style={{ fontSize: 9, color: MUTED, letterSpacing: 1, textTransform: "uppercase" }}>{k}</div>

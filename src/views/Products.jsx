@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, disp, num, input, label, sectionTitle, primaryBtn, ghostBtn, load, save } from "../shared.js";
+import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, disp, num, input, label, sectionTitle, primaryBtn, ghostBtn, load, save, macroLetters } from "../shared.js";
 import { supabase } from "../supabaseClient.js";
 
 const T = {
@@ -86,6 +86,7 @@ const PlusIcon = ({ c }) => (
 
 export default function Products({ lang, session, onClose, onPick, embedded, autoScan, onProductChange }) {
   const t = (k) => (T[k] ? T[k][lang] : k);
+  const ml = macroLetters(lang);
   const cloud = !!(session && supabase);
   const [items, setItems] = useState(() => (cloud ? [] : load("hf_products", [])));
   const [nm, setNm] = useState(""), [br, setBr] = useState(""), [bc, setBc] = useState("");
@@ -274,7 +275,7 @@ export default function Products({ lang, session, onClose, onPick, embedded, aut
             <div key={it.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: `1px solid ${LINE}` }}>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 13.5, fontWeight: 600, color: PAPER }}>{it.name}{it.brand ? <span style={{ color: MUTED, fontWeight: 400 }}> · {it.brand}</span> : null}</div>
-                <div style={{ fontSize: 11, color: MUTED, marginTop: 1 }}>{(it.per_100 && it.per_100.kcal) || 0} kcal · {(it.per_100 && it.per_100.p) || 0}p/{(it.per_100 && it.per_100.c) || 0}c/{(it.per_100 && it.per_100.f) || 0}f <span style={{ opacity: 0.6 }}>/100g</span></div>
+                <div style={{ fontSize: 11, color: MUTED, marginTop: 1 }}>{(it.per_100 && it.per_100.kcal) || 0} kcal · {(it.per_100 && it.per_100.p) || 0}{ml.p}/{(it.per_100 && it.per_100.c) || 0}{ml.c}/{(it.per_100 && it.per_100.f) || 0}{ml.f} <span style={{ opacity: 0.6 }}>/100g</span></div>
               </div>
               {!onPick && <select value={catFor(it)} onChange={(e) => setCategory(it.id, e.target.value)} title={t("catLabel")} style={{ background: INK, border: `1px solid ${LINE}`, color: MUTED, borderRadius: 7, fontSize: 10.5, padding: "4px 5px", outline: "none", maxWidth: 104, appearance: "auto", WebkitAppearance: "auto", flexShrink: 0 }}>
                 {CAT_ORDER.map((c) => <option key={c} value={c}>{CATS[c][lang]}</option>)}
