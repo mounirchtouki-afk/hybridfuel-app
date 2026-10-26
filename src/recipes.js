@@ -156,7 +156,6 @@ export const RECIPES = [
       { nl: "Sesamzaad", en: "Sesame seeds", g: 8 },
     ],
     macros: { kcal: 600, p: 48, c: 72, fiber: 5, f: 11 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_155651_e5c8e83f-c51a-43f9-b95b-df82fd6badd1.png",
   },
   {
     id: 12, type: "lunch",
@@ -171,7 +170,6 @@ export const RECIPES = [
       { nl: "Lichte yoghurtdressing", en: "Light yoghurt dressing", g: 30 },
     ],
     macros: { kcal: 560, p: 42, c: 74, fiber: 8, f: 9 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_155651_231c17bd-9e26-4e21-81cf-c88c6097e41b.png",
   },
   {
     id: 13, type: "lunch",
@@ -186,7 +184,6 @@ export const RECIPES = [
       { nl: "Avocado", en: "Avocado", g: 50 },
     ],
     macros: { kcal: 640, p: 44, c: 68, fiber: 12, f: 20 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_155650_ba4dcbdb-86d0-44ed-9b32-982c3d0a436e.png",
   },
   {
     id: 14, type: "lunch",
@@ -201,7 +198,6 @@ export const RECIPES = [
       { nl: "Komkommer", en: "Cucumber", g: 60 },
     ],
     macros: { kcal: 480, p: 45, c: 42, fiber: 6, f: 13 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_155723_afb527d6-946b-43e2-bf33-aca0c4efa61f.png",
   },
   {
     id: 15, type: "lunch",
@@ -216,7 +212,6 @@ export const RECIPES = [
       { nl: "Avocado", en: "Avocado", g: 50 },
     ],
     macros: { kcal: 610, p: 40, c: 62, fiber: 8, f: 22 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_155650_0a2eb20b-dabb-4f06-8de5-365d33009da2.png",
   },
   {
     id: 16, type: "lunch",
@@ -230,7 +225,6 @@ export const RECIPES = [
       { nl: "Shoarmakruiden", en: "Shawarma spices", g: 5 },
     ],
     macros: { kcal: 540, p: 46, c: 60, fiber: 8, f: 10 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_155724_145ad12c-eb6a-4419-8c1b-2f890ce56ca3.png",
   },
   {
     id: 17, type: "lunch",
@@ -245,7 +239,6 @@ export const RECIPES = [
       { nl: "Granaatappelpitjes", en: "Pomegranate seeds", g: 30 },
     ],
     macros: { kcal: 560, p: 30, c: 52, fiber: 8, f: 26 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_155650_68e75bbb-4433-492a-9c17-9f454493fcc1.png",
   },
   {
     id: 18, type: "lunch",
@@ -260,7 +253,6 @@ export const RECIPES = [
       { nl: "Paprika", en: "Bell pepper", g: 70 },
     ],
     macros: { kcal: 590, p: 50, c: 66, fiber: 13, f: 10 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_155651_26f5ff2c-417d-405a-8ccb-a28b5ad84e03.png",
   },
   {
     id: 19, type: "lunch",
@@ -274,7 +266,6 @@ export const RECIPES = [
       { nl: "Olijfolie", en: "Olive oil", g: 8 },
     ],
     macros: { kcal: 550, p: 44, c: 62, fiber: 7, f: 13 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_155724_abe3ee28-a010-450e-a366-545b339bb0ae.png",
   },
   {
     id: 20, type: "lunch",
@@ -289,7 +280,6 @@ export const RECIPES = [
       { nl: "Limoen", en: "Lime", g: 15 },
     ],
     macros: { kcal: 600, p: 42, c: 72, fiber: 5, f: 15 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_155650_086df02d-ca00-415e-8c1c-0c96eb87e0a1.png",
   },
   {
     id: 21, type: "lunch",
@@ -304,7 +294,6 @@ export const RECIPES = [
       { nl: "Pitabrood", en: "Pita bread", g: 60 },
     ],
     macros: { kcal: 620, p: 24, c: 78, fiber: 15, f: 24 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_155724_e679319b-128a-409c-baba-3b1db38aae1c.png",
   },
   {
     id: 22, type: "lunch",
@@ -319,7 +308,6 @@ export const RECIPES = [
       { nl: "Limoen", en: "Lime", g: 15 },
     ],
     macros: { kcal: 500, p: 38, c: 66, fiber: 5, f: 9 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_155651_ad162497-e6df-43b6-a250-759b4b5bb6da.png",
   },
   {
     id: 23, type: "lunch",
@@ -334,7 +322,6 @@ export const RECIPES = [
       { nl: "Volkoren croutons", en: "Wholegrain croutons", g: 25 },
     ],
     macros: { kcal: 450, p: 48, c: 22, fiber: 4, f: 18 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_160443_f580c735-428e-4f7f-9454-f08465c701de.png",
   },
   {
     id: 24, type: "lunch",
@@ -349,7 +336,6 @@ export const RECIPES = [
       { nl: "Jus (mager)", en: "Lean gravy", g: 30 },
     ],
     macros: { kcal: 560, p: 42, c: 62, fiber: 9, f: 14 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_160412_78a49940-524c-428b-a51f-d3a6615f1465.png",
   },
   {
     id: 25, type: "lunch",
@@ -363,7 +349,6 @@ export const RECIPES = [
       { nl: "Teriyakisaus", en: "Teriyaki sauce", g: 25 },
     ],
     macros: { kcal: 620, p: 40, c: 66, fiber: 5, f: 22 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_160411_ea1c0a7e-6b7e-4a65-b931-103a21bb0f36.png",
   },
   {
     id: 26, type: "lunch",
@@ -377,7 +362,6 @@ export const RECIPES = [
       { nl: "Kerstomaten", en: "Cherry tomatoes", g: 80 },
     ],
     macros: { kcal: 610, p: 46, c: 70, fiber: 8, f: 18 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_160442_3f7e9127-91d0-4956-b6fd-f89bb713fc90.png",
   },
   {
     id: 27, type: "lunch",
@@ -392,7 +376,6 @@ export const RECIPES = [
       { nl: "Mosterd-yoghurt", en: "Mustard-yoghurt", g: 20 },
     ],
     macros: { kcal: 470, p: 42, c: 46, fiber: 6, f: 12 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_160443_4c28d029-028f-4df7-adb2-b2bd6857312f.png",
   },
   {
     id: 28, type: "lunch",
@@ -407,7 +390,6 @@ export const RECIPES = [
       { nl: "Sesamolie", en: "Sesame oil", g: 8 },
     ],
     macros: { kcal: 540, p: 28, c: 68, fiber: 7, f: 18 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_160412_298c546b-710c-4caf-8c2a-d96d4ab45ca4.png",
   },
   {
     id: 29, type: "lunch",
@@ -421,7 +403,6 @@ export const RECIPES = [
       { nl: "Komkommer", en: "Cucumber", g: 50 },
     ],
     macros: { kcal: 440, p: 32, c: 48, fiber: 5, f: 12 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_160413_3112bb0f-5d8d-498f-94f0-2765c9e05dca.png",
   },
   {
     id: 30, type: "lunch",
@@ -436,7 +417,6 @@ export const RECIPES = [
       { nl: "Lente-ui & groente", en: "Spring onion & veg", g: 80 },
     ],
     macros: { kcal: 460, p: 44, c: 50, fiber: 4, f: 9 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_160412_83999644-8026-4d04-8867-a0a8b2a0797e.png",
   },
   {
     id: 31, type: "lunch",
@@ -451,7 +431,6 @@ export const RECIPES = [
       { nl: "Currykruiden", en: "Curry spices", g: 5 },
     ],
     macros: { kcal: 580, p: 26, c: 86, fiber: 16, f: 14 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_160411_99d2f5bc-b0a5-46a6-9870-bde79aa1dd57.png",
   },
   {
     id: 32, type: "lunch",
@@ -466,7 +445,6 @@ export const RECIPES = [
       { nl: "Balsamicodressing", en: "Balsamic dressing", g: 20 },
     ],
     macros: { kcal: 420, p: 44, c: 16, fiber: 4, f: 20 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_160411_c1faa1c4-1c17-4ef6-a4e6-14b57ac00b03.png",
   },
   {
     id: 33, type: "lunch",
@@ -481,7 +459,6 @@ export const RECIPES = [
       { nl: "Magere crème fraîche", en: "Light sour cream", g: 25 },
     ],
     macros: { kcal: 500, p: 46, c: 46, fiber: 6, f: 14 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_160443_4d72365a-3d34-45cb-a8dc-da6b6245458c.png",
   },
   {
     id: 34, type: "lunch",
@@ -496,7 +473,6 @@ export const RECIPES = [
       { nl: "Sesamzaad", en: "Sesame seeds", g: 8 },
     ],
     macros: { kcal: 560, p: 38, c: 62, fiber: 8, f: 18 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_160412_e3769fce-5fa5-4da5-90ae-e9044d539a81.png",
   },
   {
     id: 35, type: "lunch",
@@ -510,7 +486,6 @@ export const RECIPES = [
       { nl: "Sojasaus (zoutarm)", en: "Soy sauce (low-salt)", g: 15 },
     ],
     macros: { kcal: 560, p: 46, c: 66, fiber: 6, f: 10 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_160443_bbd4a87d-b258-4820-a97e-1227014cd8a1.png",
   },
 
   // ===== ONTBIJT (36–56) =====
@@ -526,7 +501,6 @@ export const RECIPES = [
       { nl: "Honing", en: "Honey", g: 12 },
     ],
     macros: { kcal: 430, p: 28, c: 52, fiber: 5, f: 12 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_160723_1344a69d-6216-467a-b62f-a8cec9dd45da.png",
   },
   {
     id: 37, type: "breakfast",
@@ -541,7 +515,6 @@ export const RECIPES = [
       { nl: "Kaneel", en: "Cinnamon", g: 2 },
     ],
     macros: { kcal: 420, p: 24, c: 52, fiber: 7, f: 11 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_160724_7a863a86-9401-452e-bc72-e4152db27ce4.png",
   },
   {
     id: 38, type: "breakfast",
@@ -555,7 +528,6 @@ export const RECIPES = [
       { nl: "Olijfolie", en: "Olive oil", g: 6 },
     ],
     macros: { kcal: 380, p: 30, c: 6, fiber: 2, f: 26 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_160813_f0b6d0b8-80fd-4004-bdb6-311a05208499.png",
   },
   {
     id: 39, type: "breakfast",
@@ -569,7 +541,6 @@ export const RECIPES = [
       { nl: "Pindakaas", en: "Peanut butter", g: 20 },
     ],
     macros: { kcal: 520, p: 22, c: 68, fiber: 8, f: 17 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_160725_1c14a9f3-6b18-4c26-8a38-ee513b1ce4ef.png",
   },
   {
     id: 40, type: "breakfast",
@@ -583,7 +554,6 @@ export const RECIPES = [
       { nl: "Volkorenbrood", en: "Wholegrain bread", g: 50 },
     ],
     macros: { kcal: 400, p: 24, c: 38, fiber: 7, f: 16 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_160854_4e3460b4-799c-4ab1-aba5-f26529dfc37c.png",
   },
   {
     id: 41, type: "breakfast",
@@ -596,7 +566,6 @@ export const RECIPES = [
       { nl: "Appel/peer", en: "Apple/pear", g: 100 },
     ],
     macros: { kcal: 420, p: 36, c: 50, fiber: 6, f: 8 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_160723_b0876cd5-0224-486b-9049-c6b2e9342c85.png",
   },
   {
     id: 42, type: "breakfast",
@@ -609,7 +578,6 @@ export const RECIPES = [
       { nl: "Ei", en: "Egg", g: 50 },
     ],
     macros: { kcal: 400, p: 18, c: 34, fiber: 8, f: 22 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_160811_e6dbe2c2-e0c3-4a50-9d54-273b170873ce.png",
   },
   {
     id: 43, type: "breakfast",
@@ -624,7 +592,6 @@ export const RECIPES = [
       { nl: "Zaden-mix", en: "Seed mix", g: 10 },
     ],
     macros: { kcal: 400, p: 34, c: 48, fiber: 7, f: 9 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_160724_2c9573f0-21f0-4bc6-8826-2e40e25c9804.png",
   },
   {
     id: 44, type: "breakfast",
@@ -637,7 +604,6 @@ export const RECIPES = [
       { nl: "Magere kaas", en: "Low-fat cheese", g: 30 },
     ],
     macros: { kcal: 300, p: 28, c: 8, fiber: 2, f: 18 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_160813_f30be4ca-f972-4955-815b-02de7484c9c3.png",
   },
   {
     id: 45, type: "breakfast",
@@ -651,7 +617,6 @@ export const RECIPES = [
       { nl: "Eiwitpoeder (vanille)", en: "Protein powder (vanilla)", g: 15 },
     ],
     macros: { kcal: 360, p: 20, c: 36, fiber: 12, f: 15 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_160724_7c5a31f5-6d61-420c-a38d-9fadb10a9f57.png",
   },
   {
     id: 46, type: "breakfast",
@@ -664,7 +629,6 @@ export const RECIPES = [
       { nl: "Kalkoenspek", en: "Turkey bacon", g: 40 },
     ],
     macros: { kcal: 450, p: 34, c: 46, fiber: 5, f: 14 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_160722_af86e5e7-04ad-41df-a916-b2971b8c2ec0.png",
   },
   {
     id: 47, type: "breakfast",
@@ -678,7 +642,6 @@ export const RECIPES = [
       { nl: "Bessen", en: "Berries", g: 60 },
     ],
     macros: { kcal: 400, p: 32, c: 42, fiber: 5, f: 10 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_160724_8e696e45-d515-479b-a767-c50838fbc8bf.png",
   },
   {
     id: 48, type: "breakfast",
@@ -692,7 +655,6 @@ export const RECIPES = [
       { nl: "Kaneel", en: "Cinnamon", g: 2 },
     ],
     macros: { kcal: 420, p: 18, c: 68, fiber: 9, f: 8 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_160854_6be96588-2249-413c-b480-d24338d8fddc.png",
   },
   {
     id: 49, type: "breakfast",
@@ -706,7 +668,6 @@ export const RECIPES = [
       { nl: "Volkorenbrood", en: "Wholegrain bread", g: 50 },
     ],
     macros: { kcal: 380, p: 26, c: 30, fiber: 6, f: 18 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_160813_c5850a08-4f07-47b1-bb0a-b552f8d910b6.png",
   },
   {
     id: 50, type: "breakfast",
@@ -721,7 +682,6 @@ export const RECIPES = [
       { nl: "Bessen", en: "Berries", g: 60 },
     ],
     macros: { kcal: 440, p: 38, c: 46, fiber: 5, f: 10 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_160812_8894a768-bff3-4324-b986-a5faf42e2dfb.png",
   },
   {
     id: 51, type: "breakfast",
@@ -735,7 +695,6 @@ export const RECIPES = [
       { nl: "Amandelmelk", en: "Almond milk", g: 200 },
     ],
     macros: { kcal: 340, p: 30, c: 40, fiber: 5, f: 6 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_160814_3779924d-7ef8-4b76-ba1c-1930e2adcbb7.png",
   },
   {
     id: 52, type: "breakfast",
@@ -749,7 +708,6 @@ export const RECIPES = [
       { nl: "Bessen", en: "Berries", g: 60 },
     ],
     macros: { kcal: 400, p: 32, c: 52, fiber: 7, f: 7 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_160814_50ed8613-10b2-4edb-af5e-8043e8cec245.png",
   },
   {
     id: 53, type: "breakfast",
@@ -763,7 +721,6 @@ export const RECIPES = [
       { nl: "Komkommer & tomaat", en: "Cucumber & tomato", g: 60 },
     ],
     macros: { kcal: 360, p: 34, c: 30, fiber: 5, f: 11 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_160813_639a702c-d7ce-48ed-b53d-48d74c562e7c.png",
   },
   {
     id: 54, type: "breakfast",
@@ -776,7 +733,6 @@ export const RECIPES = [
       { nl: "Magere kaas", en: "Low-fat cheese", g: 25 },
     ],
     macros: { kcal: 320, p: 28, c: 8, fiber: 2, f: 20 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_160855_64d9a513-8ebc-4644-9b9b-0005a40493eb.png",
   },
   {
     id: 55, type: "breakfast",
@@ -790,7 +746,6 @@ export const RECIPES = [
       { nl: "Bessen & kaneel", en: "Berries & cinnamon", g: 50 },
     ],
     macros: { kcal: 460, p: 32, c: 66, fiber: 3, f: 7 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_160855_7b473d23-6a58-4ae0-a3a7-a80e1916f9aa.png",
   },
   {
     id: 56, type: "breakfast",
@@ -803,7 +758,6 @@ export const RECIPES = [
       { nl: "Avocado", en: "Avocado", g: 60 },
     ],
     macros: { kcal: 400, p: 34, c: 24, fiber: 8, f: 18 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_160855_05f86506-fa04-4b77-a77d-81531b91bc0e.png",
   },
 
   // ===== DINER (57–77) =====
@@ -819,7 +773,6 @@ export const RECIPES = [
       { nl: "Olijfolie", en: "Olive oil", g: 8 },
     ],
     macros: { kcal: 560, p: 50, c: 56, fiber: 9, f: 12 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_161159_5c853c1b-e00b-42d1-9f3c-79f1705613c9.png",
   },
   {
     id: 58, type: "dinner",
@@ -833,7 +786,6 @@ export const RECIPES = [
       { nl: "Ui & knoflook", en: "Onion & garlic", g: 40 },
     ],
     macros: { kcal: 620, p: 46, c: 78, fiber: 10, f: 14 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_161201_02c54939-cf99-4e71-bed8-c0953a23634e.png",
   },
   {
     id: 59, type: "dinner",
@@ -847,7 +799,6 @@ export const RECIPES = [
       { nl: "Olijfolie & citroen", en: "Olive oil & lemon", g: 10 },
     ],
     macros: { kcal: 470, p: 42, c: 50, fiber: 8, f: 10 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_161201_96467d02-7707-4a3e-8c4a-7b7c700857cb.png",
   },
   {
     id: 60, type: "dinner",
@@ -862,7 +813,6 @@ export const RECIPES = [
       { nl: "Groente-mix", en: "Vegetable mix", g: 100 },
     ],
     macros: { kcal: 600, p: 46, c: 70, fiber: 6, f: 14 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_161316_eac8d9da-a285-410c-9af2-5863fa5d4466.png",
   },
   {
     id: 61, type: "dinner",
@@ -876,7 +826,6 @@ export const RECIPES = [
       { nl: "Magere crème fraîche", en: "Light sour cream", g: 25 },
     ],
     macros: { kcal: 580, p: 50, c: 52, fiber: 6, f: 18 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_161201_9d535f0f-2a72-451f-90a1-79b2cc493e9f.png",
   },
   {
     id: 62, type: "dinner",
@@ -890,7 +839,6 @@ export const RECIPES = [
       { nl: "Tomatensaus", en: "Tomato sauce", g: 80 },
     ],
     macros: { kcal: 520, p: 40, c: 54, fiber: 8, f: 14 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_161315_efc35138-b311-4a2f-9802-d9265a20bdfa.png",
   },
   {
     id: 63, type: "dinner",
@@ -904,7 +852,6 @@ export const RECIPES = [
       { nl: "Olijfolie & citroen", en: "Olive oil & lemon", g: 8 },
     ],
     macros: { kcal: 560, p: 42, c: 44, fiber: 7, f: 24 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_161200_ce1934ec-b425-4c8e-b6d3-4553b85fa75b.png",
   },
   {
     id: 64, type: "dinner",
@@ -918,7 +865,6 @@ export const RECIPES = [
       { nl: "Sojasaus (zoutarm)", en: "Soy sauce (low-salt)", g: 15 },
     ],
     macros: { kcal: 580, p: 48, c: 68, fiber: 6, f: 10 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_161159_b673e965-a1c5-481b-8109-a6e7f936c0be.png",
   },
   {
     id: 65, type: "dinner",
@@ -933,7 +879,6 @@ export const RECIPES = [
       { nl: "Witte rijst (droog)", en: "White rice (dry)", g: 60 },
     ],
     macros: { kcal: 560, p: 26, c: 98, fiber: 20, f: 6 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_161200_ec508647-eb03-4b26-99d3-c187549dd6c7.png",
   },
   {
     id: 66, type: "dinner",
@@ -947,7 +892,6 @@ export const RECIPES = [
       { nl: "Parmezaan", en: "Parmesan", g: 15 },
     ],
     macros: { kcal: 620, p: 48, c: 72, fiber: 9, f: 16 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_161245_5a203015-2dcf-4c68-afe6-85e99c77de7e.png",
   },
   {
     id: 67, type: "dinner",
@@ -961,7 +905,6 @@ export const RECIPES = [
       { nl: "Currykruiden & groente", en: "Curry spices & veg", g: 100 },
     ],
     macros: { kcal: 540, p: 38, c: 72, fiber: 5, f: 11 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_161200_57d0a7ed-d31a-47c8-ac4d-2f3658fc1b08.png",
   },
   {
     id: 68, type: "dinner",
@@ -975,7 +918,6 @@ export const RECIPES = [
       { nl: "Magere crème fraîche", en: "Light sour cream", g: 30 },
     ],
     macros: { kcal: 520, p: 42, c: 52, fiber: 7, f: 14 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_161244_8bd5d458-8421-4d47-885f-cc128be7e439.png",
   },
   {
     id: 69, type: "dinner",
@@ -989,7 +931,6 @@ export const RECIPES = [
       { nl: "Wokgroenten", en: "Stir-fry vegetables", g: 120 },
     ],
     macros: { kcal: 560, p: 28, c: 78, fiber: 7, f: 14 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_161245_e2347897-5f13-48b6-8d7c-2706c031230d.png",
   },
   {
     id: 70, type: "dinner",
@@ -1002,7 +943,6 @@ export const RECIPES = [
       { nl: "Geroosterde groente", en: "Roasted vegetables", g: 120 },
     ],
     macros: { kcal: 640, p: 42, c: 56, fiber: 6, f: 26 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_161244_3cab5e58-1f2c-44d9-a00d-d134f161b752.png",
   },
   {
     id: 71, type: "dinner",
@@ -1016,7 +956,6 @@ export const RECIPES = [
       { nl: "Lichte knoflooksaus", en: "Light garlic sauce", g: 25 },
     ],
     macros: { kcal: 600, p: 50, c: 62, fiber: 5, f: 16 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_161316_cffe4983-f33a-4b59-8914-ca785f1feae9.png",
   },
   {
     id: 72, type: "dinner",
@@ -1030,7 +969,6 @@ export const RECIPES = [
       { nl: "Visbouillon", en: "Fish stock", g: 200 },
     ],
     macros: { kcal: 420, p: 40, c: 42, fiber: 7, f: 8 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_161243_abd9fab4-b0ca-4a53-834e-433959ab2e53.png",
   },
   {
     id: 73, type: "dinner",
@@ -1044,7 +982,6 @@ export const RECIPES = [
       { nl: "Witte rijst (droog)", en: "White rice (dry)", g: 70 },
     ],
     macros: { kcal: 580, p: 48, c: 60, fiber: 4, f: 16 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_161244_1cebeab4-ed77-464f-9397-034cc306dfc6.png",
   },
   {
     id: 74, type: "dinner",
@@ -1058,7 +995,6 @@ export const RECIPES = [
       { nl: "Lichte kookroom", en: "Light cooking cream", g: 40 },
     ],
     macros: { kcal: 600, p: 46, c: 70, fiber: 5, f: 14 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_161244_3f5ac257-79e9-4911-a977-6b1382a5fafb.png",
   },
   {
     id: 75, type: "dinner",
@@ -1072,7 +1008,6 @@ export const RECIPES = [
       { nl: "Olijfolie", en: "Olive oil", g: 8 },
     ],
     macros: { kcal: 520, p: 48, c: 48, fiber: 8, f: 14 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_161245_a4754055-67b3-4816-953b-97b7a2c0499e.png",
   },
   {
     id: 76, type: "dinner",
@@ -1086,7 +1021,6 @@ export const RECIPES = [
       { nl: "Witte rijst (droog)", en: "White rice (dry)", g: 50 },
     ],
     macros: { kcal: 640, p: 50, c: 70, fiber: 5, f: 16 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_161317_2c94c6c8-1ee9-4e81-8a53-d48ea2bc3d70.png",
   },
   {
     id: 77, type: "dinner",
@@ -1100,7 +1034,6 @@ export const RECIPES = [
       { nl: "Tomatensaus", en: "Tomato sauce", g: 60 },
     ],
     macros: { kcal: 500, p: 24, c: 82, fiber: 16, f: 7 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_161314_3b39a57b-8c74-4650-9931-e90b40af2c08.png",
   },
 
   // ===== TUSSENDOORTJE (78–100) =====
@@ -1116,7 +1049,6 @@ export const RECIPES = [
       { nl: "Pure chocolade", en: "Dark chocolate", g: 10 },
     ],
     macros: { kcal: 260, p: 20, c: 30, fiber: 4, f: 7 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_161817_ea2de41a-e3ae-4d30-9642-014cdce1a616.png",
   },
   {
     id: 79, type: "snack",
@@ -1129,7 +1061,6 @@ export const RECIPES = [
       { nl: "Honing", en: "Honey", g: 10 },
     ],
     macros: { kcal: 280, p: 28, c: 20, fiber: 2, f: 11 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_161819_d783634c-fe51-4844-874e-e52213bd7049.png",
   },
   {
     id: 80, type: "snack",
@@ -1142,7 +1073,6 @@ export const RECIPES = [
       { nl: "Banaan", en: "Banana", g: 80 },
     ],
     macros: { kcal: 250, p: 7, c: 34, fiber: 3, f: 10 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_161819_96c35eff-13f0-4391-9405-1b7fe7bee3a9.png",
   },
   {
     id: 81, type: "snack",
@@ -1153,7 +1083,6 @@ export const RECIPES = [
       { nl: "Eieren", en: "Eggs", g: 120 },
     ],
     macros: { kcal: 180, p: 16, c: 1, fiber: 0, f: 12 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_161818_4ca5f581-aefa-4269-8059-4708e09e3421.png",
   },
   {
     id: 82, type: "snack",
@@ -1167,7 +1096,6 @@ export const RECIPES = [
       { nl: "Cacao", en: "Cocoa", g: 5 },
     ],
     macros: { kcal: 280, p: 28, c: 24, fiber: 3, f: 8 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_161818_723d4ced-9b11-48b3-ace0-7ddd22afa29f.png",
   },
   {
     id: 83, type: "snack",
@@ -1179,7 +1107,6 @@ export const RECIPES = [
       { nl: "Wortel, komkommer & paprika", en: "Carrot, cucumber & pepper", g: 150 },
     ],
     macros: { kcal: 200, p: 7, c: 20, fiber: 7, f: 11 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_161818_ce1144da-e69c-4f64-8ed2-2e785fad92ea.png",
   },
   {
     id: 84, type: "snack",
@@ -1191,7 +1118,6 @@ export const RECIPES = [
       { nl: "Zeezout", en: "Sea salt", g: 1 },
     ],
     macros: { kcal: 170, p: 16, c: 12, fiber: 8, f: 7 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_161933_ed7eb653-aabd-4a23-9696-ecfbcf16df9b.png",
   },
   {
     id: 85, type: "snack",
@@ -1203,7 +1129,6 @@ export const RECIPES = [
       { nl: "Honing", en: "Honey", g: 12 },
     ],
     macros: { kcal: 220, p: 18, c: 22, fiber: 0, f: 7 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_161901_1eb38b0a-7e00-4d47-9dcc-1f42e1f95441.png",
   },
   {
     id: 86, type: "snack",
@@ -1215,7 +1140,6 @@ export const RECIPES = [
       { nl: "Amandelboter", en: "Almond butter", g: 20 },
     ],
     macros: { kcal: 210, p: 5, c: 24, fiber: 5, f: 12 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_161819_6bece8c7-cddd-436e-ac11-b2a10c680aa1.png",
   },
   {
     id: 87, type: "snack",
@@ -1228,7 +1152,6 @@ export const RECIPES = [
       { nl: "Bessen", en: "Berries", g: 50 },
     ],
     macros: { kcal: 230, p: 20, c: 26, fiber: 2, f: 5 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_161901_ad614f2f-8b50-465c-8576-a5e5ec990a4d.png",
   },
   {
     id: 88, type: "snack",
@@ -1242,7 +1165,6 @@ export const RECIPES = [
       { nl: "Water of amandelmelk", en: "Water or almond milk", g: 200 },
     ],
     macros: { kcal: 260, p: 28, c: 32, fiber: 4, f: 3 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_161818_028e451b-7a6e-43c0-989a-1c0bbde795e4.png",
   },
   {
     id: 89, type: "snack",
@@ -1255,7 +1177,6 @@ export const RECIPES = [
       { nl: "Kalkoenfilet", en: "Turkey breast", g: 40 },
     ],
     macros: { kcal: 240, p: 22, c: 22, fiber: 3, f: 8 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_161936_fc72d73d-28f6-4427-9117-0da60ae462bf.png",
   },
   {
     id: 90, type: "snack",
@@ -1268,7 +1189,6 @@ export const RECIPES = [
       { nl: "Havermout", en: "Oats", g: 20 },
     ],
     macros: { kcal: 260, p: 7, c: 32, fiber: 5, f: 12 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_161935_1a6df780-6114-4ae0-b07c-fbe67b6dbc5a.png",
   },
   {
     id: 91, type: "snack",
@@ -1280,7 +1200,6 @@ export const RECIPES = [
       { nl: "Ananas", en: "Pineapple", g: 80 },
     ],
     macros: { kcal: 220, p: 26, c: 20, fiber: 1, f: 4 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_161933_59a3f137-5d71-418e-aa70-d89a3790f8f2.png",
   },
   {
     id: 92, type: "snack",
@@ -1293,7 +1212,6 @@ export const RECIPES = [
       { nl: "Gedroogd fruit", en: "Dried fruit", g: 20 },
     ],
     macros: { kcal: 270, p: 8, c: 24, fiber: 4, f: 16 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_161901_d635e22d-7b15-4f5d-811e-cd14f4c2edb2.png",
   },
   {
     id: 93, type: "snack",
@@ -1306,7 +1224,6 @@ export const RECIPES = [
       { nl: "Cacao", en: "Cocoa", g: 5 },
     ],
     macros: { kcal: 240, p: 36, c: 16, fiber: 2, f: 4 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_161902_98676ce7-87a0-4f2e-bac4-982d2eb2ac4e.png",
   },
   {
     id: 94, type: "snack",
@@ -1318,7 +1235,6 @@ export const RECIPES = [
       { nl: "Pindakaas", en: "Peanut butter", g: 15 },
     ],
     macros: { kcal: 200, p: 6, c: 30, fiber: 4, f: 8 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_161902_58c87664-9114-4fe2-b965-6ffef714ab37.png",
   },
   {
     id: 95, type: "snack",
@@ -1329,7 +1245,6 @@ export const RECIPES = [
       { nl: "Gemengde noten (ongezouten)", en: "Mixed nuts (unsalted)", g: 30 },
     ],
     macros: { kcal: 180, p: 6, c: 6, fiber: 3, f: 16 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_161902_dd669ef4-49d9-435e-be69-fea771f4bb80.png",
   },
   {
     id: 96, type: "snack",
@@ -1341,7 +1256,6 @@ export const RECIPES = [
       { nl: "Druiven", en: "Grapes", g: 100 },
     ],
     macros: { kcal: 200, p: 14, c: 18, fiber: 1, f: 9 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_161901_a6a9cbf9-155d-4258-aebc-4e15f9ce349d.png",
   },
   {
     id: 97, type: "snack",
@@ -1355,7 +1269,6 @@ export const RECIPES = [
       { nl: "Bessen", en: "Berries", g: 40 },
     ],
     macros: { kcal: 260, p: 18, c: 24, fiber: 11, f: 11 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_161902_c2f7396f-cddb-415b-a57b-02b001b3ba4c.png",
   },
   {
     id: 98, type: "snack",
@@ -1366,7 +1279,6 @@ export const RECIPES = [
       { nl: "Popcornmais (gepoft)", en: "Popcorn kernels (popped)", g: 25 },
     ],
     macros: { kcal: 95, p: 3, c: 19, fiber: 4, f: 1 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_161932_174df508-a8fc-4d24-8972-674cc0bbaa9b.png",
   },
   {
     id: 99, type: "snack",
@@ -1379,7 +1291,6 @@ export const RECIPES = [
       { nl: "Volkoren crackers", en: "Wholegrain crackers", g: 25 },
     ],
     macros: { kcal: 210, p: 24, c: 20, fiber: 3, f: 4 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_161935_dcc035fa-91d4-431f-9544-17f11bb9e00b.png",
   },
   {
     id: 100, type: "snack",
@@ -1393,7 +1304,6 @@ export const RECIPES = [
       { nl: "Bessen", en: "Berries", g: 40 },
     ],
     macros: { kcal: 240, p: 22, c: 36, fiber: 5, f: 3 },
-    image_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3L6s09ejaUCWbqeNS7rP2HKZ2iA/hf_20261026_161935_221ca59c-9c80-4918-983d-52a70ad242ca.png",
   },
 ];
 
