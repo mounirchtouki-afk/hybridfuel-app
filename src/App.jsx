@@ -9,6 +9,23 @@ import Reminders, { checkReminders } from "./views/Reminders.jsx";
 import Auth from "./views/Auth.jsx";
 import { supabase } from "./supabaseClient.js";
 
+// ===== Dev-modus demo-plan (alleen voor review op preview/localhost) =====
+const DEMO_TARGETS = { kcal: 2400, protein: 180, carbs: 240, fat: 70, bmi: 24.1, train: { kcal: 2600 }, rest: { kcal: 2200 } };
+function demoWeek(lang) {
+  const names = lang === "nl" ? ["Ma", "Di", "Wo", "Do", "Vr", "Za", "Zo"] : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  const train = [
+    { t: lang === "nl" ? "ONTBIJT" : "BREAKFAST", n: lang === "nl" ? "Skyr met havermout & bessen" : "Skyr with oats & berries", kcal: 520, p: 42, c: 60, f: 12, ing: [{ n: "skyr", g: 250 }, { n: lang === "nl" ? "havermout" : "oats", g: 60 }, { n: lang === "nl" ? "blauwe bessen" : "blueberries", g: 80 }] },
+    { t: "LUNCH", n: lang === "nl" ? "Kipfilet, rijst & broccoli" : "Chicken, rice & broccoli", kcal: 680, p: 55, c: 80, f: 14, ing: [{ n: lang === "nl" ? "kipfilet" : "chicken breast", g: 180 }, { n: lang === "nl" ? "rijst" : "rice", g: 90 }, { n: "broccoli", g: 150 }] },
+    { t: lang === "nl" ? "DINER" : "DINNER", n: lang === "nl" ? "Zalm met aardappel & spinazie" : "Salmon with potato & spinach", kcal: 700, p: 48, c: 55, f: 28, ing: [{ n: lang === "nl" ? "zalm" : "salmon", g: 170 }, { n: lang === "nl" ? "aardappel" : "potato", g: 300 }, { n: lang === "nl" ? "spinazie" : "spinach", g: 100 }] },
+  ];
+  const rest = [
+    { t: lang === "nl" ? "ONTBIJT" : "BREAKFAST", n: lang === "nl" ? "Omelet met volkorenbrood" : "Omelet with wholegrain bread", kcal: 450, p: 32, c: 38, f: 18, ing: [{ n: lang === "nl" ? "eieren" : "eggs", g: 150 }, { n: lang === "nl" ? "volkorenbrood" : "wholegrain bread", g: 80 }] },
+    { t: "LUNCH", n: lang === "nl" ? "Kwark met noten & appel" : "Quark with nuts & apple", kcal: 420, p: 34, c: 32, f: 16, ing: [{ n: lang === "nl" ? "magere kwark" : "low-fat quark", g: 300 }, { n: lang === "nl" ? "walnoten" : "walnuts", g: 20 }, { n: lang === "nl" ? "appel" : "apple", g: 150 }] },
+    { t: lang === "nl" ? "DINER" : "DINNER", n: lang === "nl" ? "Rundergehakt met quinoa" : "Beef mince with quinoa", kcal: 620, p: 46, c: 52, f: 22, ing: [{ n: lang === "nl" ? "rundergehakt 5%" : "beef mince 5%", g: 150 }, { n: "quinoa", g: 80 }, { n: lang === "nl" ? "courgette" : "zucchini", g: 150 }] },
+  ];
+  return { days: names.map((d, i) => { const tr = i % 2 === 0; return { d, train: tr, m: (tr ? train : rest).map((m) => ({ ...m, ing: m.ing.map((g) => ({ ...g })) })) }; }) };
+}
+
 // Roept GEEN Claude aan vanuit de browser — alles via /api/plan (key zit op de server).
 // Tweetalig: NL/EN via een vlagschakelaar. De gekozen taal gaat mee naar de backend.
 
@@ -276,10 +293,32 @@ export default function App() {
   const [subTier, setSubTier] = useState("free");
   const [installEvt, setInstallEvt] = useState(null);
   const [installDismissed, setInstallDismissed] = useState(() => load("hf_install_dismissed", false));
+  const [devMode, setDevMode] = useState(false);
 
-  // Toegang per laag. Eenmalig betaald (unlocked) = Basis-niveau app-toegang.
-  const hasBasis = unlocked || subTier === "basis" || subTier === "pro";
-  const hasPro = subTier === "pro";
+  // Dev-modus: alles zichtbaar voor review. Alleen op preview/localhost, NOOIT op de live site.
+  // Aanzetten: ?dev=1 in de URL. Uitzetten: ?dev=0.
+  useEffect(() => {
+    try {
+      const h = location.hostname;
+      if (!(h === "localhost" || h === "127.0.0.1" || h.endsWith(".vercel.app"))) { setDevMode(false); return; }
+      const q = new URLSearchParams(location.search);
+      if (q.get("dev") === "1") { try { localStorage.setItem("hf_dev", "1"); } catch (e) {} }
+      if (q.get("dev") === "0") { try { localStorage.removeItem("hf_dev"); } catch (e) {} }
+      const on = localStorage.getItem("hf_dev") === "1";
+      setDevMode(on);
+      if (on) {
+        let saved = null; try { saved = JSON.parse(localStorage.getItem("hf_lastplan") || "null"); } catch (e) {}
+        if (!(saved && saved.week && saved.week.days)) {
+          const w = demoWeek(localStorage.getItem("hf_lang") === "nl" ? "nl" : "en");
+          setWeek(w); setTargets(DEMO_TARGETS); setStarted(true);
+        }
+      }
+    } catch (e) { setDevMode(false); }
+  }, []);
+
+  // Toegang per laag. Eenmalig betaald (unlocked) = Basis-niveau. Dev-modus = alles.
+  const hasBasis = devMode || unlocked || subTier === "basis" || subTier === "pro";
+  const hasPro = devMode || subTier === "pro";
 
   useEffect(() => {
     try { const l = localStorage.getItem("hf_lang"); if (l === "nl" || l === "en") setLangState(l); } catch (e) {}
@@ -701,7 +740,10 @@ export default function App() {
       <div style={{ borderBottom: `1px solid ${LINE}`, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, position: "sticky", top: 0, background: `radial-gradient(130% 320% at 94% 0%, rgba(225,29,72,0.16), ${INK} 58%), ${INK}`, zIndex: 20 }}>
         <div style={{ width: 32, height: 32, borderRadius: 8, background: EMBER, display: "flex", alignItems: "center", justifyContent: "center", ...disp, fontWeight: 700, color: INK, fontSize: 19 }}>H</div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ ...disp, fontWeight: 700, fontSize: 19, letterSpacing: 0.5, lineHeight: 1 }}>HYBRIDFUEL<span style={{ color: EMBER }}>CO</span></div>
+          <div style={{ ...disp, fontWeight: 700, fontSize: 19, letterSpacing: 0.5, lineHeight: 1, display: "flex", alignItems: "center", gap: 8 }}>
+            <span>HYBRIDFUEL<span style={{ color: EMBER }}>CO</span></span>
+            {devMode && <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: 1, color: INK, background: EMBER, borderRadius: 4, padding: "2px 6px" }}>DEV</span>}
+          </div>
           <div style={{ fontSize: 10, color: MUTED, letterSpacing: 1, textTransform: "uppercase", marginTop: 3 }}>{T("tagline")}</div>
         </div>
         <div onClick={() => setShowAuth(true)} title="Account" style={{ cursor: "pointer", padding: 6, display: "flex", alignItems: "center" }}>
