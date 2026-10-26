@@ -191,6 +191,8 @@ const TXT = {
   moveClear: { nl: "Wissen", en: "Clear" },
   saveAsRecipe: { nl: "Bewaar als recept", en: "Save as recipe" },
   editVals: { nl: "Waarden bewerken", en: "Edit values" },
+  applyVals: { nl: "Toepassen", en: "Apply" },
+  ingValsHint: { nl: "Voedingswaarde per 100 g voor dit ingrediënt. Pas eiwit, koolhydraten of vet aan; de maaltijd herberekent.", en: "Nutrition per 100 g for this ingredient. Adjust protein, carbs or fat; the meal recalculates." },
   toProduct: { nl: "Bewaar in producten", en: "Save to products" },
   linkedTag: { nl: "gekoppeld", en: "linked" },
   per100Hint: { nl: "Voedingswaarde per 100 g. Dit ingrediënt komt in je producten en blijft gekoppeld — pas je het daar aan, dan verandert het hier mee.", en: "Nutrition per 100 g. This ingredient goes to your products and stays linked — change it there and it updates here." },
@@ -913,7 +915,29 @@ export default function App() {
       setSavedMsg(di + ":" + mi); setTimeout(() => setSavedMsg(null), 1800);
     } catch (e) {}
   }
-  // Bewaar één ingrediënt als product (op verzoek) en koppel het (pid).
+  // Pas de voedingswaarde (per 100 g) van één ingrediënt aan en herbereken de
+  // maaltijd. Had het ingrediënt nog geen per-100-waarde, dan nemen we zijn
+  // huidige aandeel in de maaltijd (naar rato van gewicht) als startpunt, zodat
+  // de wijziging die je typt zichtbaar het dagtotaal beweegt — zonder te crashen.
+  function applyIngVals(di, mi, ii, per100, name, pid) {
+    mutDay(di, (d) => {
+      d.m = d.m.map((mm, j) => {
+        if (j !== mi) return mm;
+        const ing = mm.ing || [], old = ing[ii];
+        if (!old) return mm;
+        const np = { kcal: R(num(per100.kcal)), p: R(num(per100.p)), c: R(num(per100.c)), f: R(num(per100.f)) };
+        let oldC;
+        if (old.per100) oldC = ingMacros(old) || { kcal: 0, p: 0, c: 0, f: 0 };
+        else { const totG = (mm.ing || []).reduce((a, x) => a + num(x.g), 0) || 1; const sh = num(old.g) / totG; oldC = { kcal: R(num(mm.kcal) * sh), p: R(num(mm.p) * sh), c: R(num(mm.c) * sh), f: R(num(mm.f) * sh) }; }
+        const nextIng = { ...old, per100: np, n: name != null ? name : old.n };
+        if (pid !== undefined) nextIng.pid = pid;
+        const newC = ingMacros(nextIng) || { kcal: 0, p: 0, c: 0, f: 0 };
+        return { ...mm, ing: ing.map((x, k) => k === ii ? nextIng : x), kcal: R(num(mm.kcal) + (newC.kcal || 0) - (oldC.kcal || 0)), p: R(num(mm.p) + (newC.p || 0) - (oldC.p || 0)), c: R(num(mm.c) + (newC.c || 0) - (oldC.c || 0)), f: R(num(mm.f) + (newC.f || 0) - (oldC.f || 0)) };
+      });
+      return d;
+    });
+  }
+  // Bewaar één ingrediënt als product (op verzoek), pas de waarden toe én koppel (pid).
   async function saveIngProduct(di, mi, ii, per100, name) {
     const nm = (name || "").trim() || "Product";
     const p100 = { kcal: R(num(per100.kcal)), p: R(num(per100.p)), c: R(num(per100.c)), f: R(num(per100.f)) };
@@ -927,7 +951,7 @@ export default function App() {
         save("hf_products", [...all, { id: newId, name: nm, brand: null, barcode: null, per_100: p100, category: null }]);
       }
     } catch (e) {}
-    patchIng(di, mi, ii, { n: nm, per100: p100, pid: newId });
+    applyIngVals(di, mi, ii, p100, nm, newId);
   }
   // Een product is aangepast → werk alle gekoppelde ingrediënten in het
   // weekschema én in de datum-afwijkingen bij (waarden gaan automatisch mee).
@@ -1114,6 +1138,12 @@ export default function App() {
     const icDate = <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 9h18M8 3v4M16 3v4" /></svg>;
     const icEdit = <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z" /></svg>;
     const miniIn = { background: INK, border: `1px solid ${LINE}`, color: PAPER, padding: "7px 6px", borderRadius: 7, fontSize: 12, outline: "none", width: "100%", textAlign: "center" };
+    const seedPer100 = (m, ing) => {
+      if (ing.per100) return { kcal: ing.per100.kcal || "", p: ing.per100.p || "", c: ing.per100.c || "", f: ing.per100.f || "" };
+      const totG = (m.ing || []).reduce((a, x) => a + num(x.g), 0) || 1;
+      const per = (v) => R(num(v) * 100 / totG);
+      return { kcal: per(m.kcal), p: per(m.p), c: per(m.c), f: per(m.f) };
+    };
     const valEditor = (mi, obj, onPatch) => (
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 6, marginBottom: 8 }}>
         {[["kcal", "kcal"], ["p", "P"], ["c", "C"], ["f", "F"]].map(([k, lbl]) => (
@@ -1151,30 +1181,34 @@ export default function App() {
                   <div onClick={() => setOpenMeal(openMeal === mi ? null : mi)} style={sqBtn(openMeal === mi)}><Dots /></div>
                 </div>
                 {valMeal === mi && valEditor(mi, m, (k, v) => patchMeal(di, mi, { [k]: num(v) }))}
-                {(m.ing || []).map((ing, ii) => (
+                {(m.ing || []).map((ing, ii) => {
+                  const openForm = () => { const s = seedPer100(m, ing); setIngForm({ mi, ii, name: ing.n || "", kcal: s.kcal, p: s.p, c: s.c, f: s.f }); };
+                  const isOpen = ingForm && ingForm.mi === mi && ingForm.ii === ii;
+                  return (
                   <div key={ii} style={{ marginBottom: 6 }}>
                     <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                       <input value={ing.n} onChange={(e) => patchIng(di, mi, ii, { n: e.target.value })} placeholder={T("ingrNamePh")} style={{ ...sIn, flex: 1 }} />
-                      <input value={ing.g} onChange={(e) => patchIng(di, mi, ii, { g: num(e.target.value) })} inputMode="numeric" style={{ ...sIn, width: 52, textAlign: "right" }} />
+                      <input value={ing.g} onChange={(e) => patchIng(di, mi, ii, { g: num(e.target.value) })} inputMode="numeric" style={{ ...sIn, width: 50, textAlign: "right" }} />
                       <span style={{ fontSize: 11, color: MUTED }}>g</span>
-                      {ing.pid
-                        ? <span style={{ fontSize: 8, color: SAGE, border: `1px solid ${SAGE}`, borderRadius: 4, padding: "1px 4px", letterSpacing: 0.3, fontWeight: 700, ...disp, whiteSpace: "nowrap" }}>{T("linkedTag")}</span>
-                        : <div onClick={() => setIngForm({ mi, ii, name: ing.n || "", kcal: (ing.per100 && ing.per100.kcal) || "", p: (ing.per100 && ing.per100.p) || "", c: (ing.per100 && ing.per100.c) || "", f: (ing.per100 && ing.per100.f) || "" })} title={T("toProduct")} style={{ cursor: "pointer", color: MUTED, display: "flex", padding: "0 1px" }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21l-7-4-7 4V5a2 2 0 012-2h10a2 2 0 012 2z" /></svg></div>}
+                      {ing.pid && <span style={{ fontSize: 8, color: SAGE, border: `1px solid ${SAGE}`, borderRadius: 4, padding: "1px 4px", letterSpacing: 0.3, fontWeight: 700, ...disp, whiteSpace: "nowrap" }}>{T("linkedTag")}</span>}
+                      <div onClick={() => isOpen ? setIngForm(null) : openForm()} title={T("editVals")} style={{ cursor: "pointer", color: isOpen ? EMBER : MUTED, display: "flex", padding: "0 1px" }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z" /></svg></div>
                       <div onClick={() => removeIngr(di, mi, ii)} style={{ cursor: "pointer", color: MUTED, fontSize: 15, padding: "0 2px" }}>×</div>
                     </div>
-                    {ingForm && ingForm.mi === mi && ingForm.ii === ii && (
+                    {isOpen && (
                       <div style={{ background: "#121212", border: `1px solid ${LINE}`, borderRadius: 10, padding: 10, marginTop: 6 }}>
-                        <div style={{ fontSize: 10.5, color: MUTED, lineHeight: 1.5, marginBottom: 8 }}>{T("per100Hint")}</div>
+                        <div style={{ fontSize: 10.5, color: MUTED, lineHeight: 1.5, marginBottom: 8 }}>{T("ingValsHint")}</div>
                         <input value={ingForm.name} onChange={(e) => setIngForm({ ...ingForm, name: e.target.value })} placeholder={T("ingName")} style={{ ...miniIn, textAlign: "left", marginBottom: 8 }} />
                         {valEditor(mi, ingForm, (k, v) => setIngForm({ ...ingForm, [k]: v }))}
-                        <div style={{ display: "flex", gap: 8 }}>
-                          <div onClick={() => { saveIngProduct(di, mi, ii, { kcal: ingForm.kcal, p: ingForm.p, c: ingForm.c, f: ingForm.f }, ingForm.name); setIngForm(null); }} style={{ flex: 1, textAlign: "center", cursor: "pointer", background: EMBER, color: PAPER, borderRadius: 8, padding: "9px 0", ...disp, fontWeight: 700, fontSize: 12.5, letterSpacing: 0.3 }}>{T("toProduct")}</div>
+                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                          <div onClick={() => { applyIngVals(di, mi, ii, { kcal: ingForm.kcal, p: ingForm.p, c: ingForm.c, f: ingForm.f }, ingForm.name); setIngForm(null); }} style={{ flex: 1, minWidth: 90, textAlign: "center", cursor: "pointer", background: EMBER, color: PAPER, borderRadius: 8, padding: "9px 0", ...disp, fontWeight: 700, fontSize: 12.5, letterSpacing: 0.3 }}>{T("applyVals")}</div>
+                          {!ing.pid && <div onClick={() => { saveIngProduct(di, mi, ii, { kcal: ingForm.kcal, p: ingForm.p, c: ingForm.c, f: ingForm.f }, ingForm.name); setIngForm(null); }} style={{ cursor: "pointer", color: EMBER, border: `1px solid ${EMBER}`, borderRadius: 8, padding: "9px 12px", ...disp, fontWeight: 700, fontSize: 12, letterSpacing: 0.3 }}>{T("toProduct")}</div>}
                           <div onClick={() => setIngForm(null)} style={{ cursor: "pointer", color: MUTED, fontSize: 12, fontWeight: 600, padding: "9px 12px", border: `1px solid ${LINE}`, borderRadius: 8 }}>{T("cancelShort")}</div>
                         </div>
                       </div>
                     )}
                   </div>
-                ))}
+                  );
+                })}
                 <div style={{ fontSize: 10.5, color: MUTED, marginTop: 6, textAlign: "right" }}>{m.kcal} kcal · {m.p}p/{m.c}c/{m.f}f</div>
               </div>
               {openMeal === mi && (
