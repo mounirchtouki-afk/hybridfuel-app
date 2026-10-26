@@ -40,12 +40,14 @@ function verify(raw, sigHeader, secret) {
   return age < 300;
 }
 
-function supaBase() { return (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "").replace(/\/$/, ""); }
+// Harde fallback op de project-URL, zodat een ontbrekende SUPABASE_URL op Preview
+// niet stilletjes de write laat falen (zelfde URL als supabaseClient.js).
+function supaBase() { return (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "https://tkmyjpsmdijaalwgzqdy.supabase.co").replace(/\/$/, ""); }
 
 async function setSub(userId, fields) {
   const url = supaBase();
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key || !userId) { console.warn("stripe-webhook: supabase niet geconfigureerd of geen userId"); return; }
+  if (!url || !key || !userId) return { ok: false, reason: "missing", hasUrl: !!url, hasKey: !!key, hasUserId: !!userId };
   // Upsert op user_id (unique): werkt de rij bij, of maakt 'm aan als de signup-trigger
   // geen rij heeft gezet. Zo is de tier-update niet afhankelijk van de trigger.
   const r = await fetch(url + "/rest/v1/subscriptions?on_conflict=user_id", {
@@ -53,7 +55,8 @@ async function setSub(userId, fields) {
     headers: { apikey: key, Authorization: "Bearer " + key, "Content-Type": "application/json", Prefer: "resolution=merge-duplicates,return=minimal" },
     body: JSON.stringify({ user_id: userId, ...fields, updated_at: new Date().toISOString() }),
   });
-  if (!r.ok) { const txt = await r.text().catch(() => ""); console.error("supabase upsert faalde", r.status, txt); }
+  if (!r.ok) { const txt = await r.text().catch(() => ""); console.error("supabase upsert faalde", r.status, txt); return { ok: false, status: r.status, body: txt.slice(0, 300) }; }
+  return { ok: true };
 }
 
 async function stripeGet(path) {
@@ -76,6 +79,7 @@ export default async function handler(req, res) {
   let evt;
   try { evt = JSON.parse(raw.toString("utf8")); } catch (e) { return res.status(400).json({ error: "bad_json" }); }
 
+  let db = { skipped: evt.type };
   try {
     const o = evt.data && evt.data.object;
     if (evt.type === "checkout.session.completed" && o && o.mode === "subscription") {
@@ -89,7 +93,7 @@ export default async function handler(req, res) {
           if (sub.current_period_end) periodEnd = new Date(sub.current_period_end * 1000).toISOString();
         }
       }
-      await setSub(userId, {
+      db = await setSub(userId, {
         stripe_customer_id: o.customer || null,
         stripe_subscription_id: o.subscription || null,
         tier, status: "active", interval, current_period_end: periodEnd, cancel_at_period_end: false,
@@ -99,7 +103,7 @@ export default async function handler(req, res) {
       const active = o.status === "active" || o.status === "trialing";
       const tier = active ? ((o.metadata && o.metadata.tier) || "basis") : "free";
       const interval = o.items && o.items.data && o.items.data[0] && o.items.data[0].price && o.items.data[0].price.recurring && o.items.data[0].price.recurring.interval;
-      await setSub(userId, {
+      db = await setSub(userId, {
         tier, status: o.status,
         interval: interval || null,
         current_period_end: o.current_period_end ? new Date(o.current_period_end * 1000).toISOString() : null,
@@ -107,13 +111,13 @@ export default async function handler(req, res) {
       });
     } else if (evt.type === "customer.subscription.deleted" && o) {
       const userId = o.metadata && o.metadata.user_id;
-      await setSub(userId, { tier: "free", status: "canceled", cancel_at_period_end: false });
+      db = await setSub(userId, { tier: "free", status: "canceled", cancel_at_period_end: false });
     }
   } catch (err) {
     console.error("stripe-webhook handler error", err);
-    // 200 teruggeven zodat Stripe niet eindeloos opnieuw probeert bij een eigen bug;
-    // de fout staat in de logs.
+    db = { ok: false, reason: "handler_error", message: String(err && err.message || err).slice(0, 200) };
   }
 
-  return res.status(200).json({ received: true });
+  // db wordt teruggegeven zodat de oorzaak zichtbaar is in het Stripe-antwoord (debug).
+  return res.status(200).json({ received: true, db });
 }
