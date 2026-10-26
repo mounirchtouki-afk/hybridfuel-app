@@ -15,8 +15,15 @@ import { supabase } from "./supabaseClient.js";
 
 // ===== Dev-modus demo-plan (alleen voor review op preview/localhost) =====
 const DEMO_TARGETS = { kcal: 2400, protein: 180, carbs: 240, fat: 70, bmi: 24.1, train: { kcal: 2600 }, rest: { kcal: 2200 } };
-function demoWeek(lang) {
+function demoWeek(lang, nSnack = 0) {
   const names = lang === "nl" ? ["Ma", "Di", "Wo", "Do", "Vr", "Za", "Zo"] : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  const SNK = lang === "nl" ? "TUSSENDOORTJE" : "SNACK";
+  const snackPool = [
+    { t: SNK, n: lang === "nl" ? "Banaan" : "Banana", kcal: 105, p: 1, c: 27, f: 0, ing: [{ n: lang === "nl" ? "banaan" : "banana", g: 120 }] },
+    { t: SNK, n: lang === "nl" ? "Appel + handje noten" : "Apple + handful nuts", kcal: 190, p: 5, c: 22, f: 10, ing: [{ n: lang === "nl" ? "appel" : "apple", g: 150 }, { n: lang === "nl" ? "amandelen" : "almonds", g: 20 }] },
+    { t: SNK, n: lang === "nl" ? "Griekse yoghurt" : "Greek yoghurt", kcal: 150, p: 15, c: 10, f: 5, ing: [{ n: lang === "nl" ? "Griekse yoghurt" : "Greek yoghurt", g: 200 }] },
+  ];
+  const snk = snackPool.slice(0, Math.max(0, Math.min(3, nSnack))).map((m) => ({ ...m, ing: m.ing.map((g) => ({ ...g })) }));
   const train = [
     { t: lang === "nl" ? "ONTBIJT" : "BREAKFAST", n: lang === "nl" ? "Skyr met havermout & bessen" : "Skyr with oats & berries", kcal: 520, p: 42, c: 60, f: 12, ing: [{ n: "skyr", g: 250 }, { n: lang === "nl" ? "havermout" : "oats", g: 60 }, { n: lang === "nl" ? "blauwe bessen" : "blueberries", g: 80 }] },
     { t: "LUNCH", n: lang === "nl" ? "Kipfilet, rijst & broccoli" : "Chicken, rice & broccoli", kcal: 680, p: 55, c: 80, f: 14, ing: [{ n: lang === "nl" ? "kipfilet" : "chicken breast", g: 180 }, { n: lang === "nl" ? "rijst" : "rice", g: 90 }, { n: "broccoli", g: 150 }] },
@@ -27,7 +34,14 @@ function demoWeek(lang) {
     { t: "LUNCH", n: lang === "nl" ? "Kwark met noten & appel" : "Quark with nuts & apple", kcal: 420, p: 34, c: 32, f: 16, ing: [{ n: lang === "nl" ? "magere kwark" : "low-fat quark", g: 300 }, { n: lang === "nl" ? "walnoten" : "walnuts", g: 20 }, { n: lang === "nl" ? "appel" : "apple", g: 150 }] },
     { t: lang === "nl" ? "DINER" : "DINNER", n: lang === "nl" ? "Rundergehakt met quinoa" : "Beef mince with quinoa", kcal: 620, p: 46, c: 52, f: 22, ing: [{ n: lang === "nl" ? "rundergehakt 5%" : "beef mince 5%", g: 150 }, { n: "quinoa", g: 80 }, { n: lang === "nl" ? "courgette" : "zucchini", g: 150 }] },
   ];
-  return { days: names.map((d, i) => { const tr = i % 2 === 0; return { d, train: tr, m: (tr ? train : rest).map((m) => ({ ...m, ing: m.ing.map((g) => ({ ...g })) })) }; }) };
+  const withSnacks = (base) => {
+    const [bf, lu, di] = base.map((m) => ({ ...m, ing: m.ing.map((g) => ({ ...g })) }));
+    const order = [bf]; if (snk[0]) order.push({ ...snk[0], ing: snk[0].ing.map((g) => ({ ...g })) });
+    order.push(lu); if (snk[1]) order.push({ ...snk[1], ing: snk[1].ing.map((g) => ({ ...g })) });
+    order.push(di); if (snk[2]) order.push({ ...snk[2], ing: snk[2].ing.map((g) => ({ ...g })) });
+    return order;
+  };
+  return { days: names.map((d, i) => { const tr = i % 2 === 0; return { d, train: tr, m: withSnacks(tr ? train : rest) }; }) };
 }
 
 // Roept GEEN Claude aan vanuit de browser — alles via /api/plan (key zit op de server).
@@ -73,6 +87,16 @@ const PROTEINS = [
   { id: "beans", nl: "Bonen", en: "Beans" },
 ];
 const WD = { nl: ["Ma", "Di", "Wo", "Do", "Vr", "Za", "Zo"], en: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] };
+const SNACKS = [
+  { id: "fruit", nl: "Fruit (banaan, appel)", en: "Fruit (banana, apple)" },
+  { id: "nuts", nl: "Noten", en: "Nuts" },
+  { id: "yoghurt", nl: "(Griekse) yoghurt", en: "(Greek) yoghurt" },
+  { id: "quark", nl: "Kwark/Skyr", en: "Quark/Skyr" },
+  { id: "bar", nl: "Eiwitreep", en: "Protein bar" },
+  { id: "ricecake", nl: "Rijstwafels", en: "Rice cakes" },
+  { id: "shake", nl: "Shake", en: "Shake" },
+  { id: "veg", nl: "Groente/dips", en: "Veg/dips" },
+];
 
 const SHOP_CATS = [
   { nl: "Groente & Fruit", en: "Produce" },
@@ -101,6 +125,9 @@ const TXT = {
   favPh: { nl: "bijv. kip, rijst, kwark", en: "e.g. chicken, rice, quark" },
   goToProteins: { nl: "Vaste eiwitbronnen", en: "Go-to proteins" },
   cuisine: { nl: "Keukenstijl", en: "Cuisine vibe" },
+  snacksLbl: { nl: "Tussendoortjes per dag", en: "Snacks per day" },
+  snacksHint: { nl: "Verdeelt de dag beter — je krijgt 3 hoofdmaaltijden + dit aantal tussendoortjes.", en: "Spreads the day better — you get 3 main meals + this many snacks." },
+  snackLikesLbl: { nl: "Wat voor tussendoortjes?", en: "What kind of snacks?" },
   trainingDays: { nl: "Trainingsdagen", en: "Training days" },
   trainingDaysHint: { nl: "Welke dagen train je? Die dagen krijgen meer calorieën (koolhydraten), rustdagen minder — je weekgemiddelde blijft op je doel.", en: "Which days do you train? Those days get more calories (carbs), rest days fewer — your weekly average stays on your goal." },
   build: { nl: "Maak mijn plan", en: "Build my plan" },
@@ -136,6 +163,22 @@ const TXT = {
   addRecipe: { nl: "+ Uit recepten", en: "+ From recipes" },
   copyDay: { nl: "Kopieer dag", en: "Copy day" },
   copyMeal: { nl: "Kopieer", en: "Copy" },
+  toDate: { nl: "→ datum", en: "→ date" },
+  movePlan: { nl: "Verplaats / kopieer", en: "Move / copy" },
+  moveTitle: { nl: "Verplaats of kopieer", en: "Move or copy" },
+  moveWeekScope: { nl: "Hele week", en: "Whole week" },
+  moveDayScope: { nl: "Dag", en: "Day" },
+  actCopy: { nl: "Kopiëren", en: "Copy" },
+  actMove: { nl: "Verplaatsen", en: "Move" },
+  tgtNextWeek: { nl: "Volgende week", en: "Next week" },
+  tgtPickWeek: { nl: "Kies een week (datum)", en: "Pick a week (date)" },
+  tgtPickDate: { nl: "Specifieke datum", en: "Specific date" },
+  moveDo: { nl: "Zet op kalender", en: "Place on calendar" },
+  moveHint: { nl: "Je plan verschijnt op die datum(s) in je Dagboek en gaat vóór je vaste weekschema. Verplaatsen wist de bron.", en: "Your plan appears on those date(s) in your Diary, overriding your default week. Move clears the source." },
+  moveWeekTo: { nl: "Zet de hele week vanaf deze maandag:", en: "Place the whole week from this Monday:" },
+  movePlaced: { nl: "Gezet ✓", en: "Placed ✓" },
+  movePlannedLbl: { nl: "Op de kalender gezet", en: "Placed on calendar" },
+  moveClear: { nl: "Wissen", en: "Clear" },
   saveAsRecipe: { nl: "Bewaar als recept", en: "Save as recipe" },
   savedAsRecipe: { nl: "Opgeslagen ✓", en: "Saved ✓" },
   copyToTitle: { nl: "Kopieer naar…", en: "Copy to…" },
@@ -289,6 +332,8 @@ export default function App() {
   const [cuisines, setCuisines] = useState([]);
   const [proteins, setProteins] = useState([]);
   const [trainingDays, setTrainingDays] = useState([0, 2, 4]);
+  const [snacks, setSnacks] = useState(2);
+  const [snackLikes, setSnackLikes] = useState(["fruit"]);
 
   const [targets, setTargets] = useState(null);
   const [week, setWeek] = useState(null);
@@ -296,6 +341,8 @@ export default function App() {
   const [showProducts, setShowProducts] = useState(false);
   const [pickTarget, setPickTarget] = useState(null);
   const [copyPick, setCopyPick] = useState(null);
+  const [movePlan, setMovePlan] = useState(null); // {scope:"week"|"day", di}
+  const [plannedDates, setPlannedDates] = useState(() => load("hf_planned", []));
   const [recipePick, setRecipePick] = useState(null);
   const [savedMsg, setSavedMsg] = useState(null);
   const [fab, setFab] = useState(false);
@@ -473,7 +520,7 @@ export default function App() {
 
   function common() {
     const dietObj = DIETS.find((d) => d.id === diet);
-    return { sex, age, height, weight, activity, goal, diet: dietObj ? dietObj[lang] : diet, avoid, likes, cuisines: labelsOf(cuisines, CUISINES), proteins: labelsOf(proteins, PROTEINS), lang };
+    return { sex, age, height, weight, activity, goal, diet: dietObj ? dietObj[lang] : diet, avoid, likes, cuisines: labelsOf(cuisines, CUISINES), proteins: labelsOf(proteins, PROTEINS), snacks, snackLikes: labelsOf(snackLikes, SNACKS), lang };
   }
   function currentIntake() { return { ...common(), trainingDays: [...trainingDays] }; }
 
@@ -483,7 +530,7 @@ export default function App() {
     try { localStorage.setItem("hf_intake", JSON.stringify(intake)); } catch (e) {}
     if (devMode) { // dev: demo-maaltijden, maar wél geschaald naar je echte berekende targets
       const tg = await computeFree(intake);
-      const dw = demoWeek(lang);
+      const dw = demoWeek(lang, snacks);
       const days = (tg && tg.train && tg.rest)
         ? dw.days.map((d) => scaleDayTo(d, d.train ? tg.train.kcal : tg.rest.kcal))
         : dw.days;
@@ -704,6 +751,44 @@ export default function App() {
     applyWeek({ ...week, days: week.days.map((d, i) => i === toDi ? { ...d, m: [...d.m, copy] } : d) });
   }
   function addRecipeToDay(di, meal) { mutDay(di, (d) => { d.m = [...d.m, meal]; return d; }); }
+
+  // --- Kalender: plan (dag of hele week) op een datum zetten ---------------
+  // Schrijft date-overrides (hf_dayover_<ISO>) die het Dagboek al mét voorrang toont.
+  function isoAdd(iso, n) { const dt = new Date(iso + "T12:00:00"); dt.setDate(dt.getDate() + n); return dt.toISOString().slice(0, 10); }
+  function mondayISO(iso) { const dt = new Date(iso + "T12:00:00"); const wd = (dt.getDay() + 6) % 7; dt.setDate(dt.getDate() - wd); return dt.toISOString().slice(0, 10); }
+  function dayToOverride(day) {
+    const m = day.m.map((mm) => ({ ...mm, ing: (mm.ing || []).map((g) => ({ ...g })) }));
+    const goal = m.reduce((a, x) => ({ kcal: a.kcal + num(x.kcal), p: a.p + num(x.p), c: a.c + num(x.c), f: a.f + num(x.f) }), { kcal: 0, p: 0, c: 0, f: 0 });
+    return { d: day.d, train: !!day.train, race: "", m, goal };
+  }
+  function recordPlanned(isos, remove) {
+    setPlannedDates((prev) => {
+      let next = prev.filter((x) => !isos.includes(x));
+      if (!remove) next = [...next, ...isos];
+      next = Array.from(new Set(next)).sort();
+      save("hf_planned", next);
+      return next;
+    });
+  }
+  function stampDayOnDate(di, iso, move) {
+    if (!week || !week.days[di]) return;
+    try { save("hf_dayover_" + iso, dayToOverride(week.days[di])); } catch (e) {}
+    if (move) { // bron is het weekschema zelf (herhaalt) — niets te wissen; alleen doel gezet
+    }
+    recordPlanned([iso], false);
+  }
+  function stampWeekFrom(startMonday, move) {
+    if (!week) return;
+    const isos = [];
+    week.days.forEach((day, i) => { const iso = isoAdd(startMonday, i); try { save("hf_dayover_" + iso, dayToOverride(day)); } catch (e) {} isos.push(iso); });
+    if (move) { // verplaatsen: wis de overrides van de huidige (bron)week
+      const srcMon = mondayISO(todayISO());
+      for (let i = 0; i < 7; i++) { const s = isoAdd(srcMon, i); if (!isos.includes(s)) { try { localStorage.removeItem("hf_dayover_" + s); } catch (e) {} } }
+      recordPlanned(Array.from({ length: 7 }, (_, i) => isoAdd(srcMon, i)), true);
+    }
+    recordPlanned(isos, false);
+  }
+  function clearPlanned(iso) { try { localStorage.removeItem("hf_dayover_" + iso); } catch (e) {} recordPlanned([iso], true); }
   async function saveMealAsRecipe(di, mi) {
     const m = week && week.days[di] && week.days[di].m[mi];
     if (!m) return;
@@ -750,6 +835,69 @@ export default function App() {
 
   const sIn = { background: INK, border: `1px solid ${LINE}`, color: PAPER, padding: "6px 8px", fontFamily: "Inter, sans-serif", fontSize: 12.5, borderRadius: 7, outline: "none", boxSizing: "border-box" };
 
+  function MovePlan({ scope, di, onClose }) {
+    const [act, setAct] = useState("copy");
+    const [tgt, setTgt] = useState(scope === "week" ? "next" : "date");
+    const [date, setDate] = useState(scope === "week" ? isoAdd(mondayISO(todayISO()), 7) : isoAdd(todayISO(), 1));
+    const [done, setDone] = useState(false);
+    const scopeLbl = scope === "week" ? T("moveWeekScope") : (week && week.days[di] ? week.days[di].d : T("moveDayScope"));
+    const dIn = { ...sIn, padding: "9px 10px", fontSize: 13, width: "100%", colorScheme: "dark" };
+    const seg = (on) => ({ flex: 1, textAlign: "center", cursor: "pointer", padding: "9px 0", borderRadius: 8, border: `1px solid ${on ? EMBER : LINE}`, background: on ? EMBER : "transparent", color: on ? PAPER : MUTED, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.5 });
+    const radio = (on) => ({ display: "flex", alignItems: "center", gap: 9, cursor: "pointer", padding: "10px 12px", borderRadius: 10, border: `1px solid ${on ? EMBER : LINE}`, background: on ? "rgba(225,29,72,0.08)" : INK2 });
+    const dot = (on) => ({ width: 16, height: 16, borderRadius: "50%", border: `2px solid ${on ? EMBER : MUTED}`, background: on ? EMBER : "transparent", flexShrink: 0 });
+    function place() {
+      if (scope === "week") { const startMon = tgt === "next" ? isoAdd(mondayISO(todayISO()), 7) : mondayISO(date); stampWeekFrom(startMon, act === "move"); }
+      else { stampDayOnDate(di, date, act === "move"); }
+      setDone(true); setTimeout(() => onClose(), 950);
+    }
+    return (
+      <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 72, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+        <div onClick={(e) => e.stopPropagation()} className="hf-modal" style={{ background: INK, border: `1px solid ${LINE}`, borderRadius: 18, width: "100%", maxWidth: 400, maxHeight: "88vh", overflowY: "auto", padding: 20, backgroundImage: "radial-gradient(130% 70% at 92% -10%, rgba(225,29,72,0.12), transparent 58%)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+            <div style={{ ...disp, fontWeight: 700, fontSize: 16 }}>{T("moveTitle")}</div>
+            <div onClick={onClose} style={{ cursor: "pointer", color: MUTED, fontSize: 17, width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 9, border: `1px solid ${LINE}` }}>×</div>
+          </div>
+          <div style={{ fontSize: 11.5, color: MUTED, marginBottom: 14 }}>{scope === "week" ? T("moveWeekScope") : T("moveDayScope")}: <span style={{ color: PAPER, fontWeight: 600 }}>{scopeLbl}</span></div>
+
+          <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+            <div onClick={() => setAct("copy")} style={seg(act === "copy")}>{T("actCopy")}</div>
+            <div onClick={() => setAct("move")} style={seg(act === "move")}>{T("actMove")}</div>
+          </div>
+
+          {scope === "week" ? (
+            <div style={{ display: "grid", gap: 8, marginBottom: 14 }}>
+              <div onClick={() => setTgt("next")} style={radio(tgt === "next")}><div style={dot(tgt === "next")} /><div style={{ fontSize: 13.5, color: PAPER, fontWeight: 600 }}>{T("tgtNextWeek")}</div></div>
+              <div onClick={() => setTgt("pick")} style={radio(tgt === "pick")}><div style={dot(tgt === "pick")} /><div style={{ fontSize: 13.5, color: PAPER, fontWeight: 600 }}>{T("tgtPickWeek")}</div></div>
+              {tgt === "pick" && (<div><div style={{ fontSize: 11, color: MUTED, marginBottom: 6 }}>{T("moveWeekTo")}</div><input type="date" value={date} onChange={(e) => setDate(e.target.value)} style={dIn} /></div>)}
+            </div>
+          ) : (
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 11, color: MUTED, marginBottom: 6 }}>{T("tgtPickDate")}</div>
+              <input type="date" value={date} onChange={(e) => setDate(e.target.value)} style={dIn} />
+            </div>
+          )}
+
+          <div onClick={done ? undefined : place} style={{ cursor: done ? "default" : "pointer", textAlign: "center", background: done ? SAGE : EMBER, color: PAPER, padding: "12px 0", borderRadius: 10, ...disp, fontWeight: 700, fontSize: 15, letterSpacing: 0.5 }}>{done ? T("movePlaced") : T("moveDo")}</div>
+          <div style={{ fontSize: 11, color: MUTED, marginTop: 10, lineHeight: 1.5 }}>{T("moveHint")}</div>
+
+          {plannedDates.length > 0 && (
+            <div style={{ marginTop: 16, borderTop: `1px solid ${LINE}`, paddingTop: 14 }}>
+              <div style={{ ...label, marginBottom: 8 }}>{T("movePlannedLbl")}</div>
+              <div style={{ display: "grid", gap: 6 }}>
+                {plannedDates.map((iso) => (
+                  <div key={iso} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: INK2, border: `1px solid ${LINE}`, borderRadius: 9, padding: "8px 12px" }}>
+                    <div style={{ fontSize: 12.5, color: PAPER }}>{new Date(iso + "T12:00:00").toLocaleDateString(lang === "nl" ? "nl-NL" : "en-GB", { weekday: "short", day: "numeric", month: "short" })}</div>
+                    <div onClick={() => clearPlanned(iso)} style={{ cursor: "pointer", fontSize: 11.5, color: MUTED, fontWeight: 600 }}>{T("moveClear")}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   function EditDayCard({ day, di }) {
     const tot = day.m.reduce((a, m) => ({ kcal: a.kcal + num(m.kcal), p: a.p + num(m.p), c: a.c + num(m.c), f: a.f + num(m.f) }), { kcal: 0, p: 0, c: 0, f: 0 });
     return (
@@ -759,6 +907,7 @@ export default function App() {
             <div style={{ ...disp, fontWeight: 600, fontSize: 15, letterSpacing: 1, textTransform: "uppercase" }}>{day.d}</div>
             <div onClick={() => mutDay(di, (d) => { d.train = !d.train; return d; })} style={{ cursor: "pointer", fontSize: 9.5, color: day.train ? EMBER : MUTED, border: `1px solid ${day.train ? EMBER : LINE}`, borderRadius: 5, padding: "2px 6px", letterSpacing: 1, fontWeight: 700 }}>{day.train ? T("trainTag") : T("restTag")}</div>
             <div onClick={() => setCopyPick({ kind: "day", di })} style={{ cursor: "pointer", fontSize: 9.5, color: MUTED, border: `1px solid ${LINE}`, borderRadius: 5, padding: "2px 6px", letterSpacing: 0.5, fontWeight: 600 }}>{T("copyDay")}</div>
+            <div onClick={() => setMovePlan({ scope: "day", di })} style={{ cursor: "pointer", fontSize: 9.5, color: MUTED, border: `1px solid ${LINE}`, borderRadius: 5, padding: "2px 6px", letterSpacing: 0.5, fontWeight: 600 }}>{T("toDate")}</div>
           </div>
           <div style={{ fontSize: 11.5, color: MUTED }}><span style={{ color: PAPER, fontWeight: 600 }}>{tot.kcal}</span> kcal · {tot.p}p/{tot.c}c/{tot.f}f</div>
         </div>
@@ -983,6 +1132,22 @@ export default function App() {
                 <div style={{ fontSize: 11, color: MUTED, lineHeight: 1.5 }}>{T("trainingDaysHint")}</div>
               </div>
 
+              <div style={{ marginBottom: snacks > 0 ? 14 : 18 }}>
+                <label style={label}>{T("snacksLbl")}</label>
+                <div style={{ display: "flex", gap: 8 }}>
+                  {[0, 1, 2, 3].map((n) => <div key={n} onClick={() => setSnacks(n)} style={segS(snacks === n)}>{n}</div>)}
+                </div>
+                <div style={{ fontSize: 11, color: MUTED, lineHeight: 1.5, marginTop: 8 }}>{T("snacksHint")}</div>
+              </div>
+              {snacks > 0 && (
+                <div style={{ marginBottom: 18 }}>
+                  <label style={label}>{T("snackLikesLbl")}</label>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+                    {SNACKS.map((s) => <div key={s.id} onClick={() => toggle(s.id, snackLikes, setSnackLikes)} style={chipS(snackLikes.includes(s.id))}>{s[lang]}</div>)}
+                  </div>
+                </div>
+              )}
+
               <button onClick={handleBuild} disabled={loading} style={{ width: "100%", background: EMBER, color: PAPER, border: "none", padding: "14px 0", borderRadius: 10, ...disp, fontWeight: 700, fontSize: 16, letterSpacing: 1, textTransform: "uppercase", cursor: loading ? "default" : "pointer", opacity: loading ? 0.7 : 1 }}>
                 {loading ? T("building") : T("build")}
               </button>
@@ -1065,7 +1230,8 @@ export default function App() {
                           ))}
                         </div>
                         {view === "plan" && (hasPro ? (
-                          <div style={{ display: "flex", gap: 8 }}>
+                          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                            {planEdit && <div onClick={() => setMovePlan({ scope: "week" })} style={{ cursor: "pointer", padding: "8px 14px", borderRadius: 8, border: `1px solid ${LINE}`, color: EMBER, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.5 }}>{T("movePlan")}</div>}
                             {planEdit && <div onClick={() => setShowProducts(true)} style={{ cursor: "pointer", padding: "8px 14px", borderRadius: 8, border: `1px solid ${LINE}`, color: EMBER, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.5 }}>{T("myProducts")}</div>}
                             <div onClick={toggleEdit} style={{ cursor: "pointer", padding: "8px 16px", borderRadius: 8, border: `1px solid ${planEdit ? EMBER : LINE}`, background: planEdit ? EMBER : "transparent", color: planEdit ? PAPER : EMBER, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.5 }}>{planEdit ? T("editDone") : T("editPlan")}</div>
                           </div>
@@ -1217,6 +1383,7 @@ export default function App() {
         </div>
       )}
       {recipePick !== null && <RecipePicker di={recipePick} onClose={() => setRecipePick(null)} />}
+      {movePlan && <MovePlan scope={movePlan.scope} di={movePlan.di} onClose={() => setMovePlan(null)} />}
     </div>
   );
 }

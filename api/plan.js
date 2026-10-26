@@ -155,6 +155,13 @@ function buildPrompt(b, cyc) {
 
   const lang = b.lang === "en" ? "en" : "nl";
 
+  // Tussendoortjes: aantal (0-3) + voorkeuren. Bepaalt hoeveel maaltijden de dag telt
+  // en hoe de kcal verdeeld worden (hoofdmaaltijden + kleine snacks).
+  const nSnack = Math.max(0, Math.min(3, parseInt(b.snacks, 10)));
+  const nSnackSafe = isNaN(nSnack) ? 0 : nSnack;
+  const snackLikes = Array.isArray(b.snackLikes) ? b.snackLikes.slice(0, 8).map((x) => cleanStr(x, 40)).filter(Boolean).join(", ") : "";
+  const totalMeals = 3 + nSnackSafe;
+
   const prefs = [];
   if (likes) prefs.push(`Loves / wants included: ${likes}`);
   if (proteins) prefs.push(`Preferred proteins: ${proteins}`);
@@ -191,16 +198,31 @@ function buildPrompt(b, cyc) {
     return `- "${r.label}" = ${tag}: ${t.kcal} kcal, ${t.protein}g protein, ${t.carbs}g carbs, ${t.fat}g fat`;
   }).join("\n");
 
+  const snackWord = lang === "en" ? "Snack" : "Tussendoortje";
+  const snackLine = nSnackSafe > 0
+    ? (lang === "en"
+        ? `- ${totalMeals} meals/day: Breakfast, Lunch, Dinner and ${nSnackSafe} ${snackWord}${nSnackSafe > 1 ? "s" : ""}. Use exactly these meal types for "t": Breakfast, Lunch, Dinner, Snack.`
+        : `- ${totalMeals} maaltijden/dag: Ontbijt, Lunch, Diner en ${nSnackSafe} ${snackWord}${nSnackSafe > 1 ? "s" : ""}. Gebruik precies deze types voor "t": Ontbijt, Lunch, Diner, Tussendoortje.`)
+    : (lang === "en"
+        ? '- 3 meals/day. Use exactly these meal types for "t": Breakfast, Lunch, Dinner.'
+        : '- 3 maaltijden/dag. Gebruik precies deze types voor "t": Ontbijt, Lunch, Diner.');
+  const snackGuide = nSnackSafe > 0
+    ? (lang === "en"
+        ? `- Keep each Snack small (roughly 8-15% of the day's calories) and simple; let the 3 main meals carry the rest. Spread the snacks between the main meals so the day is well distributed.${snackLikes ? " Base snacks on these preferences: " + snackLikes + " (e.g. a banana, an apple, a handful of nuts, Greek yoghurt)." : " Use simple snacks like a banana, an apple, a handful of nuts or Greek yoghurt."}`
+        : `- Houd elk Tussendoortje klein (ongeveer 8-15% van de dagcalorieën) en simpel; de 3 hoofdmaaltijden dragen de rest. Spreid de tussendoortjes tussen de hoofdmaaltijden zodat de dag goed verdeeld is.${snackLikes ? " Baseer de tussendoortjes op deze voorkeuren: " + snackLikes + " (bijv. een banaan, een appel, een handje noten, Griekse yoghurt)." : " Gebruik simpele tussendoortjes zoals een banaan, een appel, een handje noten of Griekse yoghurt."}`)
+    : "";
   const L = lang === "en"
     ? {
         rule1: "- Write ALL meal names, ingredient names and meal types in ENGLISH.",
-        rule2: '- 4 meals/day. Use exactly these meal types for "t": Breakfast, Lunch, Dinner, Snack.',
+        rule2: snackLine,
+        snackGuide,
         ruleN: "- Lean into the preferred foods, proteins and cuisines. Short ingredient names.",
         example: '{"days":[{"d":"' + reqs[0].label + '","m":[{"t":"Breakfast","n":"Oats with quark","kcal":0,"p":0,"c":0,"f":0,"ing":[{"n":"Oats","g":60}]}]}]}',
       }
     : {
         rule1: "- Write ALL meal names, ingredient names and meal types in DUTCH (Nederlands).",
-        rule2: '- 4 meals/day. Use exactly these Dutch meal types for "t": Ontbijt, Lunch, Diner, Snack.',
+        rule2: snackLine,
+        snackGuide,
         ruleN: "- Lean into the preferred foods, proteins and cuisines. Short Dutch ingredient names.",
         example: '{"days":[{"d":"' + reqs[0].label + '","m":[{"t":"Ontbijt","n":"Havermout met kwark","kcal":0,"p":0,"c":0,"f":0,"ing":[{"n":"Havermout","g":60}]}]}]}',
       };
@@ -218,7 +240,7 @@ Keep protein high and roughly equal on every day; put the calorie difference bet
 
 Rules:
 ${L.rule1}
-${L.rule2}
+${L.rule2}${L.snackGuide ? "\n" + L.snackGuide : ""}
 - For EACH meal list 2-4 main ingredients with weights in grams.
 - Each meal's kcal and p/c/f MUST match the listed ingredient weights.
 - Each day's meals should sum close to THAT day's targets above.
