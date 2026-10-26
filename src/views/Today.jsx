@@ -3,6 +3,7 @@ import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, SAGE, disp, num, card
 import { supabase } from "../supabaseClient.js";
 import Products from "./Products.jsx";
 import { RECIPES } from "../recipes.js";
+import { weekDatesFrom, planReductions, baseDayFor, dayTotal, upcomingSaturday, Rn } from "../weekbalance.js";
 
 const T = {
   title: { nl: "Dagboek", en: "Diary" },
@@ -36,6 +37,10 @@ const T = {
   hpDone: { nl: "Dag aangepast ✓ — resterende maaltijden geschaald.", en: "Day adjusted ✓ — remaining meals scaled." },
   hpUndo: { nl: "Ongedaan maken", en: "Undo" },
   hpNoRoom: { nl: "Geen maaltijden meer open om te schalen. Pak het morgen terug.", en: "No meals left to scale. Pick it up tomorrow." },
+  spreadBtn: { nl: "Verdeel over de week", en: "Spread across the week" },
+  spreadNote: { nl: "We verdelen het verschil licht over de komende dagen van je week — binnen gezonde grenzen, geen crashdagen.", en: "We spread the difference lightly across the coming days of your week — within healthy limits, no crash days." },
+  spreadUndo: { nl: "Ongedaan maken", en: "Undo" },
+  feastOpen: { nl: "+ Uit-eten-dag plannen", en: "+ Plan an eating-out day" },
 };
 
 function Ring({ pct }) {
@@ -60,6 +65,8 @@ export default function Today({ lang, week, onGoPlan, session, plus, onRebalance
   const [waterMl, setWaterMl] = useState(0);
   const [weightKg, setWeightKg] = useState(0);
   const [undo, setUndo] = useState(null);
+  const [spillUndo, setSpillUndo] = useState(null);
+  const [showFeast, setShowFeast] = useState(false);
   const [over, setOver] = useState(null);
 
   useEffect(() => {
@@ -158,6 +165,8 @@ export default function Today({ lang, week, onGoPlan, session, plus, onRebalance
   const goalKcal = (day && day.goal && day.goal.kcal) || plannedTotal;
   const projDiff = day ? Math.round((consumed + remKcal) - goalKcal) : 0; // >0 = koers boven doel
   const canRebalance = !!(plus && day && onRebalance && remIdx.length > 0 && Math.abs(projDiff) >= 60);
+  const spillDates = isToday ? weekDatesFrom(d).filter((x) => x > d) : [];
+  const canSpread = !!(plus && day && isToday && Math.abs(projDiff) >= 60 && spillDates.length > 0);
   function doRebalance() {
     if (!day || !onRebalance || remKcal <= 0) return;
     let f = (goalKcal - consumed) / remKcal;
@@ -172,6 +181,19 @@ export default function Today({ lang, week, onGoPlan, session, plus, onRebalance
     else if (onRebalance) onRebalance(idx, newMeals, goal);
   }
   function doUndo() { if (!undo) return; applyDayMeals(undo.meals, undo.goal); setUndo(null); }
+  function doSpread() {
+    if (!canSpread) return;
+    const { ops, applied } = planReductions(spillDates, week, projDiff);
+    if (!ops.length) return;
+    const snap = ops.map((o) => ({ iso: o.iso, prev: load("hf_dayover_" + o.iso, null) }));
+    ops.forEach((o) => save("hf_dayover_" + o.iso, { ...o.scaled, _spill: true }));
+    setSpillUndo({ snap, applied, target: projDiff, days: ops.length });
+  }
+  function undoSpread() {
+    if (!spillUndo) return;
+    spillUndo.snap.forEach((s) => { if (s.prev) save("hf_dayover_" + s.iso, s.prev); else { try { localStorage.removeItem("hf_dayover_" + s.iso); } catch (e) {} } });
+    setSpillUndo(null);
+  }
 
   function statusOf(c, target) {
     if (!target) return { label: "—", color: MUTED };
@@ -205,6 +227,7 @@ export default function Today({ lang, week, onGoPlan, session, plus, onRebalance
     <div style={{ display: "grid", gap: 16 }}>
       <div style={sectionTitle}>{t("title")}</div>
       <div style={card}>{dateNav}</div>
+      {plus && day && <div onClick={() => setShowFeast(true)} style={{ cursor: "pointer", textAlign: "center", border: `1px dashed ${LINE}`, borderRadius: 12, padding: "11px 14px", color: EMBER, ...disp, fontWeight: 700, fontSize: 12.5, letterSpacing: 0.3 }}>{t("feastOpen")}</div>}
 
       {!day ? (
         <div style={{ border: `1px dashed ${LINE}`, borderRadius: 14, padding: "32px 22px", textAlign: "center" }}>
@@ -233,8 +256,8 @@ export default function Today({ lang, week, onGoPlan, session, plus, onRebalance
             <div style={{ fontSize: 11.5, color: allDone ? "#4ADE80" : MUTED, marginTop: 10 }}>{allDone ? t("done") : t("tapHint")}</div>
           </div>
 
-          {/* "Leven gebeurt"-herplanner (Plus) */}
-          {plus && day && (undo || canRebalance) && (
+          {/* "Leven gebeurt"-herplanner (Plus) — vandaag of over de week */}
+          {plus && day && (undo || spillUndo || canRebalance || canSpread) && (
             <div style={{ border: `1px solid ${EMBER}`, borderRadius: 14, padding: 15, backgroundImage: "radial-gradient(120% 90% at 100% 0%, rgba(225,29,72,0.14), transparent 62%)" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 7 }}>
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 2.6-6.4M3 4v4h4" /></svg>
@@ -245,6 +268,19 @@ export default function Today({ lang, week, onGoPlan, session, plus, onRebalance
                   <div style={{ fontSize: 12.5, color: PAPER, lineHeight: 1.5, marginBottom: 12 }}>{t("hpDone")}</div>
                   <button onClick={doUndo} style={{ background: "transparent", color: EMBER, border: `1px solid ${EMBER}`, borderRadius: 9, padding: "9px 16px", ...disp, fontWeight: 700, fontSize: 12.5, letterSpacing: 0.5, cursor: "pointer" }}>{t("hpUndo")}</button>
                 </>
+              ) : spillUndo ? (
+                <>
+                  <div style={{ fontSize: 12.5, color: PAPER, lineHeight: 1.5, marginBottom: 12 }}>
+                    {Math.abs(spillUndo.applied) < Math.abs(spillUndo.target) - 30
+                      ? (lang === "nl"
+                        ? `We verdeelden ~${Math.abs(spillUndo.applied)} van ${Math.abs(spillUndo.target)} kcal over ${spillUndo.days} ${spillUndo.days === 1 ? "dag" : "dagen"} — de rest laten we gaan. Eén ${spillUndo.target > 0 ? "zware" : "lichte"} dag hoort erbij.`
+                        : `We spread ~${Math.abs(spillUndo.applied)} of ${Math.abs(spillUndo.target)} kcal over ${spillUndo.days} ${spillUndo.days === 1 ? "day" : "days"} — the rest we let go. One ${spillUndo.target > 0 ? "heavy" : "light"} day is fine.`)
+                      : (lang === "nl"
+                        ? `Over je week verdeeld ✓ — ${spillUndo.days} ${spillUndo.days === 1 ? "dag" : "dagen"} licht aangepast.`
+                        : `Spread across your week ✓ — ${spillUndo.days} ${spillUndo.days === 1 ? "day" : "days"} lightly adjusted.`)}
+                  </div>
+                  <button onClick={undoSpread} style={{ background: "transparent", color: EMBER, border: `1px solid ${EMBER}`, borderRadius: 9, padding: "9px 16px", ...disp, fontWeight: 700, fontSize: 12.5, letterSpacing: 0.5, cursor: "pointer" }}>{t("spreadUndo")}</button>
+                </>
               ) : (
                 <>
                   <div style={{ fontSize: 12.5, color: PAPER, lineHeight: 1.5, marginBottom: 4 }}>
@@ -252,8 +288,11 @@ export default function Today({ lang, week, onGoPlan, session, plus, onRebalance
                       ? `Zoals je dag nu loopt, kom je ~${Math.abs(projDiff)} kcal ${projDiff > 0 ? "bóven" : "ónder"} je doel uit.`
                       : `As your day is going, you'll end ~${Math.abs(projDiff)} kcal ${projDiff > 0 ? "over" : "under"} target.`}
                   </div>
-                  <div style={{ fontSize: 11, color: MUTED, lineHeight: 1.5, marginBottom: 12 }}>{t("hpNote")}</div>
-                  <button onClick={doRebalance} style={{ background: EMBER, color: PAPER, border: "none", borderRadius: 9, padding: "11px 18px", ...disp, fontWeight: 700, fontSize: 13, letterSpacing: 0.5, cursor: "pointer" }}>{t("hpBtn")}</button>
+                  <div style={{ fontSize: 11, color: MUTED, lineHeight: 1.5, marginBottom: 12 }}>{canRebalance ? t("hpNote") : t("spreadNote")}</div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                    {canRebalance && <button onClick={doRebalance} style={{ background: EMBER, color: PAPER, border: "none", borderRadius: 9, padding: "11px 18px", ...disp, fontWeight: 700, fontSize: 13, letterSpacing: 0.5, cursor: "pointer" }}>{t("hpBtn")}</button>}
+                    {canSpread && <button onClick={doSpread} style={{ background: canRebalance ? "transparent" : EMBER, color: canRebalance ? EMBER : PAPER, border: canRebalance ? `1px solid ${EMBER}` : "none", borderRadius: 9, padding: "11px 18px", ...disp, fontWeight: 700, fontSize: 13, letterSpacing: 0.5, cursor: "pointer" }}>{t("spreadBtn")}</button>}
+                  </div>
                 </>
               )}
             </div>
@@ -304,6 +343,93 @@ export default function Today({ lang, week, onGoPlan, session, plus, onRebalance
       )}
 
       {showAdd && <AddExtra lang={lang} session={session} onClose={() => setShowAdd(false)} onPickProduct={addFromProduct} onPickRecipe={addFromRecipe} />}
+      {showFeast && <FeastPlanner lang={lang} week={week} baseIso={d} onClose={() => setShowFeast(false)} />}
+    </div>
+  );
+}
+
+function FeastPlanner({ lang, week, baseIso, onClose }) {
+  const today = todayISO();
+  const [date, setDate] = useState(() => upcomingSaturday(today));
+  const [preset, setPreset] = useState(700);
+  const [result, setResult] = useState(null);
+
+  const L = {
+    title: lang === "nl" ? "Uit-eten-dag plannen" : "Plan an eating-out day",
+    intro: lang === "nl" ? "Weet je dat je ergens uit eet? Kies de dag en een ruwe schatting. We trimmen de andere dagen van die week een beetje, zodat je weekgemiddelde klopt — binnen gezonde grenzen." : "Know you're eating out? Pick the day and a rough estimate. We'll trim the other days of that week a little, so your weekly average holds — within healthy limits.",
+    dateL: lang === "nl" ? "Welke dag?" : "Which day?",
+    howL: lang === "nl" ? "Hoeveel extra, ongeveer?" : "Roughly how much extra?",
+    estimate: lang === "nl" ? "Het is een schatting — op de dag zelf log je gewoon wat je echt at." : "It's an estimate — on the day you just log what you really ate.",
+    go: lang === "nl" ? "Inplannen" : "Plan it",
+    undo: lang === "nl" ? "Ongedaan maken" : "Undo",
+    close: lang === "nl" ? "Klaar" : "Done",
+    err: lang === "nl" ? "Maak eerst je weekplan aan." : "Build your week plan first.",
+  };
+  const presets = [[400, lang === "nl" ? "Licht" : "Light"], [700, lang === "nl" ? "Normaal" : "Normal"], [1200, lang === "nl" ? "Stevig" : "Big"]];
+
+  function apply() {
+    const feastIso = date;
+    const base = baseDayFor(feastIso, week);
+    if (!base) { setResult({ err: true }); return; }
+    const surplus = preset;
+    const trimDates = weekDatesFrom(feastIso).filter((x) => x !== feastIso && x > today);
+    const { ops, applied } = planReductions(trimDates, week, surplus);
+    const snap = [{ iso: feastIso, prev: load("hf_dayover_" + feastIso, null) }, ...ops.map((o) => ({ iso: o.iso, prev: load("hf_dayover_" + o.iso, null) }))];
+    const T = dayTotal(base);
+    const gb = base.goal || { kcal: T, p: base.m.reduce((a, m) => a + num(m.p), 0), c: base.m.reduce((a, m) => a + num(m.c), 0), f: base.m.reduce((a, m) => a + num(m.f), 0) };
+    const feastDay = { ...base, goal: { kcal: Rn(num(gb.kcal) + surplus), p: Rn(num(gb.p)), c: Rn(num(gb.c) + surplus / 4), f: Rn(num(gb.f)) }, _feast: true };
+    save("hf_dayover_" + feastIso, feastDay);
+    ops.forEach((o) => save("hf_dayover_" + o.iso, { ...o.scaled, _feast: true }));
+    setResult({ surplus, applied, days: ops.length, snap });
+  }
+  function undo() {
+    if (!result || !result.snap) return;
+    result.snap.forEach((s) => { if (s.prev) save("hf_dayover_" + s.iso, s.prev); else { try { localStorage.removeItem("hf_dayover_" + s.iso); } catch (e) {} } });
+    setResult(null);
+  }
+
+  const chip = (on) => ({ flex: 1, textAlign: "center", cursor: "pointer", ...disp, fontWeight: 700, fontSize: 13, padding: "11px 0", borderRadius: 9, border: `1px solid ${on ? EMBER : LINE}`, background: on ? "rgba(225,29,72,0.14)" : "transparent", color: on ? EMBER : MUTED });
+
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 65, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ position: "relative", background: INK, border: `1px solid ${LINE}`, borderRadius: 20, width: "100%", maxWidth: 420, maxHeight: "90vh", overflowY: "auto", padding: 22, boxShadow: "0 24px 70px rgba(0,0,0,.65)", backgroundImage: "radial-gradient(130% 70% at 92% -10%, rgba(225,29,72,0.13), transparent 58%)" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+          <div style={sectionTitle}>{L.title}</div>
+          <div onClick={onClose} style={{ cursor: "pointer", color: MUTED, fontSize: 17, width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 9, border: `1px solid ${LINE}` }}>×</div>
+        </div>
+        {result ? (
+          <>
+            <div style={{ fontSize: 13.5, color: PAPER, lineHeight: 1.6, marginBottom: 16 }}>
+              {result.err ? L.err
+                : (Math.abs(result.applied) < result.surplus - 40
+                  ? (lang === "nl"
+                    ? `+${result.surplus} kcal ingepland. We konden ~${Math.abs(result.applied)} kcal over de week verdelen — de rest laten we gaan. Eén dag uit eten hoort erbij.`
+                    : `+${result.surplus} kcal planned. We could spread ~${Math.abs(result.applied)} kcal over the week — the rest we let go. One day out is fine.`)
+                  : (lang === "nl"
+                    ? `+${result.surplus} kcal ingepland. ${result.days} ${result.days === 1 ? "dag" : "dagen"} deze week licht getrimd; je weekgemiddelde blijft op doel.`
+                    : `+${result.surplus} kcal planned. ${result.days} ${result.days === 1 ? "day" : "days"} this week lightly trimmed; your weekly average holds.`))}
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              {!result.err && <button onClick={undo} style={{ background: "transparent", color: EMBER, border: `1px solid ${EMBER}`, borderRadius: 9, padding: "11px 16px", ...disp, fontWeight: 700, fontSize: 13, cursor: "pointer" }}>{L.undo}</button>}
+              <button onClick={onClose} style={{ ...primaryBtn, flex: 1 }}>{L.close}</button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div style={{ fontSize: 12.5, color: MUTED, lineHeight: 1.6, marginBottom: 16 }}>{L.intro}</div>
+            <div style={{ marginBottom: 14 }}>
+              <label style={label}>{L.dateL}</label>
+              <input type="date" value={date} min={today} onChange={(e) => setDate(e.target.value)} style={{ ...input, appearance: "auto", WebkitAppearance: "auto" }} />
+            </div>
+            <label style={label}>{L.howL}</label>
+            <div style={{ display: "flex", gap: 8, marginTop: 6, marginBottom: 6 }}>
+              {presets.map(([v, lbl]) => <div key={v} onClick={() => setPreset(v)} style={chip(preset === v)}>{lbl}<div style={{ fontSize: 10, fontWeight: 500, opacity: 0.8 }}>+{v}</div></div>)}
+            </div>
+            <div style={{ fontSize: 11, color: MUTED, lineHeight: 1.5, marginBottom: 16 }}>{L.estimate}</div>
+            <button onClick={apply} style={{ ...primaryBtn, width: "100%" }}>{L.go}</button>
+          </>
+        )}
+      </div>
     </div>
   );
 }
