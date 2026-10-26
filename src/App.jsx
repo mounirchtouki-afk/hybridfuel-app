@@ -5,6 +5,7 @@ import Tracker from "./views/Tracker.jsx";
 import Water from "./views/Water.jsx";
 import Products from "./views/Products.jsx";
 import Recipes from "./views/Recipes.jsx";
+import RaceProtocol from "./views/RaceProtocol.jsx";
 import { RECIPES } from "./recipes.js";
 import Reminders, { checkReminders } from "./views/Reminders.jsx";
 import Auth from "./views/Auth.jsx";
@@ -204,6 +205,7 @@ const TXT = {
   navWater: { nl: "Water", en: "Water" },
   navProducts: { nl: "Producten", en: "Products" },
   navRecipes: { nl: "Recepten", en: "Recipes" },
+  navRace: { nl: "Race", en: "Race" },
   install: { nl: "Installeer de app", en: "Install the app" },
   installHint: { nl: "Zet HybridFuelCo op je beginscherm — sneller, met herinneringen.", en: "Add HybridFuelCo to your home screen — faster, with reminders." },
   installBtn: { nl: "Installeren", en: "Install" },
@@ -256,6 +258,7 @@ const Icon = ({ name, on }) => {
   if (name === "water") return <svg width="23" height="23" viewBox="0 0 24 24"><path d="M12 3c3.5 4.2 6 7.3 6 10.3A6 6 0 016 13.3C6 10.3 8.5 7.2 12 3z" {...p} /></svg>;
   if (name === "producten") return <svg width="23" height="23" viewBox="0 0 24 24"><path d="M21 8l-9-5-9 5 9 5 9-5z" {...p} /><path d="M3 8v8l9 5 9-5V8M12 13v8" {...p} /></svg>;
   if (name === "recipes") return <svg width="23" height="23" viewBox="0 0 24 24"><path d="M4 4v6a3 3 0 006 0V4M7 4v16" {...p} /><path d="M17 4c-1.5 0-2.5 2-2.5 5s1 4 2.5 4 2.5-1 2.5-4-1-5-2.5-5zM17 13v7" {...p} /></svg>;
+  if (name === "race") return <svg width="23" height="23" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8" {...p} /><path d="M12 13V8.5M12 3.5V2M9.5 2h5" {...p} /></svg>;
   return null;
 };
 
@@ -337,6 +340,7 @@ export default function App() {
   // Toegang per laag. Eenmalig betaald (unlocked) = Basis-niveau. Dev-modus = alles.
   const hasBasis = devMode || unlocked || subTier === "basis" || subTier === "pro";
   const hasPro = devMode || subTier === "pro";
+  const hasPlus = devMode || subTier === "pro"; // Race Protocol — later evt. eigen Plus-laag
 
   useEffect(() => {
     try { const l = localStorage.getItem("hf_lang"); if (l === "nl" || l === "en") setLangState(l); } catch (e) {}
@@ -811,7 +815,7 @@ export default function App() {
   const safeText = lowBmi ? T("lowBmiWarn") : goal === "cut" ? T("safeCut") : goal === "gain" ? T("safeGain") : T("safeMaintain");
   const hasCycle = targets && targets.trainingCount > 0 && targets.trainingCount < 7 && targets.train && targets.rest;
 
-  const NAV = [["plan", "navPlan"], ["today", "navToday"], ["tracker", "navTracker"], ["water", "navWater"], ["producten", "navProducts"], ["recipes", "navRecipes"]];
+  const NAV = [["plan", "navPlan"], ["today", "navToday"], ["tracker", "navTracker"], ["water", "navWater"], ["producten", "navProducts"], ["recipes", "navRecipes"], ["race", "navRace"]];
 
   return (
     <div style={{ minHeight: "100vh", background: `radial-gradient(135% 95% at 90% -8%, rgba(225,29,72,0.22) 0%, rgba(150,30,18,0.07) 36%, ${INK} 66%), ${INK}`, backgroundAttachment: "fixed", backgroundRepeat: "no-repeat", color: PAPER, fontFamily: "Inter, sans-serif", paddingBottom: 76 + consentH }}>
@@ -1091,6 +1095,7 @@ export default function App() {
         {tab === "water" && (hasBasis ? <Water lang={lang} session={session} week={week} /> : <Locked />)}
         {tab === "producten" && (hasPro ? <Products embedded lang={lang} session={session} /> : <Locked pro />)}
         {tab === "recipes" && <Recipes lang={lang} session={session} />}
+        {tab === "race" && (hasPlus ? <RaceProtocol lang={lang} weight={weight} session={session} /> : <Locked pro />)}
       </div>
 
       {/* BOTTOM NAV */}
