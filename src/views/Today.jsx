@@ -20,6 +20,15 @@ const T = {
   addItem: { nl: "+ Iets toevoegen (scan / product)", en: "+ Add something (scan / product)" },
   noExtra: { nl: "Snel iets anders gegeten? Scan het of kies een product en zet het in deze dag.", en: "Ate something else? Scan it or pick a product and add it to this day." },
   g: { nl: "g", en: "g" },
+  yourDay: { nl: "Je dag", en: "Your day" },
+  onpoint: { nl: "on point", en: "on point" },
+  under: { nl: "te laag", en: "under" },
+  over: { nl: "te veel", en: "over" },
+  kcalLbl: { nl: "Calorieën", en: "Calories" },
+  protLbl: { nl: "Eiwit", en: "Protein" },
+  carbLbl: { nl: "Koolhydraten", en: "Carbs" },
+  fatLbl: { nl: "Vet", en: "Fat" },
+  waterLbl: { nl: "Water", en: "Water" },
 };
 
 function Ring({ pct }) {
@@ -41,6 +50,8 @@ export default function Today({ lang, week, onGoPlan, session }) {
   const [eaten, setEaten] = useState({});
   const [extras, setExtras] = useState([]);
   const [showAdd, setShowAdd] = useState(false);
+  const [waterMl, setWaterMl] = useState(0);
+  const [weightKg, setWeightKg] = useState(0);
 
   useEffect(() => {
     setEaten(load("hf_eaten_" + d, {}));
@@ -48,15 +59,26 @@ export default function Today({ lang, week, onGoPlan, session }) {
     if (cloud) {
       supabase.from("food_logs").select("id,item,grams,kcal,p,c,f").eq("user_id", session.user.id).eq("date", d).order("created_at")
         .then(({ data }) => { if (active && data) setExtras(data.map((r) => ({ ...r }))); }, () => {});
+      supabase.from("water_logs").select("ml").eq("user_id", session.user.id).eq("date", d)
+        .then(({ data }) => { if (active) setWaterMl((data && data[0] && data[0].ml) || 0); }, () => {});
+      supabase.from("weights").select("kg").eq("user_id", session.user.id).order("date", { ascending: false }).limit(1)
+        .then(({ data }) => { if (active && data && data[0]) setWeightKg(Number(data[0].kg)); }, () => {});
     } else {
       setExtras(load("hf_food_" + d, []));
+      setWaterMl((load("hf_water", {})[d]) || 0);
+      const ws = load("hf_weights", []); if (ws.length) { const s = [...ws].sort((a, b) => a.date.localeCompare(b.date)); setWeightKg(Number(s[s.length - 1].kg)); }
     }
     return () => { active = false; };
   }, [d, session]);
 
-  const shiftDay = (n) => { const dt = new Date(d + "T00:00:00"); dt.setDate(dt.getDate() + n); setD(dt.toISOString().slice(0, 10)); };
+  // Datum-shift tijdzone-veilig: middag pakken + lokaal formatteren (geen toISOString/UTC).
+  const shiftDay = (n) => {
+    const dt = new Date(d + "T12:00:00");
+    dt.setDate(dt.getDate() + n);
+    setD(dt.getFullYear() + "-" + String(dt.getMonth() + 1).padStart(2, "0") + "-" + String(dt.getDate()).padStart(2, "0"));
+  };
   const isToday = d === todayISO();
-  const idx = jsDayToIdx(new Date(d + "T00:00:00").getDay());
+  const idx = jsDayToIdx(new Date(d + "T12:00:00").getDay());
   const day = week && week.days && week.days.length ? (week.days[idx] || week.days[0]) : null;
 
   function toggle(i) { const next = { ...eaten, [i]: !eaten[i] }; setEaten(next); save("hf_eaten_" + d, next); }
@@ -95,6 +117,31 @@ export default function Today({ lang, week, onGoPlan, session }) {
   const allDone = day && day.m.length > 0 && day.m.every((_, i) => eaten[i]);
   const wd = WD[lang === "nl" ? "nl" : "en"][idx];
 
+  // Macro-doel = dagplan-totaal; gegeten = afgevinkte maaltijden + extra's.
+  const sumPlan = (k) => (day ? day.m.reduce((a, m) => a + num(m[k]), 0) : 0);
+  const sumEatenPlan = (k) => (day ? day.m.reduce((a, m, i) => a + (eaten[i] ? num(m[k]) : 0), 0) : 0);
+  const sumExtra = (k) => extras.reduce((a, x) => a + num(x[k]), 0);
+  const cons = (k) => sumEatenPlan(k) + sumExtra(k);
+  const waterGoal = weightKg > 0 ? Math.round((35 * weightKg + (day && day.train ? 500 : 0)) / 50) * 50 : 0;
+
+  function statusOf(c, target) {
+    if (!target) return { label: "—", color: MUTED };
+    const r = c / target;
+    if (r < 0.9) return { label: t("under"), color: EMBER_SOFT };
+    if (r > 1.1) return { label: t("over"), color: EMBER };
+    return { label: t("onpoint"), color: "#4ADE80" };
+  }
+  const block = (lbl, c, target, unit) => {
+    const s = statusOf(c, target);
+    return (
+      <div style={{ background: INK2, border: `1px solid ${LINE}`, borderLeft: `3px solid ${s.color}`, borderRadius: 10, padding: "11px 13px" }}>
+        <div style={{ fontSize: 9.5, letterSpacing: 1, textTransform: "uppercase", color: MUTED, fontWeight: 600 }}>{lbl}</div>
+        <div style={{ ...disp, fontSize: 18, fontWeight: 600, marginTop: 2, color: PAPER }}>{Math.round(c)}<span style={{ fontSize: 11.5, color: MUTED, fontWeight: 500 }}> / {Math.round(target)}{unit}</span></div>
+        <div style={{ fontSize: 10, color: s.color, fontWeight: 700, marginTop: 1 }}>{s.label}</div>
+      </div>
+    );
+  };
+
   const dateNav = (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
       <div onClick={() => shiftDay(-1)} style={{ cursor: "pointer", width: 34, height: 34, borderRadius: 9, border: `1px solid ${LINE}`, display: "flex", alignItems: "center", justifyContent: "center", color: PAPER, fontSize: 18 }}>‹</div>
@@ -118,17 +165,22 @@ export default function Today({ lang, week, onGoPlan, session }) {
         </div>
       ) : (
         <>
-          <div style={{ ...card, display: "flex", alignItems: "center", gap: 16 }}>
-            <Ring pct={pct} />
-            <div style={{ flex: 1 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+          <div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+              <div style={label}>{t("yourDay")}</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <Ring pct={pct} />
                 <div style={{ fontSize: 9.5, color: day.train ? EMBER : MUTED, border: `1px solid ${day.train ? EMBER : LINE}`, borderRadius: 5, padding: "2px 6px", letterSpacing: 1, fontWeight: 700 }}>{day.train ? t("train") : t("rest")}</div>
               </div>
-              <div style={{ fontSize: 13, color: MUTED }}>
-                <span style={{ color: PAPER, ...disp, fontSize: 17, fontWeight: 600 }}>{consumed}</span> {t("of")} {goal} kcal {t("eaten")}
-              </div>
-              <div style={{ fontSize: 11.5, color: allDone ? "#4ADE80" : MUTED, marginTop: 4 }}>{allDone ? t("done") : t("tapHint")}</div>
             </div>
+            {block(t("kcalLbl"), consumed, goal, "")}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 8 }}>
+              {block(t("waterLbl"), waterMl, waterGoal, " ml")}
+              {block(t("protLbl"), cons("p"), sumPlan("p"), "g")}
+              {block(t("carbLbl"), cons("c"), sumPlan("c"), "g")}
+              {block(t("fatLbl"), cons("f"), sumPlan("f"), "g")}
+            </div>
+            <div style={{ fontSize: 11.5, color: allDone ? "#4ADE80" : MUTED, marginTop: 10 }}>{allDone ? t("done") : t("tapHint")}</div>
           </div>
 
           <div>
