@@ -823,8 +823,9 @@ export default function App() {
   const NAV = [["plan", "navPlan"], ["today", "navToday"], ["tracker", "navTracker"], ["water", "navWater"], ["producten", "navProducts"], ["recipes", "navRecipes"], ["race", "navRace"]];
 
   return (
-    <div style={{ minHeight: "100vh", background: `radial-gradient(135% 95% at 90% -8%, rgba(225,29,72,0.22) 0%, rgba(150,30,18,0.07) 36%, ${INK} 66%), ${INK}`, backgroundAttachment: "fixed", backgroundRepeat: "no-repeat", color: PAPER, fontFamily: "Inter, sans-serif", paddingBottom: 76 + consentH }}>
-      <style dangerouslySetInnerHTML={{ __html: fonts + `*{box-sizing:border-box} select option{background:${INK2};color:${PAPER}} @keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}} .dot{animation:pulse 1s infinite} input[type=date],input[type=time]{color-scheme:dark}` }} />
+    <div style={{ minHeight: "100vh", background: INK, position: "relative", color: PAPER, fontFamily: "Inter, sans-serif", paddingBottom: 76 + consentH }}>
+      <style dangerouslySetInnerHTML={{ __html: fonts + `*{box-sizing:border-box} html,body{overflow-x:hidden} select option{background:${INK2};color:${PAPER}} @keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}} .dot{animation:pulse 1s infinite} input[type=date],input[type=time]{color-scheme:dark} .hf-glow{position:absolute;top:-240px;right:-180px;width:680px;height:680px;max-width:135vw;border-radius:50%;background:radial-gradient(circle,rgba(225,29,72,0.22),transparent 60%);pointer-events:none;z-index:0;animation:drift 16s ease-in-out infinite alternate} @keyframes drift{from{transform:translate(0,0)}to{transform:translate(-55px,45px)}} .hf-modal{scrollbar-width:none;-ms-overflow-style:none} .hf-modal::-webkit-scrollbar{display:none;width:0;height:0}` }} />
+      <div className="hf-glow" aria-hidden="true" />
 
       {/* HEADER */}
       <div style={{ borderBottom: `1px solid ${LINE}`, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, position: "sticky", top: 0, background: `radial-gradient(130% 320% at 94% 0%, rgba(225,29,72,0.16), ${INK} 58%), ${INK}`, zIndex: 20 }}>
@@ -850,7 +851,7 @@ export default function App() {
 
       {/* INSTALL-BANNER */}
       {installEvt && !installDismissed && (
-        <div style={{ background: "rgba(225,29,72,0.1)", borderBottom: `1px solid ${LINE}`, padding: "10px 16px", display: "flex", alignItems: "center", gap: 12 }}>
+        <div style={{ background: "rgba(225,29,72,0.1)", borderBottom: `1px solid ${LINE}`, padding: "10px 16px", display: "flex", alignItems: "center", gap: 12, position: "relative", zIndex: 1 }}>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 13, fontWeight: 600 }}>{T("install")}</div>
             <div style={{ fontSize: 11, color: MUTED, marginTop: 1 }}>{T("installHint")}</div>
@@ -860,7 +861,7 @@ export default function App() {
         </div>
       )}
 
-      <div style={{ maxWidth: 680, margin: "0 auto", padding: 16 }}>
+      <div style={{ maxWidth: 680, margin: "0 auto", padding: 16, position: "relative", zIndex: 1 }}>
 
         {/* ====== PLAN TAB ====== */}
         {tab === "plan" && (
