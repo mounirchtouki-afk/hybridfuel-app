@@ -57,7 +57,7 @@ export default function Dashboard({ lang, session, week, targets, units, onGo })
   const [waterMl, setWaterMl] = useState(0);
   const [weightKg, setWeightKg] = useState(0);
   const [race] = useState(() => load("hf_race", {}));
-  const [prefs, setPrefs] = useState(() => ({ water: true, weight: true, race: true, menu: true, train: true, ...(load("hf_dash", null) || {}) }));
+  const [prefs, setPrefs] = useState(() => ({ water: true, weight: false, race: true, menu: true, train: true, ...(load("hf_dash", null) || {}) }));
   const [train, setTrain] = useState(() => load("hf_workouts_" + todayISO(), []));
   const [cust, setCust] = useState(false);
   const setPref = (k, v) => { const n = { ...prefs, [k]: v }; setPrefs(n); save("hf_dash", n); };
@@ -162,6 +162,28 @@ export default function Dashboard({ lang, session, week, targets, units, onGo })
         </div>
       </div>
 
+      {/* Race-aftelling of uitnodiging (hoog = prominent) */}
+      {prefs.race && (cd !== null ? (
+        <div onClick={() => onGo("race")} style={{ cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", background: INK2, border: `1px solid ${EMBER}`, borderRadius: 14, padding: "14px 16px", backgroundImage: "radial-gradient(120% 90% at 100% 0%, rgba(225,29,72,0.16), transparent 60%)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="13" r="8" /><path d="M12 13V8.5M12 3.5V2M9.5 2h5" /></svg>
+            <div><div style={{ ...disp, fontWeight: 700, fontSize: 15 }}>{t("race")}</div><div style={{ fontSize: 10.5, color: MUTED }}>Race Protocol</div></div>
+          </div>
+          <div style={{ textAlign: "right" }}>
+            <div style={{ ...disp, fontSize: 24, fontWeight: 700, color: EMBER, lineHeight: 1 }}>{cd <= 0 ? "0" : cd}</div>
+            <div style={{ fontSize: 9.5, color: MUTED, letterSpacing: 1, textTransform: "uppercase" }}>{cd === 1 ? t("dayTomorrow") : cd <= 0 ? t("dayToday") : t("days")}</div>
+          </div>
+        </div>
+      ) : (
+        <div onClick={() => onGo("race")} style={{ cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", background: INK2, border: `1px dashed ${LINE}`, borderRadius: 14, padding: "14px 16px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="13" r="8" /><path d="M12 13V8.5M12 3.5V2M9.5 2h5" /></svg>
+            <div style={{ minWidth: 0 }}><div style={{ ...disp, fontWeight: 700, fontSize: 14.5 }}>{t("planRace")}</div><div style={{ fontSize: 10.5, color: MUTED, marginTop: 1 }}>{t("planRaceSub")}</div></div>
+          </div>
+          <div style={{ color: EMBER, fontSize: 22, fontWeight: 300, flexShrink: 0, paddingLeft: 8 }}>›</div>
+        </div>
+      ))}
+
       {/* Water + Gewicht */}
       {(prefs.water || prefs.weight) && (
         <div style={{ display: "flex", gap: 12 }}>
@@ -188,28 +210,6 @@ export default function Dashboard({ lang, session, week, targets, units, onGo })
           ) : (<div style={{ color: EMBER, fontSize: 22, fontWeight: 300, flexShrink: 0, paddingLeft: 8 }}>›</div>)}
         </div>
       )}
-
-      {/* Race-aftelling of uitnodiging */}
-      {prefs.race && (cd !== null ? (
-        <div onClick={() => onGo("race")} style={{ cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", background: INK2, border: `1px solid ${EMBER}`, borderRadius: 14, padding: "14px 16px", backgroundImage: "radial-gradient(120% 90% at 100% 0%, rgba(225,29,72,0.16), transparent 60%)" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="13" r="8" /><path d="M12 13V8.5M12 3.5V2M9.5 2h5" /></svg>
-            <div><div style={{ ...disp, fontWeight: 700, fontSize: 15 }}>{t("race")}</div><div style={{ fontSize: 10.5, color: MUTED }}>Race Protocol</div></div>
-          </div>
-          <div style={{ textAlign: "right" }}>
-            <div style={{ ...disp, fontSize: 24, fontWeight: 700, color: EMBER, lineHeight: 1 }}>{cd <= 0 ? "0" : cd}</div>
-            <div style={{ fontSize: 9.5, color: MUTED, letterSpacing: 1, textTransform: "uppercase" }}>{cd === 1 ? t("dayTomorrow") : cd <= 0 ? t("dayToday") : t("days")}</div>
-          </div>
-        </div>
-      ) : (
-        <div onClick={() => onGo("race")} style={{ cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", background: INK2, border: `1px dashed ${LINE}`, borderRadius: 14, padding: "14px 16px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="13" r="8" /><path d="M12 13V8.5M12 3.5V2M9.5 2h5" /></svg>
-            <div style={{ minWidth: 0 }}><div style={{ ...disp, fontWeight: 700, fontSize: 14.5 }}>{t("planRace")}</div><div style={{ fontSize: 10.5, color: MUTED, marginTop: 1 }}>{t("planRaceSub")}</div></div>
-          </div>
-          <div style={{ color: EMBER, fontSize: 22, fontWeight: 300, flexShrink: 0, paddingLeft: 8 }}>›</div>
-        </div>
-      ))}
 
       {/* Vandaag op het menu + extra gelogd */}
       {prefs.menu && ((day && day.m.length > 0) || extras.length > 0) && (
