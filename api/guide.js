@@ -54,7 +54,7 @@ async function isBundle(sid) {
 }
 
 async function signedUrl(lang) {
-  const url = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "").replace(/\/$/, "");
+  const url = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "https://tkmyjpsmdijaalwgzqdy.supabase.co").replace(/\/$/, "");
   const svc = process.env.SUPABASE_SERVICE_ROLE_KEY;
   const bucket = process.env.GUIDE_BUCKET || "guides";
   if (!url || !svc) return null;
