@@ -72,6 +72,11 @@ const DIETS = [
   { id: "vegan", nl: "Veganistisch", en: "Vegan" },
   { id: "pescatarian", nl: "Pescotarisch", en: "Pescatarian" },
 ];
+const VARIETY = [
+  { id: "varied", nl: "Veel variatie", en: "Lots of variety" },
+  { id: "mix", nl: "Beetje van beide", en: "A bit of both" },
+  { id: "fixed", nl: "Vaste patronen", en: "Fixed patterns" },
+];
 const CUISINES = [
   { id: "mediterranean", nl: "Mediterraans", en: "Mediterranean" },
   { id: "asian", nl: "Aziatisch", en: "Asian" },
@@ -130,6 +135,8 @@ const TXT = {
   favPh: { nl: "bijv. kip, rijst, kwark", en: "e.g. chicken, rice, quark" },
   goToProteins: { nl: "Vaste eiwitbronnen", en: "Go-to proteins" },
   cuisine: { nl: "Keukenstijl", en: "Cuisine vibe" },
+  variety: { nl: "Afwisseling in maaltijden", en: "Meal variety" },
+  varietyHint: { nl: "Wil je elke dag andere maaltijden, of juist je vaste patroon (bijv. elke ochtend hetzelfde ontbijt)? Bij vaste patronen herhalen we je maaltijden en passen we alleen de porties aan.", en: "Do you want different meals each day, or your fixed routine (e.g. the same breakfast every morning)? With fixed patterns we repeat your meals and only adjust the portions." },
   snacksLbl: { nl: "Tussendoortjes per dag", en: "Snacks per day" },
   snacksHint: { nl: "Verdeelt de dag beter — je krijgt 3 hoofdmaaltijden + dit aantal tussendoortjes.", en: "Spreads the day better — you get 3 main meals + this many snacks." },
   snackLikesLbl: { nl: "Wat voor tussendoortjes?", en: "What kind of snacks?" },
@@ -509,6 +516,7 @@ export default function App() {
   const [trainingDays, setTrainingDays] = useState([0, 2, 4]);
   const [snacks, setSnacks] = useState(2);
   const [snackLikes, setSnackLikes] = useState(["fruit"]);
+  const [variety, setVariety] = useState("mix");
 
   const [targets, setTargets] = useState(null);
   const [week, setWeek] = useState(null);
@@ -750,7 +758,7 @@ export default function App() {
 
   function common() {
     const dietObj = DIETS.find((d) => d.id === diet);
-    return { sex, age, height, weight, activity, goal, diet: dietObj ? dietObj[lang] : diet, avoid, likes, cuisines: labelsOf(cuisines, CUISINES), proteins: labelsOf(proteins, PROTEINS), snacks, snackLikes, snackLikeLabels: labelsOf(snackLikes, SNACKS), lang };
+    return { sex, age, height, weight, activity, goal, diet: dietObj ? dietObj[lang] : diet, avoid, likes, cuisines: labelsOf(cuisines, CUISINES), proteins: labelsOf(proteins, PROTEINS), snacks, snackLikes, snackLikeLabels: labelsOf(snackLikes, SNACKS), variety, lang };
   }
   function currentIntake() { return { ...common(), trainingDays: [...trainingDays] }; }
 
@@ -1441,6 +1449,12 @@ export default function App() {
               <div style={{ marginBottom: 16 }}>
                 <label style={label}>{T("cuisine")}</label>
                 <MultiDropdown values={cuisines} onChange={setCuisines} options={CUISINES.map((c) => ({ id: c.id, label: c[lang] }))} placeholder={T("pickMulti")} />
+              </div>
+
+              <div style={{ marginBottom: 18 }}>
+                <label style={label}>{T("variety")}</label>
+                <Dropdown value={variety} onChange={setVariety} options={VARIETY.map((v) => ({ id: v.id, label: v[lang] }))} />
+                <div style={{ fontSize: 11, color: MUTED, lineHeight: 1.5, marginTop: 8 }}>{T("varietyHint")}</div>
               </div>
 
               <div style={{ height: 1, background: LINE, margin: "2px 0 16px" }} />

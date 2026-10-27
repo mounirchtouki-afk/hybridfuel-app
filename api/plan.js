@@ -148,6 +148,7 @@ function buildPrompt(b, cyc) {
   const likes = cleanStr(b.likes, 200);
   const proteins = Array.isArray(b.proteins) ? b.proteins.slice(0, 10).map((x) => cleanStr(x, 30)).join(", ") : "";
   const cuisines = Array.isArray(b.cuisines) ? b.cuisines.slice(0, 10).map((x) => cleanStr(x, 30)).join(", ") : "";
+  const variety = cleanStr(b.variety, 20) || "mix";
 
   // Welke dag-templates moeten we bouwen? [{label, level}] met level train/rest/base.
   let reqs = Array.isArray(b.request) ? b.request.slice(0, 3) : [{ label: "D1", level: "base" }];
@@ -210,10 +211,15 @@ function buildPrompt(b, cyc) {
     : (lang === "en"
         ? '- 3 meals/day. Use exactly these meal types for "t": Breakfast, Lunch, Dinner.'
         : '- 3 maaltijden/dag. Gebruik precies deze types voor "t": Ontbijt, Lunch, Diner.');
+  const varyAcross = variety === "fixed"
+    ? (lang === "en" ? "Use the same snack(s) each day — repetition is wanted here." : "Gebruik elke dag dezelfde tussendoortjes — herhaling is hier gewenst.")
+    : variety === "varied"
+      ? (lang === "en" ? "Vary them across the days — avoid repeating the same snack." : "Varieer ze over de dagen — vermijd elke dag hetzelfde.")
+      : (lang === "en" ? "Keep one or two staples but rotate a snack or two across the week." : "Houd één of twee vaste tussendoortjes maar wissel er een paar af over de week.");
   const snackGuide = nSnackSafe > 0
     ? (lang === "en"
-        ? `- Keep each Snack small (roughly 8-15% of the day's calories) and simple; let the 3 main meals carry the rest. Spread the snacks between the main meals so the day is well distributed. Pick snacks FROM this list and vary them across the days (don't repeat the same snack every day): ${snackCands}. If in doubt, a banana is the most obvious default.`
-        : `- Houd elk Tussendoortje klein (ongeveer 8-15% van de dagcalorieën) en simpel; de 3 hoofdmaaltijden dragen de rest. Spreid de tussendoortjes tussen de hoofdmaaltijden zodat de dag goed verdeeld is. Kies de tussendoortjes UIT deze lijst en varieer ze over de dagen (niet elke dag hetzelfde): ${snackCands}. Bij twijfel is een banaan de meest voor de hand liggende keuze.`)
+        ? `- Keep each Snack small (roughly 8-15% of the day's calories) and simple; let the 3 main meals carry the rest. Spread the snacks between the main meals so the day is well distributed. Pick snacks FROM this list: ${snackCands}. ${varyAcross} If in doubt, a banana is the most obvious default.`
+        : `- Houd elk Tussendoortje klein (ongeveer 8-15% van de dagcalorieën) en simpel; de 3 hoofdmaaltijden dragen de rest. Spreid de tussendoortjes tussen de hoofdmaaltijden zodat de dag goed verdeeld is. Kies de tussendoortjes UIT deze lijst: ${snackCands}. ${varyAcross} Bij twijfel is een banaan de meest voor de hand liggende keuze.`)
     : "";
   const L = lang === "en"
     ? {
@@ -231,16 +237,26 @@ function buildPrompt(b, cyc) {
         example: '{"days":[{"d":"' + reqs[0].label + '","m":[{"t":"Ontbijt","n":"Havermout met kwark","kcal":0,"p":0,"c":0,"f":0,"ing":[{"n":"Havermout","g":60}]}]}]}',
       };
 
+  const varietyRule = variety === "fixed"
+    ? "MEAL VARIETY — the person prefers FIXED daily patterns. Use the SAME Breakfast, Lunch and Dinner (and the same snacks) on EVERY day; only adjust the portion sizes per day to hit that day's targets. Do NOT vary the dishes across days — repetition is intended and wanted."
+    : variety === "varied"
+      ? "MEAL VARIETY — the person wants LOTS of variety. Make each day's meals different and avoid repeating the same dish across days."
+      : "MEAL VARIETY — keep a few staple meals that repeat, but rotate 2-3 meals across the week for some variety.";
+  const cookLine = variety === "fixed"
+    ? "Keep meals realistic and easy to cook."
+    : "Make the days distinct and realistic to cook.";
+
   return `You are a sports nutrition coach. Build these meal-days, each hitting ITS OWN targets:
 ${dayLines}
 
 Diet: ${diet}. Avoid: ${avoid}.
 Preferences: ${prefText}
+${varietyRule}
 
 Optional recipe ideas that suit this person's taste — use any that fit the day's targets, the diet and the avoid-list, scaling portions to hit the numbers. Otherwise build your own simple, realistic meals around their stated preferences. Do NOT introduce novelty or "superfood" ingredients (matcha, ashwagandha, etc.) unless their preferences above mention them:
 ${recipeLines}
 
-Keep protein high and roughly equal on every day; put the calorie difference between training and rest days mainly into carbohydrates (rice, oats, potato, fruit). Make the days distinct and realistic to cook.
+Keep protein high and roughly equal on every day; put the calorie difference between training and rest days mainly into carbohydrates (rice, oats, potato, fruit). ${cookLine}
 
 Rules:
 ${L.rule1}
