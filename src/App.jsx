@@ -257,6 +257,7 @@ const TXT = {
   unlockBundle: { nl: "Week + Hyrox-gids — €17,95", en: "Week + Hyrox guide — €17.95" },
   lockFoot: { nl: "Direct beschikbaar na betaling.", en: "Available instantly after payment." },
   orSubscribe: { nl: "Of neem een abonnement — vanaf €9,95/mnd", en: "Or subscribe — from €9.95/mo" },
+  subscribeCta: { nl: "Neem een abonnement — vanaf €9,95/mnd", en: "Subscribe — from €9.95/mo" },
   lockedTitle: { nl: "Zit in Basis", en: "Part of Basic" },
   lockedSub: { nl: "Deze functie hoort bij een abonnement. Ontgrendel de volledige app.", en: "This feature is part of a subscription. Unlock the full app." },
   lockedPro: { nl: "Zit in Pro", en: "Part of Pro" },
@@ -1574,7 +1575,6 @@ export default function App() {
                         {planEmail === "sending" && <div style={{ fontSize: 12, color: MUTED, marginBottom: 10, lineHeight: 1.5 }}>{T("emailingPlan")}</div>}
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
                           <div onClick={downloadTracker} style={{ cursor: trackerBusy ? "default" : "pointer", opacity: trackerBusy ? 0.7 : 1, padding: "10px 16px", borderRadius: 8, border: "none", background: EMBER, color: PAPER, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.3 }}>{trackerBusy ? T("dlPreparing") : T("dlTracker")}</div>
-                          {tier === "bundle" && <div onClick={downloadGuide} style={{ cursor: "pointer", textDecoration: "none", padding: "10px 16px", borderRadius: 8, border: `1px solid ${EMBER}`, color: EMBER, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.3 }}>{T("dlGuide")}</div>}
                         </div>
                         <div style={{ fontSize: 11.5, color: MUTED, marginTop: 10, lineHeight: 1.5 }}>{T("dlHint")}</div>
                       </div>
@@ -1628,11 +1628,8 @@ export default function App() {
                         {[T("lb1"), T("lb2"), T("lb3")].map((t, i) => (
                           <div key={i} style={{ display: "flex", gap: 9, alignItems: "flex-start", fontSize: 13.5 }}><span style={{ color: EMBER, fontWeight: 800 }}>✓</span><span>{t}</span></div>
                         ))}
-                        <div style={{ display: "flex", gap: 9, alignItems: "flex-start", fontSize: 13.5, color: MUTED }}><span style={{ color: EMBER_SOFT, fontWeight: 800 }}>+</span><span>{T("lbBundle")}</span></div>
                       </div>
-                      <a href={STRIPE_WEEK_LINK} style={{ display: "block", textAlign: "center", background: EMBER, color: PAPER, textDecoration: "none", padding: "14px 0", borderRadius: 10, ...disp, fontWeight: 700, fontSize: 15.5, letterSpacing: 0.5, marginBottom: 9 }}>{T("unlockWeek")}</a>
-                      <a href={STRIPE_BUNDLE_LINK} style={{ display: "block", textAlign: "center", background: "transparent", color: PAPER, textDecoration: "none", padding: "12px 0", borderRadius: 10, border: `1px solid ${LINE}`, ...disp, fontWeight: 700, fontSize: 14, letterSpacing: 0.5 }}>{T("unlockBundle")}</a>
-                      <div onClick={() => setShowAuth(true)} style={{ cursor: "pointer", textAlign: "center", color: EMBER, padding: "12px 0 2px", marginTop: 4, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.3 }}>{T("orSubscribe")}</div>
+                      <div onClick={() => setShowAuth(true)} style={{ cursor: "pointer", textAlign: "center", background: EMBER, color: PAPER, padding: "14px 0", borderRadius: 10, ...disp, fontWeight: 700, fontSize: 15.5, letterSpacing: 0.5 }}>{T("subscribeCta")}</div>
                       <div style={{ fontSize: 11, color: MUTED, marginTop: 10, textAlign: "center" }}>{T("lockFoot")}</div>
                     </div>
                   )}
