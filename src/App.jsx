@@ -259,7 +259,7 @@ const TXT = {
   lockedTitle: { nl: "Zit in Basis", en: "Part of Basic" },
   lockedSub: { nl: "Deze functie hoort bij een abonnement. Ontgrendel de volledige app.", en: "This feature is part of a subscription. Unlock the full app." },
   lockedPro: { nl: "Zit in Pro", en: "Part of Pro" },
-  lockedProSub: { nl: "Zelf aanpassen, eigen producten en barcode-scan zitten in Pro.", en: "Customising, own products and barcode scan are in Pro." },
+  lockedProSub: { nl: "Eigen producten en barcode-scan zitten in Pro.", en: "Own products and barcode scan are in Pro." },
   unlockBtn: { nl: "Bekijk abonnementen", en: "See plans" },
   creditsOutTitle: { nl: "Je plannen zijn op", en: "You've used your plans" },
   creditsOutSub: { nl: "Je hebt je gegenereerde plannen gebruikt. Ontgrendel een nieuwe week om verder te gaan.", en: "You've used your generated plans. Unlock another week to continue." },
@@ -367,7 +367,7 @@ const LockIcon = ({ c, s = 24 }) => (
 );
 
 function EditDayCard({ day, di, api }) {
-const { T, ML, sIn, R, disp, mutDay, patchMeal, scaleMeal, patchIng, addIngr, removeIngr, removeMeal, addMealTo, saveMealAsRecipe, applyIngVals, saveIngProduct, setCopyPick, setMovePlan, setPickTarget, setShowProducts, setRecipePick, savedMsg, units } = api;
+const { T, ML, sIn, R, disp, mutDay, patchMeal, scaleMeal, patchIng, addIngr, removeIngr, removeMeal, addMealTo, saveMealAsRecipe, applyIngVals, saveIngProduct, setCopyPick, setMovePlan, setPickTarget, setShowProducts, setRecipePick, savedMsg, units, pro } = api;
   const [addOpen, setAddOpen] = useState(false);
   const [openMeal, setOpenMeal] = useState(null);
   const [dayMenu, setDayMenu] = useState(false);
@@ -460,7 +460,7 @@ const { T, ML, sIn, R, disp, mutDay, patchMeal, scaleMeal, patchIng, addIngr, re
                       {valEditor(mi, ingForm, (k, v) => setIngForm({ ...ingForm, [k]: v }))}
                       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                         <div onClick={() => { applyIngVals(di, mi, ii, { kcal: ingForm.kcal, p: ingForm.p, c: ingForm.c, f: ingForm.f }, ingForm.name); setIngForm(null); }} style={{ flex: 1, minWidth: 90, textAlign: "center", cursor: "pointer", background: EMBER, color: PAPER, borderRadius: 8, padding: "9px 0", ...disp, fontWeight: 700, fontSize: 12.5, letterSpacing: 0.3 }}>{T("applyVals")}</div>
-                        {!ing.pid && <div onClick={() => { saveIngProduct(di, mi, ii, { kcal: ingForm.kcal, p: ingForm.p, c: ingForm.c, f: ingForm.f }, ingForm.name); setIngForm(null); }} style={{ cursor: "pointer", color: EMBER, border: `1px solid ${EMBER}`, borderRadius: 8, padding: "9px 12px", ...disp, fontWeight: 700, fontSize: 12, letterSpacing: 0.3 }}>{T("toProduct")}</div>}
+                        {pro && !ing.pid && <div onClick={() => { saveIngProduct(di, mi, ii, { kcal: ingForm.kcal, p: ingForm.p, c: ingForm.c, f: ingForm.f }, ingForm.name); setIngForm(null); }} style={{ cursor: "pointer", color: EMBER, border: `1px solid ${EMBER}`, borderRadius: 8, padding: "9px 12px", ...disp, fontWeight: 700, fontSize: 12, letterSpacing: 0.3 }}>{T("toProduct")}</div>}
                         <div onClick={() => setIngForm(null)} style={{ cursor: "pointer", color: MUTED, fontSize: 12, fontWeight: 600, padding: "9px 12px", border: `1px solid ${LINE}`, borderRadius: 8 }}>{T("cancelShort")}</div>
                       </div>
                     </div>
@@ -474,7 +474,7 @@ const { T, ML, sIn, R, disp, mutDay, patchMeal, scaleMeal, patchIng, addIngr, re
               <div style={{ background: "#121212", borderTop: `1px solid ${LINE}` }}>
                 {miniAct(icPlus, T("addIngr").replace("+ ", ""), () => addIngr(di, mi))}
                 {miniAct(icEdit, T("editVals"), () => { setValMeal(valMeal === mi ? null : mi); setOpenMeal(null); })}
-                {miniAct(icBar, T("addProd").replace("+ ", ""), () => { setOpenMeal(null); setPickTarget({ di, mi }); setShowProducts(true); })}
+                {pro && miniAct(icBar, T("addProd").replace("+ ", ""), () => { setOpenMeal(null); setPickTarget({ di, mi }); setShowProducts(true); })}
                 {miniAct(icCopy, T("copyMeal"), () => { setOpenMeal(null); setCopyPick({ kind: "meal", di, mi }); })}
                 {miniAct(icSave, savedMsg === di + ":" + mi ? T("savedAsRecipe") : T("saveAsRecipe"), () => saveMealAsRecipe(di, mi))}
                 {miniAct(icTrash, T("removeMealTxt"), () => { setOpenMeal(null); removeMeal(di, mi); }, true)}
@@ -488,7 +488,7 @@ const { T, ML, sIn, R, disp, mutDay, patchMeal, scaleMeal, patchIng, addIngr, re
           <div style={{ background: "#121212" }}>
             {addOpt(icRecipe, T("addFromDb"), T("addFromDbSub"), () => { setAddOpen(false); setRecipePick(di); })}
             {addOpt(icPlus, T("addEmpty"), T("addEmptySub"), () => { setAddOpen(false); addMealTo(di); })}
-            {addOpt(icBar, T("addFromProd"), T("addFromProdSub"), () => { setAddOpen(false); setPickTarget({ di, mi: null }); setShowProducts(true); })}
+            {pro && addOpt(icBar, T("addFromProd"), T("addFromProdSub"), () => { setAddOpen(false); setPickTarget({ di, mi: null }); setShowProducts(true); })}
             <div onClick={() => setAddOpen(false)} style={{ cursor: "pointer", textAlign: "center", padding: "10px 0", color: MUTED, fontSize: 12, fontWeight: 600, borderTop: `1px solid ${LINE}` }}>{T("cancel")}</div>
           </div>
         )}
@@ -1561,19 +1561,19 @@ export default function App() {
                             <div key={id} onClick={() => setView(id)} style={{ padding: "8px 16px", borderRadius: 7, background: view === id ? EMBER : "transparent", color: PAPER, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.5, cursor: "pointer" }}>{lbl}</div>
                           ))}
                         </div>
-                        {view === "plan" && (hasPro ? (
+                        {view === "plan" && (hasBasis ? (
                           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                             {planEdit && <div onClick={() => setMovePlan({ scope: "week" })} style={{ cursor: "pointer", padding: "8px 14px", borderRadius: 8, border: `1px solid ${LINE}`, color: EMBER, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.5 }}>{T("movePlan")}</div>}
-                            {planEdit && <div onClick={() => setShowProducts(true)} style={{ cursor: "pointer", padding: "8px 14px", borderRadius: 8, border: `1px solid ${LINE}`, color: EMBER, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.5 }}>{T("myProducts")}</div>}
+                            {planEdit && hasPro && <div onClick={() => setShowProducts(true)} style={{ cursor: "pointer", padding: "8px 14px", borderRadius: 8, border: `1px solid ${LINE}`, color: EMBER, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.5 }}>{T("myProducts")}</div>}
                             <div onClick={toggleEdit} style={{ cursor: "pointer", padding: "8px 16px", borderRadius: 8, border: `1px solid ${planEdit ? EMBER : LINE}`, background: planEdit ? EMBER : "transparent", color: planEdit ? PAPER : EMBER, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.5 }}>{planEdit ? T("editDone") : T("editPlan")}</div>
                           </div>
                         ) : (
-                          <div onClick={() => setShowAuth(true)} style={{ cursor: "pointer", padding: "8px 14px", borderRadius: 8, border: `1px solid ${LINE}`, color: MUTED, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.5, display: "inline-flex", alignItems: "center", gap: 7 }}><LockIcon c={MUTED} s={15} />{T("editPlan")} · Pro</div>
+                          <div onClick={() => setShowAuth(true)} style={{ cursor: "pointer", padding: "8px 14px", borderRadius: 8, border: `1px solid ${LINE}`, color: MUTED, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.5, display: "inline-flex", alignItems: "center", gap: 7 }}><LockIcon c={MUTED} s={15} />{T("editPlan")}</div>
                         ))}
                       </div>
 
                       {view === "plan" && planEdit && <div style={{ fontSize: 11.5, color: MUTED, marginBottom: 12, lineHeight: 1.5 }}>{T("editHint")}</div>}
-                      {view === "plan" && (<div style={{ display: "grid", gap: 12 }}>{week.days.map((day, di) => planEdit ? <EditDayCard key={di} day={day} di={di} api={{ T, ML, sIn, R, disp, mutDay, patchMeal, scaleMeal, patchIng, addIngr, removeIngr, removeMeal, addMealTo, saveMealAsRecipe, applyIngVals, saveIngProduct, setCopyPick, setMovePlan, setPickTarget, setShowProducts, setRecipePick, savedMsg, units }} /> : <DayCard key={di} day={day} />)}</div>)}
+                      {view === "plan" && (<div style={{ display: "grid", gap: 12 }}>{week.days.map((day, di) => planEdit ? <EditDayCard key={di} day={day} di={di} api={{ T, ML, sIn, R, disp, mutDay, patchMeal, scaleMeal, patchIng, addIngr, removeIngr, removeMeal, addMealTo, saveMealAsRecipe, applyIngVals, saveIngProduct, setCopyPick, setMovePlan, setPickTarget, setShowProducts, setRecipePick, savedMsg, units, pro: hasPro }} /> : <DayCard key={di} day={day} />)}</div>)}
                       {view === "shop" && (
                         <div style={{ display: "grid", gap: 12 }}>
                           <div style={{ fontSize: 12, color: MUTED }}>{T("shopHint")}</div>
