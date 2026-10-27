@@ -353,34 +353,69 @@ export default async function handler(req, res) {
       }
     }
 
-    const key = process.env.ANTHROPIC_API_KEY;
-    if (!key) {
-      return res.status(500).json({ error: "Server mist API-key (ANTHROPIC_API_KEY)." });
+    // AI-provider-schakelaar. Standaard Anthropic-direct; zet AI_PROVIDER=openrouter
+    // in Vercel om via OpenRouter te draaien (één key, model-fallback, uitgavenlimiet).
+    // Model per provider via env: AI_MODEL_ANTHROPIC / AI_MODEL (OpenRouter-slug).
+    // Als de primaire provider faalt en de andere key bestaat, valt 't automatisch terug.
+    const anKey = process.env.ANTHROPIC_API_KEY;
+    const orKey = process.env.OPENROUTER_API_KEY;
+    const provider = (process.env.AI_PROVIDER || "anthropic").toLowerCase();
+    if (!anKey && !orKey) {
+      return res.status(500).json({ error: "Server mist AI-sleutel (ANTHROPIC_API_KEY of OPENROUTER_API_KEY)." });
     }
 
     const prompt = buildPrompt(body, cyc);
 
-    const r = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": key,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-6",
-        max_tokens: 3000,
-        messages: [{ role: "user", content: prompt }],
-      }),
-    });
-
-    if (!r.ok) {
-      const txt = await r.text();
-      return res.status(502).json({ error: "AI-aanroep mislukt (" + r.status + ")", detail: txt.slice(0, 200) });
+    async function callAnthropic() {
+      if (!anKey) return { err: "ANTHROPIC_API_KEY ontbreekt" };
+      const r = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-api-key": anKey, "anthropic-version": "2023-06-01" },
+        body: JSON.stringify({
+          model: process.env.AI_MODEL_ANTHROPIC || "claude-sonnet-4-6",
+          max_tokens: 3000,
+          messages: [{ role: "user", content: prompt }],
+        }),
+      });
+      if (!r.ok) return { err: "anthropic " + r.status, detail: (await r.text()).slice(0, 200) };
+      const d = await r.json();
+      return { text: (d.content || []).filter((x) => x.type === "text").map((x) => x.text).join("").trim() };
     }
 
-    const data = await r.json();
-    let text = (data.content || []).filter((x) => x.type === "text").map((x) => x.text).join("").trim();
+    async function callOpenRouter() {
+      if (!orKey) return { err: "OPENROUTER_API_KEY ontbreekt" };
+      const r = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + orKey,
+          "HTTP-Referer": "https://hybridfuelco.com",
+          "X-Title": "HybridFuelCo",
+        },
+        body: JSON.stringify({
+          model: process.env.AI_MODEL || "anthropic/claude-sonnet-4",
+          max_tokens: 3000,
+          messages: [{ role: "user", content: prompt }],
+        }),
+      });
+      if (!r.ok) return { err: "openrouter " + r.status, detail: (await r.text()).slice(0, 200) };
+      const d = await r.json();
+      const m = d.choices && d.choices[0] && d.choices[0].message;
+      let c = m && m.content;
+      if (Array.isArray(c)) c = c.map((x) => (x && x.text) || "").join("");
+      return { text: (c || "").trim() };
+    }
+
+    let out = provider === "openrouter" ? await callOpenRouter() : await callAnthropic();
+    // Fallback naar de andere provider als die key bestaat.
+    if ((out.err || !out.text) && (provider === "openrouter" ? anKey : orKey)) {
+      out = provider === "openrouter" ? await callAnthropic() : await callOpenRouter();
+    }
+    if (out.err || !out.text) {
+      return res.status(502).json({ error: "AI-aanroep mislukt", detail: (out.err || "leeg antwoord") + (out.detail ? " · " + out.detail : "") });
+    }
+
+    let text = out.text;
     text = text.replace(/```json/gi, "").replace(/```/g, "").trim();
 
     let plan;
