@@ -920,6 +920,16 @@ export default function App() {
     } catch (e) { exportExcel(); } finally { setTrackerBusy(false); }
   }
 
+  // Beveiligde download van de betaalde Hyrox-gids: het betaaltoken gaat naar
+  // /api/guide, dat bij Stripe herchec't op bundel en een signed URL teruggeeft.
+  function downloadGuide() {
+    let tok = "";
+    try { tok = localStorage.getItem("hf_token") || ""; } catch (e) {}
+    if (!tok) { alert(lang === "en" ? "No access token found — re-open the app from your purchase confirmation." : "Geen toegangstoken gevonden — open de app opnieuw via je aankoopbevestiging."); return; }
+    const u = "/api/guide?lang=" + encodeURIComponent(lang) + "&token=" + encodeURIComponent(tok);
+    window.open(u, "_blank", "noopener");
+  }
+
   async function emailPlan(wk) {
     if (!wk || !wk.days) return;
     try {
@@ -1564,7 +1574,7 @@ export default function App() {
                         {planEmail === "sending" && <div style={{ fontSize: 12, color: MUTED, marginBottom: 10, lineHeight: 1.5 }}>{T("emailingPlan")}</div>}
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
                           <div onClick={downloadTracker} style={{ cursor: trackerBusy ? "default" : "pointer", opacity: trackerBusy ? 0.7 : 1, padding: "10px 16px", borderRadius: 8, border: "none", background: EMBER, color: PAPER, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.3 }}>{trackerBusy ? T("dlPreparing") : T("dlTracker")}</div>
-                          {tier === "bundle" && <a href={`https://www.hybridfuelco.com/hyrox-guide-${lang}.pdf`} target="_blank" rel="noopener" style={{ textDecoration: "none", padding: "10px 16px", borderRadius: 8, border: `1px solid ${EMBER}`, color: EMBER, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.3 }}>{T("dlGuide")}</a>}
+                          {tier === "bundle" && <div onClick={downloadGuide} style={{ cursor: "pointer", textDecoration: "none", padding: "10px 16px", borderRadius: 8, border: `1px solid ${EMBER}`, color: EMBER, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.3 }}>{T("dlGuide")}</div>}
                         </div>
                         <div style={{ fontSize: 11.5, color: MUTED, marginTop: 10, lineHeight: 1.5 }}>{T("dlHint")}</div>
                       </div>
