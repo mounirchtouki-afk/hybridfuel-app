@@ -65,6 +65,12 @@ export default async function handler(req, res) {
   params.set("metadata[tier]", tier);
   params.set("subscription_data[metadata][user_id]", userId);
   params.set("subscription_data[metadata][tier]", tier);
+  // Herroepingsrecht: klant moet expliciet akkoord gaan met de voorwaarden
+  // (die de afstand bij directe digitale levering bevatten). Vereist een
+  // Terms-of-Service-URL in Stripe (Settings -> Public business information).
+  params.set("consent_collection[terms_of_service]", "required");
+  params.set("custom_text[terms_of_service_acceptance][message]",
+    "I agree to immediate access to the digital service and understand my 14-day right of withdrawal ends once delivery begins.");
 
   try {
     const r = await fetch("https://api.stripe.com/v1/checkout/sessions", {
