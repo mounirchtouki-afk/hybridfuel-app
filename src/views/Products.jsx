@@ -151,7 +151,7 @@ export default function Products({ lang, session, onClose, onPick, embedded, aut
         const p = j.product, n = p.nutriments || {};
         if (p.product_name) setNm(p.product_name);
         if (p.brands) setBr(String(p.brands).split(",")[0].trim());
-        const g = (k) => (n[k] != null ? Math.round(num(n[k])) : "");
+        const g = (k) => (n[k] != null ? Math.round(num(n[k]) * 100) / 100 : "");
         setKc(g("energy-kcal_100g")); setPr(g("proteins_100g")); setCb(g("carbohydrates_100g")); setFt(g("fat_100g"));
         setMsg(t("found"));
       } else { setMsg(t("notFound")); }
@@ -161,7 +161,8 @@ export default function Products({ lang, session, onClose, onPick, embedded, aut
   function add() {
     const name = nm.trim();
     if (!name) return;
-    const per_100 = { kcal: Math.round(num(kc)), p: Math.round(num(pr)), c: Math.round(num(cb)), f: Math.round(num(ft)) };
+    const d2 = (v) => Math.round(num(String(v).replace(",", ".")) * 100) / 100;
+    const per_100 = { kcal: d2(kc), p: d2(pr), c: d2(cb), f: d2(ft) };
     const barcode = bc.trim() || null;
     const category = cat || null;
     if (editId) {
@@ -198,7 +199,7 @@ export default function Products({ lang, session, onClose, onPick, embedded, aut
   }
   const catFor = (it) => it.category || catOf(it.name);
 
-  const macroIn = (val, set, ph) => <input value={val} onChange={(e) => set(e.target.value)} inputMode="numeric" placeholder={ph} style={{ ...input, textAlign: "center", padding: "9px 4px" }} />;
+  const macroIn = (val, set, ph) => <input value={val} onChange={(e) => set(e.target.value)} inputMode="decimal" placeholder={ph} style={{ ...input, textAlign: "center", padding: "9px 4px" }} />;
 
   // Lijst filteren + per categorie groeperen
   const needle = q.trim().toLowerCase();
