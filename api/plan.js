@@ -33,6 +33,18 @@ function validToken(token) {
   }
 }
 
+// Haalt de gebruikers-id (sub-claim) uit een Supabase-JWT. Alleen gebruikt nadat
+// subActive() het token al bij Supabase heeft geverifieerd, dus hier geen extra check.
+function jwtSub(token) {
+  try {
+    const p = (token || "").split(".")[1];
+    if (!p) return "";
+    const json = Buffer.from(p.replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf8");
+    const o = JSON.parse(json);
+    return typeof o.sub === "string" ? o.sub : "";
+  } catch (e) { return ""; }
+}
+
 // --- Abonnement-verificatie ----------------------------------------------
 // Checkt via de Supabase-sessie (JWT) of de ingelogde gebruiker een actief
 // Basis/Pro/Plus-abonnement heeft. RLS zorgt dat de query alleen de eigen rij teruggeeft.
@@ -317,6 +329,27 @@ export default async function handler(req, res) {
         // Geen credits meer (of geen geldig record) → klem op 0 en terug naar de betaalmuur.
         if (sid) { try { await kv(["SET", "cr:" + sid, "0", "EX", "15552000"]); } catch (e) {} }
         return res.status(200).json({ targets, plan: null, locked: true, reason: "no_credits" });
+      }
+    }
+
+    // Per-account eerlijk-gebruik-limiet voor abonnees (maandelijks). Voorkomt dat
+    // iemand eindeloos AI-plannen genereert op onze kosten. Ruim gezet (standaard 100/mnd),
+    // onzichtbaar voor normaal gebruik, alleen een backstop tegen misbruik.
+    // Alleen actief als er een credit-opslag (Upstash) gekoppeld is; faalt OPEN zodat
+    // echte klanten nooit vastlopen bij een opslagstoring. Env PLAN_LIMIT_PER_MONTH (0 = uit).
+    const MONTH_CAP = parseInt(process.env.PLAN_LIMIT_PER_MONTH || "100", 10);
+    if (!trusted && subVerified && kvConfigured() && MONTH_CAP > 0) {
+      const uid = jwtSub(body.authToken);
+      if (uid) {
+        try {
+          const mk = "gen:" + uid + ":" + new Date().toISOString().slice(0, 7);
+          const inc = await kv(["INCR", mk]);
+          const n = typeof inc.result === "number" ? inc.result : parseInt(inc.result, 10);
+          if (n === 1) { try { await kv(["EXPIRE", mk, "3456000"]); } catch (e) {} } // ~40 dagen
+          if (n > MONTH_CAP) {
+            return res.status(429).json({ error: "Je hebt deze maand het maximum aantal plannen gegenereerd — volgende maand kun je weer. / You've reached this month's plan limit; it resets next month." });
+          }
+        } catch (e) { /* opslag onbereikbaar → niet blokkeren */ }
       }
     }
 
