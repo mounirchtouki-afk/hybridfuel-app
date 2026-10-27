@@ -166,6 +166,7 @@ const TXT = {
   safeGain: { nl: "Opbouwen: 0,25–0,5% per week. Sneller aankomen is vooral vet, geen kracht.", en: "Building: 0.25–0.5% per week. Faster gain is mostly fat, not strength." },
   lowBmiTitle: { nl: "Belangrijk", en: "Important" },
   lowBmiWarn: { nl: "Op basis van je lengte en gewicht zit je al in een laag bereik (BMI onder 18,5). Verder afvallen raden we af — je doel staat daarom op onderhoud. Twijfel je? Overleg met een arts of diëtist.", en: "Based on your height and weight you're already in a low range (BMI under 18.5). We don't recommend losing more — your target is set to maintenance. In doubt? Talk to a doctor or dietitian." },
+  flooredWarn: { nl: "Dit is de laagste inname die we voor jouw lichaam nog veilig vinden (minimaal 1.200 kcal voor vrouwen / 1.500 voor mannen, en nooit onder je ruststofwisseling). Lager eten werkt averechts — het remt vetverlies, kost energie en spiermassa. Bij een medische aandoening of een verleden met een eetstoornis: overleg eerst met een professional.", en: "This is the lowest intake we'd safely suggest for your body (at least 1,200 kcal for women / 1,500 for men, and never below your resting metabolism). Eating less backfires — it stalls fat loss, drains energy and costs muscle. With a medical condition or any history of disordered eating, check with a professional first." },
   tabPlan: { nl: "Plan", en: "Plan" },
   tabShop: { nl: "Boodschappen", en: "Shopping list" },
   editPlan: { nl: "Aanpassen", en: "Edit" },
@@ -1333,7 +1334,8 @@ export default function App() {
   }
 
   const lowBmi = !!(targets && targets.lowBmi);
-  const safeText = lowBmi ? T("lowBmiWarn") : goal === "cut" ? T("safeCut") : goal === "gain" ? T("safeGain") : T("safeMaintain");
+  const floored = !!(targets && targets.floored);
+  const safeText = lowBmi ? T("lowBmiWarn") : floored ? T("flooredWarn") : goal === "cut" ? T("safeCut") : goal === "gain" ? T("safeGain") : T("safeMaintain");
   const hasCycle = targets && targets.trainingCount > 0 && targets.trainingCount < 7 && targets.train && targets.rest;
 
   const OVERFLOW = ["today", "tracker", "water", "producten", "race", "training"]; // zitten onder "Meer"
@@ -1551,9 +1553,9 @@ export default function App() {
                           </div>
                         </div>
                       )}
-                      <div style={lowBmi ? { marginTop: 12, border: `1px solid ${EMBER}`, background: "rgba(225,29,72,0.14)", borderRadius: 10, padding: "10px 12px" } : { marginTop: 12, borderLeft: `2px solid ${EMBER}`, padding: "2px 0 2px 12px" }}>
-                        <span style={{ fontSize: 11, fontWeight: 700, color: PAPER, textTransform: "uppercase", letterSpacing: 0.5 }}>{lowBmi ? "⚠ " + T("lowBmiTitle") : T("safeTitle")}. </span>
-                        <span style={{ fontSize: 11.5, color: lowBmi ? PAPER : MUTED, lineHeight: 1.5 }}>{safeText}</span>
+                      <div style={(lowBmi || floored) ? { marginTop: 12, border: `1px solid ${EMBER}`, background: "rgba(225,29,72,0.14)", borderRadius: 10, padding: "10px 12px" } : { marginTop: 12, borderLeft: `2px solid ${EMBER}`, padding: "2px 0 2px 12px" }}>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: PAPER, textTransform: "uppercase", letterSpacing: 0.5 }}>{(lowBmi || floored) ? "⚠ " + T("lowBmiTitle") : T("safeTitle")}. </span>
+                        <span style={{ fontSize: 11.5, color: (lowBmi || floored) ? PAPER : MUTED, lineHeight: 1.5 }}>{safeText}</span>
                       </div>
                     </div>
                   )}

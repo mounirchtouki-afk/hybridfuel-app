@@ -7,7 +7,7 @@ import { RECIPES, snackOptions } from "../src/recipes.js";
 import { kv, kvConfigured } from "./_kv.js";
 
 const ACTIVITY = { light: 1.375, moderate: 1.55, high: 1.725, athlete: 1.9 };
-const GOAL_ADJ = { cut: -0.2, maintain: 0, gain: 0.12 };
+const GOAL_ADJ = { cut: -0.18, maintain: 0, gain: 0.08 }; // gelijk aan de webcalculator
 
 // Controleert het token uit /api/verify. Is UNLOCK_SECRET niet gezet, dan is het
 // slot nog niet geactiveerd en gedraagt de app zich zoals nu (paid-vlag volstaat).
@@ -102,7 +102,7 @@ function cleanStr(v, max) {
 function computeBase(b) {
   const kg = clampNum(b.weight, 35, 300, 80);
   const cm = clampNum(b.height, 120, 230, 180);
-  const age = clampNum(b.age, 14, 100, 35);
+  const age = clampNum(b.age, 18, 100, 35); // 18+ (Mifflin is voor volwassenen gevalideerd)
   const sex = pick(b.sex, ["male", "female"], "male");
   const activity = pick(b.activity, Object.keys(ACTIVITY), "moderate");
   let goal = pick(b.goal, Object.keys(GOAL_ADJ), "maintain");
@@ -116,14 +116,17 @@ function computeBase(b) {
     ? 10 * kg + 6.25 * cm - 5 * age + 5
     : 10 * kg + 6.25 * cm - 5 * age - 161;
   const maintenance = Math.round((bmr * ACTIVITY[activity]) / 10) * 10;
-  // Veiligheidsvloer: het gemiddelde dagdoel zakt nooit onder de ruststofwisseling (BMR).
-  // Zo blijft een tekort verantwoord, ook voor slanke of lichte mensen.
-  const bmrFloor = Math.round(bmr / 10) * 10;
-  const kcal = Math.max(bmrFloor, Math.round((maintenance * (1 + GOAL_ADJ[goal])) / 10) * 10);
+  // Veiligheidsvloer: nooit onder BMR×1,1 én nooit onder de absolute ondergrens
+  // (1500 kcal man / 1200 kcal vrouw — Harvard Health). Zelfde regel als de webcalculator.
+  const sexMin = sex === "male" ? 1500 : 1200;
+  const safeFloor = Math.max(Math.round((bmr * 1.1) / 10) * 10, sexMin);
+  let kcal = Math.round((maintenance * (1 + GOAL_ADJ[goal])) / 10) * 10;
+  let floored = false;
+  if (kcal < safeFloor) { kcal = safeFloor; floored = true; }
   const protein = Math.round(kg * 2.0);
   const fat = Math.round(kg * 0.9);
   const carbs = Math.max(40, Math.round((kcal - protein * 4 - fat * 9) / 4));
-  return { kcal, protein, carbs, fat, maintenance, kg, bmi: Math.round(bmi * 10) / 10, lowBmi };
+  return { kcal, protein, carbs, fat, maintenance, kg, bmi: Math.round(bmi * 10) / 10, lowBmi, floored };
 }
 
 // Houd eiwit en vet gelijk; de calorie-swing gaat naar koolhydraten (carb cycling).
@@ -296,7 +299,7 @@ export default async function handler(req, res) {
     const cyc = computeCycle(base, body.trainingCount);
     const targets = {
       kcal: base.kcal, protein: base.protein, carbs: base.carbs, fat: base.fat,
-      maintenance: base.maintenance, bmi: base.bmi, lowBmi: base.lowBmi,
+      maintenance: base.maintenance, bmi: base.bmi, lowBmi: base.lowBmi, floored: base.floored,
       train: cyc.train, rest: cyc.rest, trainingCount: cyc.trainingCount,
     };
 
