@@ -13,6 +13,7 @@ import { RECIPES, snackOptions } from "./recipes.js";
 import Reminders, { checkReminders } from "./views/Reminders.jsx";
 import Auth from "./views/Auth.jsx";
 import { supabase } from "./supabaseClient.js";
+import { initCloudSync, pullAll } from "./cloudsync.js";
 import { Dropdown, MultiDropdown } from "./ui.jsx";
 
 // ===== Dev-modus demo-plan (alleen voor review op preview/localhost) =====
@@ -549,6 +550,7 @@ export default function App() {
   const [showMore, setShowMore] = useState(false);
   const [showReminders, setShowReminders] = useState(false);
   const [session, setSession] = useState(null);
+  const [syncVer, setSyncVer] = useState(0);
   const [showAuth, setShowAuth] = useState(false);
   const [authRecovery, setAuthRecovery] = useState(false);
   const [showLogout, setShowLogout] = useState(false);
@@ -709,6 +711,17 @@ export default function App() {
         const p = data[0];
         if (p.week && p.week.days) { setWeek(p.week); if (p.targets) setTargets(p.targets); }
       }).catch(() => {});
+    return () => { active = false; };
+  }, [session]);
+
+  // Cloud-sync van kalender-afwijkingen, trainingslogs en weekschema (localStorage
+  // → Supabase, volgt je over apparaten). Patcht localStorage en haalt bij login de
+  // cloud-waarden op; daarna remounten Today/Training (via syncVer-key) om ze te tonen.
+  useEffect(() => {
+    initCloudSync(session);
+    if (!session) return;
+    let active = true;
+    pullAll(session).then(() => { if (active) setSyncVer((v) => v + 1); });
     return () => { active = false; };
   }, [session]);
 
@@ -1646,13 +1659,13 @@ export default function App() {
         )}
 
         {/* ====== OTHER TABS ====== */}
-        {tab === "today" && (hasBasis ? <Today lang={lang} week={week} session={session} plus={hasPlus} units={units} onRebalance={rebalanceDay} onGoPlan={() => setTab("plan")} /> : <Locked />)}
+        {tab === "today" && (hasBasis ? <Today key={"today" + syncVer} lang={lang} week={week} session={session} plus={hasPlus} units={units} onRebalance={rebalanceDay} onGoPlan={() => setTab("plan")} /> : <Locked />)}
         {tab === "tracker" && (hasBasis ? <Tracker lang={lang} height={height} session={session} units={units} /> : <Locked />)}
         {tab === "water" && (hasBasis ? <Water lang={lang} session={session} week={week} units={units} /> : <Locked />)}
         {tab === "producten" && (hasPro ? <Products embedded lang={lang} session={session} onProductChange={propagateProduct} /> : <Locked pro />)}
         {tab === "recipes" && <Recipes lang={lang} session={session} units={units} />}
         {tab === "race" && (hasPlus ? <RaceProtocol lang={lang} weight={weight} session={session} week={week} /> : <Locked pro />)}
-        {tab === "training" && (hasBasis ? <Training lang={lang} weight={weight} session={session} /> : <Locked />)}
+        {tab === "training" && (hasBasis ? <Training key={"training" + syncVer} lang={lang} weight={weight} session={session} /> : <Locked />)}
       </div>
 
       {/* QUICK-ADD + (centraal, verhoogd) */}
