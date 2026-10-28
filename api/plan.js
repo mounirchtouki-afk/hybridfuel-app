@@ -54,7 +54,7 @@ async function subActive(authToken) {
   const anon = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || "sb_publishable_5CJ_waXIVhhzkkqD96iqMA_63yJJnaH";
   if (!url) return false;
   try {
-    const r = await fetch(url + "/rest/v1/subscriptions?select=tier,status", {
+    const r = await fetch(url + "/rest/v1/subscriptions?select=tier,status,current_period_end", {
       headers: { apikey: anon, Authorization: "Bearer " + authToken },
     });
     if (!r.ok) return false;
@@ -63,7 +63,9 @@ async function subActive(authToken) {
     if (!s) return false;
     const activeStatus = s.status === "active" || s.status === "trialing";
     const paidTier = s.tier === "basis" || s.tier === "pro" || s.tier === "plus";
-    return !!(activeStatus && paidTier);
+    // Eenmalige betaling: toegang vervalt op current_period_end (geen auto-verlenging).
+    const notExpired = !s.current_period_end || new Date(s.current_period_end).getTime() > Date.now();
+    return !!(activeStatus && paidTier && notExpired);
   } catch (e) { return false; }
 }
 

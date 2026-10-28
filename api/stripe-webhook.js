@@ -167,26 +167,42 @@ export default async function handler(req, res) {
   let db = { skipped: evt.type };
   try {
     const o = evt.data && evt.data.object;
-    if (evt.type === "checkout.session.completed" && o && o.mode === "subscription") {
+    if (evt.type === "checkout.session.completed" && o && (o.mode === "payment" || o.mode === "subscription")) {
       let userId = o.client_reference_id || (o.metadata && o.metadata.user_id);
+      const email = ((o.customer_details && o.customer_details.email) || o.customer_email || "").toLowerCase();
       if (!userId) {
-        // Publieke 2-klik flow: geen account vooraf. Maak/zoek de user op e-mail,
-        // koppel user_id aan de Stripe-sub en mail een inlog-link.
-        const email = ((o.customer_details && o.customer_details.email) || o.customer_email || "").toLowerCase();
+        // Publieke 2-klik flow: geen account vooraf. Maak/zoek de user op e-mail en mail een inlog-link.
         userId = await findOrCreateUser(email);
         if (userId && o.subscription) await setStripeSubMeta(o.subscription, userId);
         if (userId && email) await sendMagicLink(email);
       }
-      const st = o.subscription ? await fetchSubState(o.subscription) : null; // echte status bij Stripe
-      db = await setSub(userId, {
-        stripe_customer_id: o.customer || (st && st.customer) || null,
-        stripe_subscription_id: o.subscription || null,
-        tier: (st && st.tier) || (o.metadata && o.metadata.tier) || "basis",
-        status: (st && st.status) || "active",
-        interval: st ? st.interval : null,
-        current_period_end: st ? st.periodEnd : null,
-        cancel_at_period_end: st ? st.cancelAtPeriodEnd : false,
-      });
+      if (o.mode === "payment") {
+        // Eenmalige betaling: geef toegang voor de gekochte periode (metadata.period_days).
+        const tier = (o.metadata && o.metadata.tier) || "basis";
+        const days = parseInt((o.metadata && o.metadata.period_days) || "30", 10) || 30;
+        const until = new Date(Date.now() + days * 86400000).toISOString();
+        db = await setSub(userId, {
+          stripe_customer_id: o.customer || null,
+          stripe_subscription_id: null,
+          tier,
+          status: "active",
+          interval: (o.metadata && o.metadata.interval) || null,
+          current_period_end: until,
+          cancel_at_period_end: false,
+        });
+      } else {
+        // Legacy doorlopend abonnement (mocht er nog een bestaan).
+        const st = o.subscription ? await fetchSubState(o.subscription) : null;
+        db = await setSub(userId, {
+          stripe_customer_id: o.customer || (st && st.customer) || null,
+          stripe_subscription_id: o.subscription || null,
+          tier: (st && st.tier) || (o.metadata && o.metadata.tier) || "basis",
+          status: (st && st.status) || "active",
+          interval: st ? st.interval : null,
+          current_period_end: st ? st.periodEnd : null,
+          cancel_at_period_end: st ? st.cancelAtPeriodEnd : false,
+        });
+      }
     } else if (evt.type === "customer.subscription.updated" && o) {
       const userId = o.metadata && o.metadata.user_id;
       // Niet op het event vertrouwen: haal de echte status op. Niet-ophaalbaar = weg = free.

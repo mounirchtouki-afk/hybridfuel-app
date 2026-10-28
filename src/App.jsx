@@ -711,8 +711,13 @@ export default function App() {
   // Abonnement-laag ophalen zodra er een sessie is.
   useEffect(() => {
     if (!supabase || !session) { setSubTier("free"); return; }
-    supabase.from("subscriptions").select("tier").eq("user_id", session.user.id).single()
-      .then(({ data }) => { if (data && data.tier) setSubTier(data.tier); }).catch(() => {});
+    supabase.from("subscriptions").select("tier,current_period_end").eq("user_id", session.user.id).single()
+      .then(({ data }) => {
+        // Eenmalige betaling: toegang geldt tot current_period_end. Daarna terug naar free.
+        const live = data && data.tier && data.tier !== "free" &&
+          (!data.current_period_end || new Date(data.current_period_end).getTime() > Date.now());
+        setSubTier(live ? data.tier : "free");
+      }).catch(() => {});
   }, [session]);
 
   // Laatste plan uit de cloud laden zodra er een sessie is (volgt je over apparaten).
