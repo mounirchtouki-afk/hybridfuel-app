@@ -86,7 +86,7 @@ export default async function handler(req, res) {
   // Vereist een Terms-URL in Stripe (Settings -> Public business information).
   params.set("consent_collection[terms_of_service]", "required");
   params.set("custom_text[terms_of_service_acceptance][message]",
-    "I agree to immediate access to the digital service and understand my 14-day right of withdrawal ends once delivery begins.");
+    "I agree to immediate access to the digital plan and waive my 14-day right of withdrawal. Once access begins, the payment is non-refundable.");
 
   try {
     const r = await fetch("https://api.stripe.com/v1/checkout/sessions", {
