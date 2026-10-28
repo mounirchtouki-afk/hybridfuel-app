@@ -10,7 +10,7 @@
 //
 // Zet in Stripe de webhook-endpoint op:  https://<app>/api/stripe-webhook
 // en abonneer op: checkout.session.completed, customer.subscription.updated,
-// customer.subscription.deleted.
+// customer.subscription.deleted, charge.refunded.
 
 import crypto from "crypto";
 
@@ -149,6 +149,23 @@ async function setStripeSubMeta(subId, userId) {
   } catch (e) {}
 }
 
+// Zoekt de user_id bij een Stripe-customer, zodat we bij een refund weten wiens
+// toegang we moeten intrekken (de eenmalige betaling zette stripe_customer_id op de rij).
+async function findUserByCustomer(customerId) {
+  if (!customerId) return null;
+  const url = supaBase();
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return null;
+  try {
+    const r = await fetch(url + "/rest/v1/subscriptions?stripe_customer_id=eq." + encodeURIComponent(customerId) + "&select=user_id&limit=1", {
+      headers: { apikey: key, Authorization: "Bearer " + key },
+    });
+    if (!r.ok) return null;
+    const rows = await r.json().catch(() => []);
+    return (rows && rows[0] && rows[0].user_id) || null;
+  } catch (e) { return null; }
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") { res.setHeader("Allow", "POST"); return res.status(405).end(); }
 
@@ -213,6 +230,20 @@ export default async function handler(req, res) {
     } else if (evt.type === "customer.subscription.deleted" && o) {
       const userId = o.metadata && o.metadata.user_id;
       db = await setSub(userId, { tier: "free", status: "canceled", cancel_at_period_end: false });
+    } else if (evt.type === "charge.refunded" && o) {
+      // Volledige terugbetaling → toegang direct intrekken. Gedeeltelijke refund laat toegang staan.
+      const amount = typeof o.amount === "number" ? o.amount : null;
+      const refunded = typeof o.amount_refunded === "number" ? o.amount_refunded : null;
+      const fully = o.refunded === true || (amount !== null && refunded !== null && refunded >= amount);
+      if (!fully) {
+        db = { skipped: "partial_refund", amount, refunded };
+      } else {
+        let userId = (o.metadata && o.metadata.user_id) || null;
+        if (!userId && o.customer) userId = await findUserByCustomer(o.customer);
+        db = userId
+          ? await setSub(userId, { tier: "free", status: "canceled", cancel_at_period_end: false, current_period_end: new Date().toISOString() })
+          : { ok: false, reason: "refund_no_user", customer: o.customer || null };
+      }
     }
   } catch (err) {
     console.error("stripe-webhook handler error", err);
