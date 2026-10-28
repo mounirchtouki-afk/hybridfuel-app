@@ -84,6 +84,71 @@ async function fetchSubState(subId) {
   };
 }
 
+// --- Publieke-checkout koppeling (2-klik flow) -------------------------------
+// Betaalt iemand zonder vooraf ingelogd te zijn, dan is er nog geen Supabase-user.
+// We maken (of vinden) die op e-mail en geven de id terug, zodat de subscription
+// aan een echte account hangt.
+async function findOrCreateUser(email) {
+  if (!email) return null;
+  const url = supaBase();
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return null;
+  // 1) Aanmaken (e-mail meteen bevestigd zodat de inlog-link direct werkt).
+  try {
+    const cr = await fetch(url + "/auth/v1/admin/users", {
+      method: "POST",
+      headers: { apikey: key, Authorization: "Bearer " + key, "Content-Type": "application/json" },
+      body: JSON.stringify({ email, email_confirm: true }),
+    });
+    if (cr.ok) { const u = await cr.json().catch(() => ({})); if (u && u.id) return u.id; }
+  } catch (e) {}
+  // 2) Bestond al → opzoeken in de admin-lijst (paginerend, op e-mail).
+  for (let page = 1; page <= 10; page++) {
+    try {
+      const lr = await fetch(url + "/auth/v1/admin/users?page=" + page + "&per_page=200", {
+        headers: { apikey: key, Authorization: "Bearer " + key },
+      });
+      if (!lr.ok) break;
+      const d = await lr.json().catch(() => ({}));
+      const list = (d && (d.users || (Array.isArray(d) ? d : []))) || [];
+      const hit = list.find((x) => (x.email || "").toLowerCase() === email);
+      if (hit && hit.id) return hit.id;
+      if (list.length < 200) break;
+    } catch (e) { break; }
+  }
+  return null;
+}
+
+// Mailt een magic-link (gebruikt de ingestelde SMTP = Resend) zodat de klant na
+// betaling in de app komt zonder eerst een wachtwoord te hoeven kiezen.
+async function sendMagicLink(email) {
+  if (!email) return;
+  const url = supaBase();
+  const anon = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || "sb_publishable_5CJ_waXIVhhzkkqD96iqMA_63yJJnaH";
+  try {
+    await fetch(url + "/auth/v1/otp", {
+      method: "POST",
+      headers: { apikey: anon, "Content-Type": "application/json" },
+      body: JSON.stringify({ email, create_user: false }),
+    });
+  } catch (e) {}
+}
+
+// Zet user_id op de Stripe-subscription, zodat latere updated/deleted-events ook
+// aan de juiste gebruiker gekoppeld worden.
+async function setStripeSubMeta(subId, userId) {
+  if (!subId || !userId) return;
+  const params = new URLSearchParams();
+  params.set("metadata[user_id]", userId);
+  try {
+    await fetch("https://api.stripe.com/v1/subscriptions/" + encodeURIComponent(subId), {
+      method: "POST",
+      headers: { Authorization: "Bearer " + process.env.STRIPE_SECRET_KEY, "Content-Type": "application/x-www-form-urlencoded" },
+      body: params.toString(),
+    });
+  } catch (e) {}
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") { res.setHeader("Allow", "POST"); return res.status(405).end(); }
 
@@ -103,7 +168,15 @@ export default async function handler(req, res) {
   try {
     const o = evt.data && evt.data.object;
     if (evt.type === "checkout.session.completed" && o && o.mode === "subscription") {
-      const userId = o.client_reference_id || (o.metadata && o.metadata.user_id);
+      let userId = o.client_reference_id || (o.metadata && o.metadata.user_id);
+      if (!userId) {
+        // Publieke 2-klik flow: geen account vooraf. Maak/zoek de user op e-mail,
+        // koppel user_id aan de Stripe-sub en mail een inlog-link.
+        const email = ((o.customer_details && o.customer_details.email) || o.customer_email || "").toLowerCase();
+        userId = await findOrCreateUser(email);
+        if (userId && o.subscription) await setStripeSubMeta(o.subscription, userId);
+        if (userId && email) await sendMagicLink(email);
+      }
       const st = o.subscription ? await fetchSubState(o.subscription) : null; // echte status bij Stripe
       db = await setSub(userId, {
         stripe_customer_id: o.customer || (st && st.customer) || null,

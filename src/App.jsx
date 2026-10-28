@@ -259,6 +259,9 @@ const TXT = {
   lockFoot: { nl: "Direct beschikbaar na betaling.", en: "Available instantly after payment." },
   orSubscribe: { nl: "Of neem een abonnement · vanaf €9,95/mnd", en: "Or subscribe · from €9.95/mo" },
   subscribeCta: { nl: "Neem een abonnement · vanaf €9,95/mnd", en: "Subscribe · from €9.95/mo" },
+  subOk: { nl: "Betaling gelukt! Ben je al ingelogd, dan staat je plan klaar. Zo niet: check je mail voor je inlog-link.", en: "Payment complete! If you're logged in, your plan is ready. If not, check your email for your login link." },
+  subCancel: { nl: "Afrekenen geannuleerd.", en: "Checkout canceled." },
+  subErr: { nl: "Afrekenen is even niet beschikbaar. Probeer het later opnieuw.", en: "Checkout is temporarily unavailable. Please try again later." },
   lockedTitle: { nl: "Zit in Basis", en: "Part of Basic" },
   lockedSub: { nl: "Deze functie hoort bij een abonnement. Ontgrendel de volledige app.", en: "This feature is part of a subscription. Unlock the full app." },
   lockedPro: { nl: "Zit in Pro", en: "Part of Pro" },
@@ -539,6 +542,7 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [started, setStarted] = useState(false);
+  const [subMsg, setSubMsg] = useState("");
   const [unlocked, setUnlocked] = useState(false);
   const [tier, setTier] = useState("week");
   const [email, setEmail] = useState("");
@@ -650,6 +654,14 @@ export default function App() {
     let params = null;
     try { params = new URLSearchParams(window.location.search); } catch (e) {}
     const sid = params && params.get("session_id");
+
+    // 2-klik abonnement: terug van Stripe Checkout. Toon een nette melding.
+    try {
+      const sub = params && params.get("sub");
+      if (sub === "success") setSubMsg("ok");
+      else if (sub === "cancel") setSubMsg("cancel");
+      else if (sub === "error" || sub === "unavailable") setSubMsg("err");
+    } catch (e) {}
 
     if (sid) {
       fetch("/api/verify?session_id=" + encodeURIComponent(sid))
@@ -1364,6 +1376,12 @@ export default function App() {
     <div style={{ minHeight: "100vh", background: "linear-gradient(180deg, #1b0a11 0%, #140a0e 48%, #0e090b 100%)", position: "relative", color: PAPER, fontFamily: "Inter, sans-serif", paddingBottom: `calc(${76 + consentH}px + env(safe-area-inset-bottom))` }}>
       <style dangerouslySetInnerHTML={{ __html: fonts + `*{box-sizing:border-box;scrollbar-width:none;-ms-overflow-style:none} *::-webkit-scrollbar{display:none;width:0;height:0} html,body{overflow-x:hidden;background:#120a0d} select option{background:${INK2};color:${PAPER}} @keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}} .dot{animation:pulse 1s infinite} input[type=date],input[type=time]{color-scheme:dark} .hf-glow{position:fixed;inset:0;pointer-events:none;z-index:-1;background:radial-gradient(125% 75% at 50% -2%,rgba(225,29,72,0.20),transparent 58%),radial-gradient(95% 55% at 100% 106%,rgba(225,29,72,0.10),transparent 62%);animation:drift 20s ease-in-out infinite alternate} @keyframes drift{from{transform:translate(0,0)}to{transform:translate(-30px,24px)}} .hf-modal{scrollbar-width:none;-ms-overflow-style:none} .hf-modal::-webkit-scrollbar{display:none;width:0;height:0}` }} />
       <div className="hf-glow" aria-hidden="true" />
+      {subMsg && (
+        <div onClick={() => setSubMsg("")} style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 120, background: subMsg === "ok" ? EMBER : INK2, color: PAPER, padding: "12px 16px", paddingTop: "calc(12px + env(safe-area-inset-top))", textAlign: "center", fontSize: 13.5, lineHeight: 1.5, cursor: "pointer", boxShadow: "0 4px 18px rgba(0,0,0,.4)" }}>
+          {subMsg === "ok" ? T("subOk") : subMsg === "cancel" ? T("subCancel") : T("subErr")}
+          <span style={{ opacity: 0.7, marginLeft: 8, fontWeight: 700 }}>✕</span>
+        </div>
+      )}
 
       {/* HEADER */}
       <div style={{ borderBottom: `1px solid ${LINE}`, padding: "12px 14px", display: "flex", alignItems: "center", gap: 8, position: "sticky", top: 0, background: `radial-gradient(130% 320% at 94% 0%, rgba(225,29,72,0.18), #19090f 58%), #150a0e`, zIndex: 20 }}>

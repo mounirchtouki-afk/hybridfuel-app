@@ -31,23 +31,29 @@ function appBase(req) {
 }
 
 export default async function handler(req, res) {
-  if (req.method !== "POST") {
-    res.setHeader("Allow", "POST");
+  // GET = publieke flow vanaf de website: géén login, Stripe verzamelt de e-mail,
+  //       en we redirecten de bezoeker direct naar de betaalpagina (2-klik checkout).
+  // POST = in-app flow: ingelogde gebruiker upgradet; we geven de betaal-URL als JSON terug.
+  const isGet = req.method === "GET";
+  if (req.method !== "POST" && !isGet) {
+    res.setHeader("Allow", "GET, POST");
     return res.status(405).json({ error: "Method not allowed" });
   }
 
   let body = req.body;
   if (typeof body === "string") { try { body = JSON.parse(body); } catch (e) { body = {}; } }
-  const userId = (body && body.userId || "").trim();
-  const email = (body && body.email || "").trim().toLowerCase();
-  const tier = (body && body.tier) === "pro" ? "pro" : "basis";
-  const interval = (body && body.interval) === "year" ? "year" : "month";
-
-  if (!userId) return res.status(400).json({ error: "no_user" });
+  const src = isGet ? (req.query || {}) : (body || {});
+  const userId = (src.userId || "").toString().trim();
+  const email = (src.email || "").toString().trim().toLowerCase();
+  const tier = src.tier === "pro" ? "pro" : "basis";
+  const interval = src.interval === "year" ? "year" : "month";
+  // Alleen de in-app (POST) flow eist een ingelogde user. De publieke GET-flow niet.
+  if (!isGet && !userId) return res.status(400).json({ error: "no_user" });
 
   const stripeKey = process.env.STRIPE_SECRET_KEY;
   const priceId = process.env[PRICE_ENV[tier + ":" + interval]];
   if (!stripeKey || !priceId) {
+    if (isGet) return res.redirect(303, appBase(req) + "/?sub=unavailable");
     return res.status(503).json({ error: "not_configured", detail: "Stripe-prijzen of secret key nog niet ingesteld." });
   }
 
@@ -58,13 +64,16 @@ export default async function handler(req, res) {
   params.set("line_items[0][quantity]", "1");
   params.set("success_url", base + "/?sub=success&cs={CHECKOUT_SESSION_ID}");
   params.set("cancel_url", base + "/?sub=cancel");
-  params.set("client_reference_id", userId);
-  if (email) params.set("customer_email", email);
   params.set("allow_promotion_codes", "true");
-  params.set("metadata[user_id]", userId);
   params.set("metadata[tier]", tier);
-  params.set("subscription_data[metadata][user_id]", userId);
   params.set("subscription_data[metadata][tier]", tier);
+  if (userId) {
+    // Ingelogde flow: koppel meteen aan de bestaande account.
+    params.set("client_reference_id", userId);
+    params.set("metadata[user_id]", userId);
+    params.set("subscription_data[metadata][user_id]", userId);
+  }
+  if (email) params.set("customer_email", email);
   // Herroepingsrecht: klant moet expliciet akkoord gaan met de voorwaarden
   // (die de afstand bij directe digitale levering bevatten). Vereist een
   // Terms-of-Service-URL in Stripe (Settings -> Public business information).
@@ -81,11 +90,14 @@ export default async function handler(req, res) {
     const s = await r.json().catch(() => ({}));
     if (!r.ok || !s.url) {
       console.error("stripe checkout error", r.status, s && s.error);
+      if (isGet) return res.redirect(303, base + "/?sub=error");
       return res.status(502).json({ error: "stripe_error", detail: (s && s.error && s.error.message) || ("status " + r.status) });
     }
+    if (isGet) return res.redirect(303, s.url);
     return res.status(200).json({ ok: true, url: s.url });
   } catch (err) {
     console.error("create-subscription error", err);
+    if (isGet) return res.redirect(303, appBase(req) + "/?sub=error");
     return res.status(500).json({ error: "server_error" });
   }
 }
