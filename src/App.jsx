@@ -634,8 +634,9 @@ export default function App() {
 
   function confirmLogout() { setShowLogout(false); try { if (supabase) supabase.auth.signOut(); } catch (e) {} setTab("dashboard"); }
 
-  // Toegang per laag. Eenmalig betaald (unlocked) = Basis-niveau. Dev-modus = alles.
-  const hasBasis = devMode || unlocked || subTier === "basis" || subTier === "pro";
+  // Toegang per laag. Alleen een geldige (niet-verlopen) betaling geeft toegang.
+  // De oude one-off 'unlocked'-vlag telt niet meer mee (anders bleef stale localStorage openstaan).
+  const hasBasis = devMode || subTier === "basis" || subTier === "pro";
   const hasPro = devMode || subTier === "pro";
   const hasPlus = devMode || subTier === "pro"; // Race Protocol — later evt. eigen Plus-laag
   const ML = macroLetters(lang);
@@ -713,9 +714,10 @@ export default function App() {
     if (!supabase || !session) { setSubTier("free"); return; }
     supabase.from("subscriptions").select("tier,current_period_end").eq("user_id", session.user.id).single()
       .then(({ data }) => {
-        // Eenmalige betaling: toegang geldt tot current_period_end. Daarna terug naar free.
+        // Eenmalige betaling: toegang geldt tot current_period_end. Zonder geldige,
+        // niet-verlopen datum = geen toegang.
         const live = data && data.tier && data.tier !== "free" &&
-          (!data.current_period_end || new Date(data.current_period_end).getTime() > Date.now());
+          data.current_period_end && new Date(data.current_period_end).getTime() > Date.now();
         setSubTier(live ? data.tier : "free");
       }).catch(() => {});
   }, [session]);

@@ -64,7 +64,8 @@ async function subActive(authToken) {
     const activeStatus = s.status === "active" || s.status === "trialing";
     const paidTier = s.tier === "basis" || s.tier === "pro" || s.tier === "plus";
     // Eenmalige betaling: toegang vervalt op current_period_end (geen auto-verlenging).
-    const notExpired = !s.current_period_end || new Date(s.current_period_end).getTime() > Date.now();
+    // Zonder geldige, niet-verlopen datum = geen toegang.
+    const notExpired = !!s.current_period_end && new Date(s.current_period_end).getTime() > Date.now();
     return !!(activeStatus && paidTier && notExpired);
   } catch (e) { return false; }
 }
