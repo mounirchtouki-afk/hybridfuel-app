@@ -23,7 +23,7 @@ export default async function handler(req, res) {
   if (!userId) return res.status(400).json({ error: "no_user" });
 
   const stripeKey = process.env.STRIPE_SECRET_KEY;
-  const supaUrl = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "").replace(/\/$/, "");
+  const supaUrl = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "https://tkmyjpsmdijaalwgzqdy.supabase.co").replace(/\/$/, "");
   const svcKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!stripeKey || !supaUrl || !svcKey) return res.status(503).json({ error: "not_configured" });
 

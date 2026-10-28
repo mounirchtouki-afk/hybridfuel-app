@@ -13,7 +13,7 @@ export default async function handler(req, res) {
   const authToken = (body && body.authToken || "").trim();
   if (!authToken) return res.status(401).json({ error: "no_auth" });
 
-  const url = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "").replace(/\/$/, "");
+  const url = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "https://tkmyjpsmdijaalwgzqdy.supabase.co").replace(/\/$/, "");
   const svc = process.env.SUPABASE_SERVICE_ROLE_KEY;
   const anon = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || "sb_publishable_5CJ_waXIVhhzkkqD96iqMA_63yJJnaH";
   if (!url || !svc) return res.status(503).json({ error: "not_configured" });

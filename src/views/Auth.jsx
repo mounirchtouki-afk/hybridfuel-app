@@ -59,6 +59,7 @@ const T = {
   delYes: { nl: "Ja, verwijder alles", en: "Yes, delete everything" },
   cancel: { nl: "Annuleren", en: "Cancel" },
   deleting: { nl: "Verwijderen…", en: "Deleting…" },
+  delErr: { nl: "Verwijderen lukte niet. Probeer het later opnieuw.", en: "Couldn't delete your account. Please try again later." },
 };
 
 const PRICE = {
@@ -148,7 +149,7 @@ export default function Auth({ lang, session, tier, recovery, onClose }) {
       try { await supabase.auth.signOut(); } catch (e) {}
       try { localStorage.clear(); } catch (e) {}
       onClose();
-    } catch (e) { setErr(e && e.message ? e.message : "error"); setBusy(false); }
+    } catch (e) { setErr(t("delErr")); setBusy(false); }
   }
 
   async function upgrade(plan) {
