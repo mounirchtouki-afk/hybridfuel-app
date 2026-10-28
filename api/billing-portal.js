@@ -19,15 +19,24 @@ export default async function handler(req, res) {
 
   let body = req.body;
   if (typeof body === "string") { try { body = JSON.parse(body); } catch (e) { body = {}; } }
-  const userId = (body && body.userId || "").trim();
-  if (!userId) return res.status(400).json({ error: "no_user" });
+  const authToken = (body && body.authToken || "").trim();
+  if (!authToken) return res.status(401).json({ error: "no_auth" });
 
   const stripeKey = process.env.STRIPE_SECRET_KEY;
   const supaUrl = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "https://tkmyjpsmdijaalwgzqdy.supabase.co").replace(/\/$/, "");
   const svcKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const anon = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || "sb_publishable_5CJ_waXIVhhzkkqD96iqMA_63yJJnaH";
   if (!stripeKey || !supaUrl || !svcKey) return res.status(503).json({ error: "not_configured" });
 
   try {
+    // Verifieer het token bij Supabase en leid de user-id daaruit af. NOOIT een door de
+    // client meegestuurde userId vertrouwen, anders kan iemand andermans klantportaal openen.
+    const ur = await fetch(supaUrl + "/auth/v1/user", { headers: { apikey: anon, Authorization: "Bearer " + authToken } });
+    if (!ur.ok) return res.status(401).json({ error: "invalid_token" });
+    const who = await ur.json().catch(() => ({}));
+    const userId = who && who.id;
+    if (!userId) return res.status(401).json({ error: "no_user" });
+
     const r = await fetch(supaUrl + "/rest/v1/subscriptions?select=stripe_customer_id&user_id=eq." + encodeURIComponent(userId), {
       headers: { apikey: svcKey, Authorization: "Bearer " + svcKey },
     });

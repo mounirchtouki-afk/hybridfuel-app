@@ -166,7 +166,7 @@ export default function Auth({ lang, session, tier, recovery, onClose }) {
     if (!session) return;
     setErr(""); setSubBusy("portal");
     try {
-      const r = await fetch("/api/billing-portal", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: session.user.id }) });
+      const r = await fetch("/api/billing-portal", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ authToken: session.access_token }) });
       const d = await r.json().catch(() => ({}));
       if (d && d.url) { window.location.href = d.url; return; }
       setErr(t("notConfigured"));

@@ -10,6 +10,8 @@
 // Zonder config werkt de app gewoon (de bezoeker krijgt de gratis gids te zien),
 // maar wordt het adres NIET opgeslagen. Stel dus eerst één van de twee in.
 
+import { ipLimited } from "./_ratelimit.js";
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
@@ -24,6 +26,11 @@ export default async function handler(req, res) {
   // Simpele validatie
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
     return res.status(400).json({ error: "Invalid email" });
+  }
+
+  // Backstop tegen bulk-inschrijven vanaf één IP (lijstvervuiling / quota-misbruik).
+  if (await ipLimited(req, "subscribe", 12, 3600)) {
+    return res.status(429).json({ error: "Too many requests" });
   }
 
   const ML_KEY = process.env.MAILERLITE_API_KEY;

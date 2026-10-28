@@ -5,6 +5,8 @@
 //
 // Env-vars: MAILERLITE_API_KEY (+ MAILERLITE_GROUP_ID), of SUBSCRIBE_WEBHOOK.
 
+import { ipLimited } from "./_ratelimit.js";
+
 export default async function handler(req, res) {
   if (req.method !== "POST") { res.setHeader("Allow", "POST"); return res.status(405).json({ error: "Method not allowed" }); }
   let body = req.body;
@@ -12,6 +14,8 @@ export default async function handler(req, res) {
   const email = ((body && body.email) || "").trim().toLowerCase();
   const on = body && body.on !== false; // default aan
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return res.status(400).json({ error: "Invalid email" });
+  // Backstop tegen bulk-aan/uitzetten vanaf één IP.
+  if (await ipLimited(req, "newsletter", 12, 3600)) return res.status(429).json({ error: "Too many requests" });
 
   const ML_KEY = process.env.MAILERLITE_API_KEY;
   const ML_GROUP = process.env.MAILERLITE_GROUP_ID;
