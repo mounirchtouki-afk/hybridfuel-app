@@ -27,10 +27,12 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
   // Modules (datagedreven/uitbreidbaar). De org heeft een beschikbare set (superuser-gestuurd);
   // de eigenaar ziet alles + Team, een coach alleen z'n toegewezen rechten.
   const MODS = (org && org.enabled_modules && org.enabled_modules.length) ? org.enabled_modules : ["members", "classes", "pt", "plans", "branding", "formula"];
-  const LABEL = { members: t("Leden", "Members"), classes: t("Lessen", "Classes"), pt: t("PT-agenda", "PT"), plans: t("Abonnementen", "Plans"), branding: t("Huisstijl", "Branding"), formula: t("Formule", "Formula"), team: t("Team", "Team") };
-  const myTabs = isOwner ? [...MODS, "team"] : (Array.isArray(perms) ? MODS.filter((m) => perms.includes(m)) : []);
+  const LABEL = { overview: t("Overzicht", "Overview"), members: t("Leden", "Members"), classes: t("Lessen", "Classes"), pt: t("PT-agenda", "PT"), plans: t("Abonnementen", "Plans"), branding: t("Huisstijl", "Branding"), formula: t("Formule", "Formula"), team: t("Team", "Team") };
+  const myTabs = ["overview", ...(isOwner ? [...MODS, "team"] : (Array.isArray(perms) ? MODS.filter((m) => perms.includes(m)) : []))];
   const [active, setActive] = useState(null);
   const current = active && myTabs.includes(active) ? active : (myTabs[0] || null);
+  const [navOpen, setNavOpen] = useState(false);     // nav-uitklapmenu
+  const [rowMenu, setRowMenu] = useState(null);       // member.id waarvan het actie-uitklapmenu open staat
 
   const [members, setMembers] = useState(null);
   const [newName, setNewName] = useState("");
@@ -458,14 +460,58 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
       </div>
 
       {myTabs.length > 1 && (
-        <div style={{ borderBottom: `1px solid ${LINE}`, background: INK, display: "flex", gap: 4, overflowX: "auto", padding: "8px 12px", WebkitOverflowScrolling: "touch" }}>
-          {myTabs.map((m) => (
-            <div key={m} onClick={() => setActive(m)} style={{ cursor: "pointer", whiteSpace: "nowrap", fontSize: 13, ...disp, fontWeight: 700, letterSpacing: 0.3, padding: "8px 13px", borderRadius: 8, background: current === m ? color : "transparent", color: current === m ? "#fff" : MUTED }}>{LABEL[m] || m}</div>
-          ))}
+        <div style={{ borderBottom: `1px solid ${LINE}`, background: INK, padding: "8px 12px", position: "relative", zIndex: 20 }}>
+          <div onClick={() => setNavOpen((o) => !o)} style={{ cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", background: INK2, border: `1px solid ${LINE}`, borderRadius: 9, padding: "10px 14px", maxWidth: 360, margin: "0 auto" }}>
+            <span style={{ ...disp, fontWeight: 700, fontSize: 14, color: PAPER }}>{LABEL[current] || current}</span>
+            <span style={{ color: MUTED, fontSize: 12, transform: navOpen ? "rotate(180deg)" : "none", transition: "transform .15s" }}>▾</span>
+          </div>
+          {navOpen && (
+            <>
+              <div onClick={() => setNavOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 18 }} />
+              <div style={{ position: "absolute", top: "100%", left: "50%", transform: "translateX(-50%)", width: "calc(100% - 24px)", maxWidth: 360, background: INK2, border: `1px solid ${LINE}`, borderRadius: 10, marginTop: 4, overflow: "hidden", zIndex: 19, boxShadow: "0 12px 34px rgba(0,0,0,.4)" }}>
+                {myTabs.map((m) => (
+                  <div key={m} onClick={() => { setActive(m); setNavOpen(false); }} style={{ cursor: "pointer", padding: "11px 14px", fontSize: 14, ...disp, fontWeight: 600, color: current === m ? color : PAPER, background: current === m ? "rgba(150,150,150,0.08)" : "transparent", borderBottom: `1px solid ${LINE}` }}>{LABEL[m] || m}</div>
+                ))}
+              </div>
+            </>
+          )}
         </div>
       )}
 
       <div style={{ maxWidth: 680, margin: "0 auto", padding: "20px 16px", display: "grid", gap: 16 }}>
+        {current === "overview" && (<>
+          <div style={{ ...disp, fontWeight: 800, fontSize: 22, color: PAPER }}>{(org && org.name) || t("Overzicht", "Overview")}</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10 }}>
+            {[
+              [t("Leden", "Members"), members ? members.length : "—", "members"],
+              [t("Lessen", "Classes"), classes ? classes.length : "—", "classes"],
+              [t("Abonnementen", "Plans"), plans ? plans.length : "—", "plans"],
+              [t("Komende sessies", "Upcoming"), sessions ? sessions.length : "—", "pt"],
+            ].map(([lbl, val, go], i) => (
+              <div key={i} onClick={() => myTabs.includes(go) && setActive(go)} style={{ ...card, cursor: myTabs.includes(go) ? "pointer" : "default", padding: 14 }}>
+                <div style={{ ...disp, fontWeight: 800, fontSize: 28, color }}>{val}</div>
+                <div style={{ fontSize: 12.5, color: MUTED, marginTop: 2 }}>{lbl}</div>
+              </div>
+            ))}
+          </div>
+          {isOwner && (
+            <div style={card}>
+              <div style={{ ...sectionTitle, color, marginBottom: 8 }}>{t("Team", "Team")}</div>
+              <div style={{ fontSize: 13, color: MUTED }}>{coaches ? (coaches.length + " " + t("medewerker(s)", "staff member(s)")) : t("Laden…", "Loading…")}</div>
+            </div>
+          )}
+          {members && members.some((m) => m.progress && m.progress.adherence != null && m.progress.adherence < 50) && (
+            <div style={card}>
+              <div style={{ ...sectionTitle, color: EMBER_SOFT, marginBottom: 8 }}>{t("Aandacht nodig", "Needs attention")}</div>
+              <div style={{ display: "grid", gap: 6 }}>
+                {members.filter((m) => m.progress && m.progress.adherence != null && m.progress.adherence < 50).map((m) => (
+                  <div key={m.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: PAPER }}><span>{m.display_name}</span><span style={{ color: EMBER_SOFT }}>{Math.round(m.progress.adherence)}%</span></div>
+                ))}
+              </div>
+            </div>
+          )}
+        </>)}
+
         {current === "members" && (<>
         {/* nieuwe code tonen */}
         {codeShown && (
@@ -505,38 +551,41 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
                 const attention = adh != null && adh < 50;
                 const pro = (m.member_tier || "pro") === "pro";
                 return (
-                  <div key={m.id} style={{ background: INK, border: `1px solid ${LINE}`, borderRadius: 10, overflow: "hidden" }}>
+                  <div key={m.id} style={{ background: INK, border: `1px solid ${LINE}`, borderRadius: 10, position: "relative" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 12px" }}>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ ...disp, fontWeight: 700, fontSize: 14.5 }}>{m.display_name || t("Naamloos", "Unnamed")}</div>
+                        <div style={{ ...disp, fontWeight: 700, fontSize: 14.5 }}>{m.display_name || t("Naamloos", "Unnamed")}{(m.coach_note || m.calc_override) ? <span style={{ color, fontSize: 13, marginLeft: 6 }}>•</span> : null}</div>
                         <div style={{ fontSize: 11.5, color: MUTED, marginTop: 2 }}>{t("Laatst actief", "Last active")}: {fmtDate(m.progress && m.progress.last_active)}</div>
                       </div>
                       <div style={{ textAlign: "right" }}>
                         <div style={{ ...disp, fontWeight: 700, fontSize: 14, color: adh == null ? MUTED : attention ? EMBER_SOFT : SAGE }}>{adh == null ? "—" : adh + "%"}</div>
                         <div style={{ fontSize: 10, color: MUTED }}>{t("adherentie", "adherence")}</div>
                       </div>
-                      <div onClick={() => resetCode(m)} title={t("Nieuwe code", "New code")} style={{ cursor: "pointer", fontSize: 11.5, color: MUTED, border: `1px solid ${LINE}`, borderRadius: 7, padding: "6px 9px", whiteSpace: "nowrap" }}>{t("Reset code", "Reset code")}</div>
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "0 12px 11px", flexWrap: "wrap" }}>
                       {plans && plans.length > 0 && (
                         <select value={m.plan_id || ""} onChange={(e) => assignPlan(m, e.target.value)} style={{ ...input, width: "auto", appearance: "auto", padding: "6px 9px", fontSize: 12.5 }}>
                           <option value="">{t("Geen abo", "No plan")}</option>
                           {plans.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                         </select>
                       )}
-                      {!m.plan_id && (
-                        <div onClick={() => toggleTier(m)} title={t("Tier wisselen", "Switch tier")} style={{ cursor: "pointer", fontSize: 10.5, ...disp, fontWeight: 700, letterSpacing: 0.6, textTransform: "uppercase", padding: "4px 9px", borderRadius: 6, background: pro ? color : "transparent", color: pro ? "#fff" : MUTED, border: `1px solid ${pro ? color : LINE}` }}>{m.member_tier || "pro"}</div>
-                      )}
-                      {!m.plan_id && classes && classes.length > 0 && (
-                        <div onClick={() => openMemberClasses(m)} style={{ cursor: "pointer", fontSize: 11.5, color: MUTED, border: `1px solid ${LINE}`, borderRadius: 7, padding: "5px 9px" }}>
-                          {t("Lessen", "Classes")} ({m.class_access == null ? t("alle", "all") : m.class_access.length})
-                        </div>
-                      )}
-                      <div onClick={() => openMemberNote(m)} style={{ cursor: "pointer", fontSize: 11.5, color: m.coach_note ? color : MUTED, border: `1px solid ${LINE}`, borderRadius: 7, padding: "5px 9px" }}>{t("Notitie", "Note")}{m.coach_note ? " •" : ""}</div>
-                      <div onClick={() => openMemberFormula(m)} style={{ cursor: "pointer", fontSize: 11.5, color: m.calc_override ? color : MUTED, border: `1px solid ${LINE}`, borderRadius: 7, padding: "5px 9px" }}>{t("Formule", "Formula")}{m.calc_override ? " •" : ""}</div>
-                      <div style={{ flex: 1 }} />
-                      <div onClick={() => deleteMember(m)} title={t("Lid verwijderen", "Delete member")} style={{ cursor: "pointer", fontSize: 11.5, color: EMBER_SOFT, border: `1px solid ${LINE}`, borderRadius: 7, padding: "5px 9px" }}>{t("Verwijderen", "Delete")}</div>
+                      <div onClick={() => setRowMenu(rowMenu === m.id ? null : m.id)} title={t("Beheer", "Manage")} style={{ cursor: "pointer", fontSize: 18, lineHeight: 1, color: MUTED, border: `1px solid ${LINE}`, borderRadius: 7, padding: "4px 11px" }}>⋯</div>
                     </div>
+                    {rowMenu === m.id && (
+                      <>
+                        <div onClick={() => setRowMenu(null)} style={{ position: "fixed", inset: 0, zIndex: 28 }} />
+                        <div style={{ position: "absolute", right: 10, top: 48, background: INK2, border: `1px solid ${LINE}`, borderRadius: 10, overflow: "hidden", zIndex: 29, minWidth: 180, boxShadow: "0 12px 34px rgba(0,0,0,.4)" }}>
+                          {[
+                            [t("Code resetten", "Reset code"), () => resetCode(m), false],
+                            ...(!m.plan_id ? [[(t("Tier: ", "Tier: ") + (m.member_tier || "pro")), () => toggleTier(m), false]] : []),
+                            ...(!m.plan_id && classes && classes.length > 0 ? [[t("Lessen", "Classes"), () => openMemberClasses(m), false]] : []),
+                            [m.coach_note ? t("Notitie •", "Note •") : t("Notitie", "Note"), () => openMemberNote(m), false],
+                            [m.calc_override ? t("Formule •", "Formula •") : t("Formule", "Formula"), () => openMemberFormula(m), false],
+                            [t("Verwijderen", "Delete"), () => deleteMember(m), true],
+                          ].map(([lbl, fn, danger], i) => (
+                            <div key={i} onClick={() => { fn(); setRowMenu(null); }} style={{ cursor: "pointer", padding: "10px 14px", fontSize: 13, color: danger ? EMBER_SOFT : PAPER, borderBottom: `1px solid ${LINE}` }}>{lbl}</div>
+                          ))}
+                        </div>
+                      </>
+                    )}
                     {openNote === m.id && (
                       <div style={{ padding: "0 12px 12px" }}>
                         <textarea value={noteText} onChange={(e) => setNoteText(e.target.value)} placeholder={t("Notitie over dit lid…", "Note about this member…")} rows={3} style={{ ...input, resize: "vertical", minHeight: 64, fontFamily: "Inter, sans-serif" }} />
@@ -796,16 +845,30 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
               : (
               <div style={{ display: "grid", gap: 8 }}>
                 {coaches.map((c) => (
-                  <div key={c.id} style={{ background: INK, border: `1px solid ${LINE}`, borderRadius: 10, overflow: "hidden" }}>
+                  <div key={c.id} style={{ background: INK, border: `1px solid ${LINE}`, borderRadius: 10, position: "relative" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 12px" }}>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ ...disp, fontWeight: 700, fontSize: 14.5 }}>{c.display_name || t("Coach", "Coach")}</div>
                         <div style={{ fontSize: 11.5, color: MUTED, marginTop: 2 }}>{c.is_owner ? t("Eigenaar · alle rechten", "Owner · all access") : (Array.isArray(c.perms) && c.perms.length ? c.perms.map((p) => LABEL[p] || p).join(", ") : t("geen rechten", "no access"))}</div>
                       </div>
-                      {!c.is_owner && <div onClick={() => openCoachEdit(c)} style={{ cursor: "pointer", fontSize: 11.5, color: MUTED, border: `1px solid ${LINE}`, borderRadius: 7, padding: "5px 9px" }}>{t("Bewerk", "Edit")}</div>}
-                      {!c.is_owner && <div onClick={() => openCoachPerms(c)} style={{ cursor: "pointer", fontSize: 11.5, color: MUTED, border: `1px solid ${LINE}`, borderRadius: 7, padding: "5px 9px" }}>{t("Rechten", "Perms")}</div>}
-                      {!c.is_owner && <div onClick={() => removeCoach(c)} style={{ cursor: "pointer", fontSize: 11.5, color: EMBER_SOFT, border: `1px solid ${LINE}`, borderRadius: 7, padding: "5px 9px" }}>{t("Verwijderen", "Delete")}</div>}
+                      {!c.is_owner && (
+                        <div onClick={() => setRowMenu(rowMenu === c.id ? null : c.id)} title={t("Instellingen", "Settings")} style={{ cursor: "pointer", fontSize: 18, lineHeight: 1, color: MUTED, border: `1px solid ${LINE}`, borderRadius: 7, padding: "4px 11px" }}>⋯</div>
+                      )}
                     </div>
+                    {rowMenu === c.id && (
+                      <>
+                        <div onClick={() => setRowMenu(null)} style={{ position: "fixed", inset: 0, zIndex: 28 }} />
+                        <div style={{ position: "absolute", right: 10, top: 46, background: INK2, border: `1px solid ${LINE}`, borderRadius: 10, overflow: "hidden", zIndex: 29, minWidth: 180, boxShadow: "0 12px 34px rgba(0,0,0,.4)" }}>
+                          {[
+                            [t("Bewerken", "Edit"), () => openCoachEdit(c), false],
+                            [t("Rechten", "Permissions"), () => openCoachPerms(c), false],
+                            [t("Verwijderen", "Delete"), () => removeCoach(c), true],
+                          ].map(([lbl, fn, danger], i) => (
+                            <div key={i} onClick={() => { fn(); setRowMenu(null); }} style={{ cursor: "pointer", padding: "10px 14px", fontSize: 13, color: danger ? EMBER_SOFT : PAPER, borderBottom: `1px solid ${LINE}` }}>{lbl}</div>
+                          ))}
+                        </div>
+                      </>
+                    )}
                     {openEdit === c.id && (
                       <div style={{ padding: "0 12px 12px", display: "grid", gap: 8 }}>
                         <input style={input} value={edName} onChange={(e) => setEdName(e.target.value)} placeholder={t("Naam", "Name")} />
