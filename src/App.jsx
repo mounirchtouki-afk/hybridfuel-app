@@ -625,6 +625,8 @@ export default function App() {
   // uitlog-bevestiging (ja/nee). We houden altijd één "trap"-state op de stack.
   const navRef = useRef({});
   const persistRef = useRef(() => {});
+  const demoRef = useRef(false);
+  const SITE_URL = "https://www.hybridfuelco.com/";
   useEffect(() => {
     // Buffer van sentinel-entries: bij een snelle dubbele terug-druk verwerkt de
     // browser meerdere pops vóór onze listener erbij kan → met één entry verliet
@@ -652,6 +654,7 @@ export default function App() {
       else if (s.showAuth) { setShowAuth(false); setAuthRecovery(false); nav.showAuth = false; }
       else if (s.planEdit) { try { persistRef.current(); } catch (e) {} setPlanEdit(false); flashSaved(); nav.planEdit = false; }
       else if (s.tab !== "dashboard") { setTab("dashboard"); nav.tab = "dashboard"; try { window.scrollTo(0, 0); } catch (e) {} }
+      else if (demoRef.current) { try { window.location.href = SITE_URL; } catch (e) {} return; } // demo: terug = naar de website, geen uitlog-vraag
       else { setShowLogout(true); nav.showLogout = true; } // al op het dashboard → uitlog-check
       topUp(); // buffer weer aanvullen
     };
@@ -669,6 +672,7 @@ export default function App() {
   // Demo telt alleen voor niet-ingelogde bezoekers; het geeft GEEN echte toegang
   // (opslaan/genereren blijft achter de paywall), het laat alleen de schermen zien.
   const inDemo = demoMode && !session;
+  demoRef.current = inDemo; // zodat de terug-knop-logica (popstate) weet of we in demo zijn
   const canView = hasBasis || inDemo;      // basisschermen tonen in demo
   const canViewPlus = hasPlus || inDemo;   // raceprotocol tonen in demo
   const ML = macroLetters(lang);
@@ -1426,7 +1430,7 @@ export default function App() {
 
       {/* HEADER */}
       <div style={{ borderBottom: `1px solid ${LINE}`, padding: "12px 14px", display: "flex", alignItems: "center", gap: 8, position: "sticky", top: 0, background: `radial-gradient(130% 320% at 94% 0%, rgba(225,29,72,0.18), #19090f 58%), #150a0e`, zIndex: 20 }}>
-        <div style={{ width: 30, height: 30, borderRadius: 8, background: EMBER, display: "flex", alignItems: "center", justifyContent: "center", ...disp, fontWeight: 700, color: INK, fontSize: 18, flexShrink: 0 }}>H</div>
+        <div onClick={() => { if (inDemo) { try { window.location.href = SITE_URL; } catch (e) {} } }} title={inDemo ? (lang === "nl" ? "Terug naar website" : "Back to website") : undefined} style={{ width: 30, height: 30, borderRadius: 8, background: EMBER, display: "flex", alignItems: "center", justifyContent: "center", ...disp, fontWeight: 700, color: INK, fontSize: 18, flexShrink: 0, cursor: inDemo ? "pointer" : "default" }}>H</div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ ...disp, fontWeight: 700, fontSize: 17.5, letterSpacing: 0.4, lineHeight: 1.05, whiteSpace: "nowrap" }}>
             <span>HYBRIDFUEL<span style={{ color: EMBER }}>CO</span></span>
@@ -1452,13 +1456,14 @@ export default function App() {
       {inDemo && (
         <div style={{ background: EMBER, color: PAPER, padding: "9px 14px", display: "flex", alignItems: "center", gap: 10, position: "relative", zIndex: 1, flexWrap: "wrap" }}>
           <span style={{ fontSize: 11, fontWeight: 700, ...disp, letterSpacing: 1, background: "rgba(255,255,255,0.18)", borderRadius: 4, padding: "2px 7px" }}>{lang === "nl" ? "VOORBEELD" : "PREVIEW"}</span>
-          <span style={{ flex: 1, minWidth: 130, fontSize: 12.5, lineHeight: 1.4 }}>{lang === "nl" ? "Je bekijkt een voorbeeld. Ontgrendel de app voor je eigen plan." : "You're viewing a sample. Unlock the app for your own plan."}</span>
+          <span style={{ flex: 1, minWidth: 110, fontSize: 12.5, lineHeight: 1.4 }}>{lang === "nl" ? "Je bekijkt een voorbeeld. Ontgrendel de app voor je eigen plan." : "You're viewing a sample. Unlock the app for your own plan."}</span>
+          <a href={SITE_URL} style={{ color: PAPER, fontSize: 12.5, fontWeight: 700, ...disp, letterSpacing: 0.3, textDecoration: "none", whiteSpace: "nowrap", opacity: 0.92 }}>{lang === "nl" ? "← Website" : "← Website"}</a>
           <div onClick={() => setShowAuth(true)} style={{ cursor: "pointer", background: PAPER, color: EMBER, padding: "7px 15px", borderRadius: 8, fontSize: 12.5, fontWeight: 700, ...disp, letterSpacing: 0.3, whiteSpace: "nowrap" }}>{lang === "nl" ? "Ontgrendel" : "Unlock"}</div>
         </div>
       )}
 
       {/* INSTALL-BANNER, voor iedereen die de app nog niet geïnstalleerd heeft (ook iPhone) */}
-      {!isStandalone && !installDismissed && (
+      {!isStandalone && !installDismissed && !inDemo && (
         <div style={{ background: "rgba(225,29,72,0.1)", borderBottom: `1px solid ${LINE}`, padding: "10px 16px", display: "flex", alignItems: "center", gap: 12, position: "relative", zIndex: 1 }}>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M12 3v12M8 11l4 4 4-4" /><path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" /></svg>
           <div style={{ flex: 1, minWidth: 0 }}>
