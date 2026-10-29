@@ -155,12 +155,24 @@ async function orgCalcProfile(authToken) {
     const raw = rows && rows[0] && rows[0].calc_profile;
     if (!raw || typeof raw !== "object") return null;
     const m = raw.macros || {}, g = raw.goal || {};
-    return {
+    const prof = {
       protein_g_per_kg: raw.protein_g_per_kg != null ? raw.protein_g_per_kg : m.protein_g_per_kg,
       fat_g_per_kg: raw.fat_g_per_kg != null ? raw.fat_g_per_kg : m.fat_g_per_kg,
       cut_pct: raw.cut_pct != null ? raw.cut_pct : g.cut_pct,
       gain_pct: raw.gain_pct != null ? raw.gain_pct : g.gain_pct,
     };
+    // Per-lid override (indien ingesteld) gaat vóór de org-formule — alleen de gevulde velden.
+    try {
+      const mr = await fetch(url + "/rest/v1/org_members?select=calc_override&limit=1", { headers: { apikey: anon, Authorization: "Bearer " + authToken } });
+      if (mr.ok) {
+        const ov = (await mr.json().catch(() => []))[0];
+        const o = ov && ov.calc_override;
+        if (o && typeof o === "object") {
+          ["protein_g_per_kg", "fat_g_per_kg", "cut_pct", "gain_pct"].forEach((k) => { if (o[k] != null && o[k] !== "") prof[k] = o[k]; });
+        }
+      }
+    } catch (e) {}
+    return prof;
   } catch (e) { return null; }
 }
 

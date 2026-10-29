@@ -43,6 +43,8 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
   const [openNote, setOpenNote] = useState(null);        // member.id waarvan de notitie open staat
   const [noteText, setNoteText] = useState("");
   const [noteBusy, setNoteBusy] = useState(false);
+  const [openFormula, setOpenFormula] = useState(null);  // member.id waarvan de per-lid formule open staat
+  const [fo, setFo] = useState({ protein_g_per_kg: "", fat_g_per_kg: "", cut_pct: "", gain_pct: "" });
   const [dictating, setDictating] = useState(false);
   const srSupported = typeof window !== "undefined" && !!(window.SpeechRecognition || window.webkitSpeechRecognition);
 
@@ -87,10 +89,10 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
       // Tier + lestoegang apart + guarded (kolommen bestaan mogelijk nog niet vóór migratie).
       const tmap = {};
       try {
-        const { data: tr } = await supabase.from("org_members").select("id,member_tier,class_access,coach_note").eq("role", "member");
+        const { data: tr } = await supabase.from("org_members").select("id,member_tier,class_access,coach_note,calc_override").eq("role", "member");
         (tr || []).forEach((x) => { tmap[x.id] = x; });
       } catch (e) {}
-      setMembers((mem || []).map((m) => ({ ...m, progress: pmap[m.auth_user_id] || null, member_tier: (tmap[m.id] && tmap[m.id].member_tier) || "pro", class_access: tmap[m.id] ? tmap[m.id].class_access : null, coach_note: (tmap[m.id] && tmap[m.id].coach_note) || "" })));
+      setMembers((mem || []).map((m) => ({ ...m, progress: pmap[m.auth_user_id] || null, member_tier: (tmap[m.id] && tmap[m.id].member_tier) || "pro", class_access: tmap[m.id] ? tmap[m.id].class_access : null, coach_note: (tmap[m.id] && tmap[m.id].coach_note) || "", calc_override: (tmap[m.id] && tmap[m.id].calc_override) || null })));
     } catch (e) { setMembers([]); }
   }
   async function loadClasses() {
@@ -333,6 +335,24 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
       setNoteBusy(false);
     } catch (e) { setNoteBusy(false); }
   }
+  // Per-lid formule-override (leeg veld = standaard van de sportschool).
+  function openMemberFormula(m) {
+    if (openFormula === m.id) { setOpenFormula(null); return; }
+    const o = m.calc_override || {};
+    setOpenFormula(m.id);
+    setFo({ protein_g_per_kg: o.protein_g_per_kg != null ? String(o.protein_g_per_kg) : "", fat_g_per_kg: o.fat_g_per_kg != null ? String(o.fat_g_per_kg) : "", cut_pct: o.cut_pct != null ? String(o.cut_pct) : "", gain_pct: o.gain_pct != null ? String(o.gain_pct) : "" });
+  }
+  async function saveMemberFormula(m) {
+    if (!supabase) return;
+    const clean = {};
+    ["protein_g_per_kg", "fat_g_per_kg", "cut_pct", "gain_pct"].forEach((k) => { if (fo[k] !== "" && fo[k] != null && !isNaN(parseFloat(fo[k]))) clean[k] = parseFloat(fo[k]); });
+    const value = Object.keys(clean).length ? clean : null; // niets ingevuld = terug naar standaard
+    try {
+      const { error } = await supabase.from("org_members").update({ calc_override: value }).eq("id", m.id);
+      if (!error) { setMembers((xs) => xs.map((x) => x.id === m.id ? { ...x, calc_override: value } : x)); setOpenFormula(null); }
+    } catch (e) {}
+  }
+
   // Spraak-naar-tekst: voegt het gesproken stuk toe aan de notitie.
   function dictate() {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -431,6 +451,7 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
                         </div>
                       )}
                       <div onClick={() => openMemberNote(m)} style={{ cursor: "pointer", fontSize: 11.5, color: m.coach_note ? color : MUTED, border: `1px solid ${LINE}`, borderRadius: 7, padding: "5px 9px" }}>{t("Notitie", "Note")}{m.coach_note ? " •" : ""}</div>
+                      <div onClick={() => openMemberFormula(m)} style={{ cursor: "pointer", fontSize: 11.5, color: m.calc_override ? color : MUTED, border: `1px solid ${LINE}`, borderRadius: 7, padding: "5px 9px" }}>{t("Formule", "Formula")}{m.calc_override ? " •" : ""}</div>
                       <div style={{ flex: 1 }} />
                       <div onClick={() => deleteMember(m)} title={t("Lid verwijderen", "Delete member")} style={{ cursor: "pointer", fontSize: 11.5, color: EMBER_SOFT, border: `1px solid ${LINE}`, borderRadius: 7, padding: "5px 9px" }}>{t("Verwijderen", "Delete")}</div>
                     </div>
@@ -446,6 +467,20 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
                           <div style={{ flex: 1 }} />
                           <div onClick={() => saveNote(m)} style={{ cursor: "pointer", background: color, color: "#fff", padding: "8px 16px", borderRadius: 7, ...disp, fontWeight: 700, fontSize: 12.5 }}>{noteBusy ? t("Opslaan…", "Saving…") : t("Opslaan", "Save")}</div>
                         </div>
+                      </div>
+                    )}
+                    {openFormula === m.id && (
+                      <div style={{ padding: "0 12px 12px" }}>
+                        <div style={{ fontSize: 11, color: MUTED, marginBottom: 7, lineHeight: 1.5 }}>{t("Leeg = standaardformule van de sportschool. Alleen voor dit lid.", "Empty = gym's default formula. For this member only.")}</div>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                          {[["Eiwit g/kg", "Protein g/kg", "protein_g_per_kg"], ["Vet g/kg", "Fat g/kg", "fat_g_per_kg"], ["Afvallen %", "Cut %", "cut_pct"], ["Aankomen %", "Gain %", "gain_pct"]].map(([nl, en, key]) => (
+                            <div key={key}>
+                              <div style={{ fontSize: 11, color: MUTED, marginBottom: 3 }}>{t(nl, en)}</div>
+                              <input style={input} type="number" step="0.1" value={fo[key]} onChange={(e) => setFo((f) => ({ ...f, [key]: e.target.value }))} placeholder={t("standaard", "default")} />
+                            </div>
+                          ))}
+                        </div>
+                        <div onClick={() => saveMemberFormula(m)} style={{ cursor: "pointer", background: color, color: "#fff", padding: "8px 0", borderRadius: 7, textAlign: "center", ...disp, fontWeight: 700, fontSize: 12.5, marginTop: 8 }}>{t("Formule opslaan", "Save formula")}</div>
                       </div>
                     )}
                     {openClasses === m.id && classes && (
