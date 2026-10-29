@@ -479,38 +479,45 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
       )}
 
       <div style={{ maxWidth: 680, margin: "0 auto", padding: "20px 16px", display: "grid", gap: 16 }}>
-        {current === "overview" && (<>
-          <div style={{ ...disp, fontWeight: 800, fontSize: 22, color: PAPER }}>{(org && org.name) || t("Overzicht", "Overview")}</div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10 }}>
-            {[
-              [t("Leden", "Members"), members ? members.length : "—", "members"],
-              [t("Lessen", "Classes"), classes ? classes.length : "—", "classes"],
-              [t("Abonnementen", "Plans"), plans ? plans.length : "—", "plans"],
-              [t("Komende sessies", "Upcoming"), sessions ? sessions.length : "—", "pt"],
-            ].map(([lbl, val, go], i) => (
-              <div key={i} onClick={() => myTabs.includes(go) && setActive(go)} style={{ ...card, cursor: myTabs.includes(go) ? "pointer" : "default", padding: 14 }}>
-                <div style={{ ...disp, fontWeight: 800, fontSize: 28, color }}>{val}</div>
-                <div style={{ fontSize: 12.5, color: MUTED, marginTop: 2 }}>{lbl}</div>
+        {current === "overview" && (() => {
+          const h = new Date().getHours();
+          const greet = h < 12 ? t("Goedemorgen", "Good morning") : h < 18 ? t("Goedemiddag", "Good afternoon") : t("Goedenavond", "Good evening");
+          const today = new Date().toISOString().slice(0, 10);
+          const att = [];
+          const lowAdh = (members || []).filter((m) => m.progress && m.progress.adherence != null && m.progress.adherence < 50);
+          if (lowAdh.length) att.push({ icon: "⚠️", tint: "rgba(251,113,133,0.14)", title: lowAdh.length + " " + t("leden hebben aandacht nodig", "members need attention"), sub: t("Lage adherentie — bekijk hun voortgang", "Low adherence — check their progress"), badge: lowAdh.length, badgeColor: EMBER_SOFT, go: "members" });
+          const notActive = (members || []).filter((m) => !(m.progress && m.progress.last_active));
+          if (notActive.length) att.push({ icon: "👋", tint: "rgba(96,165,250,0.14)", title: notActive.length + " " + t("leden nog niet actief", "members not active yet"), sub: t("Nog niet ingelogd — deel hun code", "Not logged in yet — share their code"), badge: notActive.length, badgeColor: "#60A5FA", go: "members" });
+          const noPlan = (plans && plans.length) ? (members || []).filter((m) => !m.plan_id) : [];
+          if (noPlan.length) att.push({ icon: "🏷️", tint: "rgba(167,139,250,0.14)", title: noPlan.length + " " + t("leden zonder abonnement", "members without a plan"), sub: t("Koppel een abonnement zodat toegang klopt", "Assign a plan so access is correct"), badge: noPlan.length, badgeColor: "#A78BFA", go: "members" });
+          const todaySessions = (sessions || []).filter((s) => (s.starts_at || "").slice(0, 10) === today);
+          if (todaySessions.length) att.push({ icon: "📅", tint: "rgba(52,211,153,0.14)", title: todaySessions.length + " " + t("PT-sessies vandaag", "PT sessions today"), sub: t("Staan in je agenda", "In your schedule"), chevron: true, go: "pt" });
+          if (!(classes && classes.length)) att.push({ icon: "🗓️", tint: "rgba(150,150,150,0.12)", title: t("Nog geen lesrooster", "No class schedule yet"), sub: t("Voeg je weeklessen toe", "Add your weekly classes"), chevron: true, go: "classes" });
+          if (!(plans && plans.length)) att.push({ icon: "🏷️", tint: "rgba(150,150,150,0.12)", title: t("Nog geen abonnementen", "No plans yet"), sub: t("Maak je abonnementen aan", "Create your plans"), chevron: true, go: "plans" });
+          return (
+            <>
+              <div>
+                <div style={{ ...disp, fontWeight: 800, fontSize: 24, color: PAPER }}>{t("Overzicht", "Overview")}</div>
+                <div style={{ fontSize: 13.5, color: MUTED, marginTop: 3 }}>{greet} — {t("dit vraagt vandaag je aandacht.", "this needs your attention today.")}</div>
               </div>
-            ))}
-          </div>
-          {isOwner && (
-            <div style={card}>
-              <div style={{ ...sectionTitle, color, marginBottom: 8 }}>{t("Team", "Team")}</div>
-              <div style={{ fontSize: 13, color: MUTED }}>{coaches ? (coaches.length + " " + t("medewerker(s)", "staff member(s)")) : t("Laden…", "Loading…")}</div>
-            </div>
-          )}
-          {members && members.some((m) => m.progress && m.progress.adherence != null && m.progress.adherence < 50) && (
-            <div style={card}>
-              <div style={{ ...sectionTitle, color: EMBER_SOFT, marginBottom: 8 }}>{t("Aandacht nodig", "Needs attention")}</div>
-              <div style={{ display: "grid", gap: 6 }}>
-                {members.filter((m) => m.progress && m.progress.adherence != null && m.progress.adherence < 50).map((m) => (
-                  <div key={m.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: PAPER }}><span>{m.display_name}</span><span style={{ color: EMBER_SOFT }}>{Math.round(m.progress.adherence)}%</span></div>
-                ))}
-              </div>
-            </div>
-          )}
-        </>)}
+              {att.map((a, i) => (
+                <div key={i} onClick={() => myTabs.includes(a.go) && setActive(a.go)} style={{ ...card, display: "flex", alignItems: "center", gap: 14, padding: 16, cursor: myTabs.includes(a.go) ? "pointer" : "default" }}>
+                  <div style={{ width: 42, height: 42, borderRadius: 12, background: a.tint, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>{a.icon}</div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ ...disp, fontWeight: 700, fontSize: 15 }}>{a.title}</div>
+                    <div style={{ fontSize: 12.5, color: MUTED, marginTop: 2 }}>{a.sub}</div>
+                  </div>
+                  {a.badge != null ? <div style={{ minWidth: 24, height: 24, borderRadius: 12, background: a.badgeColor || EMBER_SOFT, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12.5, fontWeight: 700, ...disp, padding: "0 7px", flexShrink: 0 }}>{a.badge}</div> : <span style={{ color: MUTED, fontSize: 20, flexShrink: 0 }}>›</span>}
+                </div>
+              ))}
+              {att.length === 0 && (
+                <div style={{ background: "rgba(74,222,128,0.1)", border: "1px solid rgba(74,222,128,0.35)", borderRadius: 12, padding: "14px 16px", display: "flex", alignItems: "center", gap: 10, color: "#4ADE80", fontSize: 13.5 }}>
+                  <span style={{ fontSize: 16 }}>✓</span> {t("Alles bij — niets dat nu je aandacht vraagt.", "All clear — nothing needs your attention right now.")}
+                </div>
+              )}
+            </>
+          );
+        })()}
 
         {current === "members" && (<>
         {/* nieuwe code tonen */}
