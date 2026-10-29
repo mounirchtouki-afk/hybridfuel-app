@@ -61,6 +61,9 @@ const T = {
   cancel: { nl: "Annuleren", en: "Cancel" },
   deleting: { nl: "Verwijderen…", en: "Deleting…" },
   delErr: { nl: "Verwijderen lukte niet. Probeer het later opnieuw.", en: "Couldn't delete your account. Please try again later." },
+  gymAccessLbl: { nl: "Volledige toegang", en: "Full access" },
+  gymVia: { nl: "Via", en: "Via" },
+  gymNote: { nl: "Je hebt volledige toegang via je sportschool. Je coach beheert je account.", en: "You have full access through your gym. Your coach manages your account." },
 };
 
 const PRICE = {
@@ -68,8 +71,10 @@ const PRICE = {
   pro: { month: "€14,95", year: "€149,50" },
 };
 
-export default function Auth({ lang, session, tier, recovery, onClose }) {
+export default function Auth({ lang, session, tier, recovery, onClose, gym }) {
   const t = (k) => (T[k] ? T[k][lang] : k);
+  const isGymMember = !!gym; // lid van een sportschool: toegang via de gym, geen koop/accountbeheer
+  const gymColor = (gym && gym.brand_color) || EMBER;
   const [mode, setMode] = useState("login"); // login | signup | forgot
   const [email, setEmail] = useState("");
   const [pw, setPw] = useState("");
@@ -242,11 +247,15 @@ export default function Auth({ lang, session, tier, recovery, onClose }) {
         <div style={{ fontSize: 12, color: MUTED }}>{t("loggedInAs")}</div>
         <div style={{ ...disp, fontSize: 16, fontWeight: 600, marginTop: 2, marginBottom: 10, wordBreak: "break-all" }}>{session.user.email}</div>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 12px", background: INK2, border: `1px solid ${LINE}`, borderRadius: 10, marginBottom: 12 }}>
-          <span style={{ fontSize: 12, color: MUTED }}>{t("tier")}</span>
-          <span style={{ ...disp, fontSize: 13, fontWeight: 700, color: tier && tier !== "free" ? EMBER : MUTED, textTransform: "uppercase", letterSpacing: 1 }}>{tier || "free"}{tier && tier !== "free" ? " · " + t("active") : ""}</span>
+          <span style={{ fontSize: 12, color: MUTED }}>{isGymMember ? (t("gymVia") + " " + (gym.name || "")) : t("tier")}</span>
+          {isGymMember
+            ? <span style={{ ...disp, fontSize: 13, fontWeight: 700, color: gymColor, textTransform: "uppercase", letterSpacing: 1 }}>{t("gymAccessLbl")}</span>
+            : <span style={{ ...disp, fontSize: 13, fontWeight: 700, color: tier && tier !== "free" ? EMBER : MUTED, textTransform: "uppercase", letterSpacing: 1 }}>{tier || "free"}{tier && tier !== "free" ? " · " + t("active") : ""}</span>}
         </div>
 
-        {(!tier || tier === "free") ? (
+        {isGymMember ? (
+          <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.5, marginBottom: 14 }}>{t("gymNote")}</div>
+        ) : (!tier || tier === "free") ? (
           <div style={{ marginBottom: 10 }}>
             <div style={sectionTitle}>{t("upgradeTitle")}</div>
             <div style={{ display: "inline-flex", gap: 4, background: INK2, border: `1px solid ${LINE}`, borderRadius: 10, padding: 4, margin: "8px 0 10px" }}>
@@ -277,6 +286,7 @@ export default function Auth({ lang, session, tier, recovery, onClose }) {
           {toggle(newsOn, () => { const v = !newsOn; setNewsOn(v); setNewsletter(session.user.email, v); })}
         </div>
 
+        {!isGymMember && (<>
         {linkRow(t("changeEmail"), () => { setPanel(panel === "email" ? "" : "email"); setErr(""); setMsg(""); })}
         {panel === "email" && (
           <div style={{ padding: "10px 0 12px" }}>
@@ -301,6 +311,7 @@ export default function Auth({ lang, session, tier, recovery, onClose }) {
             </div>
           </div>
         )}
+        </>)}
 
         {err && <div style={{ fontSize: 12, color: EMBER_SOFT, margin: "12px 0", lineHeight: 1.4 }}>{err}</div>}
         {msg && <div style={{ fontSize: 12.5, color: "#4ADE80", margin: "12px 0", lineHeight: 1.5 }}>{msg}</div>}

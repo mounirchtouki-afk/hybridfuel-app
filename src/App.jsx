@@ -14,6 +14,7 @@ import Reminders, { checkReminders } from "./views/Reminders.jsx";
 import Auth from "./views/Auth.jsx";
 import Join from "./views/Join.jsx";
 import CoachDash from "./views/CoachDash.jsx";
+import GymAgendaMember from "./views/GymAgendaMember.jsx";
 import { supabase } from "./supabaseClient.js";
 import { initCloudSync, pullAll } from "./cloudsync.js";
 import { Dropdown, MultiDropdown } from "./ui.jsx";
@@ -688,9 +689,12 @@ export default function App() {
 
   // Toegang per laag. Alleen een geldige (niet-verlopen) betaling geeft toegang.
   // De oude one-off 'unlocked'-vlag telt niet meer mee (anders bleef stale localStorage openstaan).
-  const hasBasis = devMode || subTier === "basis" || subTier === "pro";
-  const hasPro = devMode || subTier === "pro";
-  const hasPlus = devMode || subTier === "pro"; // Race Protocol, later evt. eigen Plus-laag
+  // Gym-leden (ingelogd via code) krijgen automatisch volledige toegang: de sportschool
+  // betaalt per seat, dus geen consumenten-paywall voor hen.
+  const isGymMember = !!(gymCtx && gymCtx.role === "member");
+  const hasBasis = devMode || isGymMember || subTier === "basis" || subTier === "pro";
+  const hasPro = devMode || isGymMember || subTier === "pro";
+  const hasPlus = devMode || isGymMember || subTier === "pro"; // Race Protocol, later evt. eigen Plus-laag
   // Demo telt alleen voor niet-ingelogde bezoekers; het geeft GEEN echte toegang
   // (opslaan/genereren blijft achter de paywall), het laat alleen de schermen zien.
   const inDemo = demoMode && !session;
@@ -1457,14 +1461,22 @@ export default function App() {
 
       {/* HEADER */}
       <div style={{ borderBottom: `1px solid ${LINE}`, padding: "12px 14px", display: "flex", alignItems: "center", gap: 8, position: "sticky", top: 0, background: `radial-gradient(130% 320% at 94% 0%, rgba(225,29,72,0.18), #19090f 58%), #150a0e`, zIndex: 20 }}>
-        <div onClick={() => { if (inDemo) { try { window.location.href = SITE_URL; } catch (e) {} } }} title={inDemo ? (lang === "nl" ? "Terug naar website" : "Back to website") : undefined} style={{ width: 30, height: 30, borderRadius: 8, background: EMBER, display: "flex", alignItems: "center", justifyContent: "center", ...disp, fontWeight: 700, color: INK, fontSize: 18, flexShrink: 0, cursor: inDemo ? "pointer" : "default" }}>H</div>
+        {isGymMember && gymCtx.org.logo_url ? (
+          <img src={gymCtx.org.logo_url} alt={gymCtx.org.name || ""} style={{ height: 30, maxWidth: 140, objectFit: "contain", flexShrink: 0 }} />
+        ) : isGymMember ? (
+          <div style={{ width: 30, height: 30, borderRadius: 8, background: gymCtx.org.brand_color || EMBER, display: "flex", alignItems: "center", justifyContent: "center", ...disp, fontWeight: 700, color: "#fff", fontSize: 18, flexShrink: 0 }}>{(gymCtx.org.name || "?").trim().charAt(0).toUpperCase()}</div>
+        ) : (
+          <div onClick={() => { if (inDemo) { try { window.location.href = SITE_URL; } catch (e) {} } }} title={inDemo ? (lang === "nl" ? "Terug naar website" : "Back to website") : undefined} style={{ width: 30, height: 30, borderRadius: 8, background: EMBER, display: "flex", alignItems: "center", justifyContent: "center", ...disp, fontWeight: 700, color: INK, fontSize: 18, flexShrink: 0, cursor: inDemo ? "pointer" : "default" }}>H</div>
+        )}
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ ...disp, fontWeight: 700, fontSize: 17.5, letterSpacing: 0.4, lineHeight: 1.05, whiteSpace: "nowrap" }}>
-            <span>HYBRIDFUEL<span style={{ color: EMBER }}>CO</span></span>
+          <div style={{ ...disp, fontWeight: 700, fontSize: 17.5, letterSpacing: 0.4, lineHeight: 1.05, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            {isGymMember
+              ? <span style={{ color: gymCtx.org.brand_color || EMBER }}>{gymCtx.org.name || ""}</span>
+              : <span>HYBRIDFUEL<span style={{ color: EMBER }}>CO</span></span>}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 3, minWidth: 0 }}>
             {devMode && <span style={{ flexShrink: 0, fontSize: 8, fontWeight: 700, letterSpacing: 1, color: INK, background: EMBER, borderRadius: 4, padding: "1px 4px", ...disp }}>DEV</span>}
-            <span style={{ fontSize: 9.5, color: MUTED, letterSpacing: 1, textTransform: "uppercase", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{T("tagline")}</span>
+            <span style={{ fontSize: 9.5, color: MUTED, letterSpacing: 1, textTransform: "uppercase", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{isGymMember ? "Powered by HybridFuel" : T("tagline")}</span>
           </div>
         </div>
         <div onClick={() => setShowReminders(true)} title="Reminders" style={{ cursor: "pointer", width: 32, height: 32, borderRadius: "50%", border: `1px solid ${LINE}`, background: "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
@@ -1525,6 +1537,7 @@ export default function App() {
 
       <div style={{ maxWidth: 680, margin: "0 auto", padding: 16, position: "relative", zIndex: 1 }}>
 
+        {tab === "dashboard" && isGymMember && <GymAgendaMember lang={lang} color={gymCtx.org.brand_color} />}
         {tab === "dashboard" && <Dashboard lang={lang} session={session} week={week} targets={targets} units={units} onGo={(x) => { setTab(x); try { window.scrollTo(0, 0); } catch (e) {} }} />}
 
         {/* ====== PLAN TAB ====== */}
@@ -1835,7 +1848,7 @@ export default function App() {
       )}
 
       {showReminders && <Reminders lang={lang} onClose={() => setShowReminders(false)} />}
-      {showAuth && <Auth lang={lang} session={session} tier={subTier} recovery={authRecovery} onClose={() => { setShowAuth(false); setAuthRecovery(false); }} />}
+      {showAuth && <Auth lang={lang} session={session} tier={subTier} recovery={authRecovery} gym={isGymMember ? gymCtx.org : null} onClose={() => { setShowAuth(false); setAuthRecovery(false); }} />}
       {showProducts && <Products lang={lang} session={session} autoScan={fabScan} onClose={() => { setShowProducts(false); setPickTarget(null); setFabScan(false); }} onPick={pickTarget ? (prod) => { if (pickTarget.mi == null) addProductAsMeal(pickTarget.di, prod); else addProductIng(pickTarget.di, pickTarget.mi, prod); setShowProducts(false); setPickTarget(null); } : fabScan ? (prod) => { addTodayProduct(prod); setShowProducts(false); setFabScan(false); } : null} />}
       {showBuilder && <RecipeBuilder lang={lang} session={session} units={units} onClose={() => setShowBuilder(false)} onSaved={() => flashSaved()} />}
 

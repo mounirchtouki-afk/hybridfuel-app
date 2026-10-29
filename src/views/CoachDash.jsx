@@ -15,6 +15,15 @@ export default function CoachDash({ session, org, lang, onLogout }) {
   const [codeShown, setCodeShown] = useState(null);  // {name, code}
   const [err, setErr] = useState("");
 
+  // PT-agenda
+  const [sessions, setSessions] = useState(null);
+  const [sTitle, setSTitle] = useState("");
+  const [sWho, setSWho] = useState("");        // "" = hele groep, anders auth_user_id van een lid
+  const [sDate, setSDate] = useState("");
+  const [sTime, setSTime] = useState("");
+  const [sBusy, setSBusy] = useState(false);
+  const [sErr, setSErr] = useState("");
+
   const joinUrl = (typeof window !== "undefined" ? window.location.origin : "") + "/join/" + (org && org.slug);
 
   async function load() {
@@ -26,7 +35,36 @@ export default function CoachDash({ session, org, lang, onLogout }) {
       setMembers((mem || []).map((m) => ({ ...m, progress: pmap[m.auth_user_id] || null })));
     } catch (e) { setMembers([]); }
   }
-  useEffect(() => { load(); }, []);
+  async function loadSessions() {
+    if (!supabase) return;
+    try {
+      const { data } = await supabase.from("org_sessions").select("id,member_id,title,starts_at,note").gte("starts_at", new Date(Date.now() - 36e5).toISOString()).order("starts_at", { ascending: true });
+      setSessions(data || []);
+    } catch (e) { setSessions([]); }
+  }
+  useEffect(() => { load(); loadSessions(); }, []);
+
+  async function addSession() {
+    const title = sTitle.trim();
+    if (!title || !sDate || !sTime || sBusy) { if (!sDate || !sTime) setSErr(t("Kies datum en tijd.", "Pick a date and time.")); return; }
+    setSBusy(true); setSErr("");
+    try {
+      const starts = new Date(sDate + "T" + sTime);
+      if (isNaN(starts.getTime())) { setSErr(t("Ongeldige datum/tijd.", "Invalid date/time.")); setSBusy(false); return; }
+      const row = { org_id: org && org.id, member_id: sWho || null, title, starts_at: starts.toISOString(), created_by: session && session.user && session.user.id };
+      const { error } = await supabase.from("org_sessions").insert(row);
+      if (error) { setSErr(t("Opslaan mislukt. Staat de agenda-tabel al aan?", "Save failed. Is the agenda table enabled yet?")); setSBusy(false); return; }
+      setSTitle(""); setSWho(""); setSDate(""); setSTime(""); setSBusy(false); loadSessions();
+    } catch (e) { setSErr(t("Opslaan mislukt.", "Save failed.")); setSBusy(false); }
+  }
+
+  async function delSession(id) {
+    if (!supabase) return;
+    try { await supabase.from("org_sessions").delete().eq("id", id); loadSessions(); } catch (e) {}
+  }
+
+  const memberName = (uid) => { const m = (members || []).find((x) => x.auth_user_id === uid); return m ? (m.display_name || t("Lid", "Member")) : t("Lid", "Member"); };
+  const fmtWhen = (s) => { try { return new Date(s).toLocaleString(lang === "nl" ? "nl-NL" : "en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }); } catch (e) { return s; } };
 
   async function addMember() {
     const name = newName.trim();
@@ -113,6 +151,38 @@ export default function CoachDash({ session, org, lang, onLogout }) {
               })}
             </div>
           )}
+        </div>
+
+        {/* PT-agenda */}
+        <div style={card}>
+          <div style={{ ...sectionTitle, color, marginBottom: 10 }}>{t("PT-agenda", "PT schedule")}</div>
+          <div style={{ display: "grid", gap: 8 }}>
+            <input style={input} value={sTitle} onChange={(e) => setSTitle(e.target.value)} placeholder={t("Titel (bv. Personal training)", "Title (e.g. Personal training)")} />
+            <select style={{ ...input, appearance: "auto" }} value={sWho} onChange={(e) => setSWho(e.target.value)}>
+              <option value="">{t("Hele groep", "Whole group")}</option>
+              {(members || []).map((m) => <option key={m.id} value={m.auth_user_id}>{m.display_name || t("Naamloos", "Unnamed")}</option>)}
+            </select>
+            <div style={{ display: "flex", gap: 8 }}>
+              <input style={{ ...input, flex: 1 }} type="date" value={sDate} onChange={(e) => setSDate(e.target.value)} />
+              <input style={{ ...input, flex: 1 }} type="time" value={sTime} onChange={(e) => setSTime(e.target.value)} />
+            </div>
+            <div onClick={addSession} style={{ cursor: sBusy ? "default" : "pointer", opacity: sBusy ? 0.7 : 1, background: color, color: "#fff", padding: "11px 0", borderRadius: 8, textAlign: "center", ...disp, fontWeight: 700, fontSize: 13.5, letterSpacing: 0.3 }}>{t("Sessie plannen", "Schedule session")}</div>
+          </div>
+          {sErr && <div style={{ fontSize: 12, color: EMBER_SOFT, marginTop: 8 }}>{sErr}</div>}
+
+          <div style={{ marginTop: 14, display: "grid", gap: 8 }}>
+            {!sessions ? <div style={{ fontSize: 13, color: MUTED }}>{t("Laden…", "Loading…")}</div>
+              : sessions.length === 0 ? <div style={{ fontSize: 12.5, color: MUTED, lineHeight: 1.5 }}>{t("Nog geen geplande sessies.", "No sessions scheduled yet.")}</div>
+              : sessions.map((s) => (
+                <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: INK, border: `1px solid ${LINE}`, borderRadius: 10 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ ...disp, fontWeight: 700, fontSize: 14 }}>{s.title}</div>
+                    <div style={{ fontSize: 11.5, color: MUTED, marginTop: 2 }}>{fmtWhen(s.starts_at)} · {s.member_id ? memberName(s.member_id) : t("Hele groep", "Whole group")}</div>
+                  </div>
+                  <div onClick={() => delSession(s.id)} style={{ cursor: "pointer", fontSize: 11.5, color: MUTED, border: `1px solid ${LINE}`, borderRadius: 7, padding: "6px 9px", whiteSpace: "nowrap" }}>{t("Verwijderen", "Delete")}</div>
+                </div>
+              ))}
+          </div>
         </div>
       </div>
     </div>
