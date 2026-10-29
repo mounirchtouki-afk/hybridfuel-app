@@ -31,8 +31,14 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
   const myTabs = ["overview", ...(isOwner ? [...MODS, "team"] : (Array.isArray(perms) ? MODS.filter((m) => perms.includes(m)) : []))];
   const [active, setActive] = useState(null);
   const current = active && myTabs.includes(active) ? active : (myTabs[0] || null);
-  const [navOpen, setNavOpen] = useState(false);     // nav-uitklapmenu
+  const [navOpen, setNavOpen] = useState(false);     // nav-uitklapmenu (mobiel drawer)
   const [rowMenu, setRowMenu] = useState(null);       // member.id waarvan het actie-uitklapmenu open staat
+  const [isWide, setIsWide] = useState(() => (typeof window !== "undefined" ? window.innerWidth >= 880 : true));
+  useEffect(() => {
+    const onR = () => setIsWide(window.innerWidth >= 880);
+    window.addEventListener("resize", onR);
+    return () => window.removeEventListener("resize", onR);
+  }, []);
 
   const [members, setMembers] = useState(null);
   const [newName, setNewName] = useState("");
@@ -444,56 +450,111 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
   }
 
   const fmtDate = (s) => { try { return s ? new Date(s).toLocaleDateString(lang === "nl" ? "nl-NL" : "en-GB", { day: "numeric", month: "short" }) : "—"; } catch (e) { return "—"; } };
+
+  // Lijn-iconen (SVG, geen emoji/sjablonen). Kleur via currentColor.
+  const svg = (paths, extra) => (p) => <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ color: (p && p.col) || "currentColor", flexShrink: 0 }}>{paths}{extra}</svg>;
+  const ICON = {
+    overview: svg(<><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></>),
+    members: svg(<><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /></>),
+    classes: svg(<><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></>),
+    pt: svg(<><path d="M6.5 6.5l11 11M4 9l-1.5 1.5a1.5 1.5 0 000 2L4 14M20 9l1.5 1.5a1.5 1.5 0 010 2L20 14M7 4l1.5 1.5M17 20l-1.5-1.5" /></>),
+    plans: svg(<><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" /><circle cx="7" cy="7" r="1.2" /></>),
+    branding: svg(<><circle cx="13.5" cy="6.5" r="1.3" /><circle cx="17.5" cy="10.5" r="1.3" /><circle cx="8.5" cy="7.5" r="1.3" /><circle cx="6.5" cy="12.5" r="1.3" /><path d="M12 2a10 10 0 1 0 0 20c1.1 0 2-.9 2-2 0-.5-.2-1-.5-1.3-.3-.4-.5-.8-.5-1.2 0-1.1.9-2 2-2h1.5A3.5 3.5 0 0 0 22 11c0-5-4.5-9-10-9z" /></>),
+    formula: svg(<><rect x="4" y="2" width="16" height="20" rx="2" /><path d="M8 6h8M8 10h2M8 14h2M8 18h2M14 10v8" /></>),
+    team: svg(<><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><circle cx="19" cy="7" r="3" /><path d="M23 21v-1.5a3.5 3.5 0 0 0-3-3.4" /></>),
+    alert: svg(<><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><path d="M12 9v4M12 17h.01" /></>),
+    wave: svg(<><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></>),
+    calendar2: svg(<><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18M8 14h.01M12 14h.01M16 14h.01" /></>),
+  };
+
+  // Aandacht-items (voor het overzicht én de badge in de zijbalk).
+  function attentionItems() {
+    const today = new Date().toISOString().slice(0, 10);
+    const att = [];
+    const lowAdh = (members || []).filter((m) => m.progress && m.progress.adherence != null && m.progress.adherence < 50);
+    if (lowAdh.length) att.push({ ic: "alert", tint: "rgba(251,113,133,0.14)", icCol: EMBER_SOFT, title: lowAdh.length + " " + t("leden hebben aandacht nodig", "members need attention"), sub: t("Lage adherentie — bekijk hun voortgang", "Low adherence — check their progress"), badge: lowAdh.length, badgeColor: EMBER_SOFT, go: "members" });
+    const notActive = (members || []).filter((m) => !(m.progress && m.progress.last_active));
+    if (notActive.length) att.push({ ic: "wave", tint: "rgba(96,165,250,0.14)", icCol: "#60A5FA", title: notActive.length + " " + t("leden nog niet actief", "members not active yet"), sub: t("Nog niet ingelogd — deel hun code", "Not logged in yet — share their code"), badge: notActive.length, badgeColor: "#60A5FA", go: "members" });
+    const noPlan = (plans && plans.length) ? (members || []).filter((m) => !m.plan_id) : [];
+    if (noPlan.length) att.push({ ic: "plans", tint: "rgba(167,139,250,0.14)", icCol: "#A78BFA", title: noPlan.length + " " + t("leden zonder abonnement", "members without a plan"), sub: t("Koppel een abonnement zodat toegang klopt", "Assign a plan so access is correct"), badge: noPlan.length, badgeColor: "#A78BFA", go: "members" });
+    const todaySessions = (sessions || []).filter((s) => (s.starts_at || "").slice(0, 10) === today);
+    if (todaySessions.length) att.push({ ic: "calendar2", tint: "rgba(52,211,153,0.14)", icCol: "#34D399", title: todaySessions.length + " " + t("PT-sessies vandaag", "PT sessions today"), sub: t("Staan in je agenda", "In your schedule"), chevron: true, go: "pt" });
+    if (!(classes && classes.length)) att.push({ ic: "classes", tint: "rgba(150,150,150,0.12)", icCol: MUTED, title: t("Nog geen lesrooster", "No class schedule yet"), sub: t("Voeg je weeklessen toe", "Add your weekly classes"), chevron: true, go: "classes" });
+    if (!(plans && plans.length)) att.push({ ic: "plans", tint: "rgba(150,150,150,0.12)", icCol: MUTED, title: t("Nog geen abonnementen", "No plans yet"), sub: t("Maak je abonnementen aan", "Create your plans"), chevron: true, go: "plans" });
+    return att;
+  }
+  const navCount = (m) => {
+    if (m === "overview") { const n = attentionItems().length; return n || null; }
+    if (m === "members") return members ? members.length : null;
+    if (m === "classes") return classes ? classes.length : null;
+    if (m === "plans") return plans ? plans.length : null;
+    if (m === "team") return coaches ? coaches.length : null;
+    return null;
+  };
+
   const card = { background: INK2, border: `1px solid ${LINE}`, borderRadius: 14, padding: 16 };
   const input = { width: "100%", background: INK, border: `1px solid ${LINE}`, color: PAPER, padding: "11px 12px", fontSize: 14, borderRadius: 8, outline: "none", boxSizing: "border-box", fontFamily: "Inter, sans-serif" };
 
-  return (
-    <div style={{ minHeight: "100vh", background: INK, color: PAPER, fontFamily: "Inter, sans-serif", paddingBottom: 40 }}>
-      {/* header white-label */}
-      <div style={{ borderBottom: `1px solid ${LINE}`, padding: "14px 16px", display: "flex", alignItems: "center", gap: 10, position: "sticky", top: 0, background: INK, zIndex: 10 }}>
-        {org && org.logo_url
-          ? <img src={org.logo_url} alt={org.name} style={{ maxHeight: 30, maxWidth: 150, objectFit: "contain" }} />
-          : <div style={{ ...disp, fontWeight: 800, fontSize: 17, color }}>{(org && org.name) || "Coach"}</div>}
-        <div style={{ flex: 1 }} />
-        <div style={{ fontSize: 11, color: MUTED, letterSpacing: 1, textTransform: "uppercase", ...disp, fontWeight: 700 }}>Coach</div>
-        <div onClick={onLogout} style={{ cursor: "pointer", fontSize: 12.5, color: MUTED, border: `1px solid ${LINE}`, borderRadius: 8, padding: "6px 11px" }}>{t("Uitloggen", "Log out")}</div>
-      </div>
-
-      {myTabs.length > 1 && (
-        <div style={{ borderBottom: `1px solid ${LINE}`, background: INK, padding: "8px 12px", position: "relative", zIndex: 20 }}>
-          <div onClick={() => setNavOpen((o) => !o)} style={{ cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", background: INK2, border: `1px solid ${LINE}`, borderRadius: 9, padding: "10px 14px", maxWidth: 360, margin: "0 auto" }}>
-            <span style={{ ...disp, fontWeight: 700, fontSize: 14, color: PAPER }}>{LABEL[current] || current}</span>
-            <span style={{ color: MUTED, fontSize: 12, transform: navOpen ? "rotate(180deg)" : "none", transition: "transform .15s" }}>▾</span>
+  const renderNav = (closeAfter) => (
+    <div style={{ display: "grid", gap: 3 }}>
+      {myTabs.map((m) => {
+        const on = current === m; const cnt = navCount(m);
+        return (
+          <div key={m} onClick={() => { setActive(m); if (closeAfter) setNavOpen(false); }} style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: 11, padding: "10px 12px", borderRadius: 9, background: on ? "rgba(150,150,150,0.1)" : "transparent", color: on ? color : PAPER }}>
+            <span style={{ display: "flex" }}>{ICON[m] ? ICON[m]({ col: on ? color : MUTED }) : null}</span>
+            <span style={{ ...disp, fontWeight: 600, fontSize: 14, flex: 1, color: on ? color : PAPER }}>{LABEL[m]}</span>
+            {cnt != null && <span style={{ minWidth: 20, height: 20, borderRadius: 10, background: on ? color : LINE, color: on ? "#fff" : MUTED, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, ...disp, padding: "0 6px" }}>{cnt}</span>}
           </div>
-          {navOpen && (
-            <>
-              <div onClick={() => setNavOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 18 }} />
-              <div style={{ position: "absolute", top: "100%", left: "50%", transform: "translateX(-50%)", width: "calc(100% - 24px)", maxWidth: 360, background: INK2, border: `1px solid ${LINE}`, borderRadius: 10, marginTop: 4, overflow: "hidden", zIndex: 19, boxShadow: "0 12px 34px rgba(0,0,0,.4)" }}>
-                {myTabs.map((m) => (
-                  <div key={m} onClick={() => { setActive(m); setNavOpen(false); }} style={{ cursor: "pointer", padding: "11px 14px", fontSize: 14, ...disp, fontWeight: 600, color: current === m ? color : PAPER, background: current === m ? "rgba(150,150,150,0.08)" : "transparent", borderBottom: `1px solid ${LINE}` }}>{LABEL[m] || m}</div>
-                ))}
-              </div>
-            </>
-          )}
+        );
+      })}
+    </div>
+  );
+  const navBrand = (
+    <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "4px 8px 16px" }}>
+      {org && org.logo_url ? <img src={org.logo_url} alt={org.name} style={{ maxHeight: 28, maxWidth: 160, objectFit: "contain" }} /> : <div style={{ ...disp, fontWeight: 800, fontSize: 16, color }}>{(org && org.name) || "Coach"}</div>}
+    </div>
+  );
+  const logoutBtn = <div onClick={onLogout} style={{ cursor: "pointer", marginTop: 12, fontSize: 12.5, color: MUTED, border: `1px solid ${LINE}`, borderRadius: 8, padding: "9px 12px", textAlign: "center" }}>{t("Uitloggen", "Log out")}</div>;
+
+  return (
+    <div style={{ minHeight: "100vh", background: INK, color: PAPER, fontFamily: "Inter, sans-serif", display: "flex" }}>
+      {/* Zijbalk (desktop) */}
+      {isWide && (
+        <div style={{ width: 240, flexShrink: 0, borderRight: `1px solid ${LINE}`, background: INK, position: "sticky", top: 0, alignSelf: "flex-start", height: "100vh", display: "flex", flexDirection: "column", padding: "16px 12px", boxSizing: "border-box" }}>
+          {navBrand}
+          <div style={{ flex: 1, overflowY: "auto" }}>{renderNav(false)}</div>
+          {logoutBtn}
         </div>
       )}
+      {/* Drawer (mobiel) */}
+      {!isWide && navOpen && (
+        <>
+          <div onClick={() => setNavOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 40 }} />
+          <div style={{ position: "fixed", top: 0, left: 0, bottom: 0, width: 250, background: INK, borderRight: `1px solid ${LINE}`, zIndex: 41, padding: "16px 12px", display: "flex", flexDirection: "column", boxSizing: "border-box" }}>
+            {navBrand}
+            <div style={{ flex: 1, overflowY: "auto" }}>{renderNav(true)}</div>
+            {logoutBtn}
+          </div>
+        </>
+      )}
 
-      <div style={{ maxWidth: 680, margin: "0 auto", padding: "20px 16px", display: "grid", gap: 16 }}>
+      {/* Content-kolom */}
+      <div style={{ flex: 1, minWidth: 0, paddingBottom: 40 }}>
+        {!isWide && (
+          <div style={{ borderBottom: `1px solid ${LINE}`, padding: "12px 14px", display: "flex", alignItems: "center", gap: 10, position: "sticky", top: 0, background: INK, zIndex: 20 }}>
+            <div onClick={() => setNavOpen(true)} style={{ cursor: "pointer", color: PAPER, border: `1px solid ${LINE}`, borderRadius: 8, padding: "7px 10px", display: "flex" }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M3 12h18M3 6h18M3 18h18" /></svg>
+            </div>
+            {org && org.logo_url ? <img src={org.logo_url} alt={org.name} style={{ maxHeight: 26, maxWidth: 130, objectFit: "contain" }} /> : <div style={{ ...disp, fontWeight: 800, fontSize: 16, color }}>{(org && org.name) || "Coach"}</div>}
+            <div style={{ flex: 1 }} />
+            <div style={{ ...disp, fontWeight: 700, fontSize: 14, color: PAPER }}>{LABEL[current]}</div>
+          </div>
+        )}
+      <div style={{ maxWidth: 720, margin: "0 auto", padding: "20px 16px", display: "grid", gap: 16 }}>
         {current === "overview" && (() => {
           const h = new Date().getHours();
           const greet = h < 12 ? t("Goedemorgen", "Good morning") : h < 18 ? t("Goedemiddag", "Good afternoon") : t("Goedenavond", "Good evening");
-          const today = new Date().toISOString().slice(0, 10);
-          const att = [];
-          const lowAdh = (members || []).filter((m) => m.progress && m.progress.adherence != null && m.progress.adherence < 50);
-          if (lowAdh.length) att.push({ icon: "⚠️", tint: "rgba(251,113,133,0.14)", title: lowAdh.length + " " + t("leden hebben aandacht nodig", "members need attention"), sub: t("Lage adherentie — bekijk hun voortgang", "Low adherence — check their progress"), badge: lowAdh.length, badgeColor: EMBER_SOFT, go: "members" });
-          const notActive = (members || []).filter((m) => !(m.progress && m.progress.last_active));
-          if (notActive.length) att.push({ icon: "👋", tint: "rgba(96,165,250,0.14)", title: notActive.length + " " + t("leden nog niet actief", "members not active yet"), sub: t("Nog niet ingelogd — deel hun code", "Not logged in yet — share their code"), badge: notActive.length, badgeColor: "#60A5FA", go: "members" });
-          const noPlan = (plans && plans.length) ? (members || []).filter((m) => !m.plan_id) : [];
-          if (noPlan.length) att.push({ icon: "🏷️", tint: "rgba(167,139,250,0.14)", title: noPlan.length + " " + t("leden zonder abonnement", "members without a plan"), sub: t("Koppel een abonnement zodat toegang klopt", "Assign a plan so access is correct"), badge: noPlan.length, badgeColor: "#A78BFA", go: "members" });
-          const todaySessions = (sessions || []).filter((s) => (s.starts_at || "").slice(0, 10) === today);
-          if (todaySessions.length) att.push({ icon: "📅", tint: "rgba(52,211,153,0.14)", title: todaySessions.length + " " + t("PT-sessies vandaag", "PT sessions today"), sub: t("Staan in je agenda", "In your schedule"), chevron: true, go: "pt" });
-          if (!(classes && classes.length)) att.push({ icon: "🗓️", tint: "rgba(150,150,150,0.12)", title: t("Nog geen lesrooster", "No class schedule yet"), sub: t("Voeg je weeklessen toe", "Add your weekly classes"), chevron: true, go: "classes" });
-          if (!(plans && plans.length)) att.push({ icon: "🏷️", tint: "rgba(150,150,150,0.12)", title: t("Nog geen abonnementen", "No plans yet"), sub: t("Maak je abonnementen aan", "Create your plans"), chevron: true, go: "plans" });
+          const att = attentionItems();
           return (
             <>
               <div>
@@ -502,7 +563,7 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
               </div>
               {att.map((a, i) => (
                 <div key={i} onClick={() => myTabs.includes(a.go) && setActive(a.go)} style={{ ...card, display: "flex", alignItems: "center", gap: 14, padding: 16, cursor: myTabs.includes(a.go) ? "pointer" : "default" }}>
-                  <div style={{ width: 42, height: 42, borderRadius: 12, background: a.tint, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>{a.icon}</div>
+                  <div style={{ width: 42, height: 42, borderRadius: 12, background: a.tint, display: "flex", alignItems: "center", justifyContent: "center", color: a.icCol, flexShrink: 0 }}>{ICON[a.ic] && ICON[a.ic]({ col: a.icCol })}</div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ ...disp, fontWeight: 700, fontSize: 15 }}>{a.title}</div>
                     <div style={{ fontSize: 12.5, color: MUTED, marginTop: 2 }}>{a.sub}</div>
@@ -901,6 +962,7 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
           </div>
           </>
         )}
+      </div>
       </div>
     </div>
   );
