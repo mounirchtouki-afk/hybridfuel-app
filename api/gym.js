@@ -9,7 +9,7 @@
 import crypto from "crypto";
 import { ipLimited } from "./_ratelimit.js";
 import {
-  rest, genCode, hashCode, adminCreateUser, adminGetUser, adminSetPassword,
+  rest, genCode, hashCode, adminCreateUser, adminGetUser, adminSetPassword, adminDeleteUser,
   passwordGrant, userIdFromToken, coachOrgId, MEMBER_EMAIL_DOMAIN, readBody,
 } from "./_gym.js";
 
@@ -33,6 +33,7 @@ export default async function handler(req, res) {
     if (action === "login")  return await login(req, res, body);
     if (action === "create") return await create(req, res, body);
     if (action === "reset")  return await reset(req, res, body);
+    if (action === "remove") return await remove(req, res, body);
     if (action === "setup")  return await setup(req, res, body);
     return res.status(400).json({ error: "unknown_action" });
   } catch (err) {
@@ -145,6 +146,30 @@ async function reset(req, res, body) {
   const uh = await rest("org_members?id=eq." + encodeURIComponent(memberId), { method: "PATCH", body: JSON.stringify({ code_hash: hashCode(code) }) });
   if (!uh.ok) return res.status(502).json({ error: "reset_failed" });
   return res.status(200).json({ ok: true, member_id: memberId, code });
+}
+
+// --- remove: coach verwijdert een lid (org_members-rij + auth-gebruiker) ---
+async function remove(req, res, body) {
+  const coachId = await userIdFromToken(String(body.authToken || "").trim());
+  if (!coachId) return res.status(401).json({ error: "invalid_token" });
+  const orgId = await coachOrgId(coachId);
+  if (!orgId) return res.status(403).json({ error: "not_a_coach" });
+
+  const memberId = String(body.member_id || "").trim();
+  if (!memberId) return res.status(400).json({ error: "bad_request" });
+
+  const mr = await rest("org_members?select=id,auth_user_id,org_id,role&id=eq." + encodeURIComponent(memberId) + "&limit=1");
+  const rows = mr.ok ? await mr.json().catch(() => []) : [];
+  const mem = rows && rows[0];
+  if (!mem || mem.org_id !== orgId || mem.role !== "member") return res.status(404).json({ error: "not_found" });
+
+  // Best-effort: afgeleide data opruimen, dan de lidrij, dan de auth-gebruiker.
+  try { await rest("member_progress?user_id=eq." + encodeURIComponent(mem.auth_user_id), { method: "DELETE" }); } catch (e) {}
+  try { await rest("org_sessions?member_id=eq." + encodeURIComponent(mem.auth_user_id), { method: "DELETE" }); } catch (e) {}
+  const del = await rest("org_members?id=eq." + encodeURIComponent(memberId), { method: "DELETE" });
+  if (!del.ok) { const e = await del.text().catch(() => ""); return res.status(502).json({ error: "delete_failed", detail: e.slice(0, 200) }); }
+  try { await adminDeleteUser(mem.auth_user_id); } catch (e) {}
+  return res.status(200).json({ ok: true, member_id: memberId });
 }
 
 // --- setup: bootstrap org + coach (met geheim) ---

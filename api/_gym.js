@@ -61,6 +61,13 @@ export async function adminSetPassword(userId, password) {
   });
   return r;
 }
+export async function adminDeleteUser(userId) {
+  const r = await fetch(supaUrl() + "/auth/v1/admin/users/" + encodeURIComponent(userId), {
+    method: "DELETE",
+    headers: { apikey: svcKey(), Authorization: "Bearer " + svcKey() },
+  });
+  return r;
+}
 // Logt een (synthetische) gebruiker in met wachtwoord en geeft de sessie terug.
 export async function passwordGrant(email, password) {
   const r = await fetch(supaUrl() + "/auth/v1/token?grant_type=password", {

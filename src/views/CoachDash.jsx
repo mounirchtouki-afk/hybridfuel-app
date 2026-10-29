@@ -32,6 +32,11 @@ export default function CoachDash({ session, org, lang, onLogout }) {
   const [cBusy, setCBusy] = useState(false);
   const [openClasses, setOpenClasses] = useState(null); // member.id waarvan de les-toegang open staat
   const [sel, setSel] = useState([]);                    // werk-selectie van class-ids
+  const [openNote, setOpenNote] = useState(null);        // member.id waarvan de notitie open staat
+  const [noteText, setNoteText] = useState("");
+  const [noteBusy, setNoteBusy] = useState(false);
+  const [dictating, setDictating] = useState(false);
+  const srSupported = typeof window !== "undefined" && !!(window.SpeechRecognition || window.webkitSpeechRecognition);
 
   // Rekenformule + juridisch akkoord
   const [termsOk, setTermsOk] = useState(null);     // null = nog niet geladen
@@ -63,10 +68,10 @@ export default function CoachDash({ session, org, lang, onLogout }) {
       // Tier + lestoegang apart + guarded (kolommen bestaan mogelijk nog niet vóór migratie).
       const tmap = {};
       try {
-        const { data: tr } = await supabase.from("org_members").select("id,member_tier,class_access").eq("role", "member");
+        const { data: tr } = await supabase.from("org_members").select("id,member_tier,class_access,coach_note").eq("role", "member");
         (tr || []).forEach((x) => { tmap[x.id] = x; });
       } catch (e) {}
-      setMembers((mem || []).map((m) => ({ ...m, progress: pmap[m.auth_user_id] || null, member_tier: (tmap[m.id] && tmap[m.id].member_tier) || "pro", class_access: tmap[m.id] ? tmap[m.id].class_access : null })));
+      setMembers((mem || []).map((m) => ({ ...m, progress: pmap[m.auth_user_id] || null, member_tier: (tmap[m.id] && tmap[m.id].member_tier) || "pro", class_access: tmap[m.id] ? tmap[m.id].class_access : null, coach_note: (tmap[m.id] && tmap[m.id].coach_note) || "" })));
     } catch (e) { setMembers([]); }
   }
   async function loadClasses() {
@@ -245,6 +250,47 @@ export default function CoachDash({ session, org, lang, onLogout }) {
   }
   const DAY_LBL = (d) => (lang === "nl" ? ["zo", "ma", "di", "wo", "do", "vr", "za"] : ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"])[d];
 
+  // Lid verwijderen (org_members-rij + auth-gebruiker) via de server.
+  async function deleteMember(m) {
+    if (busy) return;
+    const ok = typeof window !== "undefined" ? window.confirm(t("Lid \"" + (m.display_name || "") + "\" definitief verwijderen?", "Permanently delete member \"" + (m.display_name || "") + "\"?")) : true;
+    if (!ok) return;
+    setBusy(true);
+    try {
+      const r = await fetch("/api/gym", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "remove", authToken: token, member_id: m.id }) });
+      if (r.ok) setMembers((xs) => xs.filter((x) => x.id !== m.id));
+      setBusy(false);
+    } catch (e) { setBusy(false); }
+  }
+
+  // Coach-notitie per lid (voor de coach zelf).
+  function openMemberNote(m) {
+    if (openNote === m.id) { setOpenNote(null); return; }
+    setOpenNote(m.id); setNoteText(m.coach_note || "");
+  }
+  async function saveNote(m) {
+    if (!supabase || noteBusy) return;
+    setNoteBusy(true);
+    try {
+      const { error } = await supabase.from("org_members").update({ coach_note: noteText }).eq("id", m.id);
+      if (!error) { setMembers((xs) => xs.map((x) => x.id === m.id ? { ...x, coach_note: noteText } : x)); setOpenNote(null); }
+      setNoteBusy(false);
+    } catch (e) { setNoteBusy(false); }
+  }
+  // Spraak-naar-tekst: voegt het gesproken stuk toe aan de notitie.
+  function dictate() {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) return;
+    const rec = new SR();
+    rec.lang = lang === "nl" ? "nl-NL" : "en-US";
+    rec.interimResults = false; rec.maxAlternatives = 1;
+    rec.onresult = (e) => { try { const txt = e.results[0][0].transcript; setNoteText((t0) => (t0 ? t0.trim() + " " : "") + txt); } catch (err) {} };
+    rec.onend = () => setDictating(false);
+    rec.onerror = () => setDictating(false);
+    setDictating(true);
+    try { rec.start(); } catch (e) { setDictating(false); }
+  }
+
   const fmtDate = (s) => { try { return s ? new Date(s).toLocaleDateString(lang === "nl" ? "nl-NL" : "en-GB", { day: "numeric", month: "short" }) : "—"; } catch (e) { return "—"; } };
   const card = { background: INK2, border: `1px solid ${LINE}`, borderRadius: 14, padding: 16 };
   const input = { width: "100%", background: INK, border: `1px solid ${LINE}`, color: PAPER, padding: "11px 12px", fontSize: 14, borderRadius: 8, outline: "none", boxSizing: "border-box", fontFamily: "Inter, sans-serif" };
@@ -319,7 +365,24 @@ export default function CoachDash({ session, org, lang, onLogout }) {
                           {t("Lessen", "Classes")} ({m.class_access == null ? t("alle", "all") : m.class_access.length})
                         </div>
                       )}
+                      <div onClick={() => openMemberNote(m)} style={{ cursor: "pointer", fontSize: 11.5, color: m.coach_note ? color : MUTED, border: `1px solid ${LINE}`, borderRadius: 7, padding: "5px 9px" }}>{t("Notitie", "Note")}{m.coach_note ? " •" : ""}</div>
+                      <div style={{ flex: 1 }} />
+                      <div onClick={() => deleteMember(m)} title={t("Lid verwijderen", "Delete member")} style={{ cursor: "pointer", fontSize: 11.5, color: EMBER_SOFT, border: `1px solid ${LINE}`, borderRadius: 7, padding: "5px 9px" }}>{t("Verwijderen", "Delete")}</div>
                     </div>
+                    {openNote === m.id && (
+                      <div style={{ padding: "0 12px 12px" }}>
+                        <textarea value={noteText} onChange={(e) => setNoteText(e.target.value)} placeholder={t("Notitie over dit lid…", "Note about this member…")} rows={3} style={{ ...input, resize: "vertical", minHeight: 64, fontFamily: "Inter, sans-serif" }} />
+                        <div style={{ display: "flex", gap: 8, marginTop: 8, alignItems: "center" }}>
+                          {srSupported && (
+                            <div onClick={dictate} title={t("Inspreken", "Dictate")} style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, color: dictating ? color : MUTED, border: `1px solid ${dictating ? color : LINE}`, borderRadius: 7, padding: "7px 11px" }}>
+                              <span style={{ width: 9, height: 9, borderRadius: "50%", background: dictating ? color : MUTED, display: "inline-block" }} />{dictating ? t("Luistert…", "Listening…") : t("Inspreken", "Dictate")}
+                            </div>
+                          )}
+                          <div style={{ flex: 1 }} />
+                          <div onClick={() => saveNote(m)} style={{ cursor: "pointer", background: color, color: "#fff", padding: "8px 16px", borderRadius: 7, ...disp, fontWeight: 700, fontSize: 12.5 }}>{noteBusy ? t("Opslaan…", "Saving…") : t("Opslaan", "Save")}</div>
+                        </div>
+                      </div>
+                    )}
                     {openClasses === m.id && classes && (
                       <div style={{ padding: "0 12px 12px", display: "grid", gap: 6 }}>
                         {classes.length === 0 ? <div style={{ fontSize: 12, color: MUTED }}>{t("Nog geen lessen.", "No classes yet.")}</div>
