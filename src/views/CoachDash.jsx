@@ -764,7 +764,8 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
       {/* Content-kolom */}
       <div style={{ flex: 1, minWidth: 0, paddingBottom: 40 }}>
         {isWide && (
-          <div style={{ padding: "16px 26px", borderBottom: `1px solid ${LINE}`, display: "flex", alignItems: "center", gap: 14, background: INK, position: "sticky", top: 0, zIndex: 20 }}>
+          <div style={{ borderBottom: `1px solid ${LINE}`, background: INK, position: "sticky", top: 0, zIndex: 20 }}>
+          <div style={{ maxWidth: current === "overview" ? 1320 : 1060, margin: "0 auto", padding: "16px 26px", display: "flex", alignItems: "center", gap: 14 }}>
             <div style={{ minWidth: 0 }}>
               {current === "overview"
                 ? <>
@@ -775,10 +776,12 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
             </div>
             <div style={{ flex: 1 }} />
             {isOwner && (
-              <div style={{ display: "flex", border: `1px solid ${LINE}`, borderRadius: 10, overflow: "hidden" }}>
-                {[["owner", t("Eigenaar", "Owner")], ["coach", t("Coach", "Coach")]].map(([k, lbl]) => (
-                  <div key={k} onClick={() => { setPreviewRole(k); setActive("overview"); }} style={{ cursor: "pointer", fontSize: 12.5, ...disp, fontWeight: 700, padding: "9px 15px", background: previewRole === k ? color : "transparent", color: previewRole === k ? "#fff" : MUTED }}>{lbl}</div>
-                ))}
+              <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                <span style={{ fontSize: 11.5, color: MUTED, ...disp, fontWeight: 700, letterSpacing: 0.3 }}>{t("Bekijk als", "View as")}</span>
+                <select value={previewRole} onChange={(e) => { setPreviewRole(e.target.value); setActive("overview"); }} style={{ ...input, width: "auto", appearance: "auto", WebkitAppearance: "auto", padding: "9px 12px", fontSize: 13, cursor: "pointer" }}>
+                  <option value="owner">{t("Eigenaar", "Owner")}</option>
+                  <option value="coach">{t("Coach", "Coach")}</option>
+                </select>
               </div>
             )}
             {myTabs.includes("members") && (
@@ -794,6 +797,7 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
             )}
             {isOwner && previewRole === "coach" && <span style={{ fontSize: 11.5, color: MUTED }}>{t("(coach-voorbeeld)", "(coach preview)")}</span>}
           </div>
+          </div>
         )}
         {!isWide && (
           <div style={{ borderBottom: `1px solid ${LINE}`, padding: "12px 14px", display: "flex", alignItems: "center", gap: 10, position: "sticky", top: 0, background: INK, zIndex: 20 }}>
@@ -805,7 +809,7 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
             <div style={{ ...disp, fontWeight: 700, fontSize: 14, color: PAPER }}>{LABEL[current]}</div>
           </div>
         )}
-      <div style={{ maxWidth: current === "overview" ? 1320 : 720, margin: current === "overview" ? "0" : "0 auto", padding: current === "overview" ? "22px 26px" : "20px 16px", display: "grid", gap: 16 }}>
+      <div style={{ maxWidth: current === "overview" ? 1320 : 1060, margin: "0 auto", padding: isWide ? "22px 26px" : "18px 14px", display: "grid", gap: 16 }}>
         {current === "overview" && (() => {
           const h = new Date().getHours();
           const greet = h < 12 ? t("Goedemorgen", "Good morning") : h < 18 ? t("Goedemiddag", "Good afternoon") : t("Goedenavond", "Good evening");
@@ -1020,11 +1024,10 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
           <div style={{ ...sectionTitle, color, marginBottom: 10 }}>{t("Lid toevoegen", "Add member")}</div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
             <input style={{ ...input, flex: 1, minWidth: 160 }} value={newName} onChange={(e) => setNewName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") addMember(); }} placeholder={t("Naam van het lid", "Member name")} />
-            <div style={{ display: "inline-flex", border: `1px solid ${LINE}`, borderRadius: 8, overflow: "hidden" }}>
-              {["basis", "pro"].map((tr) => (
-                <div key={tr} onClick={() => setNewTier(tr)} style={{ cursor: "pointer", padding: "10px 13px", fontSize: 12.5, ...disp, fontWeight: 700, letterSpacing: 0.3, textTransform: "capitalize", background: newTier === tr ? color : "transparent", color: newTier === tr ? "#fff" : MUTED }}>{tr}</div>
-              ))}
-            </div>
+            <select value={newTier} onChange={(e) => setNewTier(e.target.value)} style={{ ...input, width: "auto", appearance: "auto", WebkitAppearance: "auto", padding: "11px 12px", cursor: "pointer", textTransform: "capitalize" }}>
+              <option value="basis">{t("Basis", "Basis")}</option>
+              <option value="pro">Pro</option>
+            </select>
             <div onClick={addMember} style={{ cursor: busy ? "default" : "pointer", opacity: busy ? 0.7 : 1, background: color, color: "#fff", padding: "11px 18px", borderRadius: 8, ...disp, fontWeight: 700, fontSize: 13.5, letterSpacing: 0.3, whiteSpace: "nowrap" }}>{t("Aanmaken", "Create")}</div>
           </div>
           <div style={{ fontSize: 11, color: MUTED, marginTop: 7, lineHeight: 1.5 }}>{t("basis = voeding + rooster · pro = ook persoonlijke PT", "basis = nutrition + schedule · pro = also personal PT")}</div>
@@ -1352,18 +1355,18 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
           </div>
 
           <div style={{ fontSize: 12.5, color: MUTED, marginBottom: 6 }}>{t("Basis-template", "Base template")}</div>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
-            {Object.keys(THEME_TEMPLATES).map((k) => {
-              const on = tpl === k; const base = THEME_TEMPLATES[k];
-              return (
-                <div key={k} onClick={() => setTpl(k)} style={{ cursor: "pointer", border: `2px solid ${on ? accent : LINE}`, borderRadius: 10, padding: 8, display: "flex", alignItems: "center", gap: 8, background: INK }}>
-                  <div style={{ width: 24, height: 24, borderRadius: 6, background: base.ink, border: `1px solid ${base.line}`, position: "relative" }}>
-                    <div style={{ position: "absolute", right: 3, bottom: 3, width: 8, height: 8, borderRadius: "50%", background: accent }} />
-                  </div>
-                  <span style={{ fontSize: 12.5, color: PAPER, textTransform: "capitalize", ...disp, fontWeight: 600 }}>{k}</span>
-                </div>
-              );
-            })}
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+            {(() => { const base = THEME_TEMPLATES[tpl] || THEME_TEMPLATES.dark; return (
+              <div style={{ width: 34, height: 34, borderRadius: 8, background: base.ink, border: `1px solid ${base.line}`, position: "relative", flexShrink: 0 }}>
+                <div style={{ position: "absolute", right: 4, bottom: 4, width: 10, height: 10, borderRadius: "50%", background: accent }} />
+              </div>
+            ); })()}
+            <select value={tpl} onChange={(e) => setTpl(e.target.value)} style={{ ...input, width: "auto", minWidth: 180, appearance: "auto", WebkitAppearance: "auto", cursor: "pointer" }}>
+              {Object.keys(THEME_TEMPLATES).map((k) => {
+                const nm = { dark: t("Donker", "Dark"), light: t("Licht", "Light"), slate: t("Leisteen", "Slate"), sand: t("Zand", "Sand") }[k] || k;
+                return <option key={k} value={k}>{nm}</option>;
+              })}
+            </select>
           </div>
 
           <div style={{ fontSize: 12.5, color: MUTED, marginBottom: 6 }}>{t("Accentkleur (knoppen & accenten)", "Accent color (buttons & accents)")}</div>
