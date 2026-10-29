@@ -1745,7 +1745,7 @@ export default function App() {
         )}
 
         {/* ====== OTHER TABS ====== */}
-        {tab === "today" && (canView ? <Today key={"today" + syncVer} lang={lang} week={week} session={session} plus={hasPlus} units={units} onRebalance={rebalanceDay} onGoPlan={() => setTab("plan")} /> : <Locked />)}
+        {tab === "today" && (canView ? <Today key={"today" + syncVer} lang={lang} week={week} session={session} plus={hasPlus} demo={inDemo} onUnlock={() => setShowAuth(true)} units={units} onRebalance={rebalanceDay} onGoPlan={() => setTab("plan")} /> : <Locked />)}
         {tab === "tracker" && (hasBasis ? <Tracker lang={lang} height={height} session={session} units={units} /> : <Locked />)}
         {tab === "water" && (hasBasis ? <Water lang={lang} session={session} week={week} units={units} /> : <Locked />)}
         {tab === "producten" && (hasPro ? <Products embedded lang={lang} session={session} onProductChange={propagateProduct} /> : <Locked pro />)}

@@ -55,7 +55,7 @@ function Ring({ pct }) {
   );
 }
 
-export default function Today({ lang, week, onGoPlan, session, plus, units, onRebalance }) {
+export default function Today({ lang, week, onGoPlan, session, plus, units, onRebalance, demo, onUnlock }) {
   const t = (k) => (T[k] ? T[k][lang] : k);
   const ml = macroLetters(lang);
   const cloud = !!(session && supabase);
@@ -257,8 +257,28 @@ export default function Today({ lang, week, onGoPlan, session, plus, units, onRe
             <div style={{ fontSize: 11.5, color: allDone ? "#4ADE80" : MUTED, marginTop: 10 }}>{allDone ? t("done") : t("tapHint")}</div>
           </div>
 
+          {/* Demo-teaser van de herplanner: Pro staat uit in demo, maar prospects
+              moeten deze topfunctie wél zien. Klik stuurt naar het ontgrendel-scherm. */}
+          {demo && day && (
+            <div onClick={() => onUnlock && onUnlock()} style={{ cursor: "pointer", border: `1px solid ${EMBER}`, borderRadius: 14, padding: 15, backgroundImage: "radial-gradient(120% 90% at 100% 0%, rgba(225,29,72,0.14), transparent 62%)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 7 }}>
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 2.6-6.4M3 4v4h4" /></svg>
+                <div style={{ ...disp, fontSize: 13.5, fontWeight: 700, letterSpacing: 0.5, textTransform: "uppercase", color: EMBER }}>{t("hpTitle")}</div>
+                <span style={{ marginLeft: "auto", fontSize: 9.5, fontWeight: 700, letterSpacing: 1, color: PAPER, background: EMBER, borderRadius: 5, padding: "2px 7px", ...disp }}>PRO</span>
+              </div>
+              <div style={{ fontSize: 12.5, color: PAPER, lineHeight: 1.5, marginBottom: 12 }}>
+                {lang === "nl"
+                  ? "Te veel of te weinig gegeten? HybridFuel verdeelt het slim over de rest van je dag of je week, zodat je op koers blijft. Leven gebeurt."
+                  : "Ate too much or too little? HybridFuel smartly rebalances the rest of your day or your week so you stay on track. Life happens."}
+              </div>
+              <div style={{ display: "inline-block", background: EMBER, color: PAPER, borderRadius: 9, padding: "11px 18px", ...disp, fontWeight: 700, fontSize: 13, letterSpacing: 0.5 }}>
+                {lang === "nl" ? "Ontgrendel slim herplannen" : "Unlock smart re-plan"}
+              </div>
+            </div>
+          )}
+
           {/* "Leven gebeurt"-herplanner (Plus), vandaag of over de week */}
-          {plus && day && (undo || spillUndo || canRebalance || canSpread) && (
+          {!demo && plus && day && (undo || spillUndo || canRebalance || canSpread) && (
             <div style={{ border: `1px solid ${EMBER}`, borderRadius: 14, padding: 15, backgroundImage: "radial-gradient(120% 90% at 100% 0%, rgba(225,29,72,0.14), transparent 62%)" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 7 }}>
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 2.6-6.4M3 4v4h4" /></svg>
