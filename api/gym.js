@@ -13,11 +13,13 @@ import {
   passwordGrant, userIdFromToken, coachOrgId, MEMBER_EMAIL_DOMAIN, readBody,
 } from "./_gym.js";
 
+// Platte vorm die de rekenmotor (api/plan.js) direct begrijpt. Alleen deze waarden
+// zijn instelbaar; BMR (Mifflin), activiteitsfactoren en de veiligheidsvloer staan vast.
 const DEFAULT_CALC = {
-  bmr: "mifflin",
-  activity: { sedentary: 1.2, light: 1.375, moderate: 1.55, active: 1.725, very: 1.9 },
-  macros: { protein_g_per_kg: 2.0, fat_pct: 25 },
-  goal: { cut_pct: -17, maintain: 0, gain_pct: 12 },
+  protein_g_per_kg: 2.0,
+  fat_g_per_kg: 0.9,
+  cut_pct: -18,
+  gain_pct: 8,
 };
 
 export default async function handler(req, res) {
@@ -98,6 +100,7 @@ async function create(req, res, body) {
   if (!orgId) return res.status(403).json({ error: "not_a_coach" });
 
   const displayName = String(body.display_name || "").trim().slice(0, 80);
+  const tier = ["basis", "pro"].includes(String(body.tier)) ? String(body.tier) : "pro";
   const code = genCode(8);
   const email = "m-" + crypto.randomUUID() + "@" + MEMBER_EMAIL_DOMAIN;
 
@@ -113,7 +116,12 @@ async function create(req, res, body) {
   });
   if (!ins.ok) { const e = await ins.text().catch(() => ""); return res.status(502).json({ error: "insert_failed", detail: e.slice(0, 200) }); }
   const rows = await ins.json().catch(() => []);
-  return res.status(200).json({ ok: true, member_id: rows && rows[0] && rows[0].id, display_name: displayName, code });
+  const memberId = rows && rows[0] && rows[0].id;
+  // Tier zetten (guarded; kolom bestaat mogelijk nog niet vóór migratie). Default = pro.
+  if (memberId && tier !== "pro") {
+    try { await rest("org_members?id=eq." + encodeURIComponent(memberId), { method: "PATCH", body: JSON.stringify({ member_tier: tier }) }); } catch (e) {}
+  }
+  return res.status(200).json({ ok: true, member_id: memberId, display_name: displayName, code });
 }
 
 // --- reset: coach genereert nieuwe code voor een lid ---

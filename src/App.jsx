@@ -15,6 +15,7 @@ import Auth from "./views/Auth.jsx";
 import Join from "./views/Join.jsx";
 import CoachDash from "./views/CoachDash.jsx";
 import GymAgendaMember from "./views/GymAgendaMember.jsx";
+import GymClasses from "./views/GymClasses.jsx";
 import { supabase } from "./supabaseClient.js";
 import { initCloudSync, pullAll } from "./cloudsync.js";
 import { Dropdown, MultiDropdown } from "./ui.jsx";
@@ -621,6 +622,12 @@ export default function App() {
         const { data: meRows } = await supabase.from("org_members").select("org_id,role").eq("auth_user_id", session.user.id).limit(1);
         const me = meRows && meRows[0];
         if (!me) { if (alive) setGymCtx(null); return; }
+        // Tier + lestoegang apart + guarded (kolommen bestaan mogelijk nog niet vóór migratie).
+        let tier = "pro", classAccess = null;
+        try {
+          const { data: tr } = await supabase.from("org_members").select("member_tier,class_access").eq("auth_user_id", session.user.id).limit(1);
+          if (tr && tr[0]) { tier = tr[0].member_tier || "pro"; classAccess = tr[0].class_access || null; }
+        } catch (e) {}
         const { data: orgRows } = await supabase.from("orgs").select("id,slug,name").eq("id", me.org_id).limit(1);
         const { data: cfgRows } = await supabase.from("org_config").select("brand_color,logo_url").eq("org_id", me.org_id).limit(1);
         const org = (orgRows && orgRows[0]) || {};
@@ -634,7 +641,7 @@ export default function App() {
         const brand = (cfg && cfg.brand_color) || "#E11D48";
         if (!theme) theme = { template: "dark", accent: brand }; // fallback: accent op donker
         if (!theme.accent) theme.accent = brand;
-        if (alive) setGymCtx({ role: me.role, org: { ...org, brand_color: brand, logo_url: (cfg && cfg.logo_url) || null, theme } });
+        if (alive) setGymCtx({ role: me.role, tier, classAccess, org: { ...org, brand_color: brand, logo_url: (cfg && cfg.logo_url) || null, theme } });
       } catch (e) { if (alive) setGymCtx(null); }
     })();
     return () => { alive = false; };
@@ -709,9 +716,11 @@ export default function App() {
   // Gym-leden (ingelogd via code) krijgen automatisch volledige toegang: de sportschool
   // betaalt per seat, dus geen consumenten-paywall voor hen.
   const isGymMember = !!(gymCtx && gymCtx.role === "member");
+  // Tier binnen de gym: basis = voeding/tracking + groepsrooster; pro = + persoonlijke PT-laag.
+  const gymPro = isGymMember && (gymCtx.tier || "pro") === "pro";
   const hasBasis = devMode || isGymMember || subTier === "basis" || subTier === "pro";
-  const hasPro = devMode || isGymMember || subTier === "pro";
-  const hasPlus = devMode || isGymMember || subTier === "pro"; // Race Protocol, later evt. eigen Plus-laag
+  const hasPro = devMode || gymPro || subTier === "pro";
+  const hasPlus = devMode || gymPro || subTier === "pro"; // Race Protocol, later evt. eigen Plus-laag
   // Demo telt alleen voor niet-ingelogde bezoekers; het geeft GEEN echte toegang
   // (opslaan/genereren blijft achter de paywall), het laat alleen de schermen zien.
   const inDemo = demoMode && !session;
@@ -1554,7 +1563,8 @@ export default function App() {
 
       <div style={{ maxWidth: 680, margin: "0 auto", padding: 16, position: "relative", zIndex: 1 }}>
 
-        {tab === "dashboard" && isGymMember && <GymAgendaMember lang={lang} color={gymCtx.org.brand_color} />}
+        {tab === "dashboard" && gymPro && <GymAgendaMember lang={lang} color={gymCtx.org.brand_color} />}
+        {tab === "dashboard" && isGymMember && <GymClasses lang={lang} color={gymCtx.org.brand_color} classAccess={gymCtx.classAccess} />}
         {tab === "dashboard" && <Dashboard lang={lang} session={session} week={week} targets={targets} units={units} onGo={(x) => { setTab(x); try { window.scrollTo(0, 0); } catch (e) {} }} />}
 
         {/* ====== PLAN TAB ====== */}

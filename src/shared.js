@@ -37,6 +37,30 @@ export function applyOrgTheme(theme) {
 }
 
 export const disp = { fontFamily: "Oswald, sans-serif" };
+
+// --- Agenda-export (ICS + Google Calendar) voor sessies/lessen -------------
+// Zo kan een lid een geplande sessie in z'n eigen agenda zetten, zonder e-mail.
+const icsStamp = (d) => { try { return new Date(d).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, ""); } catch (e) { return ""; } };
+export function icsDataUrl({ title, startsAt, durationMin, note, id }) {
+  const start = icsStamp(startsAt);
+  const end = icsStamp(new Date(new Date(startsAt).getTime() + (durationMin || 60) * 60000));
+  const esc = (s) => String(s || "").replace(/([,;\\])/g, "\\$1").replace(/\n/g, "\\n");
+  const body = [
+    "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//HybridFuel//Gym//NL", "CALSCALE:GREGORIAN",
+    "BEGIN:VEVENT", "UID:" + (id || Math.random().toString(36).slice(2)) + "@hybridfuelco",
+    "DTSTAMP:" + icsStamp(new Date()), "DTSTART:" + start, "DTEND:" + end,
+    "SUMMARY:" + esc(title), note ? "DESCRIPTION:" + esc(note) : "",
+    "BEGIN:VALARM", "TRIGGER:-PT2H", "ACTION:DISPLAY", "DESCRIPTION:" + esc(title), "END:VALARM",
+    "END:VEVENT", "END:VCALENDAR",
+  ].filter(Boolean).join("\r\n");
+  return "data:text/calendar;charset=utf-8," + encodeURIComponent(body);
+}
+export function googleCalUrl({ title, startsAt, durationMin, note }) {
+  const start = icsStamp(startsAt);
+  const end = icsStamp(new Date(new Date(startsAt).getTime() + (durationMin || 60) * 60000));
+  const p = new URLSearchParams({ action: "TEMPLATE", text: title || "", dates: start + "/" + end, details: note || "" });
+  return "https://calendar.google.com/calendar/render?" + p.toString();
+}
 export const num = (v, d = 0) => { const n = parseFloat(v); return isNaN(n) ? d : n; };
 // Macro-letters per taal: NL eiwit/koolhydraten/vet = e/k/v, EN protein/carbs/fat = p/c/f.
 export const macroLetters = (lang) => (lang === "nl"

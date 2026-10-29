@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { INK, INK2, PAPER, MUTED, LINE, disp, sectionTitle } from "../shared.js";
+import { INK, INK2, PAPER, MUTED, LINE, disp, sectionTitle, icsDataUrl, googleCalUrl } from "../shared.js";
 import { supabase } from "../supabaseClient.js";
 
 // Leden-weergave van de PT-agenda: toont komende sessies (groep + eigen).
@@ -15,7 +15,7 @@ export default function GymAgendaMember({ lang, color }) {
       if (!supabase) { if (alive) setSessions([]); return; }
       try {
         const { data } = await supabase.from("org_sessions")
-          .select("id,title,starts_at,note")
+          .select("id,title,starts_at,note,duration_min")
           .gte("starts_at", new Date(Date.now() - 36e5).toISOString())
           .order("starts_at", { ascending: true })
           .limit(6);
@@ -40,6 +40,7 @@ export default function GymAgendaMember({ lang, color }) {
               <div style={{ ...disp, fontWeight: 700, fontSize: 14 }}>{s.title}</div>
               <div style={{ fontSize: 11.5, color: MUTED, marginTop: 2 }}>{fmtWhen(s.starts_at)}{s.note ? " · " + s.note : ""}</div>
             </div>
+            <a href={icsDataUrl({ title: s.title, startsAt: s.starts_at, durationMin: s.duration_min, note: s.note, id: s.id })} download={(s.title || "sessie").replace(/[^a-z0-9]+/gi, "-").toLowerCase() + ".ics"} style={{ textDecoration: "none", flexShrink: 0, fontSize: 11.5, color: c, border: `1px solid ${c}`, borderRadius: 7, padding: "6px 10px", ...disp, fontWeight: 700, whiteSpace: "nowrap" }}>{t("Zet in agenda", "Add to calendar")}</a>
           </div>
         ))}
       </div>

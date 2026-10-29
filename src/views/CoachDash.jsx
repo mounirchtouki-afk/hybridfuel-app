@@ -22,6 +22,27 @@ export default function CoachDash({ session, org, lang, onLogout }) {
   const [brandBusy, setBrandBusy] = useState(false);
   const [brandMsg, setBrandMsg] = useState("");
 
+  // Tiers + lessen
+  const [newTier, setNewTier] = useState("pro");
+  const [classes, setClasses] = useState(null);
+  const [cName, setCName] = useState("");
+  const [cDay, setCDay] = useState("1");
+  const [cTime, setCTime] = useState("");
+  const [cDur, setCDur] = useState("");
+  const [cBusy, setCBusy] = useState(false);
+  const [openClasses, setOpenClasses] = useState(null); // member.id waarvan de les-toegang open staat
+  const [sel, setSel] = useState([]);                    // werk-selectie van class-ids
+
+  // Rekenformule + juridisch akkoord
+  const [termsOk, setTermsOk] = useState(null);     // null = nog niet geladen
+  const [termsCheck, setTermsCheck] = useState(false);
+  const [pPerKg, setPPerKg] = useState("2.0");
+  const [fPerKg, setFPerKg] = useState("0.9");
+  const [cutPct, setCutPct] = useState("-18");
+  const [gainPct, setGainPct] = useState("8");
+  const [calcBusy, setCalcBusy] = useState(false);
+  const [calcMsg, setCalcMsg] = useState("");
+
   // PT-agenda
   const [sessions, setSessions] = useState(null);
   const [sTitle, setSTitle] = useState("");
@@ -39,8 +60,21 @@ export default function CoachDash({ session, org, lang, onLogout }) {
       const { data: mem } = await supabase.from("org_members").select("id,auth_user_id,display_name,active,created_at").eq("role", "member").order("created_at", { ascending: true });
       const { data: prog } = await supabase.from("member_progress").select("user_id,adherence,last_active");
       const pmap = {}; (prog || []).forEach((p) => { pmap[p.user_id] = p; });
-      setMembers((mem || []).map((m) => ({ ...m, progress: pmap[m.auth_user_id] || null })));
+      // Tier + lestoegang apart + guarded (kolommen bestaan mogelijk nog niet vóór migratie).
+      const tmap = {};
+      try {
+        const { data: tr } = await supabase.from("org_members").select("id,member_tier,class_access").eq("role", "member");
+        (tr || []).forEach((x) => { tmap[x.id] = x; });
+      } catch (e) {}
+      setMembers((mem || []).map((m) => ({ ...m, progress: pmap[m.auth_user_id] || null, member_tier: (tmap[m.id] && tmap[m.id].member_tier) || "pro", class_access: tmap[m.id] ? tmap[m.id].class_access : null })));
     } catch (e) { setMembers([]); }
+  }
+  async function loadClasses() {
+    if (!supabase) return;
+    try {
+      const { data } = await supabase.from("org_classes").select("id,name,day_of_week,start_time,duration_min").order("day_of_week", { ascending: true }).order("start_time", { ascending: true });
+      setClasses(data || []);
+    } catch (e) { setClasses([]); }
   }
   async function loadSessions() {
     if (!supabase) return;
@@ -49,7 +83,39 @@ export default function CoachDash({ session, org, lang, onLogout }) {
       setSessions(data || []);
     } catch (e) { setSessions([]); }
   }
-  useEffect(() => { load(); loadSessions(); }, []);
+  async function loadConfig() {
+    if (!supabase || !org || !org.id) return;
+    try {
+      const { data } = await supabase.from("org_config").select("terms_accepted_at,calc_profile").eq("org_id", org.id).limit(1);
+      const cfg = data && data[0];
+      setTermsOk(!!(cfg && cfg.terms_accepted_at));
+      const raw = (cfg && cfg.calc_profile) || {}; const m = raw.macros || {}, g = raw.goal || {};
+      const pick2 = (a, b2, d) => (a != null ? a : (b2 != null ? b2 : d));
+      setPPerKg(String(pick2(raw.protein_g_per_kg, m.protein_g_per_kg, 2.0)));
+      setFPerKg(String(pick2(raw.fat_g_per_kg, m.fat_g_per_kg, 0.9)));
+      setCutPct(String(pick2(raw.cut_pct, g.cut_pct, -18)));
+      setGainPct(String(pick2(raw.gain_pct, g.gain_pct, 8)));
+    } catch (e) { setTermsOk(false); }
+  }
+  useEffect(() => { load(); loadSessions(); loadClasses(); loadConfig(); }, []);
+
+  async function acceptTerms() {
+    if (!supabase || !termsCheck) return;
+    try {
+      const { error } = await supabase.from("org_config").update({ terms_accepted_at: new Date().toISOString(), terms_accepted_by: session && session.user && session.user.id }).eq("org_id", org.id);
+      if (!error) setTermsOk(true);
+    } catch (e) {}
+  }
+  async function saveFormula() {
+    if (!supabase || calcBusy) return;
+    setCalcBusy(true); setCalcMsg("");
+    try {
+      const prof = { protein_g_per_kg: parseFloat(pPerKg), fat_g_per_kg: parseFloat(fPerKg), cut_pct: parseFloat(cutPct), gain_pct: parseFloat(gainPct) };
+      const { error } = await supabase.from("org_config").update({ calc_profile: prof }).eq("org_id", org.id);
+      setCalcMsg(error ? t("Opslaan mislukt.", "Save failed.") : t("Opgeslagen. Geldt voor nieuwe berekeningen.", "Saved. Applies to new calculations."));
+      setCalcBusy(false);
+    } catch (e) { setCalcMsg(t("Opslaan mislukt.", "Save failed.")); setCalcBusy(false); }
+  }
 
   async function addSession() {
     const title = sTitle.trim();
@@ -116,7 +182,7 @@ export default function CoachDash({ session, org, lang, onLogout }) {
     if (!name || busy) return;
     setBusy(true); setErr("");
     try {
-      const r = await fetch("/api/gym", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "create", authToken: token, display_name: name }) });
+      const r = await fetch("/api/gym", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "create", authToken: token, display_name: name, tier: newTier }) });
       const d = await r.json().catch(() => ({}));
       if (!r.ok || !d.code) { setErr(t("Aanmaken mislukt.", "Create failed.")); setBusy(false); return; }
       setCodeShown({ name, code: d.code }); setNewName(""); setBusy(false); load();
@@ -132,6 +198,52 @@ export default function CoachDash({ session, org, lang, onLogout }) {
       setCodeShown({ name: m.display_name, code: d.code }); setBusy(false);
     } catch (e) { setErr(t("Reset mislukt.", "Reset failed.")); setBusy(false); }
   }
+
+  // Tier wisselen (basis <-> pro) — coach mag org_members updaten (RLS).
+  async function toggleTier(m) {
+    if (!supabase) return;
+    const next = (m.member_tier || "pro") === "pro" ? "basis" : "pro";
+    try {
+      const { error } = await supabase.from("org_members").update({ member_tier: next }).eq("id", m.id);
+      if (!error) setMembers((xs) => xs.map((x) => x.id === m.id ? { ...x, member_tier: next } : x));
+    } catch (e) {}
+  }
+
+  // Lessenbeheer
+  async function addClass() {
+    const name = cName.trim();
+    if (!name || !cTime || cBusy) return;
+    setCBusy(true);
+    try {
+      const row = { org_id: org && org.id, name, day_of_week: parseInt(cDay, 10), start_time: cTime, duration_min: cDur ? parseInt(cDur, 10) : null, created_by: session && session.user && session.user.id };
+      const { error } = await supabase.from("org_classes").insert(row);
+      if (!error) { setCName(""); setCTime(""); setCDur(""); loadClasses(); }
+      setCBusy(false);
+    } catch (e) { setCBusy(false); }
+  }
+  async function delClass(id) {
+    if (!supabase) return;
+    try { await supabase.from("org_classes").delete().eq("id", id); loadClasses(); } catch (e) {}
+  }
+
+  // Les-toegang per lid
+  function openMemberClasses(m) {
+    if (openClasses === m.id) { setOpenClasses(null); return; }
+    setOpenClasses(m.id);
+    setSel(Array.isArray(m.class_access) ? m.class_access.slice() : (classes || []).map((c) => c.id)); // null = alles toegestaan
+  }
+  function toggleSel(id) { setSel((xs) => xs.includes(id) ? xs.filter((x) => x !== id) : [...xs, id]); }
+  async function saveMemberClasses(m) {
+    if (!supabase) return;
+    // Alles aangevinkt -> null (alles toegestaan) zodat nieuwe lessen automatisch meekomen.
+    const all = (classes || []).map((c) => c.id);
+    const value = sel.length >= all.length && all.every((id) => sel.includes(id)) ? null : sel;
+    try {
+      const { error } = await supabase.from("org_members").update({ class_access: value }).eq("id", m.id);
+      if (!error) { setMembers((xs) => xs.map((x) => x.id === m.id ? { ...x, class_access: value } : x)); setOpenClasses(null); }
+    } catch (e) {}
+  }
+  const DAY_LBL = (d) => (lang === "nl" ? ["zo", "ma", "di", "wo", "do", "vr", "za"] : ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"])[d];
 
   const fmtDate = (s) => { try { return s ? new Date(s).toLocaleDateString(lang === "nl" ? "nl-NL" : "en-GB", { day: "numeric", month: "short" }) : "—"; } catch (e) { return "—"; } };
   const card = { background: INK2, border: `1px solid ${LINE}`, borderRadius: 14, padding: 16 };
@@ -162,10 +274,16 @@ export default function CoachDash({ session, org, lang, onLogout }) {
         {/* lid toevoegen */}
         <div style={card}>
           <div style={{ ...sectionTitle, color, marginBottom: 10 }}>{t("Lid toevoegen", "Add member")}</div>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <input style={{ ...input, flex: 1, minWidth: 180 }} value={newName} onChange={(e) => setNewName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") addMember(); }} placeholder={t("Naam van het lid", "Member name")} />
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+            <input style={{ ...input, flex: 1, minWidth: 160 }} value={newName} onChange={(e) => setNewName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") addMember(); }} placeholder={t("Naam van het lid", "Member name")} />
+            <div style={{ display: "inline-flex", border: `1px solid ${LINE}`, borderRadius: 8, overflow: "hidden" }}>
+              {["basis", "pro"].map((tr) => (
+                <div key={tr} onClick={() => setNewTier(tr)} style={{ cursor: "pointer", padding: "10px 13px", fontSize: 12.5, ...disp, fontWeight: 700, letterSpacing: 0.3, textTransform: "capitalize", background: newTier === tr ? color : "transparent", color: newTier === tr ? "#fff" : MUTED }}>{tr}</div>
+              ))}
+            </div>
             <div onClick={addMember} style={{ cursor: busy ? "default" : "pointer", opacity: busy ? 0.7 : 1, background: color, color: "#fff", padding: "11px 18px", borderRadius: 8, ...disp, fontWeight: 700, fontSize: 13.5, letterSpacing: 0.3, whiteSpace: "nowrap" }}>{t("Aanmaken", "Create")}</div>
           </div>
+          <div style={{ fontSize: 11, color: MUTED, marginTop: 7, lineHeight: 1.5 }}>{t("basis = voeding + rooster · pro = ook persoonlijke PT", "basis = nutrition + schedule · pro = also personal PT")}</div>
           <div style={{ fontSize: 11.5, color: MUTED, marginTop: 10, lineHeight: 1.5 }}>{t("Deel de join-link + code met je lid:", "Share the join link + code with your member:")} <span style={{ color: PAPER }}>{joinUrl}</span></div>
           {err && <div style={{ fontSize: 12, color: EMBER_SOFT, marginTop: 8 }}>{err}</div>}
         </div>
@@ -180,22 +298,72 @@ export default function CoachDash({ session, org, lang, onLogout }) {
               {members.map((m) => {
                 const adh = m.progress && m.progress.adherence != null ? Math.round(m.progress.adherence) : null;
                 const attention = adh != null && adh < 50;
+                const pro = (m.member_tier || "pro") === "pro";
                 return (
-                  <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 12px", background: INK, border: `1px solid ${LINE}`, borderRadius: 10 }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ ...disp, fontWeight: 700, fontSize: 14.5 }}>{m.display_name || t("Naamloos", "Unnamed")}</div>
-                      <div style={{ fontSize: 11.5, color: MUTED, marginTop: 2 }}>{t("Laatst actief", "Last active")}: {fmtDate(m.progress && m.progress.last_active)}</div>
+                  <div key={m.id} style={{ background: INK, border: `1px solid ${LINE}`, borderRadius: 10, overflow: "hidden" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 12px" }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ ...disp, fontWeight: 700, fontSize: 14.5 }}>{m.display_name || t("Naamloos", "Unnamed")}</div>
+                        <div style={{ fontSize: 11.5, color: MUTED, marginTop: 2 }}>{t("Laatst actief", "Last active")}: {fmtDate(m.progress && m.progress.last_active)}</div>
+                      </div>
+                      <div style={{ textAlign: "right" }}>
+                        <div style={{ ...disp, fontWeight: 700, fontSize: 14, color: adh == null ? MUTED : attention ? EMBER_SOFT : SAGE }}>{adh == null ? "—" : adh + "%"}</div>
+                        <div style={{ fontSize: 10, color: MUTED }}>{t("adherentie", "adherence")}</div>
+                      </div>
+                      <div onClick={() => resetCode(m)} title={t("Nieuwe code", "New code")} style={{ cursor: "pointer", fontSize: 11.5, color: MUTED, border: `1px solid ${LINE}`, borderRadius: 7, padding: "6px 9px", whiteSpace: "nowrap" }}>{t("Reset code", "Reset code")}</div>
                     </div>
-                    <div style={{ textAlign: "right" }}>
-                      <div style={{ ...disp, fontWeight: 700, fontSize: 14, color: adh == null ? MUTED : attention ? EMBER_SOFT : SAGE }}>{adh == null ? "—" : adh + "%"}</div>
-                      <div style={{ fontSize: 10, color: MUTED }}>{t("adherentie", "adherence")}</div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "0 12px 11px", flexWrap: "wrap" }}>
+                      <div onClick={() => toggleTier(m)} title={t("Tier wisselen", "Switch tier")} style={{ cursor: "pointer", fontSize: 10.5, ...disp, fontWeight: 700, letterSpacing: 0.6, textTransform: "uppercase", padding: "4px 9px", borderRadius: 6, background: pro ? color : "transparent", color: pro ? "#fff" : MUTED, border: `1px solid ${pro ? color : LINE}` }}>{m.member_tier || "pro"}</div>
+                      {classes && classes.length > 0 && (
+                        <div onClick={() => openMemberClasses(m)} style={{ cursor: "pointer", fontSize: 11.5, color: MUTED, border: `1px solid ${LINE}`, borderRadius: 7, padding: "5px 9px" }}>
+                          {t("Lessen", "Classes")} ({m.class_access == null ? t("alle", "all") : m.class_access.length})
+                        </div>
+                      )}
                     </div>
-                    <div onClick={() => resetCode(m)} title={t("Nieuwe code", "New code")} style={{ cursor: "pointer", fontSize: 11.5, color: MUTED, border: `1px solid ${LINE}`, borderRadius: 7, padding: "6px 9px", whiteSpace: "nowrap" }}>{t("Reset code", "Reset code")}</div>
+                    {openClasses === m.id && classes && (
+                      <div style={{ padding: "0 12px 12px", display: "grid", gap: 6 }}>
+                        {classes.length === 0 ? <div style={{ fontSize: 12, color: MUTED }}>{t("Nog geen lessen.", "No classes yet.")}</div>
+                          : classes.map((c) => (
+                            <label key={c.id} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 12.5, color: PAPER }}>
+                              <input type="checkbox" checked={sel.includes(c.id)} onChange={() => toggleSel(c.id)} />
+                              <span>{DAY_LBL(c.day_of_week)} {c.start_time} · {c.name}</span>
+                            </label>
+                          ))}
+                        <div onClick={() => saveMemberClasses(m)} style={{ cursor: "pointer", background: color, color: "#fff", padding: "8px 0", borderRadius: 7, textAlign: "center", ...disp, fontWeight: 700, fontSize: 12.5, marginTop: 4 }}>{t("Lestoegang opslaan", "Save class access")}</div>
+                      </div>
+                    )}
                   </div>
                 );
               })}
             </div>
           )}
+        </div>
+
+        {/* Groepsrooster (lessen) */}
+        <div style={card}>
+          <div style={{ ...sectionTitle, color, marginBottom: 10 }}>{t("Lesrooster", "Class schedule")}</div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+            <input style={{ ...input, flex: 1, minWidth: 140 }} value={cName} onChange={(e) => setCName(e.target.value)} placeholder={t("Les (bv. HYROX, HIIT)", "Class (e.g. HYROX, HIIT)")} />
+            <select style={{ ...input, width: "auto", appearance: "auto" }} value={cDay} onChange={(e) => setCDay(e.target.value)}>
+              {[1, 2, 3, 4, 5, 6, 0].map((d) => <option key={d} value={d}>{(lang === "nl" ? ["zondag", "maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag"] : ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"])[d]}</option>)}
+            </select>
+            <input style={{ ...input, width: 110 }} type="time" value={cTime} onChange={(e) => setCTime(e.target.value)} />
+            <input style={{ ...input, width: 78 }} type="number" value={cDur} onChange={(e) => setCDur(e.target.value)} placeholder={t("min", "min")} />
+            <div onClick={addClass} style={{ cursor: cBusy ? "default" : "pointer", opacity: cBusy ? 0.7 : 1, background: color, color: "#fff", padding: "11px 16px", borderRadius: 8, ...disp, fontWeight: 700, fontSize: 13, letterSpacing: 0.3, whiteSpace: "nowrap" }}>{t("Toevoegen", "Add")}</div>
+          </div>
+          <div style={{ marginTop: 12, display: "grid", gap: 7 }}>
+            {!classes ? <div style={{ fontSize: 13, color: MUTED }}>{t("Laden…", "Loading…")}</div>
+              : classes.length === 0 ? <div style={{ fontSize: 12.5, color: MUTED }}>{t("Nog geen lessen. Voeg je weeklessen toe.", "No classes yet. Add your weekly classes.")}</div>
+              : classes.map((c) => (
+                <div key={c.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", background: INK, border: `1px solid ${LINE}`, borderRadius: 10 }}>
+                  <div style={{ ...disp, fontWeight: 700, fontSize: 12.5, color, minWidth: 64, textTransform: "capitalize" }}>{(lang === "nl" ? ["zo", "ma", "di", "wo", "do", "vr", "za"] : ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"])[c.day_of_week]} {c.start_time}</div>
+                  <div style={{ flex: 1, minWidth: 0, ...disp, fontWeight: 600, fontSize: 14 }}>{c.name}</div>
+                  {c.duration_min ? <div style={{ fontSize: 11.5, color: MUTED }}>{c.duration_min} min</div> : null}
+                  <div onClick={() => delClass(c.id)} style={{ cursor: "pointer", fontSize: 11.5, color: MUTED, border: `1px solid ${LINE}`, borderRadius: 7, padding: "5px 9px" }}>{t("Verwijderen", "Delete")}</div>
+                </div>
+              ))}
+          </div>
+          <div style={{ fontSize: 11, color: MUTED, marginTop: 9, lineHeight: 1.5 }}>{t("Stel per lid in welke lessen in hun abo zitten (knop \"Lessen\" bij het lid).", "Set per member which classes are in their plan (the \"Classes\" button on each member).")}</div>
         </div>
 
         {/* PT-agenda */}
@@ -228,6 +396,39 @@ export default function CoachDash({ session, org, lang, onLogout }) {
                 </div>
               ))}
           </div>
+        </div>
+
+        {/* Rekenformule + juridisch akkoord */}
+        <div style={card}>
+          <div style={{ ...sectionTitle, color, marginBottom: 10 }}>{t("Rekenformule", "Calculation formula")}</div>
+          {termsOk === null ? (
+            <div style={{ fontSize: 13, color: MUTED }}>{t("Laden…", "Loading…")}</div>
+          ) : !termsOk ? (
+            <div>
+              <div style={{ fontSize: 12.5, color: PAPER, lineHeight: 1.55, marginBottom: 12 }}>
+                {t("Je kunt de rekenformule voor jouw leden aanpassen. De sportschool is zelf verantwoordelijk voor de ingestelde waarden en geeft advies volgens de geldende wetgeving — geen schadelijk of medisch advies. HybridFuel levert alleen het gereedschap.", "You can adjust the calculation formula for your members. The gym is responsible for the values it sets and advises in line with applicable law — no harmful or medical advice. HybridFuel only provides the tool.")}
+              </div>
+              <label style={{ display: "flex", gap: 8, alignItems: "flex-start", cursor: "pointer", fontSize: 12.5, color: PAPER, marginBottom: 12 }}>
+                <input type="checkbox" checked={termsCheck} onChange={(e) => setTermsCheck(e.target.checked)} style={{ marginTop: 2 }} />
+                <span>{t("Ik ga akkoord namens de sportschool.", "I agree on behalf of the gym.")}</span>
+              </label>
+              <div onClick={acceptTerms} style={{ cursor: termsCheck ? "pointer" : "default", opacity: termsCheck ? 1 : 0.5, background: color, color: "#fff", padding: "11px 0", borderRadius: 8, textAlign: "center", ...disp, fontWeight: 700, fontSize: 13.5 }}>{t("Akkoord & formule instellen", "Agree & set formula")}</div>
+            </div>
+          ) : (
+            <div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                {[["Eiwit (g/kg)", "Protein (g/kg)", pPerKg, setPPerKg, "0.1"], ["Vet (g/kg)", "Fat (g/kg)", fPerKg, setFPerKg, "0.1"], ["Afvallen (%)", "Cut (%)", cutPct, setCutPct, "1"], ["Aankomen (%)", "Gain (%)", gainPct, setGainPct, "1"]].map(([nl, en, val, set, step], i) => (
+                  <div key={i}>
+                    <div style={{ fontSize: 11.5, color: MUTED, marginBottom: 4 }}>{t(nl, en)}</div>
+                    <input style={input} type="number" step={step} value={val} onChange={(e) => set(e.target.value)} />
+                  </div>
+                ))}
+              </div>
+              <div onClick={saveFormula} style={{ cursor: calcBusy ? "default" : "pointer", opacity: calcBusy ? 0.7 : 1, background: color, color: "#fff", padding: "11px 0", borderRadius: 8, textAlign: "center", ...disp, fontWeight: 700, fontSize: 13.5, marginTop: 12 }}>{calcBusy ? t("Opslaan…", "Saving…") : t("Formule opslaan", "Save formula")}</div>
+              {calcMsg && <div style={{ fontSize: 12, color: SAGE, marginTop: 8 }}>{calcMsg}</div>}
+              <div style={{ fontSize: 11, color: MUTED, marginTop: 9, lineHeight: 1.5 }}>{t("BMR (Mifflin-St Jeor), activiteitsfactoren en de veiligheidsvloer blijven vast. Alleen deze waarden passen de ledenberekening aan.", "BMR (Mifflin-St Jeor), activity factors and the safety floor stay fixed. Only these values adjust the member calculation.")}</div>
+            </div>
+          )}
         </div>
 
         {/* Huisstijl (self-serve white-label) */}

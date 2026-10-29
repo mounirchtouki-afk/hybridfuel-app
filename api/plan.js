@@ -102,13 +102,24 @@ function cleanStr(v, max) {
 }
 
 // Basis-dagdoelen (gemiddelde dag, vóór trainings-/rustcycling).
-function computeBase(b) {
+// Optioneel org-profiel (sportschool stelt eigen formule in, binnen veilige grenzen).
+// Alleen eiwit/vet per kg en de cut/gain-correcties zijn instelbaar; BMR (Mifflin),
+// activiteitsfactoren en de veiligheidsvloer blijven vast.
+function computeBase(b, p) {
+  const toNum = (v, d) => { const n = parseFloat(v); return isNaN(n) ? d : n; };
+  p = p || {};
+  const pPerKg = Math.min(3.5, Math.max(1.2, toNum(p.protein_g_per_kg, 2.0)));   // grenzen = verantwoord
+  const fPerKg = Math.min(2.0, Math.max(0.4, toNum(p.fat_g_per_kg, 0.9)));
+  const cutAdj = p.cut_pct != null ? Math.max(-0.30, Math.min(0, toNum(p.cut_pct, -18) / 100)) : GOAL_ADJ.cut;
+  const gainAdj = p.gain_pct != null ? Math.max(0, Math.min(0.25, toNum(p.gain_pct, 8) / 100)) : GOAL_ADJ.gain;
+  const GOAL = { cut: cutAdj, maintain: 0, gain: gainAdj };
+
   const kg = clampNum(b.weight, 35, 300, 80);
   const cm = clampNum(b.height, 120, 230, 180);
   const age = clampNum(b.age, 18, 100, 35); // 18+ (Mifflin is voor volwassenen gevalideerd)
   const sex = pick(b.sex, ["male", "female"], "male");
   const activity = pick(b.activity, Object.keys(ACTIVITY), "moderate");
-  let goal = pick(b.goal, Object.keys(GOAL_ADJ), "maintain");
+  let goal = pick(b.goal, Object.keys(GOAL), "maintain");
 
   // Verantwoord: wie al (bijna) ondergewicht heeft niet verder laten afvallen.
   const bmi = cm > 0 ? kg / Math.pow(cm / 100, 2) : 22;
@@ -123,13 +134,34 @@ function computeBase(b) {
   // (1500 kcal man / 1200 kcal vrouw — Harvard Health). Zelfde regel als de webcalculator.
   const sexMin = sex === "male" ? 1500 : 1200;
   const safeFloor = Math.max(Math.round((bmr * 1.1) / 10) * 10, sexMin);
-  let kcal = Math.round((maintenance * (1 + GOAL_ADJ[goal])) / 10) * 10;
+  let kcal = Math.round((maintenance * (1 + GOAL[goal])) / 10) * 10;
   let floored = false;
   if (kcal < safeFloor) { kcal = safeFloor; floored = true; }
-  const protein = Math.round(kg * 2.0);
-  const fat = Math.round(kg * 0.9);
+  const protein = Math.round(kg * pPerKg);
+  const fat = Math.round(kg * fPerKg);
   const carbs = Math.max(40, Math.round((kcal - protein * 4 - fat * 9) / 4));
   return { kcal, protein, carbs, fat, maintenance, kg, bmi: Math.round(bmi * 10) / 10, lowBmi, floored };
+}
+
+// Haalt het org-rekenprofiel op voor een ingelogd gym-lid (RLS geeft alleen de eigen org).
+async function orgCalcProfile(authToken) {
+  if (!authToken || typeof authToken !== "string") return null;
+  const url = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "https://tkmyjpsmdijaalwgzqdy.supabase.co").replace(/\/$/, "");
+  const anon = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || "sb_publishable_5CJ_waXIVhhzkkqD96iqMA_63yJJnaH";
+  try {
+    const r = await fetch(url + "/rest/v1/org_config?select=calc_profile&limit=1", { headers: { apikey: anon, Authorization: "Bearer " + authToken } });
+    if (!r.ok) return null;
+    const rows = await r.json().catch(() => []);
+    const raw = rows && rows[0] && rows[0].calc_profile;
+    if (!raw || typeof raw !== "object") return null;
+    const m = raw.macros || {}, g = raw.goal || {};
+    return {
+      protein_g_per_kg: raw.protein_g_per_kg != null ? raw.protein_g_per_kg : m.protein_g_per_kg,
+      fat_g_per_kg: raw.fat_g_per_kg != null ? raw.fat_g_per_kg : m.fat_g_per_kg,
+      cut_pct: raw.cut_pct != null ? raw.cut_pct : g.cut_pct,
+      gain_pct: raw.gain_pct != null ? raw.gain_pct : g.gain_pct,
+    };
+  } catch (e) { return null; }
 }
 
 // Houd eiwit en vet gelijk; de calorie-swing gaat naar koolhydraten (carb cycling).
@@ -298,7 +330,9 @@ export default async function handler(req, res) {
 
   try {
     const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body || {};
-    const base = computeBase(body);
+    // Gym-lid? Dan de formule van de sportschool gebruiken (anders de standaardformule).
+    const orgProfile = await orgCalcProfile(body.authToken);
+    const base = computeBase(body, orgProfile);
     const cyc = computeCycle(base, body.trainingCount);
     const targets = {
       kcal: base.kcal, protein: base.protein, carbs: base.carbs, fat: base.fat,
