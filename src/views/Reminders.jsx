@@ -18,8 +18,8 @@ const T = {
 };
 
 const NOTIF = {
-  weighIn: { title: { nl: "Tijd om te wegen ⚖️", en: "Time to weigh in ⚖️" }, body: { nl: "Log je gewicht in HybridFuelCo — 10 seconden werk.", en: "Log your weight in HybridFuelCo — takes 10 seconds." } },
-  water: { title: { nl: "Drink wat water 💧", en: "Drink some water 💧" }, body: { nl: "Blijf gehydrateerd — zeker op trainingsdagen.", en: "Stay hydrated — especially on training days." } },
+  weighIn: { title: { nl: "Tijd om te wegen ⚖️", en: "Time to weigh in ⚖️" }, body: { nl: "Log je gewicht in HybridFuelCo, 10 seconden werk.", en: "Log your weight in HybridFuelCo, takes 10 seconds." } },
+  water: { title: { nl: "Drink wat water 💧", en: "Drink some water 💧" }, body: { nl: "Blijf gehydrateerd, zeker op trainingsdagen.", en: "Stay hydrated, especially on training days." } },
   weekly: { title: { nl: "Nieuwe week 🔥", en: "New week 🔥" }, body: { nl: "Genereer je weekplan opnieuw voor deze week.", en: "Regenerate your meal plan for this week." } },
   test: { title: { nl: "HybridFuelCo", en: "HybridFuelCo" }, body: { nl: "Zo zien je herinneringen eruit. 💪", en: "This is what your reminders look like. 💪" } },
 };

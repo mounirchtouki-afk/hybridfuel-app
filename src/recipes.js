@@ -1,4 +1,4 @@
-// HybridFuelCo — vaste receptenbibliotheek (kok-gemaakt, doorgerekend).
+// HybridFuelCo, vaste receptenbibliotheek (kok-gemaakt, doorgerekend).
 // Deze recepten gebruikt de app als bouwstenen: elk heeft ingrediënten met grammen
 // en bekende macro's, zodat we ze netjes naar de dagdoelen van de klant kunnen
 // SCHALEN i.p.v. uit het niets te genereren.
@@ -161,7 +161,7 @@ export const RECIPES = [
     id: 12, type: "lunch",
     name: { nl: "Tonijn-Pastasalade", en: "Tuna Pasta Salad" },
     goal: { nl: "Meal-prep", en: "Meal-prep" },
-    desc: { nl: "Koude pastasalade met tonijn, kerstomaat en mais. Maak 'm de avond ervoor — blijft dagen goed en zit vol eiwit.", en: "Cold pasta salad with tuna, cherry tomato and sweetcorn. Make it the night before — keeps for days and packed with protein." },
+    desc: { nl: "Koude pastasalade met tonijn, kerstomaat en mais. Maak 'm de avond ervoor, blijft dagen goed en zit vol eiwit.", en: "Cold pasta salad with tuna, cherry tomato and sweetcorn. Make it the night before, keeps for days and packed with protein." },
     ing: [
       { nl: "Volkoren pasta (droog)", en: "Wholewheat pasta (dry)", g: 75 },
       { nl: "Tonijn (in water)", en: "Tuna (in water)", g: 120 },
@@ -258,7 +258,7 @@ export const RECIPES = [
     id: 19, type: "lunch",
     name: { nl: "Gerookte Kip-Couscous", en: "Smoked Chicken Couscous" },
     goal: { nl: "Snel / Meal-prep", en: "Quick / Meal-prep" },
-    desc: { nl: "Gerookte kip met couscous en geroosterde groenten. Couscous is in 5 minuten klaar — ideaal voor een snelle, eiwitrijke lunch.", en: "Smoked chicken with couscous and roasted vegetables. Couscous is ready in 5 minutes — ideal for a quick, high-protein lunch." },
+    desc: { nl: "Gerookte kip met couscous en geroosterde groenten. Couscous is in 5 minuten klaar, ideaal voor een snelle, eiwitrijke lunch.", en: "Smoked chicken with couscous and roasted vegetables. Couscous is ready in 5 minutes, ideal for a quick, high-protein lunch." },
     ing: [
       { nl: "Gerookte kipfilet", en: "Smoked chicken breast", g: 150 },
       { nl: "Couscous (droog)", en: "Couscous (dry)", g: 70 },
@@ -520,7 +520,7 @@ export const RECIPES = [
     id: 38, type: "breakfast",
     name: { nl: "Spinazie-Feta Omelet", en: "Spinach Feta Omelette" },
     goal: { nl: "Low-carb / Mager", en: "Low-carb / Lean" },
-    desc: { nl: "Luchtige omelet met spinazie en feta. Weinig koolhydraten, veel eiwit — perfect op een rustdag.", en: "Fluffy omelette with spinach and feta. Low in carbs, high in protein — perfect on a rest day." },
+    desc: { nl: "Luchtige omelet met spinazie en feta. Weinig koolhydraten, veel eiwit, perfect op een rustdag.", en: "Fluffy omelette with spinach and feta. Low in carbs, high in protein, perfect on a rest day." },
     ing: [
       { nl: "Eieren", en: "Eggs", g: 150 },
       { nl: "Spinazie", en: "Spinach", g: 80 },
@@ -597,7 +597,7 @@ export const RECIPES = [
     id: 44, type: "breakfast",
     name: { nl: "Ei-Muffins met Groente", en: "Veggie Egg Muffins" },
     goal: { nl: "Meal-prep / Low-carb", en: "Meal-prep / Low-carb" },
-    desc: { nl: "Mini-omeletjes uit de oven met groente. Maak een batch voor de week — koud of warm lekker.", en: "Baked mini egg frittatas with vegetables. Make a batch for the week — great cold or warm." },
+    desc: { nl: "Mini-omeletjes uit de oven met groente. Maak een batch voor de week, koud of warm lekker.", en: "Baked mini egg frittatas with vegetables. Make a batch for the week, great cold or warm." },
     ing: [
       { nl: "Eieren", en: "Eggs", g: 150 },
       { nl: "Paprika & spinazie", en: "Peppers & spinach", g: 100 },
@@ -609,7 +609,7 @@ export const RECIPES = [
     id: 45, type: "breakfast",
     name: { nl: "Chia-Pudding met Mango", en: "Mango Chia Pudding" },
     goal: { nl: "Meal-prep / Fiber", en: "Meal-prep / Fibre" },
-    desc: { nl: "Chiazaad geweekt in melk met mango. Maak 'm de avond ervoor — vol vezels en omega-3.", en: "Chia seeds soaked in milk with mango. Make it the night before — full of fibre and omega-3." },
+    desc: { nl: "Chiazaad geweekt in melk met mango. Maak 'm de avond ervoor, vol vezels en omega-3.", en: "Chia seeds soaked in milk with mango. Make it the night before, full of fibre and omega-3." },
     ing: [
       { nl: "Chiazaad", en: "Chia seeds", g: 30 },
       { nl: "Amandelmelk", en: "Almond milk", g: 200 },
@@ -700,7 +700,7 @@ export const RECIPES = [
     id: 52, type: "breakfast",
     name: { nl: "Kwark Overnight Oats met Bessen", en: "Quark Overnight Oats with Berries" },
     goal: { nl: "Meal-prep / Eiwitrijk", en: "Meal-prep / High-protein" },
-    desc: { nl: "Havermout en kwark geweekt met bessen. 's Avonds klaarmaken, 's ochtends pakken — heel veel eiwit.", en: "Oats and quark soaked with berries. Prep at night, grab in the morning — very high in protein." },
+    desc: { nl: "Havermout en kwark geweekt met bessen. 's Avonds klaarmaken, 's ochtends pakken, heel veel eiwit.", en: "Oats and quark soaked with berries. Prep at night, grab in the morning, very high in protein." },
     ing: [
       { nl: "Havermout", en: "Oats", g: 50 },
       { nl: "Magere kwark", en: "Low-fat quark", g: 150 },
@@ -1078,7 +1078,7 @@ export const RECIPES = [
     id: 81, type: "snack",
     name: { nl: "Gekookte Eieren", en: "Boiled Eggs" },
     goal: { nl: "Low-carb / Mager", en: "Low-carb / Lean" },
-    desc: { nl: "Twee gekookte eieren met wat peper. Simpeler wordt eiwit niet — klaar om mee te nemen.", en: "Two boiled eggs with a little pepper. Protein doesn't get simpler — ready to take along." },
+    desc: { nl: "Twee gekookte eieren met wat peper. Simpeler wordt eiwit niet, klaar om mee te nemen.", en: "Two boiled eggs with a little pepper. Protein doesn't get simpler, ready to take along." },
     ing: [
       { nl: "Eieren", en: "Eggs", g: 120 },
     ],
@@ -1347,7 +1347,7 @@ export function recipeToMeal(recipe, lang) {
 
 // --- Tussendoortjes-database ---------------------------------------------
 // Per snacktype (zelfde ids als de intake-chips) een lijst concrete opties met
-// macro's voor een normale portie. De app/generator kiest HIERUIT — niet
+// macro's voor een normale portie. De app/generator kiest HIERUIT, niet
 // letterlijk "banaan/appel". Banaan staat vooraan als meest voor de hand
 // liggende default wanneer er niets gekozen is of de lijst leeg zou zijn.
 export const SNACK_DB = {

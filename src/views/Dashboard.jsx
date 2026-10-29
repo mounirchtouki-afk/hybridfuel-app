@@ -22,7 +22,7 @@ const T = {
   menu: { nl: "Vandaag op het menu", en: "Today's menu" },
   extraLogged: { nl: "Extra gelogd", en: "Logged extra" },
   extra: { nl: "Extra", en: "Extra" },
-  noPlan: { nl: "Nog geen plan — maak je weekplan aan.", en: "No plan yet — build your week plan." },
+  noPlan: { nl: "Nog geen plan, maak je weekplan aan.", en: "No plan yet, build your week plan." },
   train: { nl: "Training", en: "Training" },
   rest: { nl: "Rust", en: "Rest" },
   customize: { nl: "Aanpassen", en: "Customize" },
@@ -33,7 +33,7 @@ const T = {
   training: { nl: "Training", en: "Training" },
   trainBurn: { nl: "verbrand (schatting)", en: "burned (est.)" },
   trainMin: { nl: "min", en: "min" },
-  trainNone: { nl: "Nog geen training — log je sessie", en: "No training yet — log a session" },
+  trainNone: { nl: "Nog geen training, log je sessie", en: "No training yet, log a session" },
   sessions: { nl: "sessies", en: "sessions" },
 };
 
@@ -150,7 +150,7 @@ export default function Dashboard({ lang, session, week, targets, units, onGo })
         </div>
       )}
 
-      {/* Vandaag — grote kaart */}
+      {/* Vandaag, grote kaart */}
       <div onClick={() => onGo("today")} style={{ cursor: "pointer", borderRadius: 18, padding: 18, background: `linear-gradient(135deg, ${EMBER} 0%, #9f1239 100%)`, position: "relative", overflow: "hidden" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>

@@ -14,7 +14,7 @@ const T = {
   heightCm: { nl: "Lengte (cm)", en: "Height (cm)" },
   logBtn: { nl: "Loggen", en: "Log" },
   history: { nl: "Historie", en: "History" },
-  empty: { nl: "Nog geen wegingen. Voeg je eerste toe — dan verschijnt je trend hier.", en: "No weigh-ins yet. Add your first — your trend shows up here." },
+  empty: { nl: "Nog geen wegingen. Voeg je eerste toe, dan verschijnt je trend hier.", en: "No weigh-ins yet. Add your first, your trend shows up here." },
   trend: { nl: "Gewichtstrend", en: "Weight trend" },
   needHeight: { nl: "Vul je lengte in voor je BMI.", en: "Enter your height for your BMI." },
   cat: { under: { nl: "Ondergewicht", en: "Underweight" }, healthy: { nl: "Gezond", en: "Healthy" }, over: { nl: "Overgewicht", en: "Overweight" }, obese: { nl: "Obesitas", en: "Obese" } },

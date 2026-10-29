@@ -48,7 +48,7 @@ function demoWeek(lang, nSnack = 0, snackLikes = []) {
   return { days: names.map((d, i) => { const tr = i % 2 === 0; return { d, train: tr, m: withSnacks(tr ? train : rest, i) }; }) };
 }
 
-// Roept GEEN Claude aan vanuit de browser — alles via /api/plan (key zit op de server).
+// Roept GEEN Claude aan vanuit de browser, alles via /api/plan (key zit op de server).
 // Tweetalig: NL/EN via een vlagschakelaar. De gekozen taal gaat mee naar de backend.
 
 // >>> Stripe-betaallinks <<<
@@ -139,10 +139,10 @@ const TXT = {
   variety: { nl: "Afwisseling in maaltijden", en: "Meal variety" },
   varietyHint: { nl: "Wil je elke dag andere maaltijden, of juist je vaste patroon (bijv. elke ochtend hetzelfde ontbijt)? Bij vaste patronen herhalen we je maaltijden en passen we alleen de porties aan.", en: "Do you want different meals each day, or your fixed routine (e.g. the same breakfast every morning)? With fixed patterns we repeat your meals and only adjust the portions." },
   snacksLbl: { nl: "Tussendoortjes per dag", en: "Snacks per day" },
-  snacksHint: { nl: "Verdeelt de dag beter — je krijgt 3 hoofdmaaltijden + dit aantal tussendoortjes.", en: "Spreads the day better — you get 3 main meals + this many snacks." },
+  snacksHint: { nl: "Verdeelt de dag beter, je krijgt 3 hoofdmaaltijden + dit aantal tussendoortjes.", en: "Spreads the day better, you get 3 main meals + this many snacks." },
   snackLikesLbl: { nl: "Wat voor tussendoortjes?", en: "What kind of snacks?" },
   trainingDays: { nl: "Trainingsdagen", en: "Training days" },
-  trainingDaysHint: { nl: "Welke dagen train je? Die dagen krijgen meer calorieën (koolhydraten), rustdagen minder — je weekgemiddelde blijft op je doel.", en: "Which days do you train? Those days get more calories (carbs), rest days fewer — your weekly average stays on your goal." },
+  trainingDaysHint: { nl: "Welke dagen train je? Die dagen krijgen meer calorieën (koolhydraten), rustdagen minder, je weekgemiddelde blijft op je doel.", en: "Which days do you train? Those days get more calories (carbs), rest days fewer, your weekly average stays on your goal." },
   build: { nl: "Maak mijn plan", en: "Build my plan" },
   building: { nl: "Bezig…", en: "Building…" },
   emptyTitle: { nl: "Fuel the work.", en: "Fuel the work." },
@@ -161,12 +161,12 @@ const TXT = {
   trainTag: { nl: "Training", en: "Training" },
   restTag: { nl: "Rust", en: "Rest" },
   safeTitle: { nl: "Verantwoord tempo", en: "Responsible pace" },
-  safeCut: { nl: "Mik op 0,5–1% van je gewicht per week afvallen. Gaat het sneller? Eet iets meer — snelheid kost spier en herstel.", en: "Aim to lose 0.5–1% of bodyweight per week. Going faster? Eat a bit more — speed costs muscle and recovery." },
+  safeCut: { nl: "Mik op 0,5–1% van je gewicht per week afvallen. Gaat het sneller? Eet iets meer, snelheid kost spier en herstel.", en: "Aim to lose 0.5–1% of bodyweight per week. Going faster? Eat a bit more, speed costs muscle and recovery." },
   safeMaintain: { nl: "Onderhoud = binnen ±0,5% per week blijven, beide kanten op.", en: "Maintenance = stay within ±0.5% per week, either way." },
   safeGain: { nl: "Opbouwen: 0,25–0,5% per week. Sneller aankomen is vooral vet, geen kracht.", en: "Building: 0.25–0.5% per week. Faster gain is mostly fat, not strength." },
   lowBmiTitle: { nl: "Belangrijk", en: "Important" },
-  lowBmiWarn: { nl: "Op basis van je lengte en gewicht zit je al in een laag bereik (BMI onder 18,5). Verder afvallen raden we af — je doel staat daarom op onderhoud. Twijfel je? Overleg met een arts of diëtist.", en: "Based on your height and weight you're already in a low range (BMI under 18.5). We don't recommend losing more — your target is set to maintenance. In doubt? Talk to a doctor or dietitian." },
-  flooredWarn: { nl: "Dit is de laagste inname die we voor jouw lichaam nog veilig vinden (minimaal 1.200 kcal voor vrouwen / 1.500 voor mannen, en nooit onder je ruststofwisseling). Lager eten werkt averechts — het remt vetverlies, kost energie en spiermassa. Bij een medische aandoening of een verleden met een eetstoornis: overleg eerst met een professional.", en: "This is the lowest intake we'd safely suggest for your body (at least 1,200 kcal for women / 1,500 for men, and never below your resting metabolism). Eating less backfires — it stalls fat loss, drains energy and costs muscle. With a medical condition or any history of disordered eating, check with a professional first." },
+  lowBmiWarn: { nl: "Op basis van je lengte en gewicht zit je al in een laag bereik (BMI onder 18,5). Verder afvallen raden we af, je doel staat daarom op onderhoud. Twijfel je? Overleg met een arts of diëtist.", en: "Based on your height and weight you're already in a low range (BMI under 18.5). We don't recommend losing more, your target is set to maintenance. In doubt? Talk to a doctor or dietitian." },
+  flooredWarn: { nl: "Dit is de laagste inname die we voor jouw lichaam nog veilig vinden (minimaal 1.200 kcal voor vrouwen / 1.500 voor mannen, en nooit onder je ruststofwisseling). Lager eten werkt averechts, het remt vetverlies, kost energie en spiermassa. Bij een medische aandoening of een verleden met een eetstoornis: overleg eerst met een professional.", en: "This is the lowest intake we'd safely suggest for your body (at least 1,200 kcal for women / 1,500 for men, and never below your resting metabolism). Eating less backfires, it stalls fat loss, drains energy and costs muscle. With a medical condition or any history of disordered eating, check with a professional first." },
   tabPlan: { nl: "Plan", en: "Plan" },
   tabShop: { nl: "Boodschappen", en: "Shopping list" },
   editPlan: { nl: "Aanpassen", en: "Edit" },
@@ -182,7 +182,7 @@ const TXT = {
   addRecipe: { nl: "+ Uit recepten", en: "+ From recipes" },
   copyDay: { nl: "Kopieer dag", en: "Copy day" },
   copyMeal: { nl: "Kopieer", en: "Copy" },
-  toDate: { nl: "→ datum", en: "→ date" },
+  toDate: { nl: "tot datum", en: "to date" },
   movePlan: { nl: "Verplaats / kopieer", en: "Move / copy" },
   moveTitle: { nl: "Verplaats of kopieer", en: "Move or copy" },
   moveWeekScope: { nl: "Hele week", en: "Whole week" },
@@ -204,7 +204,7 @@ const TXT = {
   ingValsHint: { nl: "Voedingswaarde per 100 g voor dit ingrediënt. Pas eiwit, koolhydraten of vet aan; de maaltijd herberekent.", en: "Nutrition per 100 g for this ingredient. Adjust protein, carbs or fat; the meal recalculates." },
   toProduct: { nl: "Bewaar in producten", en: "Save to products" },
   linkedTag: { nl: "gekoppeld", en: "linked" },
-  per100Hint: { nl: "Voedingswaarde per 100 g. Dit ingrediënt komt in je producten en blijft gekoppeld — pas je het daar aan, dan verandert het hier mee.", en: "Nutrition per 100 g. This ingredient goes to your products and stays linked — change it there and it updates here." },
+  per100Hint: { nl: "Voedingswaarde per 100 g. Dit ingrediënt komt in je producten en blijft gekoppeld, pas je het daar aan, dan verandert het hier mee.", en: "Nutrition per 100 g. This ingredient goes to your products and stays linked, change it there and it updates here." },
   ingName: { nl: "Naam", en: "Name" },
   cancelShort: { nl: "Annuleer", en: "Cancel" },
   savedAsRecipe: { nl: "Opgeslagen ✓", en: "Saved ✓" },
@@ -227,7 +227,7 @@ const TXT = {
   mealOpts: { nl: "Opties", en: "Options" },
   removeMealTxt: { nl: "Verwijderen", en: "Remove" },
   buildOwn: { nl: "Of: zelf samenstellen", en: "Or: build your own" },
-  ownPlanHint: { nl: "Leeg weekschema — vul elke dag zelf met de +.", en: "Empty week — fill each day yourself with the +." },
+  ownPlanHint: { nl: "Leeg weekschema, vul elke dag zelf met de +.", en: "Empty week, fill each day yourself with the +." },
   cancel: { nl: "Annuleren", en: "Cancel" },
   system: { nl: "van ons", en: "from us" },
   myProducts: { nl: "Producten", en: "Products" },
@@ -245,7 +245,7 @@ const TXT = {
   dlPreparing: { nl: "Tracker wordt gemaakt…", en: "Building your tracker…" },
   dlGuide: { nl: "⬇ Hyrox-voedingsgids (PDF)", en: "⬇ Hyrox nutrition guide (PDF)" },
   dlHint: { nl: "Eén Excel met alles: dashboard, grafiek, jouw weekplan, boodschappenlijst en recepten. Open 'm ook in Google Sheets om bij te houden.", en: "One Excel with everything: dashboard, chart, your week plan, shopping list and recipes. Open it in Google Sheets too to track and tick off." },
-  emailedPlan: { nl: "📧 Ook naar je mail (betaaladres) gestuurd — je kunt 'm hieronder ook downloaden.", en: "📧 Also sent to your email — you can download it below too." },
+  emailedPlan: { nl: "📧 Ook naar je mail (betaaladres) gestuurd, je kunt 'm hieronder ook downloaden.", en: "📧 Also sent to your email, you can download it below too." },
   emailingPlan: { nl: "📧 Je plan wordt naar je mail gestuurd…", en: "📧 Sending your plan to your email…" },
   freeSample: { nl: "Gratis voorbeelddag", en: "Free sample day" },
   lockTitle: { nl: "Je persoonlijke weekplan", en: "Your personal week plan" },
@@ -254,8 +254,8 @@ const TXT = {
   lb2: { nl: "Exacte grammen per maaltijd + 100+ recepten", en: "Exact weights per meal + 100+ recipes" },
   lb3: { nl: "Dagelijks tracken, slim herplannen en Hyrox-raceprotocol", en: "Daily tracking, smart re-plan and Hyrox race protocol" },
   lbBundle: { nl: "+ Hyrox-voedingsgids (bundel)", en: "+ Hyrox nutrition guide (bundle)" },
-  unlockWeek: { nl: "Ontgrendel de week — €14,95", en: "Unlock the week — €14.95" },
-  unlockBundle: { nl: "Week + Hyrox-gids — €17,95", en: "Week + Hyrox guide — €17.95" },
+  unlockWeek: { nl: "Ontgrendel de week, €14,95", en: "Unlock the week, €14.95" },
+  unlockBundle: { nl: "Week + Hyrox-gids, €17,95", en: "Week + Hyrox guide, €17.95" },
   lockFoot: { nl: "Direct beschikbaar na betaling.", en: "Available instantly after payment." },
   orSubscribe: { nl: "Of neem een abonnement · vanaf €9,95/mnd", en: "Or subscribe · from €9.95/mo" },
   subscribeCta: { nl: "Neem een abonnement · vanaf €9,95/mnd", en: "Subscribe · from €9.95/mo" },
@@ -301,17 +301,17 @@ const TXT = {
   navDash: { nl: "Home", en: "Home" },
   navMore: { nl: "Meer", en: "More" },
   install: { nl: "Installeer de app", en: "Install the app" },
-  installHint: { nl: "Zet HybridFuelCo op je beginscherm — sneller, met herinneringen.", en: "Add HybridFuelCo to your home screen — faster, with reminders." },
+  installHint: { nl: "Zet HybridFuelCo op je beginscherm, sneller, met herinneringen.", en: "Add HybridFuelCo to your home screen, faster, with reminders." },
   installBtn: { nl: "Installeren", en: "Install" },
   installHelpTitle: { nl: "Zet de app op je telefoon", en: "Add the app to your phone" },
   installIosT: { nl: "iPhone (Safari)", en: "iPhone (Safari)" },
   installIos1: { nl: "Tik onderin op het deel-icoon (vierkantje met pijl omhoog).", en: "Tap the Share icon at the bottom (square with an up arrow)." },
   installIos2: { nl: "Kies “Zet op beginscherm”.", en: "Choose “Add to Home Screen”." },
-  installIos3: { nl: "Tik op “Voeg toe” — de app staat nu tussen je andere apps.", en: "Tap “Add” — the app now sits with your other apps." },
+  installIos3: { nl: "Tik op “Voeg toe”, de app staat nu tussen je andere apps.", en: "Tap “Add”, the app now sits with your other apps." },
   installAndroidT: { nl: "Android (Chrome)", en: "Android (Chrome)" },
   installAndroid1: { nl: "Tik rechtsboven op het menu (⋮).", en: "Tap the menu (⋮) at the top right." },
   installAndroid2: { nl: "Kies “App installeren” of “Toevoegen aan startscherm”.", en: "Choose “Install app” or “Add to home screen”." },
-  installAndroid3: { nl: "Bevestig — de app staat nu tussen je andere apps.", en: "Confirm — the app now sits with your other apps." },
+  installAndroid3: { nl: "Bevestig, de app staat nu tussen je andere apps.", en: "Confirm, the app now sits with your other apps." },
   installClose: { nl: "Begrepen", en: "Got it" },
 };
 
@@ -638,7 +638,7 @@ export default function App() {
   // De oude one-off 'unlocked'-vlag telt niet meer mee (anders bleef stale localStorage openstaan).
   const hasBasis = devMode || subTier === "basis" || subTier === "pro";
   const hasPro = devMode || subTier === "pro";
-  const hasPlus = devMode || subTier === "pro"; // Race Protocol — later evt. eigen Plus-laag
+  const hasPlus = devMode || subTier === "pro"; // Race Protocol, later evt. eigen Plus-laag
   const ML = macroLetters(lang);
 
   useEffect(() => {
@@ -946,7 +946,7 @@ export default function App() {
   function downloadGuide() {
     let tok = "";
     try { tok = localStorage.getItem("hf_token") || ""; } catch (e) {}
-    if (!tok) { alert(lang === "en" ? "No access token found — re-open the app from your purchase confirmation." : "Geen toegangstoken gevonden — open de app opnieuw via je aankoopbevestiging."); return; }
+    if (!tok) { alert(lang === "en" ? "No access token found, re-open the app from your purchase confirmation." : "Geen toegangstoken gevonden, open de app opnieuw via je aankoopbevestiging."); return; }
     const u = "/api/guide?lang=" + encodeURIComponent(lang) + "&token=" + encodeURIComponent(tok);
     window.open(u, "_blank", "noopener");
   }
@@ -981,7 +981,7 @@ export default function App() {
     const nw = { ...week, days: week.days.map((dd, i) => i === di ? { ...dd, m: newMeals, goal: goal || dd.goal } : dd) };
     applyWeek(nw); persistPlanCloud();
   }
-  // Snel een (gescand) product aan het Dagboek van vandaag loggen — via de + knop.
+  // Snel een (gescand) product aan het Dagboek van vandaag loggen, via de + knop.
   function addTodayProduct(product) {
     const d = todayISO(), g = 100, p1 = product.per_100 || {};
     const calc = (k) => Math.round(num(p1[k]) * g / 100);
@@ -1085,7 +1085,7 @@ export default function App() {
   function stampDayOnDate(di, iso, move) {
     if (!week || !week.days[di]) return;
     try { save("hf_dayover_" + iso, dayToOverride(week.days[di])); } catch (e) {}
-    if (move) { // bron is het weekschema zelf (herhaalt) — niets te wissen; alleen doel gezet
+    if (move) { // bron is het weekschema zelf (herhaalt), niets te wissen; alleen doel gezet
     }
     recordPlanned([iso], false);
   }
@@ -1115,7 +1115,7 @@ export default function App() {
   // Pas de voedingswaarde (per 100 g) van één ingrediënt aan en herbereken de
   // maaltijd. Had het ingrediënt nog geen per-100-waarde, dan nemen we zijn
   // huidige aandeel in de maaltijd (naar rato van gewicht) als startpunt, zodat
-  // de wijziging die je typt zichtbaar het dagtotaal beweegt — zonder te crashen.
+  // de wijziging die je typt zichtbaar het dagtotaal beweegt, zonder te crashen.
   function applyIngVals(di, mi, ii, per100, name, pid) {
     mutDay(di, (d) => {
       d.m = d.m.map((mm, j) => {
@@ -1414,7 +1414,7 @@ export default function App() {
         </div>
       </div>
 
-      {/* INSTALL-BANNER — voor iedereen die de app nog niet geïnstalleerd heeft (ook iPhone) */}
+      {/* INSTALL-BANNER, voor iedereen die de app nog niet geïnstalleerd heeft (ook iPhone) */}
       {!isStandalone && !installDismissed && (
         <div style={{ background: "rgba(225,29,72,0.1)", borderBottom: `1px solid ${LINE}`, padding: "10px 16px", display: "flex", alignItems: "center", gap: 12, position: "relative", zIndex: 1 }}>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M12 3v12M8 11l4 4 4-4" /><path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" /></svg>
@@ -1717,7 +1717,7 @@ export default function App() {
         <svg width="27" height="27" viewBox="0 0 24 24" fill="none" stroke={PAPER} strokeWidth="2.4" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
       </div>
 
-      {/* BOTTOM NAV — 2 links, +, 2 rechts */}
+      {/* BOTTOM NAV, 2 links, +, 2 rechts */}
       <div style={{ position: "fixed", left: 0, right: 0, bottom: 0, background: INK, borderTop: `1px solid ${LINE}`, display: "flex", zIndex: 45, paddingBottom: "env(safe-area-inset-bottom)" }}>
         {navCell("dashboard", "navDash", () => go("dashboard"), tab === "dashboard")}
         {navCell("plan", "navPlan", () => go("plan"), tab === "plan")}
@@ -1749,7 +1749,7 @@ export default function App() {
                   <div key={u} onClick={() => setUnitsSave(u)} style={{ flex: 1, textAlign: "center", cursor: "pointer", ...disp, fontWeight: 700, fontSize: 12.5, letterSpacing: 0.3, padding: "10px 0", borderRadius: 7, background: units === u ? EMBER : "transparent", color: units === u ? PAPER : MUTED }}>{lbl}</div>
                 ))}
               </div>
-              <div style={{ fontSize: 10.5, color: MUTED, marginTop: 7, lineHeight: 1.5 }}>{lang === "nl" ? "Geldt voor gewichten in de hele app — altijd aanpasbaar." : "Applies to weights across the app — change it anytime."}</div>
+              <div style={{ fontSize: 10.5, color: MUTED, marginTop: 7, lineHeight: 1.5 }}>{lang === "nl" ? "Geldt voor gewichten in de hele app, altijd aanpasbaar." : "Applies to weights across the app, change it anytime."}</div>
             </div>
           </div>
         </div>

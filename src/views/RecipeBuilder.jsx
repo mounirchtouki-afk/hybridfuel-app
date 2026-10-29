@@ -17,7 +17,7 @@ const T = {
   changePhoto: { nl: "Foto wijzigen", en: "Change photo" },
   ingredients: { nl: "Ingrediënten", en: "Ingredients" },
   addIngr: { nl: "+ Ingrediënt (scan / product)", en: "+ Ingredient (scan / product)" },
-  noIngr: { nl: "Voeg ingrediënten toe — de voedingswaarde wordt automatisch berekend.", en: "Add ingredients — nutrition is calculated automatically." },
+  noIngr: { nl: "Voeg ingrediënten toe, de voedingswaarde wordt automatisch berekend.", en: "Add ingredients, nutrition is calculated automatically." },
   steps: { nl: "Bereidingswijze", en: "Preparation" },
   stepsPh: { nl: "Beschrijf de stappen…", en: "Describe the steps…" },
   genSteps: { nl: "⚡ Genereer uit ingrediënten", en: "⚡ Generate from ingredients" },

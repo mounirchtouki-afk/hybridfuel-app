@@ -48,7 +48,7 @@ const T = {
   moveDo: { nl: "Zet op kalender", en: "Place on calendar" },
   movePlaced: { nl: "Gezet ✓", en: "Placed ✓" },
   moveHint: { nl: "Je trainingsschema verschijnt op die datum(s). Verplaatsen wist de bronweek.", en: "Your training plan appears on those date(s). Move clears the source week." },
-  toDate: { nl: "→ datum", en: "→ date" },
+  toDate: { nl: "tot datum", en: "to date" },
 };
 
 const isoAdd = (iso, n) => { const dt = new Date(iso + "T12:00:00"); dt.setDate(dt.getDate() + n); return dt.toISOString().slice(0, 10); };

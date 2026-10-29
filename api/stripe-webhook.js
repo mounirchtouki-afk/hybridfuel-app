@@ -13,6 +13,7 @@
 // customer.subscription.deleted, charge.refunded.
 
 import crypto from "crypto";
+import { kv } from "./_kv.js";
 
 // Vercel mag de body NIET parsen — we hebben de rauwe bytes nodig voor de signature.
 export const config = { api: { bodyParser: false } };
@@ -166,6 +167,52 @@ async function findUserByCustomer(customerId) {
   } catch (e) { return null; }
 }
 
+// --- Bestelmelding naar de eigenaar ------------------------------------------
+// Stuurt bij een geslaagde betaling een mail met de orderdetails naar de eigenaar,
+// via dezelfde Make-webhook die de verlengmails relayt ({to, subject, html} -> Gmail).
+// Dedup op de sessie-id (KV, 7 dagen) zodat een resend/retry niet dubbel mailt.
+const ORDER_LABEL = { basis: "Basic", pro: "Pro" };
+function eur(cents) { return "€" + (Number(cents || 0) / 100).toFixed(2).replace(".", ","); }
+function orderRow(k, v) { return "<tr><td style='padding:3px 16px 3px 0;color:#67646E;vertical-align:top'>" + k + "</td><td style='padding:3px 0;font-weight:600'>" + v + "</td></tr>"; }
+
+async function sendOrderNotification(o) {
+  const to = process.env.ORDER_NOTIFY_EMAIL || "hybridfuelco@gmail.com";
+  const hook = process.env.ORDER_NOTIFY_WEBHOOK || process.env.RENEWAL_WEBHOOK || "https://hook.eu1.make.com/1o3ll8fvbtyewn9wyfrax5sd9ywofnln";
+  if (!to || !hook) return;
+  // Dedup: één mail per order.
+  try {
+    const d = await kv(["SET", "ord:" + (o.id || ""), "1", "EX", "604800", "NX"]);
+    if (d.configured && d.result !== "OK") return;
+  } catch (e) {}
+  const tier = (o.metadata && o.metadata.tier) || "basis";
+  const interval = (o.metadata && o.metadata.interval) === "year" ? "year" : "month";
+  const days = (o.metadata && o.metadata.period_days) || (interval === "year" ? "365" : "30");
+  const label = ORDER_LABEL[tier] || tier;
+  const cust = o.customer_details || {};
+  const addr = cust.address || {};
+  const addrLine = [addr.line1, addr.postal_code, addr.city, addr.country].filter(Boolean).join(", ");
+  let when = new Date().toISOString();
+  try { when = new Date().toLocaleString("nl-NL", { timeZone: "Europe/Amsterdam" }); } catch (e) {}
+  const subject = "Nieuwe bestelling: HybridFuelCo " + label + " (" + days + " dagen), " + eur(o.amount_total);
+  const html =
+    "<div style='font-family:Arial,sans-serif;color:#141215;max-width:560px;line-height:1.6'>" +
+    "<h2 style='color:#E11D48;margin:0 0 12px'>Nieuwe bestelling</h2>" +
+    "<table style='border-collapse:collapse;font-size:14px'>" +
+    orderRow("Pakket", "HybridFuelCo " + label + " (" + days + " dagen toegang)") +
+    orderRow("Bedrag", eur(o.amount_total) + " " + (o.currency || "eur").toUpperCase()) +
+    orderRow("Interval", interval === "year" ? "Jaar" : "Maand") +
+    orderRow("Klant", (cust.name || "-") + " (" + (cust.email || "-") + ")") +
+    (addrLine ? orderRow("Adres", addrLine) : "") +
+    orderRow("Order-ID", o.id || "-") +
+    orderRow("Payment intent", o.payment_intent || "-") +
+    orderRow("Datum", when) +
+    "</table>" +
+    "<p style='font-size:13px;color:#67646E;margin-top:14px'>Automatisch verstuurd bij een geslaagde betaling.</p></div>";
+  try {
+    await fetch(hook, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ to, subject, html }) });
+  } catch (e) {}
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") { res.setHeader("Allow", "POST"); return res.status(405).end(); }
 
@@ -220,6 +267,8 @@ export default async function handler(req, res) {
           cancel_at_period_end: st ? st.cancelAtPeriodEnd : false,
         });
       }
+      // Bestelmelding naar de eigenaar (faalt nooit de webhook).
+      await sendOrderNotification(o);
     } else if (evt.type === "customer.subscription.updated" && o) {
       const userId = o.metadata && o.metadata.user_id;
       // Niet op het event vertrouwen: haal de echte status op. Niet-ophaalbaar = weg = free.

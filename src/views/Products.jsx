@@ -24,7 +24,7 @@ const T = {
   manualCode: { nl: "Of typ de barcode", en: "Or type the barcode" },
   lookup: { nl: "Zoek", en: "Look up" },
   looking: { nl: "Zoeken…", en: "Looking up…" },
-  notFound: { nl: "Niet gevonden — vul de waarden zelf in.", en: "Not found — enter the values yourself." },
+  notFound: { nl: "Niet gevonden, vul de waarden zelf in.", en: "Not found, enter the values yourself." },
   found: { nl: "Gevonden! Controleer en voeg toe.", en: "Found! Check and add." },
   camErr: { nl: "Camera niet beschikbaar. Typ de barcode.", en: "Camera unavailable. Type the barcode." },
   scanErr: { nl: "Scanner kon niet laden. Typ de barcode.", en: "Scanner failed to load. Type the barcode." },
@@ -33,7 +33,7 @@ const T = {
   catAuto: { nl: "Automatisch (op naam)", en: "Automatic (by name)" },
   editTitle: { nl: "Product bewerken", en: "Edit product" },
   save: { nl: "Opslaan", en: "Save" },
-  editProp: { nl: "Aangepast — je plan is bijgewerkt op de gekoppelde items.", en: "Updated — your plan was refreshed on the linked items." },
+  editProp: { nl: "Aangepast, je plan is bijgewerkt op de gekoppelde items.", en: "Updated, your plan was refreshed on the linked items." },
 };
 
 const CATS = {

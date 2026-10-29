@@ -32,7 +32,7 @@ const T = {
   proFeat: { nl: "Alles van Basis + zelf aanpassen · eigen producten · barcode-scan", en: "Everything in Basic + customise · own products · barcode scan" },
   choose: { nl: "Kiezen", en: "Choose" },
   popular: { nl: "Populair", en: "Popular" },
-  manage: { nl: "Beheer abonnement", en: "Manage subscription" },
+  manage: { nl: "Facturen bekijken", en: "View invoices" },
   active: { nl: "Actief", en: "Active" },
   notConfigured: { nl: "Afrekenen is nog niet actief. Probeer later opnieuw.", en: "Checkout isn't live yet. Try again later." },
   forgot: { nl: "Wachtwoord vergeten?", en: "Forgot password?" },

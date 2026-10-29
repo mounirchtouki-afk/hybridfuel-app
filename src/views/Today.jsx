@@ -8,7 +8,7 @@ import { weekDatesFrom, planReductions, baseDayFor, dayTotal, upcomingSaturday, 
 const T = {
   title: { nl: "Dagboek", en: "Diary" },
   none: { nl: "Nog geen plan", en: "No plan yet" },
-  noneBody: { nl: "Maak eerst je weekplan aan. Daarna zie je hier per dag je maaltijden en vink je ze af — en je kunt alles loggen wat je extra eet.", en: "Build your week plan first. Then you'll see your meals per day and check them off here — and log anything extra you eat." },
+  noneBody: { nl: "Maak eerst je weekplan aan. Daarna zie je hier per dag je maaltijden en vink je ze af, en je kunt alles loggen wat je extra eet.", en: "Build your week plan first. Then you'll see your meals per day and check them off here, and log anything extra you eat." },
   goPlan: { nl: "Naar plan", en: "Go to plan" },
   train: { nl: "Trainingsdag", en: "Training day" },
   rest: { nl: "Rustdag", en: "Rest day" },
@@ -34,11 +34,11 @@ const T = {
   hpTitle: { nl: "Leven gebeurt", en: "Life happens" },
   hpBtn: { nl: "Herbalanceer de rest van mijn dag", en: "Rebalance the rest of my day" },
   hpNote: { nl: "De app schaalt je nog niet-afgevinkte maaltijden zodat je dag alsnog op je doel landt.", en: "The app scales your unchecked meals so your day still lands on target." },
-  hpDone: { nl: "Dag aangepast ✓ — resterende maaltijden geschaald.", en: "Day adjusted ✓ — remaining meals scaled." },
+  hpDone: { nl: "Dag aangepast ✓, resterende maaltijden geschaald.", en: "Day adjusted ✓, remaining meals scaled." },
   hpUndo: { nl: "Ongedaan maken", en: "Undo" },
   hpNoRoom: { nl: "Geen maaltijden meer open om te schalen. Pak het morgen terug.", en: "No meals left to scale. Pick it up tomorrow." },
   spreadBtn: { nl: "Verdeel over de week", en: "Spread across the week" },
-  spreadNote: { nl: "We verdelen het verschil licht over de komende dagen van je week — binnen gezonde grenzen, geen crashdagen.", en: "We spread the difference lightly across the coming days of your week — within healthy limits, no crash days." },
+  spreadNote: { nl: "We verdelen het verschil licht over de komende dagen van je week, binnen gezonde grenzen, geen crashdagen.", en: "We spread the difference lightly across the coming days of your week, within healthy limits, no crash days." },
   spreadUndo: { nl: "Ongedaan maken", en: "Undo" },
   feastOpen: { nl: "+ Uit-eten-dag plannen", en: "+ Plan an eating-out day" },
 };
@@ -257,7 +257,7 @@ export default function Today({ lang, week, onGoPlan, session, plus, units, onRe
             <div style={{ fontSize: 11.5, color: allDone ? "#4ADE80" : MUTED, marginTop: 10 }}>{allDone ? t("done") : t("tapHint")}</div>
           </div>
 
-          {/* "Leven gebeurt"-herplanner (Plus) — vandaag of over de week */}
+          {/* "Leven gebeurt"-herplanner (Plus), vandaag of over de week */}
           {plus && day && (undo || spillUndo || canRebalance || canSpread) && (
             <div style={{ border: `1px solid ${EMBER}`, borderRadius: 14, padding: 15, backgroundImage: "radial-gradient(120% 90% at 100% 0%, rgba(225,29,72,0.14), transparent 62%)" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 7 }}>
@@ -274,11 +274,11 @@ export default function Today({ lang, week, onGoPlan, session, plus, units, onRe
                   <div style={{ fontSize: 12.5, color: PAPER, lineHeight: 1.5, marginBottom: 12 }}>
                     {Math.abs(spillUndo.applied) < Math.abs(spillUndo.target) - 30
                       ? (lang === "nl"
-                        ? `We verdeelden ~${Math.abs(spillUndo.applied)} van ${Math.abs(spillUndo.target)} kcal over ${spillUndo.days} ${spillUndo.days === 1 ? "dag" : "dagen"} — de rest laten we gaan. Eén ${spillUndo.target > 0 ? "zware" : "lichte"} dag hoort erbij.`
-                        : `We spread ~${Math.abs(spillUndo.applied)} of ${Math.abs(spillUndo.target)} kcal over ${spillUndo.days} ${spillUndo.days === 1 ? "day" : "days"} — the rest we let go. One ${spillUndo.target > 0 ? "heavy" : "light"} day is fine.`)
+                        ? `We verdeelden ~${Math.abs(spillUndo.applied)} van ${Math.abs(spillUndo.target)} kcal over ${spillUndo.days} ${spillUndo.days === 1 ? "dag" : "dagen"}, de rest laten we gaan. Eén ${spillUndo.target > 0 ? "zware" : "lichte"} dag hoort erbij.`
+                        : `We spread ~${Math.abs(spillUndo.applied)} of ${Math.abs(spillUndo.target)} kcal over ${spillUndo.days} ${spillUndo.days === 1 ? "day" : "days"}, the rest we let go. One ${spillUndo.target > 0 ? "heavy" : "light"} day is fine.`)
                       : (lang === "nl"
-                        ? `Over je week verdeeld ✓ — ${spillUndo.days} ${spillUndo.days === 1 ? "dag" : "dagen"} licht aangepast.`
-                        : `Spread across your week ✓ — ${spillUndo.days} ${spillUndo.days === 1 ? "day" : "days"} lightly adjusted.`)}
+                        ? `Over je week verdeeld ✓, ${spillUndo.days} ${spillUndo.days === 1 ? "dag" : "dagen"} licht aangepast.`
+                        : `Spread across your week ✓, ${spillUndo.days} ${spillUndo.days === 1 ? "day" : "days"} lightly adjusted.`)}
                   </div>
                   <button onClick={undoSpread} style={{ background: "transparent", color: EMBER, border: `1px solid ${EMBER}`, borderRadius: 9, padding: "9px 16px", ...disp, fontWeight: 700, fontSize: 12.5, letterSpacing: 0.5, cursor: "pointer" }}>{t("spreadUndo")}</button>
                 </>
@@ -357,10 +357,10 @@ function FeastPlanner({ lang, week, baseIso, onClose }) {
 
   const L = {
     title: lang === "nl" ? "Uit-eten-dag plannen" : "Plan an eating-out day",
-    intro: lang === "nl" ? "Weet je dat je ergens uit eet? Kies de dag en een ruwe schatting. We trimmen de andere dagen van die week een beetje, zodat je weekgemiddelde klopt — binnen gezonde grenzen." : "Know you're eating out? Pick the day and a rough estimate. We'll trim the other days of that week a little, so your weekly average holds — within healthy limits.",
+    intro: lang === "nl" ? "Weet je dat je ergens uit eet? Kies de dag en een ruwe schatting. We trimmen de andere dagen van die week een beetje, zodat je weekgemiddelde klopt, binnen gezonde grenzen." : "Know you're eating out? Pick the day and a rough estimate. We'll trim the other days of that week a little, so your weekly average holds, within healthy limits.",
     dateL: lang === "nl" ? "Welke dag?" : "Which day?",
     howL: lang === "nl" ? "Hoeveel extra, ongeveer?" : "Roughly how much extra?",
-    estimate: lang === "nl" ? "Het is een schatting — op de dag zelf log je gewoon wat je echt at." : "It's an estimate — on the day you just log what you really ate.",
+    estimate: lang === "nl" ? "Het is een schatting, op de dag zelf log je gewoon wat je echt at." : "It's an estimate, on the day you just log what you really ate.",
     go: lang === "nl" ? "Inplannen" : "Plan it",
     undo: lang === "nl" ? "Ongedaan maken" : "Undo",
     close: lang === "nl" ? "Klaar" : "Done",
@@ -404,8 +404,8 @@ function FeastPlanner({ lang, week, baseIso, onClose }) {
               {result.err ? L.err
                 : (Math.abs(result.applied) < result.surplus - 40
                   ? (lang === "nl"
-                    ? `+${result.surplus} kcal ingepland. We konden ~${Math.abs(result.applied)} kcal over de week verdelen — de rest laten we gaan. Eén dag uit eten hoort erbij.`
-                    : `+${result.surplus} kcal planned. We could spread ~${Math.abs(result.applied)} kcal over the week — the rest we let go. One day out is fine.`)
+                    ? `+${result.surplus} kcal ingepland. We konden ~${Math.abs(result.applied)} kcal over de week verdelen, de rest laten we gaan. Eén dag uit eten hoort erbij.`
+                    : `+${result.surplus} kcal planned. We could spread ~${Math.abs(result.applied)} kcal over the week, the rest we let go. One day out is fine.`)
                   : (lang === "nl"
                     ? `+${result.surplus} kcal ingepland. ${result.days} ${result.days === 1 ? "dag" : "dagen"} deze week licht getrimd; je weekgemiddelde blijft op doel.`
                     : `+${result.surplus} kcal planned. ${result.days} ${result.days === 1 ? "day" : "days"} this week lightly trimmed; your weekly average holds.`))}
