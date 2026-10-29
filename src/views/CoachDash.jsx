@@ -2,6 +2,38 @@ import React, { useState, useEffect } from "react";
 import { INK, INK2, PAPER, MUTED, LINE, SAGE, EMBER_SOFT, disp, sectionTitle, applyOrgTheme, THEME_TEMPLATES } from "../shared.js";
 import { supabase } from "../supabaseClient.js";
 
+// Herbruikbaar uitklap-menu met aanvinkvakjes (meervoudige keuze, i.p.v. losse knoppen).
+function MultiPick({ options, selected, onToggle, placeholder, color }) {
+  const [open, setOpen] = useState(false);
+  const sel = Array.isArray(selected) ? selected : [];
+  const labelFor = (id) => { const o = options.find((x) => x.id === id); return o ? o.label : id; };
+  const summary = sel.length === 0 ? placeholder : (sel.length <= 2 ? sel.map(labelFor).join(", ") : sel.length + " gekozen");
+  return (
+    <div style={{ position: "relative" }}>
+      <div onClick={() => setOpen((v) => !v)} style={{ cursor: "pointer", width: "100%", background: INK, border: `1px solid ${open ? color : LINE}`, color: sel.length ? PAPER : MUTED, padding: "11px 12px", fontSize: 13.5, borderRadius: 8, boxSizing: "border-box", display: "flex", alignItems: "center", gap: 8 }}>
+        <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{summary}</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={MUTED} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: open ? "rotate(180deg)" : "none", flexShrink: 0 }}><path d="M6 9l6 6 6-6" /></svg>
+      </div>
+      {open && (
+        <>
+          <div onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 48 }} />
+          <div style={{ position: "absolute", left: 0, right: 0, top: "calc(100% + 4px)", background: INK2, border: `1px solid ${LINE}`, borderRadius: 10, overflow: "hidden", zIndex: 49, boxShadow: "0 12px 34px rgba(0,0,0,.4)", maxHeight: 240, overflowY: "auto" }}>
+            {options.map((o) => {
+              const on = sel.includes(o.id);
+              return (
+                <div key={o.id} onClick={() => onToggle(o.id)} style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: 9, padding: "10px 12px", fontSize: 13, color: PAPER, borderBottom: `1px solid ${LINE}` }}>
+                  <span style={{ width: 17, height: 17, borderRadius: 5, border: `1.5px solid ${on ? color : LINE}`, background: on ? color : "transparent", display: "grid", placeItems: "center", flexShrink: 0 }}>{on && <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>}</span>
+                  {o.label}
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 // Coach-dashboard: verschijnt als een ingelogde gebruiker de rol 'coach' heeft.
 // Toont de leden + voortgang, en laat de coach leden aanmaken (met code) + code resetten.
 export default function CoachDash({ session, org, isOwner, perms, lang, onLogout }) {
@@ -71,6 +103,7 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
   const [cTime, setCTime] = useState("");
   const [cDur, setCDur] = useState("");
   const [cCap, setCCap] = useState("");
+  const [editClassId, setEditClassId] = useState(null);
   const [cBusy, setCBusy] = useState(false);
 
   // Abonnementen
@@ -226,7 +259,11 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
   async function loadCoaches() {
     if (!supabase || !isOwner) return;
     try {
-      const { data } = await supabase.from("org_members").select("id,auth_user_id,display_name,is_owner,perms").eq("role", "coach").order("is_owner", { ascending: false });
+      let { data, error } = await supabase.from("org_members").select("id,auth_user_id,display_name,is_owner,perms").eq("role", "coach").order("is_owner", { ascending: false });
+      if (error) { // kolommen is_owner/perms bestaan nog niet (vóór gym-roles.sql) → zonder laden
+        const r2 = await supabase.from("org_members").select("id,auth_user_id,display_name").eq("role", "coach").order("created_at", { ascending: true });
+        data = r2.data;
+      }
       setCoaches(data || []);
     } catch (e) { setCoaches([]); }
   }
@@ -466,20 +503,33 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
   }
 
   // Lessenbeheer
+  function resetClassForm() { setCName(""); setCTime(""); setCDur(""); setCCap(""); setCDay("1"); setEditClassId(null); }
+  function editClass(c) {
+    setEditClassId(c.id);
+    setCName(c.name || ""); setCDay(String(c.day_of_week)); setCTime(c.start_time || "");
+    setCDur(c.duration_min != null ? String(c.duration_min) : ""); setCCap(c.capacity != null ? String(c.capacity) : "");
+    try { window.scrollTo({ top: 0, behavior: "smooth" }); } catch (e) {}
+  }
   async function addClass() {
     const name = cName.trim();
     if (!name || !cTime || cBusy) return;
     setCBusy(true);
     try {
-      const row = { org_id: org && org.id, name, day_of_week: parseInt(cDay, 10), start_time: cTime, duration_min: cDur ? parseInt(cDur, 10) : null, capacity: cCap ? parseInt(cCap, 10) : null, created_by: session && session.user && session.user.id };
-      const { error } = await supabase.from("org_classes").insert(row);
-      if (!error) { setCName(""); setCTime(""); setCDur(""); setCCap(""); loadClasses(); }
+      const fields = { name, day_of_week: parseInt(cDay, 10), start_time: cTime, duration_min: cDur ? parseInt(cDur, 10) : null, capacity: cCap ? parseInt(cCap, 10) : null };
+      if (editClassId) {
+        const { error } = await supabase.from("org_classes").update(fields).eq("id", editClassId);
+        if (!error) { resetClassForm(); loadClasses(); }
+      } else {
+        const { error } = await supabase.from("org_classes").insert({ ...fields, org_id: org && org.id, created_by: session && session.user && session.user.id });
+        if (!error) { resetClassForm(); loadClasses(); }
+      }
       setCBusy(false);
     } catch (e) { setCBusy(false); }
   }
   async function delClass(id) {
     if (!supabase) return;
-    try { await supabase.from("org_classes").delete().eq("id", id); loadClasses(); } catch (e) {}
+    if (typeof window !== "undefined" && !window.confirm(t("Les verwijderen?", "Delete class?"))) return;
+    try { await supabase.from("org_classes").delete().eq("id", id); if (editClassId === id) resetClassForm(); loadClasses(); } catch (e) {}
   }
 
   // Les-toegang per lid
@@ -1237,7 +1287,7 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
         {current === "classes" && (<>
         {/* Groepsrooster (lessen) */}
         <div style={card}>
-          <div style={{ ...sectionTitle, color, marginBottom: 10 }}>{t("Lesrooster", "Class schedule")}</div>
+          <div style={{ ...sectionTitle, color, marginBottom: 10 }}>{editClassId ? t("Les bewerken", "Edit class") : t("Lesrooster", "Class schedule")}</div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
             <input style={{ ...input, flex: 1, minWidth: 140 }} value={cName} onChange={(e) => setCName(e.target.value)} placeholder={t("Les (bv. HYROX, HIIT)", "Class (e.g. HYROX, HIIT)")} />
             <select style={{ ...input, width: "auto", appearance: "auto" }} value={cDay} onChange={(e) => setCDay(e.target.value)}>
@@ -1246,7 +1296,8 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
             <input style={{ ...input, width: 110 }} type="time" value={cTime} onChange={(e) => setCTime(e.target.value)} />
             <input style={{ ...input, width: 70 }} type="number" value={cDur} onChange={(e) => setCDur(e.target.value)} placeholder={t("min", "min")} />
             <input style={{ ...input, width: 80 }} type="number" value={cCap} onChange={(e) => setCCap(e.target.value)} placeholder={t("max pers", "max")} />
-            <div onClick={addClass} style={{ cursor: cBusy ? "default" : "pointer", opacity: cBusy ? 0.7 : 1, background: color, color: "#fff", padding: "11px 16px", borderRadius: 8, ...disp, fontWeight: 700, fontSize: 13, letterSpacing: 0.3, whiteSpace: "nowrap" }}>{t("Toevoegen", "Add")}</div>
+            <div onClick={addClass} style={{ cursor: cBusy ? "default" : "pointer", opacity: cBusy ? 0.7 : 1, background: color, color: "#fff", padding: "11px 16px", borderRadius: 8, ...disp, fontWeight: 700, fontSize: 13, letterSpacing: 0.3, whiteSpace: "nowrap" }}>{cBusy ? t("Opslaan…", "Saving…") : editClassId ? t("Opslaan", "Save") : t("Toevoegen", "Add")}</div>
+            {editClassId && <div onClick={resetClassForm} style={{ cursor: "pointer", padding: "11px 14px", borderRadius: 8, border: `1px solid ${LINE}`, color: MUTED, ...disp, fontWeight: 700, fontSize: 13 }}>{t("Annuleer", "Cancel")}</div>}
           </div>
           <div style={{ marginTop: 12, display: "grid", gap: 7 }}>
             {!classes ? <div style={{ fontSize: 13, color: MUTED }}>{t("Laden…", "Loading…")}</div>
@@ -1257,6 +1308,7 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
                   <div style={{ flex: 1, minWidth: 0, ...disp, fontWeight: 600, fontSize: 14 }}>{c.name}</div>
                   {c.duration_min ? <div style={{ fontSize: 11.5, color: MUTED }}>{c.duration_min} min</div> : null}
                   {c.capacity != null ? <div style={{ fontSize: 11.5, color: MUTED }}>max {c.capacity}</div> : null}
+                  <div onClick={() => editClass(c)} style={{ cursor: "pointer", fontSize: 11.5, color: editClassId === c.id ? color : MUTED, border: `1px solid ${editClassId === c.id ? color : LINE}`, borderRadius: 7, padding: "5px 11px", ...disp, fontWeight: 700 }}>{t("Bewerken", "Edit")}</div>
                   <div onClick={() => delClass(c.id)} style={{ cursor: "pointer", fontSize: 11.5, color: MUTED, border: `1px solid ${LINE}`, borderRadius: 7, padding: "5px 9px" }}>{t("Verwijderen", "Delete")}</div>
                 </div>
               ))}
@@ -1389,12 +1441,9 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
                 <input type="checkbox" checked={pPt} onChange={(e) => setPPt(e.target.checked)} /> {t("Persoonlijke PT inbegrepen", "Personal PT included")}
               </label>
               <div style={{ fontSize: 11.5, color: MUTED }}>{t("Welke lessen zitten in dit abo:", "Which classes are included:")}</div>
-              <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
-                {(classes || []).length === 0 ? <div style={{ fontSize: 12, color: MUTED }}>{t("Voeg eerst lessen toe (tab Lessen).", "Add classes first (Classes tab).")}</div>
-                  : (classes || []).map((cl) => (
-                    <div key={cl.id} onClick={() => togglePermIn(pClassIds, setPClassIds, cl.id)} style={{ cursor: "pointer", fontSize: 12, ...disp, fontWeight: 700, padding: "6px 11px", borderRadius: 7, border: `1px solid ${pClassIds.includes(cl.id) ? color : LINE}`, background: pClassIds.includes(cl.id) ? color : "transparent", color: pClassIds.includes(cl.id) ? "#fff" : MUTED }}>{cl.name}</div>
-                  ))}
-              </div>
+              {(classes || []).length === 0
+                ? <div style={{ fontSize: 12, color: MUTED }}>{t("Voeg eerst lessen toe (tab Lessen).", "Add classes first (Classes tab).")}</div>
+                : <MultiPick options={(classes || []).map((cl) => ({ id: cl.id, label: DAY_LBL(cl.day_of_week) + " " + cl.start_time + " · " + cl.name }))} selected={pClassIds} onToggle={(id) => togglePermIn(pClassIds, setPClassIds, id)} placeholder={t("Kies lessen (leeg = alle)…", "Pick classes (empty = all)…")} color={color} />}
               <div onClick={addPlan} style={{ cursor: planBusy ? "default" : "pointer", opacity: planBusy ? 0.7 : 1, background: color, color: "#fff", padding: "11px 0", borderRadius: 8, textAlign: "center", ...disp, fontWeight: 700, fontSize: 13.5, marginTop: 4 }}>{planBusy ? t("Opslaan…", "Saving…") : t("Abonnement opslaan", "Save plan")}</div>
               <div style={{ fontSize: 11, color: MUTED, lineHeight: 1.5 }}>{t("Daarna kies je per lid alleen nog het abo (tab Leden) — de lessen + PT-toegang volgen automatisch.", "Then just pick a plan per member (Members tab) — classes + PT access follow automatically.")}</div>
             </div>
@@ -1428,11 +1477,7 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
               <input style={input} type="email" value={ncEmail} onChange={(e) => setNcEmail(e.target.value)} placeholder={t("E-mail", "Email")} />
               <input style={input} type="text" value={ncPass} onChange={(e) => setNcPass(e.target.value)} placeholder={t("Tijdelijk wachtwoord (min. 8)", "Temporary password (min. 8)")} />
               <div style={{ fontSize: 11.5, color: MUTED, marginTop: 2 }}>{t("Rechten (wat deze coach mag beheren):", "Permissions (what this coach can manage):")}</div>
-              <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
-                {MODS.map((m) => (
-                  <div key={m} onClick={() => togglePermIn(ncPerms, setNcPerms, m)} style={{ cursor: "pointer", fontSize: 12, ...disp, fontWeight: 700, padding: "6px 11px", borderRadius: 7, border: `1px solid ${ncPerms.includes(m) ? color : LINE}`, background: ncPerms.includes(m) ? color : "transparent", color: ncPerms.includes(m) ? "#fff" : MUTED }}>{LABEL[m] || m}</div>
-                ))}
-              </div>
+              <MultiPick options={MODS.map((m) => ({ id: m, label: LABEL[m] || m }))} selected={ncPerms} onToggle={(m) => togglePermIn(ncPerms, setNcPerms, m)} placeholder={t("Kies rechten…", "Pick permissions…")} color={color} />
               <div onClick={addCoach} style={{ cursor: teamBusy ? "default" : "pointer", opacity: teamBusy ? 0.7 : 1, background: color, color: "#fff", padding: "11px 0", borderRadius: 8, textAlign: "center", ...disp, fontWeight: 700, fontSize: 13.5, marginTop: 4 }}>{teamBusy ? t("Aanmaken…", "Creating…") : t("Coach aanmaken", "Create coach")}</div>
               {teamMsg && <div style={{ fontSize: 12, color: SAGE, marginTop: 4 }}>{teamMsg}</div>}
             </div>
@@ -1498,12 +1543,8 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
                       </div>
                     )}
                     {openPerms === c.id && (
-                      <div style={{ padding: "0 12px 12px" }}>
-                        <div style={{ display: "flex", gap: 7, flexWrap: "wrap", marginBottom: 8 }}>
-                          {MODS.map((m) => (
-                            <div key={m} onClick={() => togglePermIn(permSel, setPermSel, m)} style={{ cursor: "pointer", fontSize: 12, ...disp, fontWeight: 700, padding: "6px 11px", borderRadius: 7, border: `1px solid ${permSel.includes(m) ? color : LINE}`, background: permSel.includes(m) ? color : "transparent", color: permSel.includes(m) ? "#fff" : MUTED }}>{LABEL[m] || m}</div>
-                          ))}
-                        </div>
+                      <div style={{ padding: "0 12px 12px", display: "grid", gap: 8 }}>
+                        <MultiPick options={MODS.map((m) => ({ id: m, label: LABEL[m] || m }))} selected={permSel} onToggle={(m) => togglePermIn(permSel, setPermSel, m)} placeholder={t("Kies rechten…", "Pick permissions…")} color={color} />
                         <div onClick={() => saveCoachPerms(c)} style={{ cursor: "pointer", background: color, color: "#fff", padding: "8px 0", borderRadius: 7, textAlign: "center", ...disp, fontWeight: 700, fontSize: 12.5 }}>{t("Rechten opslaan", "Save permissions")}</div>
                       </div>
                     )}

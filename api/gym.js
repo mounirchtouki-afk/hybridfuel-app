@@ -218,6 +218,14 @@ async function remove(req, res, body) {
 }
 
 // --- addcoach: EIGENAAR maakt een medewerker/coach-account (e-mail+wachtwoord) + rechten ---
+// Haalt een coach-rij op; guarded voor de is_owner-kolom (die bestaat pas na gym-roles.sql).
+async function fetchCoachRow(memberId) {
+  let r = await rest("org_members?select=id,auth_user_id,org_id,role,is_owner&id=eq." + encodeURIComponent(memberId) + "&limit=1");
+  if (!r.ok) r = await rest("org_members?select=id,auth_user_id,org_id,role&id=eq." + encodeURIComponent(memberId) + "&limit=1");
+  const rows = r.ok ? await r.json().catch(() => []) : [];
+  return rows && rows[0];
+}
+
 async function addcoach(req, res, body) {
   const callerId = await userIdFromToken(String(body.authToken || "").trim());
   if (!callerId) return res.status(401).json({ error: "invalid_token" });
@@ -236,7 +244,10 @@ async function addcoach(req, res, body) {
   const uid = coach && coach.id;
   if (!uid) return res.status(502).json({ error: "coach_failed" });
 
-  const ins = await rest("org_members", { method: "POST", headers: { Prefer: "return=representation" }, body: JSON.stringify({ org_id: orgId, auth_user_id: uid, role: "coach", display_name: displayName, is_owner: false, perms, active: true }) });
+  const base = { org_id: orgId, auth_user_id: uid, role: "coach", display_name: displayName, active: true };
+  // Eerst mét is_owner/perms; als die kolommen nog niet bestaan (vóór gym-roles.sql) → zonder.
+  let ins = await rest("org_members", { method: "POST", headers: { Prefer: "return=representation" }, body: JSON.stringify({ ...base, is_owner: false, perms }) });
+  if (!ins.ok) ins = await rest("org_members", { method: "POST", headers: { Prefer: "return=representation" }, body: JSON.stringify(base) });
   if (!ins.ok) { const e = await ins.text().catch(() => ""); return res.status(502).json({ error: "insert_failed", detail: e.slice(0, 200) }); }
   const rows = await ins.json().catch(() => []);
   return res.status(200).json({ ok: true, coach_id: rows && rows[0] && rows[0].id, email });
@@ -253,14 +264,12 @@ async function setperms(req, res, body) {
   const perms = Array.isArray(body.perms) ? body.perms.filter((p) => ALL_MODULES.includes(p)) : [];
   if (!memberId) return res.status(400).json({ error: "bad_request" });
 
-  const mr = await rest("org_members?select=id,org_id,role,is_owner&id=eq." + encodeURIComponent(memberId) + "&limit=1");
-  const rows = mr.ok ? await mr.json().catch(() => []) : [];
-  const mem = rows && rows[0];
-  if (!mem || mem.org_id !== orgId || mem.role !== "coach" || mem.is_owner) return res.status(404).json({ error: "not_found" });
+  const mem = await fetchCoachRow(memberId);
+  if (!mem || mem.org_id !== orgId || mem.role !== "coach" || mem.is_owner || mem.auth_user_id === callerId) return res.status(404).json({ error: "not_found" });
 
+  // Guarded: als de perms-kolom nog niet bestaat (vóór migratie) is dit een no-op, geen fout.
   const up = await rest("org_members?id=eq." + encodeURIComponent(memberId), { method: "PATCH", body: JSON.stringify({ perms }) });
-  if (!up.ok) return res.status(502).json({ error: "update_failed" });
-  return res.status(200).json({ ok: true, member_id: memberId, perms });
+  return res.status(200).json({ ok: true, member_id: memberId, perms, stored: up.ok });
 }
 
 // --- editcoach: EIGENAAR wijzigt naam en/of wachtwoord van een coach ---
@@ -273,9 +282,7 @@ async function editcoach(req, res, body) {
   const memberId = String(body.member_id || "").trim();
   if (!memberId) return res.status(400).json({ error: "bad_request" });
 
-  const mr = await rest("org_members?select=id,auth_user_id,org_id,role,is_owner&id=eq." + encodeURIComponent(memberId) + "&limit=1");
-  const rows = mr.ok ? await mr.json().catch(() => []) : [];
-  const mem = rows && rows[0];
+  const mem = await fetchCoachRow(memberId);
   if (!mem || mem.org_id !== orgId || mem.role !== "coach" || mem.is_owner) return res.status(404).json({ error: "not_found" });
 
   const name = body.display_name != null ? String(body.display_name).trim().slice(0, 80) : null;
@@ -303,10 +310,8 @@ async function removecoach(req, res, body) {
   const memberId = String(body.member_id || "").trim();
   if (!memberId) return res.status(400).json({ error: "bad_request" });
 
-  const mr = await rest("org_members?select=id,auth_user_id,org_id,role,is_owner&id=eq." + encodeURIComponent(memberId) + "&limit=1");
-  const rows = mr.ok ? await mr.json().catch(() => []) : [];
-  const mem = rows && rows[0];
-  if (!mem || mem.org_id !== orgId || mem.role !== "coach" || mem.is_owner) return res.status(404).json({ error: "not_found" });
+  const mem = await fetchCoachRow(memberId);
+  if (!mem || mem.org_id !== orgId || mem.role !== "coach" || mem.is_owner || mem.auth_user_id === callerId) return res.status(404).json({ error: "not_found" });
 
   const del = await rest("org_members?id=eq." + encodeURIComponent(memberId), { method: "DELETE" });
   if (!del.ok) return res.status(502).json({ error: "delete_failed" });
