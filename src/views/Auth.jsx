@@ -96,7 +96,7 @@ export default function Auth({ lang, session, tier, recovery, onClose }) {
 
   function setNewsletter(email, on) {
     try { localStorage.setItem("hf_newsletter", on ? "1" : "0"); } catch (e) {}
-    fetch("/api/newsletter", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, on }) }).catch(() => {});
+    fetch("/api/subscribe", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "newsletter", email, on }) }).catch(() => {});
   }
 
   async function submit() {
