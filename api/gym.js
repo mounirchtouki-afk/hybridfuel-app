@@ -10,8 +10,10 @@ import crypto from "crypto";
 import { ipLimited } from "./_ratelimit.js";
 import {
   rest, genCode, hashCode, adminCreateUser, adminGetUser, adminSetPassword, adminDeleteUser,
-  passwordGrant, userIdFromToken, coachOrgId, MEMBER_EMAIL_DOMAIN, readBody,
+  passwordGrant, userIdFromToken, coachOrgId, ownerOrgId, MEMBER_EMAIL_DOMAIN, readBody,
 } from "./_gym.js";
+
+const ALL_MODULES = ["members", "classes", "pt", "plans", "branding", "formula"];
 
 // Platte vorm die de rekenmotor (api/plan.js) direct begrijpt. Alleen deze waarden
 // zijn instelbaar; BMR (Mifflin), activiteitsfactoren en de veiligheidsvloer staan vast.
@@ -34,6 +36,9 @@ export default async function handler(req, res) {
     if (action === "create") return await create(req, res, body);
     if (action === "reset")  return await reset(req, res, body);
     if (action === "remove") return await remove(req, res, body);
+    if (action === "addcoach")   return await addcoach(req, res, body);
+    if (action === "setperms")   return await setperms(req, res, body);
+    if (action === "removecoach") return await removecoach(req, res, body);
     if (action === "setup")  return await setup(req, res, body);
     return res.status(400).json({ error: "unknown_action" });
   } catch (err) {
@@ -172,6 +177,73 @@ async function remove(req, res, body) {
   return res.status(200).json({ ok: true, member_id: memberId });
 }
 
+// --- addcoach: EIGENAAR maakt een medewerker/coach-account (e-mail+wachtwoord) + rechten ---
+async function addcoach(req, res, body) {
+  const callerId = await userIdFromToken(String(body.authToken || "").trim());
+  if (!callerId) return res.status(401).json({ error: "invalid_token" });
+  const orgId = await ownerOrgId(callerId);
+  if (!orgId) return res.status(403).json({ error: "not_owner" });
+
+  const email = String(body.email || "").trim().toLowerCase();
+  const password = String(body.password || "");
+  const displayName = String(body.display_name || "").trim().slice(0, 80) || email;
+  const perms = Array.isArray(body.perms) ? body.perms.filter((p) => ALL_MODULES.includes(p)) : [];
+  if (!email || password.length < 8) return res.status(400).json({ error: "bad_request" });
+
+  const cu = await adminCreateUser(email, password, { org_id: orgId, role: "coach" });
+  if (!cu.ok) { const e = await cu.json().catch(() => ({})); return res.status(409).json({ error: "coach_exists_or_failed", detail: e && (e.msg || e.error_description) }); }
+  const coach = await cu.json().catch(() => null);
+  const uid = coach && coach.id;
+  if (!uid) return res.status(502).json({ error: "coach_failed" });
+
+  const ins = await rest("org_members", { method: "POST", headers: { Prefer: "return=representation" }, body: JSON.stringify({ org_id: orgId, auth_user_id: uid, role: "coach", display_name: displayName, is_owner: false, perms, active: true }) });
+  if (!ins.ok) { const e = await ins.text().catch(() => ""); return res.status(502).json({ error: "insert_failed", detail: e.slice(0, 200) }); }
+  const rows = await ins.json().catch(() => []);
+  return res.status(200).json({ ok: true, coach_id: rows && rows[0] && rows[0].id, email });
+}
+
+// --- setperms: EIGENAAR wijzigt de rechten van een coach ---
+async function setperms(req, res, body) {
+  const callerId = await userIdFromToken(String(body.authToken || "").trim());
+  if (!callerId) return res.status(401).json({ error: "invalid_token" });
+  const orgId = await ownerOrgId(callerId);
+  if (!orgId) return res.status(403).json({ error: "not_owner" });
+
+  const memberId = String(body.member_id || "").trim();
+  const perms = Array.isArray(body.perms) ? body.perms.filter((p) => ALL_MODULES.includes(p)) : [];
+  if (!memberId) return res.status(400).json({ error: "bad_request" });
+
+  const mr = await rest("org_members?select=id,org_id,role,is_owner&id=eq." + encodeURIComponent(memberId) + "&limit=1");
+  const rows = mr.ok ? await mr.json().catch(() => []) : [];
+  const mem = rows && rows[0];
+  if (!mem || mem.org_id !== orgId || mem.role !== "coach" || mem.is_owner) return res.status(404).json({ error: "not_found" });
+
+  const up = await rest("org_members?id=eq." + encodeURIComponent(memberId), { method: "PATCH", body: JSON.stringify({ perms }) });
+  if (!up.ok) return res.status(502).json({ error: "update_failed" });
+  return res.status(200).json({ ok: true, member_id: memberId, perms });
+}
+
+// --- removecoach: EIGENAAR verwijdert een coach (niet zichzelf) ---
+async function removecoach(req, res, body) {
+  const callerId = await userIdFromToken(String(body.authToken || "").trim());
+  if (!callerId) return res.status(401).json({ error: "invalid_token" });
+  const orgId = await ownerOrgId(callerId);
+  if (!orgId) return res.status(403).json({ error: "not_owner" });
+
+  const memberId = String(body.member_id || "").trim();
+  if (!memberId) return res.status(400).json({ error: "bad_request" });
+
+  const mr = await rest("org_members?select=id,auth_user_id,org_id,role,is_owner&id=eq." + encodeURIComponent(memberId) + "&limit=1");
+  const rows = mr.ok ? await mr.json().catch(() => []) : [];
+  const mem = rows && rows[0];
+  if (!mem || mem.org_id !== orgId || mem.role !== "coach" || mem.is_owner) return res.status(404).json({ error: "not_found" });
+
+  const del = await rest("org_members?id=eq." + encodeURIComponent(memberId), { method: "DELETE" });
+  if (!del.ok) return res.status(502).json({ error: "delete_failed" });
+  try { await adminDeleteUser(mem.auth_user_id); } catch (e) {}
+  return res.status(200).json({ ok: true, member_id: memberId });
+}
+
 // --- setup: bootstrap org + coach (met geheim) ---
 async function setup(req, res, body) {
   const key = String((req.query && req.query.key) || body.key || "");
@@ -203,8 +275,10 @@ async function setup(req, res, body) {
   const coachId = coach && coach.id;
   if (!coachId) return res.status(502).json({ error: "coach_failed" });
 
-  const im = await rest("org_members", { method: "POST", body: JSON.stringify({ org_id: orgId, auth_user_id: coachId, role: "coach", display_name: "Coach", active: true }) });
+  const im = await rest("org_members", { method: "POST", headers: { Prefer: "return=representation" }, body: JSON.stringify({ org_id: orgId, auth_user_id: coachId, role: "coach", display_name: "Coach", active: true }) });
   if (!im.ok) { const e = await im.text().catch(() => ""); return res.status(502).json({ error: "coach_link_failed", detail: e.slice(0, 200) }); }
+  // Eerste account = eigenaar (guarded; kolom bestaat mogelijk nog niet vóór migratie).
+  try { const rows = await im.json().catch(() => []); const id = rows && rows[0] && rows[0].id; if (id) await rest("org_members?id=eq." + encodeURIComponent(id), { method: "PATCH", body: JSON.stringify({ is_owner: true }) }); } catch (e) {}
 
   return res.status(200).json({ ok: true, org_id: orgId, slug, coach_user_id: coachId, join_url: "/join/" + slug });
 }

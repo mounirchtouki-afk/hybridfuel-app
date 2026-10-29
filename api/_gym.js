@@ -96,6 +96,18 @@ export async function coachOrgId(userId) {
   return (rows && rows[0] && rows[0].org_id) || null;
 }
 
+// Geeft org_id alleen terug als de gebruiker EIGENAAR is (is_owner=true). Guarded: als de
+// kolom nog niet bestaat (vóór migratie) valt 'ie terug op gewone coach-rechten.
+export async function ownerOrgId(userId) {
+  if (!userId) return null;
+  try {
+    const r = await rest("org_members?select=org_id,is_owner&auth_user_id=eq." + encodeURIComponent(userId) + "&role=eq.coach&active=eq.true&limit=1");
+    if (r.ok) { const rows = await r.json().catch(() => []); const row = rows && rows[0]; if (row && row.is_owner) return row.org_id; return null; }
+  } catch (e) {}
+  // Fallback vóór migratie: eerste coach = eigenaar.
+  return await coachOrgId(userId);
+}
+
 export function readBody(req) {
   let body = req.body;
   if (typeof body === "string") { try { body = JSON.parse(body); } catch (e) { body = {}; } }

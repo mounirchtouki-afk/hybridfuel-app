@@ -4,10 +4,18 @@ import { supabase } from "../supabaseClient.js";
 
 // Coach-dashboard: verschijnt als een ingelogde gebruiker de rol 'coach' heeft.
 // Toont de leden + voortgang, en laat de coach leden aanmaken (met code) + code resetten.
-export default function CoachDash({ session, org, lang, onLogout }) {
+export default function CoachDash({ session, org, isOwner, perms, lang, onLogout }) {
   const t = (nl, en) => (lang === "nl" ? nl : en);
   const color = (org && org.brand_color) || "#E11D48";
   const token = session && session.access_token;
+
+  // Modules (datagedreven/uitbreidbaar). De org heeft een beschikbare set (superuser-gestuurd);
+  // de eigenaar ziet alles + Team, een coach alleen z'n toegewezen rechten.
+  const MODS = (org && org.enabled_modules && org.enabled_modules.length) ? org.enabled_modules : ["members", "classes", "pt", "plans", "branding", "formula"];
+  const LABEL = { members: t("Leden", "Members"), classes: t("Lessen", "Classes"), pt: t("PT-agenda", "PT"), plans: t("Abonnementen", "Plans"), branding: t("Huisstijl", "Branding"), formula: t("Formule", "Formula"), team: t("Team", "Team") };
+  const myTabs = isOwner ? [...MODS, "team"] : (Array.isArray(perms) ? MODS.filter((m) => perms.includes(m)) : []);
+  const [active, setActive] = useState(null);
+  const current = active && myTabs.includes(active) ? active : (myTabs[0] || null);
 
   const [members, setMembers] = useState(null);
   const [newName, setNewName] = useState("");
@@ -37,6 +45,17 @@ export default function CoachDash({ session, org, lang, onLogout }) {
   const [noteBusy, setNoteBusy] = useState(false);
   const [dictating, setDictating] = useState(false);
   const srSupported = typeof window !== "undefined" && !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+
+  // Team (eigenaar beheert coaches + rechten)
+  const [coaches, setCoaches] = useState(null);
+  const [ncEmail, setNcEmail] = useState("");
+  const [ncPass, setNcPass] = useState("");
+  const [ncName, setNcName] = useState("");
+  const [ncPerms, setNcPerms] = useState(["members", "pt"]);
+  const [teamBusy, setTeamBusy] = useState(false);
+  const [teamMsg, setTeamMsg] = useState("");
+  const [openPerms, setOpenPerms] = useState(null); // coach-id waarvan de rechten-editor open staat
+  const [permSel, setPermSel] = useState([]);
 
   // Rekenformule + juridisch akkoord
   const [termsOk, setTermsOk] = useState(null);     // null = nog niet geladen
@@ -102,7 +121,44 @@ export default function CoachDash({ session, org, lang, onLogout }) {
       setGainPct(String(pick2(raw.gain_pct, g.gain_pct, 8)));
     } catch (e) { setTermsOk(false); }
   }
-  useEffect(() => { load(); loadSessions(); loadClasses(); loadConfig(); }, []);
+  async function loadCoaches() {
+    if (!supabase || !isOwner) return;
+    try {
+      const { data } = await supabase.from("org_members").select("id,auth_user_id,display_name,is_owner,perms").eq("role", "coach").order("is_owner", { ascending: false });
+      setCoaches(data || []);
+    } catch (e) { setCoaches([]); }
+  }
+  useEffect(() => { load(); loadSessions(); loadClasses(); loadConfig(); loadCoaches(); }, []);
+
+  const togglePermIn = (arr, setArr, p) => setArr(arr.includes(p) ? arr.filter((x) => x !== p) : [...arr, p]);
+  async function addCoach() {
+    const email = ncEmail.trim().toLowerCase();
+    if (!email || ncPass.length < 8 || teamBusy) { if (ncPass.length < 8) setTeamMsg(t("Wachtwoord min. 8 tekens.", "Password min. 8 chars.")); return; }
+    setTeamBusy(true); setTeamMsg("");
+    try {
+      const r = await fetch("/api/gym", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "addcoach", authToken: token, email, password: ncPass, display_name: ncName.trim(), perms: ncPerms }) });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) { setTeamMsg(d.error === "coach_exists_or_failed" ? t("E-mail bestaat al of ongeldig.", "Email exists or invalid.") : t("Aanmaken mislukt.", "Create failed.")); setTeamBusy(false); return; }
+      setNcEmail(""); setNcPass(""); setNcName(""); setNcPerms(["members", "pt"]); setTeamBusy(false); setTeamMsg(t("Coach aangemaakt.", "Coach created.")); loadCoaches();
+    } catch (e) { setTeamMsg(t("Aanmaken mislukt.", "Create failed.")); setTeamBusy(false); }
+  }
+  function openCoachPerms(c) {
+    if (openPerms === c.id) { setOpenPerms(null); return; }
+    setOpenPerms(c.id); setPermSel(Array.isArray(c.perms) ? c.perms.slice() : []);
+  }
+  async function saveCoachPerms(c) {
+    try {
+      const r = await fetch("/api/gym", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "setperms", authToken: token, member_id: c.id, perms: permSel }) });
+      if (r.ok) { setCoaches((xs) => xs.map((x) => x.id === c.id ? { ...x, perms: permSel } : x)); setOpenPerms(null); }
+    } catch (e) {}
+  }
+  async function removeCoach(c) {
+    if (typeof window !== "undefined" && !window.confirm(t("Coach verwijderen?", "Delete coach?"))) return;
+    try {
+      const r = await fetch("/api/gym", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "removecoach", authToken: token, member_id: c.id }) });
+      if (r.ok) setCoaches((xs) => xs.filter((x) => x.id !== c.id));
+    } catch (e) {}
+  }
 
   async function acceptTerms() {
     if (!supabase || !termsCheck) return;
@@ -307,7 +363,16 @@ export default function CoachDash({ session, org, lang, onLogout }) {
         <div onClick={onLogout} style={{ cursor: "pointer", fontSize: 12.5, color: MUTED, border: `1px solid ${LINE}`, borderRadius: 8, padding: "6px 11px" }}>{t("Uitloggen", "Log out")}</div>
       </div>
 
+      {myTabs.length > 1 && (
+        <div style={{ borderBottom: `1px solid ${LINE}`, background: INK, display: "flex", gap: 4, overflowX: "auto", padding: "8px 12px", WebkitOverflowScrolling: "touch" }}>
+          {myTabs.map((m) => (
+            <div key={m} onClick={() => setActive(m)} style={{ cursor: "pointer", whiteSpace: "nowrap", fontSize: 13, ...disp, fontWeight: 700, letterSpacing: 0.3, padding: "8px 13px", borderRadius: 8, background: current === m ? color : "transparent", color: current === m ? "#fff" : MUTED }}>{LABEL[m] || m}</div>
+          ))}
+        </div>
+      )}
+
       <div style={{ maxWidth: 680, margin: "0 auto", padding: "20px 16px", display: "grid", gap: 16 }}>
+        {current === "members" && (<>
         {/* nieuwe code tonen */}
         {codeShown && (
           <div style={{ ...card, border: `1px solid ${color}`, background: "linear-gradient(180deg, rgba(255,255,255,0.04), transparent 70%)" }}>
@@ -402,6 +467,9 @@ export default function CoachDash({ session, org, lang, onLogout }) {
           )}
         </div>
 
+        </>)}
+
+        {current === "classes" && (<>
         {/* Groepsrooster (lessen) */}
         <div style={card}>
           <div style={{ ...sectionTitle, color, marginBottom: 10 }}>{t("Lesrooster", "Class schedule")}</div>
@@ -429,6 +497,9 @@ export default function CoachDash({ session, org, lang, onLogout }) {
           <div style={{ fontSize: 11, color: MUTED, marginTop: 9, lineHeight: 1.5 }}>{t("Stel per lid in welke lessen in hun abo zitten (knop \"Lessen\" bij het lid).", "Set per member which classes are in their plan (the \"Classes\" button on each member).")}</div>
         </div>
 
+        </>)}
+
+        {current === "pt" && (<>
         {/* PT-agenda */}
         <div style={card}>
           <div style={{ ...sectionTitle, color, marginBottom: 10 }}>{t("PT-agenda", "PT schedule")}</div>
@@ -461,6 +532,9 @@ export default function CoachDash({ session, org, lang, onLogout }) {
           </div>
         </div>
 
+        </>)}
+
+        {current === "formula" && (<>
         {/* Rekenformule + juridisch akkoord */}
         <div style={card}>
           <div style={{ ...sectionTitle, color, marginBottom: 10 }}>{t("Rekenformule", "Calculation formula")}</div>
@@ -494,6 +568,9 @@ export default function CoachDash({ session, org, lang, onLogout }) {
           )}
         </div>
 
+        </>)}
+
+        {current === "branding" && (<>
         {/* Huisstijl (self-serve white-label) */}
         <div style={card}>
           <div style={{ ...sectionTitle, color: accent, marginBottom: 12 }}>{t("Huisstijl", "Branding")}</div>
@@ -534,6 +611,66 @@ export default function CoachDash({ session, org, lang, onLogout }) {
           <div onClick={saveBrand} style={{ cursor: brandBusy ? "default" : "pointer", opacity: brandBusy ? 0.7 : 1, background: accent, color: "#fff", padding: "11px 0", borderRadius: 8, textAlign: "center", ...disp, fontWeight: 700, fontSize: 13.5, letterSpacing: 0.3 }}>{brandBusy ? t("Opslaan…", "Saving…") : t("Huisstijl opslaan", "Save branding")}</div>
           {brandMsg && <div style={{ fontSize: 12, color: SAGE, marginTop: 8 }}>{brandMsg}</div>}
         </div>
+        </>)}
+
+        {current === "plans" && (
+          <div style={card}>
+            <div style={{ ...sectionTitle, color, marginBottom: 10 }}>{t("Abonnementen", "Plans")}</div>
+            <div style={{ fontSize: 13, color: MUTED, lineHeight: 1.6 }}>{t("Hier maak je straks je eigen abonnementen aan (eigen naam), koppel je welke lessen erin zitten en of persoonlijke PT is inbegrepen. Komt eraan.", "Here you'll create your own plans (your own name), link which classes they include and whether personal PT is included. Coming soon.")}</div>
+          </div>
+        )}
+
+        {current === "team" && isOwner && (
+          <>
+          <div style={card}>
+            <div style={{ ...sectionTitle, color, marginBottom: 10 }}>{t("Coach toevoegen", "Add coach")}</div>
+            <div style={{ display: "grid", gap: 8 }}>
+              <input style={input} value={ncName} onChange={(e) => setNcName(e.target.value)} placeholder={t("Naam", "Name")} />
+              <input style={input} type="email" value={ncEmail} onChange={(e) => setNcEmail(e.target.value)} placeholder={t("E-mail", "Email")} />
+              <input style={input} type="text" value={ncPass} onChange={(e) => setNcPass(e.target.value)} placeholder={t("Tijdelijk wachtwoord (min. 8)", "Temporary password (min. 8)")} />
+              <div style={{ fontSize: 11.5, color: MUTED, marginTop: 2 }}>{t("Rechten (wat deze coach mag beheren):", "Permissions (what this coach can manage):")}</div>
+              <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
+                {MODS.map((m) => (
+                  <div key={m} onClick={() => togglePermIn(ncPerms, setNcPerms, m)} style={{ cursor: "pointer", fontSize: 12, ...disp, fontWeight: 700, padding: "6px 11px", borderRadius: 7, border: `1px solid ${ncPerms.includes(m) ? color : LINE}`, background: ncPerms.includes(m) ? color : "transparent", color: ncPerms.includes(m) ? "#fff" : MUTED }}>{LABEL[m] || m}</div>
+                ))}
+              </div>
+              <div onClick={addCoach} style={{ cursor: teamBusy ? "default" : "pointer", opacity: teamBusy ? 0.7 : 1, background: color, color: "#fff", padding: "11px 0", borderRadius: 8, textAlign: "center", ...disp, fontWeight: 700, fontSize: 13.5, marginTop: 4 }}>{teamBusy ? t("Aanmaken…", "Creating…") : t("Coach aanmaken", "Create coach")}</div>
+              {teamMsg && <div style={{ fontSize: 12, color: SAGE, marginTop: 4 }}>{teamMsg}</div>}
+            </div>
+          </div>
+
+          <div style={card}>
+            <div style={{ ...sectionTitle, color, marginBottom: 12 }}>{t("Team", "Team")} {coaches ? "(" + coaches.length + ")" : ""}</div>
+            {!coaches ? <div style={{ fontSize: 13, color: MUTED }}>{t("Laden…", "Loading…")}</div>
+              : (
+              <div style={{ display: "grid", gap: 8 }}>
+                {coaches.map((c) => (
+                  <div key={c.id} style={{ background: INK, border: `1px solid ${LINE}`, borderRadius: 10, overflow: "hidden" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 12px" }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ ...disp, fontWeight: 700, fontSize: 14.5 }}>{c.display_name || t("Coach", "Coach")}</div>
+                        <div style={{ fontSize: 11.5, color: MUTED, marginTop: 2 }}>{c.is_owner ? t("Eigenaar · alle rechten", "Owner · all access") : (Array.isArray(c.perms) && c.perms.length ? c.perms.map((p) => LABEL[p] || p).join(", ") : t("geen rechten", "no access"))}</div>
+                      </div>
+                      {!c.is_owner && <div onClick={() => openCoachPerms(c)} style={{ cursor: "pointer", fontSize: 11.5, color: MUTED, border: `1px solid ${LINE}`, borderRadius: 7, padding: "5px 9px" }}>{t("Rechten", "Perms")}</div>}
+                      {!c.is_owner && <div onClick={() => removeCoach(c)} style={{ cursor: "pointer", fontSize: 11.5, color: EMBER_SOFT, border: `1px solid ${LINE}`, borderRadius: 7, padding: "5px 9px" }}>{t("Verwijderen", "Delete")}</div>}
+                    </div>
+                    {openPerms === c.id && (
+                      <div style={{ padding: "0 12px 12px" }}>
+                        <div style={{ display: "flex", gap: 7, flexWrap: "wrap", marginBottom: 8 }}>
+                          {MODS.map((m) => (
+                            <div key={m} onClick={() => togglePermIn(permSel, setPermSel, m)} style={{ cursor: "pointer", fontSize: 12, ...disp, fontWeight: 700, padding: "6px 11px", borderRadius: 7, border: `1px solid ${permSel.includes(m) ? color : LINE}`, background: permSel.includes(m) ? color : "transparent", color: permSel.includes(m) ? "#fff" : MUTED }}>{LABEL[m] || m}</div>
+                          ))}
+                        </div>
+                        <div onClick={() => saveCoachPerms(c)} style={{ cursor: "pointer", background: color, color: "#fff", padding: "8px 0", borderRadius: 7, textAlign: "center", ...disp, fontWeight: 700, fontSize: 12.5 }}>{t("Rechten opslaan", "Save permissions")}</div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          </>
+        )}
       </div>
     </div>
   );

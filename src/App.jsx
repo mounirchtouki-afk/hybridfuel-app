@@ -622,11 +622,23 @@ export default function App() {
         const { data: meRows } = await supabase.from("org_members").select("org_id,role").eq("auth_user_id", session.user.id).limit(1);
         const me = meRows && meRows[0];
         if (!me) { if (alive) setGymCtx(null); return; }
-        // Tier + lestoegang apart + guarded (kolommen bestaan mogelijk nog niet vóór migratie).
+        // Tier + lestoegang (guarded).
         let tier = "pro", classAccess = null;
         try {
           const { data: tr } = await supabase.from("org_members").select("member_tier,class_access").eq("auth_user_id", session.user.id).limit(1);
           if (tr && tr[0]) { tier = tr[0].member_tier || "pro"; classAccess = tr[0].class_access || null; }
+        } catch (e) {}
+        // Rol-rechten apart: lukt de select niet (kolommen bestaan nog niet vóór migratie),
+        // dan is de rol ONBEKEND en behandelen we de coach als eigenaar (alle tabs) — nooit leeg.
+        let isOwner = true, perms = null;
+        try {
+          const { data: rr, error: re } = await supabase.from("org_members").select("is_owner,perms").eq("auth_user_id", session.user.id).limit(1);
+          if (!re && rr && rr[0]) { isOwner = !!rr[0].is_owner; perms = rr[0].perms || null; }
+        } catch (e) {}
+        let enabledModules = null;
+        try {
+          const { data: em } = await supabase.from("org_config").select("enabled_modules").eq("org_id", me.org_id).limit(1);
+          if (em && em[0]) enabledModules = em[0].enabled_modules || null;
         } catch (e) {}
         const { data: orgRows } = await supabase.from("orgs").select("id,slug,name").eq("id", me.org_id).limit(1);
         const { data: cfgRows } = await supabase.from("org_config").select("brand_color,logo_url").eq("org_id", me.org_id).limit(1);
@@ -641,7 +653,7 @@ export default function App() {
         const brand = (cfg && cfg.brand_color) || "#E11D48";
         if (!theme) theme = { template: "dark", accent: brand }; // fallback: accent op donker
         if (!theme.accent) theme.accent = brand;
-        if (alive) setGymCtx({ role: me.role, tier, classAccess, org: { ...org, brand_color: brand, logo_url: (cfg && cfg.logo_url) || null, theme } });
+        if (alive) setGymCtx({ role: me.role, tier, classAccess, isOwner, perms, org: { ...org, brand_color: brand, logo_url: (cfg && cfg.logo_url) || null, theme, enabled_modules: enabledModules } });
       } catch (e) { if (alive) setGymCtx(null); }
     })();
     return () => { alive = false; };
@@ -1472,7 +1484,7 @@ export default function App() {
   // Sportschool-routes: join-scherm (code-login) en coach-dashboard gaan vóór de gewone app.
   const joinSlug = (() => { try { const m = location.pathname.match(/^\/join\/([a-z0-9-]+)/i); return m ? m[1].toLowerCase() : null; } catch (e) { return null; } })();
   if (joinSlug && !session) return <Join slug={joinSlug} lang={lang} />;
-  if (session && gymCtx && gymCtx.role === "coach") return <CoachDash session={session} org={gymCtx.org} lang={lang} onLogout={confirmLogout} />;
+  if (session && gymCtx && gymCtx.role === "coach") return <CoachDash session={session} org={gymCtx.org} isOwner={gymCtx.isOwner} perms={gymCtx.perms} lang={lang} onLogout={confirmLogout} />;
 
   return (
     <div style={{ minHeight: "100vh", background: isGymMember ? INK : "linear-gradient(180deg, #1b0a11 0%, #140a0e 48%, #0e090b 100%)", position: "relative", color: PAPER, fontFamily: "Inter, sans-serif", paddingBottom: `calc(${76 + consentH}px + env(safe-area-inset-bottom))` }}>
