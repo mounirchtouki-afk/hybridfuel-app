@@ -122,6 +122,7 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
   const [enrollCounts, setEnrollCounts] = useState(null); // {class_id: aantal inschrijvingen}
   const [dashCustom, setDashCustom] = useState(false);     // 'Aanpassen'-modus eigenaar
   const [dashHidden, setDashHidden] = useState(() => { try { return JSON.parse(localStorage.getItem("hf_dash_hidden_" + (org && org.id)) || "[]"); } catch (e) { return []; } });
+  const [memberQuery, setMemberQuery] = useState("");
   const [sTitle, setSTitle] = useState("");
   const [sWho, setSWho] = useState("");        // "" = hele groep, anders auth_user_id van een lid
   const [sDate, setSDate] = useState("");
@@ -647,59 +648,122 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
   const card = { background: INK2, border: `1px solid ${LINE}`, borderRadius: 14, padding: 16 };
   const input = { width: "100%", background: INK, border: `1px solid ${LINE}`, color: PAPER, padding: "11px 12px", fontSize: 14, borderRadius: 8, outline: "none", boxSizing: "border-box", fontFamily: "Inter, sans-serif" };
 
+  const meCoach = (coaches || []).find((c) => session && session.user && c.auth_user_id === session.user.id);
+  const myName = (meCoach && meCoach.display_name) || "";
+  const nowHour = new Date().getHours();
+  const greetWord = nowHour < 12 ? t("Goedemorgen", "Good morning") : nowHour < 18 ? t("Goedemiddag", "Good afternoon") : t("Goedenavond", "Good evening");
+  const todayLong = new Date().toLocaleDateString(lang === "nl" ? "nl-NL" : "en-GB", { weekday: "long", day: "numeric", month: "long" });
+  // Navigatie in secties (zoals de mockup): Overzicht · Beheer · Organisatie.
+  const NAV_SECTIONS = [
+    { label: t("Overzicht", "Overview"), items: ["overview"] },
+    { label: t("Beheer", "Manage"), items: ["members", "classes", "pt", "plans"] },
+    { label: t("Organisatie", "Organization"), items: ["team", "branding", "formula"] },
+  ];
   const renderNav = (closeAfter) => (
-    <div style={{ display: "grid", gap: 3 }}>
-      {myTabs.map((m) => {
-        const on = current === m; const cnt = navCount(m);
+    <div style={{ display: "grid", gap: 2 }}>
+      {NAV_SECTIONS.map((sec) => {
+        const items = sec.items.filter((m) => myTabs.includes(m));
+        if (!items.length) return null;
         return (
-          <div key={m} onClick={() => { setActive(m); if (closeAfter) setNavOpen(false); }} style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: 11, padding: "10px 12px", borderRadius: 9, background: on ? "rgba(150,150,150,0.1)" : "transparent", color: on ? color : PAPER }}>
-            <span style={{ display: "flex" }}>{ICON[m] ? ICON[m]({ col: on ? color : MUTED }) : null}</span>
-            <span style={{ ...disp, fontWeight: 600, fontSize: 14, flex: 1, color: on ? color : PAPER }}>{LABEL[m]}</span>
-            {cnt != null && <span style={{ minWidth: 20, height: 20, borderRadius: 10, background: on ? color : LINE, color: on ? "#fff" : MUTED, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, ...disp, padding: "0 6px" }}>{cnt}</span>}
+          <div key={sec.label} style={{ marginBottom: 6 }}>
+            <div style={{ fontSize: 10, letterSpacing: 1.3, textTransform: "uppercase", color: MUTED, fontWeight: 700, padding: "12px 10px 6px", opacity: 0.8 }}>{sec.label}</div>
+            {items.map((m) => {
+              const on = current === m; const cnt = navCount(m);
+              return (
+                <div key={m} onClick={() => { setActive(m); if (closeAfter) setNavOpen(false); }} style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: 11, padding: "10px 11px", borderRadius: 9, background: on ? (color + "1F") : "transparent", color: on ? color : PAPER }}>
+                  <span style={{ display: "flex" }}>{ICON[m] ? ICON[m]({ col: on ? color : MUTED }) : null}</span>
+                  <span style={{ ...disp, fontWeight: 600, fontSize: 13.5, flex: 1, color: on ? color : PAPER }}>{LABEL[m]}</span>
+                  {cnt != null && <span style={{ minWidth: 20, height: 20, borderRadius: 10, background: on ? color : LINE, color: on ? "#fff" : MUTED, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, ...disp, padding: "0 6px" }}>{cnt}</span>}
+                </div>
+              );
+            })}
           </div>
         );
       })}
     </div>
   );
+  const brandInitials = ((org && org.name) || "HF").replace(/[^A-Za-z0-9 ]/g, "").split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase() || "HF";
   const navBrand = (
-    <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "4px 8px 16px" }}>
-      {org && org.logo_url ? <img src={org.logo_url} alt={org.name} style={{ maxHeight: 28, maxWidth: 160, objectFit: "contain" }} /> : <div style={{ ...disp, fontWeight: 800, fontSize: 16, color }}>{(org && org.name) || "Coach"}</div>}
+    <div style={{ display: "flex", alignItems: "center", gap: 11, padding: "4px 8px 14px" }}>
+      {org && org.logo_url
+        ? <img src={org.logo_url} alt={org.name} style={{ maxHeight: 34, maxWidth: 150, objectFit: "contain" }} />
+        : <>
+            <div style={{ width: 34, height: 34, borderRadius: 9, background: color, display: "grid", placeItems: "center", color: "#fff", ...disp, fontWeight: 800, fontSize: 14, flexShrink: 0 }}>{brandInitials}</div>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ ...disp, fontWeight: 800, fontSize: 15, color: PAPER, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{(org && org.name) || "Coach"}</div>
+              <div style={{ fontSize: 10.5, color: MUTED, marginTop: 1 }}>{t("Beheer · white-label", "Admin · white-label")}</div>
+            </div>
+          </>}
     </div>
   );
-  const logoutBtn = <div onClick={onLogout} style={{ cursor: "pointer", marginTop: 12, fontSize: 12.5, color: MUTED, border: `1px solid ${LINE}`, borderRadius: 8, padding: "9px 12px", textAlign: "center" }}>{t("Uitloggen", "Log out")}</div>;
+  const myInitials = (myName || (org && org.name) || "?").slice(0, 2).toUpperCase();
+  const navFooter = (
+    <div style={{ marginTop: "auto", borderTop: `1px solid ${LINE}`, paddingTop: 12, display: "flex", alignItems: "center", gap: 10 }}>
+      <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#2a333f", display: "grid", placeItems: "center", fontSize: 12, fontWeight: 700, color: "#cfd5de", flexShrink: 0 }}>{myInitials}</div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ ...disp, fontWeight: 700, fontSize: 12.5, color: PAPER, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{myName || t("Beheerder", "Admin")}</div>
+        <div style={{ fontSize: 10.5, color: MUTED }}>{isOwner ? t("Eigenaar", "Owner") : t("Coach", "Coach")}</div>
+      </div>
+      <div onClick={onLogout} title={t("Uitloggen", "Log out")} style={{ cursor: "pointer", color: MUTED, display: "grid", placeItems: "center", width: 30, height: 30, borderRadius: 8, border: `1px solid ${LINE}` }}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="M16 17l5-5-5-5M21 12H9" /></svg>
+      </div>
+    </div>
+  );
 
   return (
     <div style={{ minHeight: "100vh", background: INK, color: PAPER, fontFamily: "Inter, sans-serif", display: "flex" }}>
       {/* Zijbalk (desktop) */}
       {isWide && (
-        <div style={{ width: 240, flexShrink: 0, borderRight: `1px solid ${LINE}`, background: INK, position: "sticky", top: 0, alignSelf: "flex-start", height: "100vh", display: "flex", flexDirection: "column", padding: "16px 12px", boxSizing: "border-box" }}>
+        <div style={{ width: 244, flexShrink: 0, borderRight: `1px solid ${LINE}`, background: INK, position: "sticky", top: 0, alignSelf: "flex-start", height: "100vh", display: "flex", flexDirection: "column", padding: "18px 14px", boxSizing: "border-box" }}>
           {navBrand}
           <div style={{ flex: 1, overflowY: "auto" }}>{renderNav(false)}</div>
-          {logoutBtn}
+          {navFooter}
         </div>
       )}
       {/* Drawer (mobiel) */}
       {!isWide && navOpen && (
         <>
           <div onClick={() => setNavOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 40 }} />
-          <div style={{ position: "fixed", top: 0, left: 0, bottom: 0, width: 250, background: INK, borderRight: `1px solid ${LINE}`, zIndex: 41, padding: "16px 12px", display: "flex", flexDirection: "column", boxSizing: "border-box" }}>
+          <div style={{ position: "fixed", top: 0, left: 0, bottom: 0, width: 252, background: INK, borderRight: `1px solid ${LINE}`, zIndex: 41, padding: "18px 14px", display: "flex", flexDirection: "column", boxSizing: "border-box" }}>
             {navBrand}
             <div style={{ flex: 1, overflowY: "auto" }}>{renderNav(true)}</div>
-            {logoutBtn}
+            {navFooter}
           </div>
         </>
       )}
 
       {/* Content-kolom */}
       <div style={{ flex: 1, minWidth: 0, paddingBottom: 40 }}>
-        {isOwner && (
-          <div style={{ padding: "9px 16px", borderBottom: `1px solid ${LINE}`, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", background: INK2 }}>
-            <span style={{ fontSize: 11, color: MUTED, ...disp, fontWeight: 700, letterSpacing: 0.5, textTransform: "uppercase" }}>{t("Bekijk als", "View as")}</span>
-            {[["owner", t("Eigenaar", "Owner")], ["coach", t("Coach", "Coach")]].map(([k, lbl]) => (
-              <div key={k} onClick={() => { setPreviewRole(k); setActive("overview"); }} style={{ cursor: "pointer", fontSize: 12.5, ...disp, fontWeight: 700, padding: "6px 12px", borderRadius: 7, background: previewRole === k ? color : "transparent", color: previewRole === k ? "#fff" : MUTED, border: `1px solid ${previewRole === k ? color : LINE}` }}>{lbl}</div>
-            ))}
-            <a href={joinUrl} target="_blank" rel="noreferrer" style={{ textDecoration: "none", fontSize: 12.5, color: MUTED, ...disp, fontWeight: 700, padding: "6px 12px", borderRadius: 7, border: `1px solid ${LINE}` }}>{t("Leden-app ↗", "Member app ↗")}</a>
-            {previewRole === "coach" && <span style={{ fontSize: 11.5, color: MUTED }}>{t("(voorbeeld van een beperkte coach)", "(preview of a limited coach)")}</span>}
+        {isWide && (
+          <div style={{ padding: "16px 26px", borderBottom: `1px solid ${LINE}`, display: "flex", alignItems: "center", gap: 14, background: INK, position: "sticky", top: 0, zIndex: 20 }}>
+            <div style={{ minWidth: 0 }}>
+              {current === "overview"
+                ? <>
+                    <div style={{ ...disp, fontWeight: 800, fontSize: 20, color: PAPER, whiteSpace: "nowrap" }}>{greetWord}{myName ? ", " + myName : ""}</div>
+                    <div style={{ fontSize: 12.5, color: MUTED, marginTop: 2, textTransform: "capitalize" }}>{todayLong}{isOwner ? "" : " · " + t("jouw overzicht", "your overview")}</div>
+                  </>
+                : <div style={{ ...disp, fontWeight: 800, fontSize: 20, color: PAPER }}>{LABEL[current]}</div>}
+            </div>
+            <div style={{ flex: 1 }} />
+            {isOwner && (
+              <div style={{ display: "flex", border: `1px solid ${LINE}`, borderRadius: 10, overflow: "hidden" }}>
+                {[["owner", t("Eigenaar", "Owner")], ["coach", t("Coach", "Coach")]].map(([k, lbl]) => (
+                  <div key={k} onClick={() => { setPreviewRole(k); setActive("overview"); }} style={{ cursor: "pointer", fontSize: 12.5, ...disp, fontWeight: 700, padding: "9px 15px", background: previewRole === k ? color : "transparent", color: previewRole === k ? "#fff" : MUTED }}>{lbl}</div>
+                ))}
+              </div>
+            )}
+            {myTabs.includes("members") && (
+              <div style={{ display: "flex", alignItems: "center", gap: 8, background: INK2, border: `1px solid ${LINE}`, borderRadius: 10, padding: "8px 12px", width: 210 }}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={MUTED} strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4-4" /></svg>
+                <input value={memberQuery} onChange={(e) => { setMemberQuery(e.target.value); if (current !== "members") setActive("members"); }} placeholder={t("Zoek lid…", "Search member…")} style={{ border: "none", outline: "none", background: "transparent", color: PAPER, fontSize: 13, width: "100%", fontFamily: "Inter, sans-serif" }} />
+              </div>
+            )}
+            {myTabs.includes("members") && (
+              <div onClick={() => setActive("members")} style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 7, background: color, color: "#fff", borderRadius: 10, padding: "10px 15px", ...disp, fontWeight: 700, fontSize: 13, whiteSpace: "nowrap" }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>{t("Lid toevoegen", "Add member")}
+              </div>
+            )}
+            {isOwner && previewRole === "coach" && <span style={{ fontSize: 11.5, color: MUTED }}>{t("(coach-voorbeeld)", "(coach preview)")}</span>}
           </div>
         )}
         {!isWide && (
@@ -712,7 +776,7 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
             <div style={{ ...disp, fontWeight: 700, fontSize: 14, color: PAPER }}>{LABEL[current]}</div>
           </div>
         )}
-      <div style={{ maxWidth: 720, margin: "0 auto", padding: "20px 16px", display: "grid", gap: 16 }}>
+      <div style={{ maxWidth: current === "overview" ? 1320 : 720, margin: current === "overview" ? "0" : "0 auto", padding: current === "overview" ? "22px 26px" : "20px 16px", display: "grid", gap: 16 }}>
         {current === "overview" && (() => {
           const h = new Date().getHours();
           const greet = h < 12 ? t("Goedemorgen", "Good morning") : h < 18 ? t("Goedemiddag", "Good afternoon") : t("Goedenavond", "Good evening");
@@ -724,10 +788,11 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
 
           // KPI-tegels (alleen die onder je rechten vallen).
           const tiles = [];
-          if (canSee("members")) tiles.push({ k: "leden", ic: "members", col: color, tint: EMBER_SOFT, label: t("Actieve leden", "Active members"), val: String(st.active), sub: st.newThisMonth ? "▲ " + st.newThisMonth + " " + t("deze maand", "this month") : t("stabiel", "steady"), subCol: st.newThisMonth ? SAGE2 : MUTED, spark: st.growth, sparkCol: SAGE2 });
+          const brandTint = (color || "#E11D48") + "22";
+          if (canSee("members")) tiles.push({ k: "leden", ic: "members", col: color, tint: brandTint, label: t("Actieve leden", "Active members"), val: String(st.active), sub: st.newThisMonth ? "▲ " + st.newThisMonth + " " + t("deze maand", "this month") : t("stabiel", "steady"), subCol: st.newThisMonth ? SAGE2 : MUTED, spark: st.growth, sparkCol: SAGE2 });
           if (canSee("members")) tiles.push({ k: "adh", ic: "formula", col: BLUE, tint: "rgba(96,165,250,0.15)", label: t("Gem. adherentie", "Avg. adherence"), val: st.adhAvg == null ? "—" : st.adhAvg + "%", sub: st.adhAvg == null ? t("nog geen data", "no data yet") : (st.adhLow ? st.adhLow + " " + t("onder 50%", "below 50%") : t("iedereen ≥ 50%", "all ≥ 50%")), subCol: st.adhLow ? color : MUTED });
           if (canSee("classes")) tiles.push({ k: "bezet", ic: "classes", col: AMBER, tint: "rgba(245,158,11,0.15)", label: t("Lesbezetting", "Class occupancy"), val: st.occ == null ? (st.classCount + " " + t("lessen", "classes")) : st.occ + "%", sub: st.occ == null ? t("zet capaciteit per les", "set capacity per class") : st.enrSum + " " + t("ingeschreven", "enrolled"), subCol: MUTED });
-          if (canSee("pt")) tiles.push({ k: "pt", ic: "pt", col: color, tint: EMBER_SOFT, label: t("Open PT-sessies", "Open PT sessions"), val: String(st.ptOpen), sub: st.nextSession ? t("eerstvolgende", "next") + " " + fmtDate(st.nextSession.starts_at) : t("niets gepland", "nothing scheduled"), subCol: MUTED });
+          if (canSee("pt")) tiles.push({ k: "pt", ic: "pt", col: color, tint: brandTint, label: t("Open PT-sessies", "Open PT sessions"), val: String(st.ptOpen), sub: st.nextSession ? t("eerstvolgende", "next") + " " + fmtDate(st.nextSession.starts_at) : t("niets gepland", "nothing scheduled"), subCol: MUTED });
 
           const segs = aboSegments();
           const totalAbo = segs.reduce((s, x) => s + x.n, 0) || 1;
@@ -744,16 +809,12 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
 
           return (
             <>
-              {/* header */}
-              <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ ...disp, fontWeight: 800, fontSize: 24, color: PAPER }}>{greet}{session && session.user ? "" : ""}</div>
-                  <div style={{ fontSize: 13.5, color: MUTED, marginTop: 3 }}>{new Date().toLocaleDateString(lang === "nl" ? "nl-NL" : "en-GB", { weekday: "long", day: "numeric", month: "long" })}{isOwner ? "" : " — " + t("jouw overzicht", "your overview")}</div>
-                </div>
-                {isOwner && (
+              {/* header-actie: aanpassen (eigenaar) */}
+              {isOwner && (
+                <div style={{ display: "flex", justifyContent: "flex-end" }}>
                   <div onClick={() => setDashCustom((v) => !v)} style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 7, border: `1px solid ${dashCustom ? color : LINE}`, color: dashCustom ? color : MUTED, borderRadius: 9, padding: "8px 13px", ...disp, fontWeight: 700, fontSize: 12.5 }}>{GEAR_ICON} {t("Aanpassen", "Customize")}</div>
-                )}
-              </div>
+                </div>
+              )}
 
               {/* customization panel */}
               {isOwner && dashCustom && (
@@ -1035,12 +1096,24 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
 
         {/* leden-lijst */}
         <div style={card}>
-          <div style={{ ...sectionTitle, color, marginBottom: 12 }}>{t("Leden", "Members")} {members ? "(" + members.length + ")" : ""}</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12, flexWrap: "wrap" }}>
+            <div style={{ ...sectionTitle, color, margin: 0 }}>{t("Leden", "Members")} {members ? "(" + members.length + ")" : ""}</div>
+            <div style={{ flex: 1 }} />
+            <div style={{ display: "flex", alignItems: "center", gap: 8, background: INK, border: `1px solid ${LINE}`, borderRadius: 9, padding: "8px 11px", minWidth: 180 }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={MUTED} strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4-4" /></svg>
+              <input value={memberQuery} onChange={(e) => setMemberQuery(e.target.value)} placeholder={t("Zoek lid…", "Search member…")} style={{ border: "none", outline: "none", background: "transparent", color: PAPER, fontSize: 13, width: "100%", fontFamily: "Inter, sans-serif" }} />
+              {memberQuery && <span onClick={() => setMemberQuery("")} style={{ cursor: "pointer", color: MUTED, fontSize: 15, lineHeight: 1 }}>×</span>}
+            </div>
+          </div>
           {!members ? <div style={{ fontSize: 13, color: MUTED }}>{t("Laden…", "Loading…")}</div>
             : members.length === 0 ? <div style={{ fontSize: 13, color: MUTED, lineHeight: 1.5 }}>{t("Nog geen leden. Voeg je eerste lid toe.", "No members yet. Add your first one.")}</div>
-            : (
+            : (() => {
+            const q = memberQuery.trim().toLowerCase();
+            const shown = q ? members.filter((m) => (m.display_name || "").toLowerCase().includes(q)) : members;
+            if (!shown.length) return <div style={{ fontSize: 13, color: MUTED }}>{t("Geen leden gevonden voor", "No members found for")} “{memberQuery}”.</div>;
+            return (
             <div style={{ display: "grid", gap: 8 }}>
-              {members.map((m) => {
+              {shown.map((m) => {
                 const adh = m.progress && m.progress.adherence != null ? Math.round(m.progress.adherence) : null;
                 const attention = adh != null && adh < 50;
                 const pro = (m.member_tier || "pro") === "pro";
@@ -1124,7 +1197,7 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
                 );
               })}
             </div>
-          )}
+          ); })()}
         </div>
 
         </>)}
