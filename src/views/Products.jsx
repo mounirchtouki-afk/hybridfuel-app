@@ -34,7 +34,17 @@ const T = {
   editTitle: { nl: "Product bewerken", en: "Edit product" },
   save: { nl: "Opslaan", en: "Save" },
   editProp: { nl: "Aangepast, je plan is bijgewerkt op de gekoppelde items.", en: "Updated, your plan was refreshed on the linked items." },
+  mealLabel: { nl: "Voor welke maaltijd?", en: "For which meal?" },
+  mealHint: { nl: "Kies bij welke maaltijden dit product past. Niets gekozen = overal bruikbaar. Gebruikt bij 'plan uit mijn producten'.", en: "Pick which meals this product suits. Nothing selected = usable anywhere. Used by 'plan from my products'." },
 };
+
+const MEALS = {
+  breakfast: { nl: "Ontbijt", en: "Breakfast" },
+  lunch: { nl: "Lunch", en: "Lunch" },
+  dinner: { nl: "Diner", en: "Dinner" },
+  snack: { nl: "Snack", en: "Snack" },
+};
+const MEAL_ORDER = ["breakfast", "lunch", "dinner", "snack"];
 
 const CATS = {
   meat: { nl: "Vlees & vis", en: "Meat & fish" },
@@ -92,6 +102,8 @@ export default function Products({ lang, session, onClose, onPick, embedded, aut
   const [nm, setNm] = useState(""), [br, setBr] = useState(""), [bc, setBc] = useState("");
   const [kc, setKc] = useState(""), [pr, setPr] = useState(""), [cb, setCb] = useState(""), [ft, setFt] = useState("");
   const [cat, setCat] = useState("");
+  const [mt, setMt] = useState([]);          // meal_types voor dit product
+  const [hasMeal, setHasMeal] = useState(true); // false als de kolom meal_types nog niet bestaat
   const [adding, setAdding] = useState(false);
   const [editId, setEditId] = useState(null);
   const [propMsg, setPropMsg] = useState(false);
@@ -106,8 +118,15 @@ export default function Products({ lang, session, onClose, onPick, embedded, aut
   useEffect(() => {
     let active = true;
     if (cloud) {
-      supabase.from("products").select("id,name,brand,barcode,per_100,category").eq("user_id", session.user.id).order("name")
-        .then(({ data }) => { if (active && data) setItems(data); });
+      supabase.from("products").select("id,name,brand,barcode,per_100,category,meal_types").eq("user_id", session.user.id).order("name")
+        .then(({ data, error }) => {
+          if (!active) return;
+          if (error) { // kolom meal_types bestaat nog niet (vóór migratie) -> zonder laden
+            setHasMeal(false);
+            supabase.from("products").select("id,name,brand,barcode,per_100,category").eq("user_id", session.user.id).order("name")
+              .then(({ data: d2 }) => { if (active && d2) setItems(d2); });
+          } else if (data) { setItems(data); }
+        });
     }
     return () => { active = false; stopScan(); };
   }, [session]);
@@ -119,13 +138,13 @@ export default function Products({ lang, session, onClose, onPick, embedded, aut
     try { if (readerRef.current) { readerRef.current.reset(); readerRef.current = null; } } catch (e) {}
     try { const v = videoRef.current; if (v && v.srcObject) { v.srcObject.getTracks().forEach((tk) => tk.stop()); v.srcObject = null; } } catch (e) {}
   }
-  function resetForm() { setNm(""); setBr(""); setBc(""); setKc(""); setPr(""); setCb(""); setFt(""); setCat(""); setMsg(""); setManualBc(""); }
+  function resetForm() { setNm(""); setBr(""); setBc(""); setKc(""); setPr(""); setCb(""); setFt(""); setCat(""); setMt([]); setMsg(""); setManualBc(""); }
   function closeAdd() { stopScan(); setScanning(false); setAdding(false); setEditId(null); resetForm(); }
   function startEdit(it) {
     setEditId(it.id); setScanning(false); setMsg("");
     setNm(it.name || ""); setBr(it.brand || ""); setBc(it.barcode || "");
     const p = it.per_100 || {}; setKc(p.kcal != null ? p.kcal : ""); setPr(p.p != null ? p.p : ""); setCb(p.c != null ? p.c : ""); setFt(p.f != null ? p.f : "");
-    setCat(it.category || ""); setAdding(true);
+    setCat(it.category || ""); setMt(Array.isArray(it.meal_types) ? it.meal_types : []); setAdding(true);
   }
 
   async function startScan() {
@@ -165,21 +184,35 @@ export default function Products({ lang, session, onClose, onPick, embedded, aut
     const per_100 = { kcal: d2(kc), p: d2(pr), c: d2(cb), f: d2(ft) };
     const barcode = bc.trim() || null;
     const category = cat || null;
+    const meal_types = Array.isArray(mt) ? mt : [];
     if (editId) {
-      const patch = { name, brand: br.trim() || null, barcode, per_100, category };
+      const patch = { name, brand: br.trim() || null, barcode, per_100, category, meal_types };
       const next = items.map((x) => x.id === editId ? { ...x, ...patch } : x).sort((a, b) => a.name.localeCompare(b.name));
       setItems(next);
-      if (cloud) supabase.from("products").update(patch).eq("id", editId).then(() => {}, () => {});
-      else save("hf_products", next);
+      if (cloud) {
+        const cloudPatch = hasMeal ? patch : { name: patch.name, brand: patch.brand, barcode, per_100, category };
+        supabase.from("products").update(cloudPatch).eq("id", editId).then(({ error }) => { if (error && hasMeal) { setHasMeal(false); const { meal_types: _m, ...p2 } = cloudPatch; supabase.from("products").update(p2).eq("id", editId).then(() => {}, () => {}); } }, () => {});
+      } else save("hf_products", next);
       if (onProductChange) { onProductChange({ id: editId, ...patch }); setPropMsg(true); setTimeout(() => setPropMsg(false), 2600); }
       closeAdd();
       return;
     }
     if (cloud) {
-      supabase.from("products").insert({ user_id: session.user.id, name, brand: br.trim() || null, barcode, per_100, category, unit: "g" }).select("id,name,brand,barcode,per_100,category").single()
-        .then(({ data }) => { if (data) setItems((p) => [...p, data].sort((a, b) => a.name.localeCompare(b.name))); }, () => {});
+      const row = { user_id: session.user.id, name, brand: br.trim() || null, barcode, per_100, category, unit: "g" };
+      if (hasMeal) row.meal_types = meal_types;
+      const sel = hasMeal ? "id,name,brand,barcode,per_100,category,meal_types" : "id,name,brand,barcode,per_100,category";
+      supabase.from("products").insert(row).select(sel).single()
+        .then(({ data, error }) => {
+          if (data) { setItems((p) => [...p, data].sort((a, b) => a.name.localeCompare(b.name))); return; }
+          if (error && hasMeal) { // kolom bestaat niet -> opnieuw zonder meal_types
+            setHasMeal(false);
+            const { meal_types: _m, ...r2 } = row;
+            supabase.from("products").insert(r2).select("id,name,brand,barcode,per_100,category").single()
+              .then(({ data: d2 }) => { if (d2) setItems((p) => [...p, d2].sort((a, b) => a.name.localeCompare(b.name))); }, () => {});
+          }
+        }, () => {});
     } else {
-      const row = { id: "l" + Date.now(), name, brand: br.trim() || null, barcode, per_100, category };
+      const row = { id: "l" + Date.now(), name, brand: br.trim() || null, barcode, per_100, category, meal_types };
       const next = [...items, row].sort((a, b) => a.name.localeCompare(b.name));
       setItems(next); save("hf_products", next);
     }
@@ -234,6 +267,18 @@ export default function Products({ lang, session, onClose, onPick, embedded, aut
           <option value="">{t("catAuto")}</option>
           {CAT_ORDER.map((c) => <option key={c} value={c}>{CATS[c][lang]}</option>)}
         </select>
+      </div>
+      <div style={{ marginBottom: 10 }}>
+        <label style={label}>{t("mealLabel")}</label>
+        <div style={{ display: "flex", gap: 7, flexWrap: "wrap", marginTop: 2 }}>
+          {MEAL_ORDER.map((m) => {
+            const on = mt.includes(m);
+            return (
+              <div key={m} onClick={() => setMt((xs) => on ? xs.filter((x) => x !== m) : [...xs, m])} style={{ cursor: "pointer", fontSize: 12.5, fontWeight: 700, padding: "7px 13px", borderRadius: 8, border: `1px solid ${on ? EMBER : LINE}`, background: on ? EMBER : "transparent", color: on ? PAPER : MUTED }}>{MEALS[m][lang]}</div>
+            );
+          })}
+        </div>
+        <div style={{ fontSize: 10.5, color: MUTED, lineHeight: 1.5, marginTop: 7 }}>{t("mealHint")}</div>
       </div>
       <label style={label}>{t("per100")}</label>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 7, marginBottom: 12 }}>

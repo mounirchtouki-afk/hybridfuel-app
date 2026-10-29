@@ -10,6 +10,7 @@ import Recipes from "./views/Recipes.jsx";
 import RaceProtocol from "./views/RaceProtocol.jsx";
 import Training from "./views/Training.jsx";
 import { RECIPES, snackOptions } from "./recipes.js";
+import { buildDaysFromProducts, productPlanReadiness } from "./ownplan.js";
 import Reminders, { checkReminders } from "./views/Reminders.jsx";
 import Auth from "./views/Auth.jsx";
 import Join from "./views/Join.jsx";
@@ -149,6 +150,13 @@ const TXT = {
   trainingDaysHint: { nl: "Welke dagen train je? Die dagen krijgen meer calorieën (koolhydraten), rustdagen minder, je weekgemiddelde blijft op je doel.", en: "Which days do you train? Those days get more calories (carbs), rest days fewer, your weekly average stays on your goal." },
   build: { nl: "Maak mijn plan", en: "Build my plan" },
   building: { nl: "Bezig…", en: "Building…" },
+  planSourceLbl: { nl: "Hoe wil je je plan?", en: "How do you want your plan?" },
+  planAi: { nl: "AI stelt samen", en: "AI builds it" },
+  planProducts: { nl: "Mijn producten", en: "My products" },
+  planAiHint: { nl: "Onze AI kiest passende maaltijden en porties op jouw doelen.", en: "Our AI picks fitting meals and portions for your goals." },
+  planProductsHint: { nl: "We stellen je weekplan samen uit je eigen gescande/aangemaakte producten (tag ze per maaltijd bij Producten).", en: "We compose your week from your own scanned/added products (tag them per meal under Products)." },
+  needProductsTitle: { nl: "Nog te weinig producten", en: "Not enough products yet" },
+  needProductsBody: { nl: "Voeg eerst producten toe en tag ze als ontbijt, lunch of diner (bij Producten). Dan stellen we je plan uit je eigen producten samen.", en: "Add products first and tag them as breakfast, lunch or dinner (under Products). Then we'll compose your plan from your own products." },
   emptyTitle: { nl: "Fuel the work.", en: "Fuel the work." },
   emptyBody: { nl: "Vul je gegevens in. Je krijgt gratis je persoonlijke macro's en trainings/rust-verdeling. Het volledige maaltijdplan ontgrendel je daarna.", en: "Enter your stats. You'll get your personal macros and training/rest split for free. Unlock the full meal plan after that." },
   dailyTargets: { nl: "Dagdoelen (weekgemiddelde)", en: "Daily targets (weekly average)" },
@@ -551,6 +559,7 @@ export default function App() {
   const [trackerBusy, setTrackerBusy] = useState(false);
   const [lockReason, setLockReason] = useState("");
   const [planEmail, setPlanEmail] = useState("");
+  const [planSource, setPlanSource] = useState("ai"); // 'ai' = AI stelt samen · 'products' = uit eigen producten
 
   // App-navigatie + PWA
   const [tab, setTab] = useState("dashboard");
@@ -912,6 +921,7 @@ export default function App() {
     setError(""); setStarted(true); setView("plan"); setChecked({}); setWeek(null); setLockReason(""); setPlanEmail("");
     const intake = currentIntake();
     try { localStorage.setItem("hf_intake", JSON.stringify(intake)); } catch (e) {}
+    if (planSource === "products") { await buildFromProducts(intake); return; }
     if (devMode) { // dev: demo-maaltijden, maar wél geschaald naar je echte berekende targets
       const tg = await computeFree(intake);
       const dw = demoWeek(lang, snacks, snackLikes);
@@ -995,6 +1005,48 @@ export default function App() {
         supabase.from("plans").insert({ user_id: session.user.id, targets: data.targets, week: { days }, is_active: true }).then(() => {}, () => {});
       }
       emailPlan({ days });
+    } catch (e) { setError(e && e.message ? e.message : T("unknownErr")); } finally { setLoading(false); }
+  }
+
+  // Laadt de eigen producten van de klant (cloud als ingelogd, anders lokaal).
+  async function loadUserProducts() {
+    if (supabase && session) {
+      try {
+        let { data, error } = await supabase.from("products")
+          .select("id,name,brand,per_100,category,meal_types").eq("user_id", session.user.id);
+        if (error) { // kolom meal_types bestaat mogelijk nog niet (vóór migratie)
+          const r2 = await supabase.from("products").select("id,name,brand,per_100,category").eq("user_id", session.user.id);
+          data = r2.data || [];
+        }
+        return data || [];
+      } catch (e) { return []; }
+    }
+    try { return JSON.parse(localStorage.getItem("hf_products") || "[]") || []; } catch (e) { return []; }
+  }
+
+  // #3-keuze: plan samenstellen uit de EIGEN producten (geen AI).
+  async function buildFromProducts(intake) {
+    setLoading(true); setError("");
+    try {
+      const nTrain = (intake.trainingDays || []).length;
+      const tg = await fetchChunk({ ...intake, trainingCount: nTrain, paid: false });
+      setTargets(tg.targets);
+      if (!hasBasis) { setLoading(false); return; } // zonder abo: targets + paywall
+
+      const products = await loadUserProducts();
+      const ready = productPlanReadiness(products);
+      if (!ready.mainsCovered) {
+        setWeek(null);
+        setError(T("needProductsBody"));
+        setLoading(false);
+        return;
+      }
+      const { days } = buildDaysFromProducts({ products, targets: tg.targets, intake, WD });
+      setWeek({ days });
+      try { localStorage.setItem("hf_lastplan", JSON.stringify({ targets: tg.targets, week: { days } })); } catch (e) {}
+      if (supabase && session) {
+        supabase.from("plans").insert({ user_id: session.user.id, targets: tg.targets, week: { days }, is_active: true }).then(() => {}, () => {});
+      }
     } catch (e) { setError(e && e.message ? e.message : T("unknownErr")); } finally { setLoading(false); }
   }
 
@@ -1666,6 +1718,16 @@ export default function App() {
                   <MultiDropdown values={snackLikes} onChange={setSnackLikes} options={SNACKS.map((s) => ({ id: s.id, label: s[lang] }))} placeholder={T("pickMulti")} />
                 </div>
               )}
+
+              <div style={{ marginBottom: 12 }}>
+                <label style={label}>{T("planSourceLbl")}</label>
+                <div style={{ display: "flex", border: `1px solid ${LINE}`, borderRadius: 10, overflow: "hidden", marginTop: 4 }}>
+                  {[["ai", T("planAi")], ["products", T("planProducts")]].map(([id, lbl]) => (
+                    <div key={id} onClick={() => setPlanSource(id)} style={{ flex: 1, textAlign: "center", cursor: "pointer", padding: "11px 0", ...disp, fontWeight: 700, fontSize: 13.5, letterSpacing: 0.3, background: planSource === id ? EMBER : "transparent", color: planSource === id ? PAPER : MUTED }}>{lbl}</div>
+                  ))}
+                </div>
+                <div style={{ fontSize: 11, color: MUTED, lineHeight: 1.5, marginTop: 8 }}>{T(planSource === "products" ? "planProductsHint" : "planAiHint")}</div>
+              </div>
 
               <button onClick={handleBuild} disabled={loading} style={{ width: "100%", background: EMBER, color: PAPER, border: "none", padding: "14px 0", borderRadius: 10, ...disp, fontWeight: 700, fontSize: 16, letterSpacing: 1, textTransform: "uppercase", cursor: loading ? "default" : "pointer", opacity: loading ? 0.7 : 1 }}>
                 {loading ? T("building") : T("build")}
