@@ -119,6 +119,9 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
 
   // PT-agenda
   const [sessions, setSessions] = useState(null);
+  const [enrollCounts, setEnrollCounts] = useState(null); // {class_id: aantal inschrijvingen}
+  const [dashCustom, setDashCustom] = useState(false);     // 'Aanpassen'-modus eigenaar
+  const [dashHidden, setDashHidden] = useState(() => { try { return JSON.parse(localStorage.getItem("hf_dash_hidden_" + (org && org.id)) || "[]"); } catch (e) { return []; } });
   const [sTitle, setSTitle] = useState("");
   const [sWho, setSWho] = useState("");        // "" = hele groep, anders auth_user_id van een lid
   const [sDate, setSDate] = useState("");
@@ -189,6 +192,22 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
       setSessions(data || []);
     } catch (e) { setSessions([]); }
   }
+  async function loadEnroll() {
+    if (!supabase) return;
+    try {
+      const { data, error } = await supabase.from("class_enrollments").select("class_id");
+      if (error) { setEnrollCounts({}); return; }
+      const c = {}; (data || []).forEach((r) => { c[r.class_id] = (c[r.class_id] || 0) + 1; });
+      setEnrollCounts(c);
+    } catch (e) { setEnrollCounts({}); }
+  }
+  function toggleWidget(key) {
+    setDashHidden((xs) => {
+      const next = xs.includes(key) ? xs.filter((x) => x !== key) : [...xs, key];
+      try { localStorage.setItem("hf_dash_hidden_" + (org && org.id), JSON.stringify(next)); } catch (e) {}
+      return next;
+    });
+  }
   async function loadConfig() {
     if (!supabase || !org || !org.id) return;
     try {
@@ -210,7 +229,7 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
       setCoaches(data || []);
     } catch (e) { setCoaches([]); }
   }
-  useEffect(() => { load(); loadSessions(); loadClasses(); loadConfig(); loadCoaches(); loadPlans(); }, []);
+  useEffect(() => { load(); loadSessions(); loadClasses(); loadConfig(); loadCoaches(); loadPlans(); loadEnroll(); }, []);
 
   const togglePermIn = (arr, setArr, p) => setArr(arr.includes(p) ? arr.filter((x) => x !== p) : [...arr, p]);
   async function addCoach() {
@@ -561,6 +580,8 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
   const EYE_OFF = <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" /><path d="M1 1l22 22" /></svg>;
   const UPLOAD_ICON = <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="M17 8l-5-5-5 5" /><path d="M12 3v12" /></svg>;
   const DOWNLOAD_ICON = <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="M7 10l5 5 5-5" /><path d="M12 15V3" /></svg>;
+  const GEAR_ICON = <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></svg>;
+  const DONUT_COLORS = [color, "#60A5FA", "#34D399", "#F59E0B", "#A78BFA", "#F472B6"];
 
   // Aandacht-items (voor het overzicht én de badge in de zijbalk).
   function attentionItems() {
@@ -578,6 +599,42 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
     if (!(plans && plans.length)) att.push({ ic: "plans", tint: "rgba(150,150,150,0.12)", icCol: MUTED, title: t("Nog geen abonnementen", "No plans yet"), sub: t("Maak je abonnementen aan", "Create your plans"), chevron: true, go: "plans" });
     return att;
   }
+  // --- Dashboard-berekeningen (echte cijfers, niets verzonnen) ---
+  function dashStats() {
+    const ms = members || [];
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const newThisMonth = ms.filter((m) => m.created_at && new Date(m.created_at) >= monthStart).length;
+    const adhVals = ms.map((m) => (m.progress && m.progress.adherence != null ? m.progress.adherence : null)).filter((x) => x != null);
+    const adhAvg = adhVals.length ? Math.round(adhVals.reduce((s, x) => s + x, 0) / adhVals.length) : null;
+    const adhLow = ms.filter((m) => m.progress && m.progress.adherence != null && m.progress.adherence < 50).length;
+    let capSum = 0, enrSum = 0, capKnown = false;
+    (classes || []).forEach((c) => { if (c.capacity) { capSum += c.capacity; capKnown = true; } if (enrollCounts) enrSum += (enrollCounts[c.id] || 0); });
+    const occ = (capKnown && capSum > 0 && enrollCounts) ? Math.round((enrSum / capSum) * 100) : null;
+    const ptOpen = (sessions || []).length;
+    const weeks = 8; const growth = [];
+    for (let i = weeks - 1; i >= 0; i--) { const edge = new Date(now); edge.setDate(edge.getDate() - i * 7); growth.push(ms.filter((m) => m.created_at && new Date(m.created_at) <= edge).length); }
+    return { active: ms.length, newThisMonth, adhAvg, adhLow, adhCount: adhVals.length, occ, enrSum, classCount: (classes || []).length, ptOpen, nextSession: (sessions || [])[0] || null, growth };
+  }
+  // Sparkline-/area-punten uit een reeks getallen.
+  const sparkPts = (vals, w, h) => {
+    if (!vals || vals.length < 2) return "";
+    const mn = Math.min(...vals), mx = Math.max(...vals), rng = (mx - mn) || 1;
+    return vals.map((v, i) => `${((i / (vals.length - 1)) * w).toFixed(1)},${(h - ((v - mn) / rng) * (h - 4) - 2).toFixed(1)}`).join(" ");
+  };
+  const aboSegments = () => {
+    const ms = members || [];
+    if (plans && plans.length) {
+      const segs = plans.map((p, i) => ({ label: p.name, n: ms.filter((m) => m.plan_id === p.id).length, col: DONUT_COLORS[i % DONUT_COLORS.length] }));
+      const none = ms.filter((m) => !m.plan_id).length;
+      if (none) segs.push({ label: t("Zonder abo", "No plan"), n: none, col: "#2a333f" });
+      return segs.filter((s) => s.n > 0);
+    }
+    const basis = ms.filter((m) => (m.member_tier || "pro") === "basis").length;
+    const pro = ms.length - basis;
+    return [{ label: "Pro", n: pro, col: color }, { label: "Basis", n: basis, col: "#60A5FA" }].filter((s) => s.n > 0);
+  };
+
   const navCount = (m) => {
     if (m === "overview") { const n = attentionItems().length; return n || null; }
     if (m === "members") return members ? members.length : null;
@@ -659,26 +716,199 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
         {current === "overview" && (() => {
           const h = new Date().getHours();
           const greet = h < 12 ? t("Goedemorgen", "Good morning") : h < 18 ? t("Goedemiddag", "Good afternoon") : t("Goedenavond", "Good evening");
-          const att = attentionItems();
+          const st = dashStats();
+          const att = attentionItems().filter((a) => myTabs.includes(a.go));
+          const canSee = (m) => myTabs.includes(m);
+          const on = (k) => !dashHidden.includes(k);
+          const SAGE2 = "#34D399", BLUE = "#60A5FA", AMBER = "#F59E0B";
+
+          // KPI-tegels (alleen die onder je rechten vallen).
+          const tiles = [];
+          if (canSee("members")) tiles.push({ k: "leden", ic: "members", col: color, tint: EMBER_SOFT, label: t("Actieve leden", "Active members"), val: String(st.active), sub: st.newThisMonth ? "▲ " + st.newThisMonth + " " + t("deze maand", "this month") : t("stabiel", "steady"), subCol: st.newThisMonth ? SAGE2 : MUTED, spark: st.growth, sparkCol: SAGE2 });
+          if (canSee("members")) tiles.push({ k: "adh", ic: "formula", col: BLUE, tint: "rgba(96,165,250,0.15)", label: t("Gem. adherentie", "Avg. adherence"), val: st.adhAvg == null ? "—" : st.adhAvg + "%", sub: st.adhAvg == null ? t("nog geen data", "no data yet") : (st.adhLow ? st.adhLow + " " + t("onder 50%", "below 50%") : t("iedereen ≥ 50%", "all ≥ 50%")), subCol: st.adhLow ? color : MUTED });
+          if (canSee("classes")) tiles.push({ k: "bezet", ic: "classes", col: AMBER, tint: "rgba(245,158,11,0.15)", label: t("Lesbezetting", "Class occupancy"), val: st.occ == null ? (st.classCount + " " + t("lessen", "classes")) : st.occ + "%", sub: st.occ == null ? t("zet capaciteit per les", "set capacity per class") : st.enrSum + " " + t("ingeschreven", "enrolled"), subCol: MUTED });
+          if (canSee("pt")) tiles.push({ k: "pt", ic: "pt", col: color, tint: EMBER_SOFT, label: t("Open PT-sessies", "Open PT sessions"), val: String(st.ptOpen), sub: st.nextSession ? t("eerstvolgende", "next") + " " + fmtDate(st.nextSession.starts_at) : t("niets gepland", "nothing scheduled"), subCol: MUTED });
+
+          const segs = aboSegments();
+          const totalAbo = segs.reduce((s, x) => s + x.n, 0) || 1;
+          const todayDow = new Date().getDay();
+          const todayClasses = (classes || []).filter((c) => c.day_of_week === todayDow).sort((a, b) => (a.start_time || "").localeCompare(b.start_time || ""));
+          const recentMembers = [...(members || [])].sort((a, b) => (b.created_at || "").localeCompare(a.created_at || "")).slice(0, 5);
+
+          const cardHead = (title, mini) => (
+            <div style={{ display: "flex", alignItems: "center", marginBottom: 14 }}>
+              <div style={{ ...disp, fontWeight: 800, fontSize: 15 }}>{title}</div>
+              {mini != null && <div style={{ marginLeft: "auto", fontSize: 11.5, color: MUTED, fontWeight: 600 }}>{mini}</div>}
+            </div>
+          );
+
           return (
             <>
-              <div>
-                <div style={{ ...disp, fontWeight: 800, fontSize: 24, color: PAPER }}>{t("Overzicht", "Overview")}</div>
-                <div style={{ fontSize: 13.5, color: MUTED, marginTop: 3 }}>{greet} — {t("dit vraagt vandaag je aandacht.", "this needs your attention today.")}</div>
-              </div>
-              {att.map((a, i) => (
-                <div key={i} onClick={() => myTabs.includes(a.go) && setActive(a.go)} style={{ ...card, display: "flex", alignItems: "center", gap: 14, padding: 16, cursor: myTabs.includes(a.go) ? "pointer" : "default" }}>
-                  <div style={{ width: 42, height: 42, borderRadius: 12, background: a.tint, display: "flex", alignItems: "center", justifyContent: "center", color: a.icCol, flexShrink: 0 }}>{ICON[a.ic] && ICON[a.ic]({ col: a.icCol })}</div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ ...disp, fontWeight: 700, fontSize: 15 }}>{a.title}</div>
-                    <div style={{ fontSize: 12.5, color: MUTED, marginTop: 2 }}>{a.sub}</div>
-                  </div>
-                  {a.badge != null ? <div style={{ minWidth: 24, height: 24, borderRadius: 12, background: a.badgeColor || EMBER_SOFT, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12.5, fontWeight: 700, ...disp, padding: "0 7px", flexShrink: 0 }}>{a.badge}</div> : <span style={{ color: MUTED, fontSize: 20, flexShrink: 0 }}>›</span>}
+              {/* header */}
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ ...disp, fontWeight: 800, fontSize: 24, color: PAPER }}>{greet}{session && session.user ? "" : ""}</div>
+                  <div style={{ fontSize: 13.5, color: MUTED, marginTop: 3 }}>{new Date().toLocaleDateString(lang === "nl" ? "nl-NL" : "en-GB", { weekday: "long", day: "numeric", month: "long" })}{isOwner ? "" : " — " + t("jouw overzicht", "your overview")}</div>
                 </div>
-              ))}
-              {att.length === 0 && (
-                <div style={{ background: "rgba(74,222,128,0.1)", border: "1px solid rgba(74,222,128,0.35)", borderRadius: 12, padding: "14px 16px", display: "flex", alignItems: "center", gap: 10, color: "#4ADE80", fontSize: 13.5 }}>
-                  <span style={{ fontSize: 16 }}>✓</span> {t("Alles bij — niets dat nu je aandacht vraagt.", "All clear — nothing needs your attention right now.")}
+                {isOwner && (
+                  <div onClick={() => setDashCustom((v) => !v)} style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 7, border: `1px solid ${dashCustom ? color : LINE}`, color: dashCustom ? color : MUTED, borderRadius: 9, padding: "8px 13px", ...disp, fontWeight: 700, fontSize: 12.5 }}>{GEAR_ICON} {t("Aanpassen", "Customize")}</div>
+                )}
+              </div>
+
+              {/* customization panel */}
+              {isOwner && dashCustom && (
+                <div style={{ ...card, border: `1px solid ${color}` }}>
+                  <div style={{ fontSize: 12.5, color: MUTED, marginBottom: 10 }}>{t("Kies wat je op je dashboard ziet:", "Choose what shows on your dashboard:")}</div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                    {[["kpis", t("Kerncijfers", "Key figures")], ["feed", t("Aandacht", "Attention")], ["growth", t("Ledengroei", "Member growth")], ["abo", t("Abonnementen", "Plans")], ["classes", t("Lessen vandaag", "Classes today")], ["team", "Team"], ["newmembers", t("Nieuwe leden", "New members")]].map(([k, lbl]) => {
+                      const vis = on(k);
+                      return <div key={k} onClick={() => toggleWidget(k)} style={{ cursor: "pointer", fontSize: 12.5, ...disp, fontWeight: 700, padding: "7px 13px", borderRadius: 8, border: `1px solid ${vis ? color : LINE}`, background: vis ? color : "transparent", color: vis ? "#fff" : MUTED }}>{vis ? "✓ " : ""}{lbl}</div>;
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* KPI-rij */}
+              {on("kpis") && tiles.length > 0 && (
+                <div style={{ display: "grid", gridTemplateColumns: isWide ? "repeat(" + Math.min(tiles.length, 4) + ", 1fr)" : "1fr 1fr", gap: 14 }}>
+                  {tiles.map((ti) => (
+                    <div key={ti.k} style={{ ...card, padding: 16, position: "relative", overflow: "hidden" }}>
+                      <div style={{ width: 34, height: 34, borderRadius: 9, background: ti.tint, display: "grid", placeItems: "center", color: ti.col, marginBottom: 12 }}>{ICON[ti.ic] && ICON[ti.ic]({ col: ti.col })}</div>
+                      <div style={{ fontSize: 12, color: MUTED, fontWeight: 600 }}>{ti.label}</div>
+                      <div style={{ ...disp, fontSize: 26, fontWeight: 800, letterSpacing: 0.3, marginTop: 2 }}>{ti.val}</div>
+                      <div style={{ fontSize: 11.5, fontWeight: 700, color: ti.subCol, marginTop: 6 }}>{ti.sub}</div>
+                      {ti.spark && ti.spark.length > 1 && (Math.max(...ti.spark) > Math.min(...ti.spark)) && (
+                        <svg width="70" height="26" viewBox="0 0 70 26" fill="none" style={{ position: "absolute", right: 14, bottom: 14, opacity: 0.9 }}><polyline points={sparkPts(ti.spark, 70, 26)} stroke={ti.sparkCol} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* grid */}
+              <div style={{ display: "grid", gridTemplateColumns: isWide ? "1fr 340px" : "1fr", gap: 16 }}>
+                {/* links */}
+                <div style={{ display: "grid", gap: 16, alignContent: "start" }}>
+                  {on("feed") && (
+                    <div style={card}>
+                      {cardHead(t("Dit vraagt vandaag je aandacht", "This needs your attention today"), att.length ? att.length + " " + t("punten", "items") : null)}
+                      {att.length === 0
+                        ? <div style={{ background: "rgba(52,211,153,0.1)", border: "1px solid rgba(52,211,153,0.3)", borderRadius: 11, padding: "13px 15px", display: "flex", alignItems: "center", gap: 10, color: SAGE2, fontSize: 13.5 }}><span style={{ fontSize: 16 }}>✓</span> {t("Alles bij — niets dat nu je aandacht vraagt.", "All clear — nothing needs your attention right now.")}</div>
+                        : <div style={{ display: "grid", gap: 9 }}>
+                            {att.map((a, i) => (
+                              <div key={i} onClick={() => setActive(a.go)} style={{ display: "flex", alignItems: "center", gap: 13, background: INK, border: `1px solid ${LINE}`, borderRadius: 11, padding: "12px 14px", cursor: "pointer" }}>
+                                <div style={{ width: 34, height: 34, borderRadius: 9, background: a.tint, display: "grid", placeItems: "center", color: a.icCol, flexShrink: 0 }}>{ICON[a.ic] && ICON[a.ic]({ col: a.icCol })}</div>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <div style={{ ...disp, fontWeight: 700, fontSize: 13.5 }}>{a.title}</div>
+                                  <div style={{ fontSize: 11.5, color: MUTED, marginTop: 1 }}>{a.sub}</div>
+                                </div>
+                                <span style={{ fontSize: 11.5, fontWeight: 700, color: MUTED, border: `1px solid ${LINE}`, borderRadius: 8, padding: "6px 11px", flexShrink: 0 }}>{t("Bekijk", "View")}</span>
+                              </div>
+                            ))}
+                          </div>}
+                    </div>
+                  )}
+
+                  {isOwner && on("growth") && (
+                    <div style={card}>
+                      {cardHead(t("Ledengroei — laatste 8 weken", "Member growth — last 8 weeks"), (st.growth[st.growth.length - 1] - st.growth[0] >= 0 ? "+" : "") + (st.growth[st.growth.length - 1] - st.growth[0]) + " " + t("leden", "members"))}
+                      {st.active === 0
+                        ? <div style={{ fontSize: 12.5, color: MUTED }}>{t("Nog geen leden om te tonen.", "No members to show yet.")}</div>
+                        : (() => {
+                            const g = st.growth, w = 620, hgt = 150, mn = Math.min(...g), mx = Math.max(...g), rng = (mx - mn) || 1;
+                            const pts = g.map((v, i) => `${((i / (g.length - 1)) * w).toFixed(1)},${(hgt - ((v - mn) / rng) * (hgt - 16) - 8).toFixed(1)}`);
+                            return (
+                              <svg viewBox={`0 0 ${w} ${hgt}`} width="100%" height={hgt} fill="none" preserveAspectRatio="none">
+                                <line x1="0" y1={hgt * 0.25} x2={w} y2={hgt * 0.25} stroke={LINE} /><line x1="0" y1={hgt * 0.6} x2={w} y2={hgt * 0.6} stroke={LINE} />
+                                <path d={`M0,${hgt} L${pts.join(" L")} L${w},${hgt} Z`} fill={color} fillOpacity="0.14" />
+                                <polyline points={pts.join(" ")} stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                              </svg>
+                            );
+                          })()}
+                    </div>
+                  )}
+                </div>
+
+                {/* rechts */}
+                <div style={{ display: "grid", gap: 16, alignContent: "start" }}>
+                  {isOwner && on("abo") && (members && members.length > 0) && (
+                    <div style={card}>
+                      {cardHead(t("Leden per abonnement", "Members per plan"))}
+                      <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                        <svg width="104" height="104" viewBox="0 0 42 42">
+                          <circle cx="21" cy="21" r="15.9" fill="none" stroke="#242c38" strokeWidth="6.5" />
+                          {(() => { let acc = 0; return segs.map((s, i) => { const len = (s.n / totalAbo) * 100; const el = <circle key={i} cx="21" cy="21" r="15.9" fill="none" stroke={s.col} strokeWidth="6.5" strokeDasharray={`${len} ${100 - len}`} strokeDashoffset={25 - acc} transform="rotate(-90 21 21)" />; acc += len; return el; }); })()}
+                          <text x="21" y="20.5" textAnchor="middle" fontSize="7" fontWeight="700" fill={PAPER}>{st.active}</text>
+                          <text x="21" y="26" textAnchor="middle" fontSize="3.2" fill={MUTED}>{t("leden", "members")}</text>
+                        </svg>
+                        <div style={{ display: "grid", gap: 8, fontSize: 12.5 }}>
+                          {segs.map((s, i) => <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, color: "#c7cdd6" }}><i style={{ width: 11, height: 11, borderRadius: 3, background: s.col, display: "inline-block" }} />{s.label} <b style={{ color: PAPER, marginLeft: 4 }}>{s.n}</b></div>)}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {canSee("classes") && on("classes") && (
+                    <div style={card}>
+                      {cardHead(t("Lessen vandaag", "Classes today"), DAY_LBL(todayDow))}
+                      {todayClasses.length === 0
+                        ? <div style={{ fontSize: 12.5, color: MUTED }}>{t("Geen lessen vandaag.", "No classes today.")}</div>
+                        : todayClasses.map((c) => {
+                            const cnt = enrollCounts ? (enrollCounts[c.id] || 0) : null; const cap = c.capacity || null;
+                            const full = cap != null && cnt != null && cnt >= cap;
+                            const warn = cap != null && cnt != null && !full && cnt / cap >= 0.8;
+                            const pillBg = full ? EMBER_SOFT : warn ? "rgba(245,158,11,0.15)" : "rgba(52,211,153,0.14)";
+                            const pillCol = full ? color : warn ? AMBER : SAGE2;
+                            return (
+                              <div key={c.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 2px", borderBottom: `1px solid ${LINE}` }}>
+                                <div style={{ ...disp, fontWeight: 800, fontSize: 12, width: 42 }}>{c.start_time}</div>
+                                <div style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>{c.name}</div>
+                                {cap != null && cnt != null
+                                  ? <span style={{ fontSize: 11, fontWeight: 700, borderRadius: 20, padding: "3px 10px", background: pillBg, color: pillCol }}>{full ? cnt + "/" + cap + " " + t("vol", "full") : cnt + "/" + cap}</span>
+                                  : <span style={{ fontSize: 11, color: MUTED }}>{c.start_time}</span>}
+                              </div>
+                            );
+                          })}
+                    </div>
+                  )}
+
+                  {isOwner && on("team") && coaches && coaches.length > 0 && (
+                    <div style={card}>
+                      {cardHead("Team", coaches.length + " " + t("coaches", "coaches"))}
+                      {coaches.map((c) => (
+                        <div key={c.id} style={{ display: "flex", alignItems: "center", gap: 11, padding: "10px 2px", borderBottom: `1px solid ${LINE}` }}>
+                          <div style={{ width: 30, height: 30, borderRadius: "50%", background: "#2a333f", display: "grid", placeItems: "center", fontSize: 11, fontWeight: 700, color: "#cfd5de" }}>{(c.display_name || "?").slice(0, 2).toUpperCase()}</div>
+                          <div style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>{c.display_name || t("Coach", "Coach")}<div style={{ fontSize: 11, color: MUTED }}>{c.is_owner ? t("Eigenaar", "Owner") : t("Coach", "Coach")}</div></div>
+                          <span style={{ fontSize: 11, fontWeight: 700, borderRadius: 20, padding: "3px 10px", background: "rgba(52,211,153,0.14)", color: SAGE2 }}>{t("actief", "active")}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* nieuwe leden */}
+              {canSee("members") && on("newmembers") && recentMembers.length > 0 && (
+                <div style={card}>
+                  {cardHead(t("Laatste nieuwe leden", "Latest new members"))}
+                  <div style={{ overflowX: "auto" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                      <tbody>
+                        <tr>{[t("Lid", "Member"), t("Tier", "Tier"), t("Adherentie", "Adherence"), t("Toegevoegd", "Added")].map((th, i) => <th key={i} style={{ textAlign: "left", fontSize: 10.5, letterSpacing: 0.5, textTransform: "uppercase", color: "#5c6676", fontWeight: 700, padding: "0 10px 10px" }}>{th}</th>)}</tr>
+                        {recentMembers.map((m) => {
+                          const adh = m.progress && m.progress.adherence != null ? Math.round(m.progress.adherence) : null;
+                          return (
+                            <tr key={m.id}>
+                              <td style={{ padding: "11px 10px", borderTop: `1px solid ${LINE}`, fontSize: 13 }}><span style={{ width: 26, height: 26, borderRadius: "50%", background: "#2a333f", display: "inline-grid", placeItems: "center", fontSize: 10.5, fontWeight: 700, color: "#cfd5de", marginRight: 9, verticalAlign: "middle" }}>{(m.display_name || "?").slice(0, 2).toUpperCase()}</span>{m.display_name || t("Naamloos", "Unnamed")}</td>
+                              <td style={{ padding: "11px 10px", borderTop: `1px solid ${LINE}`, fontSize: 12.5, color: MUTED, textTransform: "capitalize" }}>{m.member_tier || "pro"}</td>
+                              <td style={{ padding: "11px 10px", borderTop: `1px solid ${LINE}`, fontSize: 12.5, color: adh == null ? MUTED : adh < 50 ? color : SAGE2, fontWeight: 700 }}>{adh == null ? "—" : adh + "%"}</td>
+                              <td style={{ padding: "11px 10px", borderTop: `1px solid ${LINE}`, fontSize: 12.5, color: MUTED }}>{fmtDate(m.created_at)}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               )}
             </>
