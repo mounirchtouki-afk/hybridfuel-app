@@ -12,6 +12,8 @@ import Training from "./views/Training.jsx";
 import { RECIPES, snackOptions } from "./recipes.js";
 import Reminders, { checkReminders } from "./views/Reminders.jsx";
 import Auth from "./views/Auth.jsx";
+import Join from "./views/Join.jsx";
+import CoachDash from "./views/CoachDash.jsx";
 import { supabase } from "./supabaseClient.js";
 import { initCloudSync, pullAll } from "./cloudsync.js";
 import { Dropdown, MultiDropdown } from "./ui.jsx";
@@ -566,6 +568,7 @@ export default function App() {
   const [installDismissed, setInstallDismissed] = useState(() => load("hf_install_dismissed", false));
   const [devMode, setDevMode] = useState(false);
   const [demoMode, setDemoMode] = useState(false);
+  const [gymCtx, setGymCtx] = useState(null); // {role:'coach'|'member', org:{...}} als de gebruiker bij een sportschool hoort
 
   // Dev-modus: alles zichtbaar voor review. Alleen op preview/localhost, NOOIT op de live site.
   // Aanzetten: ?dev=1 in de URL. Uitzetten: ?dev=0.
@@ -607,6 +610,25 @@ export default function App() {
       setTab("dashboard");
     } catch (e) {}
   }, []);
+
+  // Sportschool-context: hoort deze ingelogde gebruiker bij een org, en als wat (coach/lid)?
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      if (!supabase || !session || !session.user) { if (alive) setGymCtx(null); return; }
+      try {
+        const { data: meRows } = await supabase.from("org_members").select("org_id,role").eq("auth_user_id", session.user.id).limit(1);
+        const me = meRows && meRows[0];
+        if (!me) { if (alive) setGymCtx(null); return; }
+        const { data: orgRows } = await supabase.from("orgs").select("id,slug,name").eq("id", me.org_id).limit(1);
+        const { data: cfgRows } = await supabase.from("org_config").select("brand_color,logo_url").eq("org_id", me.org_id).limit(1);
+        const org = (orgRows && orgRows[0]) || {};
+        const cfg = cfgRows && cfgRows[0];
+        if (alive) setGymCtx({ role: me.role, org: { ...org, brand_color: (cfg && cfg.brand_color) || "#E11D48", logo_url: (cfg && cfg.logo_url) || null } });
+      } catch (e) { if (alive) setGymCtx(null); }
+    })();
+    return () => { alive = false; };
+  }, [session]);
 
   // Opslag-bevestiging (toast met "Naar dashboard").
   const flashSaved = () => { setSaveFlash(true); setTimeout(() => setSaveFlash(false), 4500); };
@@ -1416,6 +1438,11 @@ export default function App() {
     </div>
   );
   const mIcon = (name) => <Icon name={name} on={true} />;
+
+  // Sportschool-routes: join-scherm (code-login) en coach-dashboard gaan vóór de gewone app.
+  const joinSlug = (() => { try { const m = location.pathname.match(/^\/join\/([a-z0-9-]+)/i); return m ? m[1].toLowerCase() : null; } catch (e) { return null; } })();
+  if (joinSlug && !session) return <Join slug={joinSlug} lang={lang} />;
+  if (session && gymCtx && gymCtx.role === "coach") return <CoachDash session={session} org={gymCtx.org} lang={lang} onLogout={confirmLogout} />;
 
   return (
     <div style={{ minHeight: "100vh", background: "linear-gradient(180deg, #1b0a11 0%, #140a0e 48%, #0e090b 100%)", position: "relative", color: PAPER, fontFamily: "Inter, sans-serif", paddingBottom: `calc(${76 + consentH}px + env(safe-area-inset-bottom))` }}>

@@ -27,6 +27,7 @@ export default async function handler(req, res) {
   const action = String(body.action || "").trim();
 
   try {
+    if (action === "branding") return await branding(req, res, body);
     if (action === "login")  return await login(req, res, body);
     if (action === "create") return await create(req, res, body);
     if (action === "reset")  return await reset(req, res, body);
@@ -36,6 +37,19 @@ export default async function handler(req, res) {
     console.error("gym error", action, err);
     return res.status(500).json({ error: "server_error" });
   }
+}
+
+// --- branding: publieke white-label-gegevens voor de join-pagina (vóór login) ---
+async function branding(req, res, body) {
+  const slug = String(body.slug || "").trim().toLowerCase();
+  if (!slug) return res.status(400).json({ error: "bad_request" });
+  const or = await rest("orgs?select=id,name&slug=eq." + encodeURIComponent(slug) + "&limit=1");
+  const orgs = or.ok ? await or.json().catch(() => []) : [];
+  const org = orgs && orgs[0];
+  if (!org) return res.status(404).json({ error: "not_found" });
+  const cr = await rest("org_config?select=brand_color,logo_url&org_id=eq." + encodeURIComponent(org.id) + "&limit=1");
+  const cfg = cr.ok ? (await cr.json().catch(() => []))[0] : null;
+  return res.status(200).json({ ok: true, name: org.name, brand_color: (cfg && cfg.brand_color) || "#E11D48", logo_url: (cfg && cfg.logo_url) || null });
 }
 
 // --- login: code -> sessie (publiek, rate-limited, generieke fouten) ---
