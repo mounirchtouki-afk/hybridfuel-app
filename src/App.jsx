@@ -153,8 +153,13 @@ const TXT = {
   planSourceLbl: { nl: "Hoe wil je je plan?", en: "How do you want your plan?" },
   planAi: { nl: "AI stelt samen", en: "AI builds it" },
   planProducts: { nl: "Mijn producten", en: "My products" },
-  planAiHint: { nl: "Onze AI kiest passende maaltijden en porties op jouw doelen.", en: "Our AI picks fitting meals and portions for your goals." },
-  planProductsHint: { nl: "We stellen je weekplan samen uit je eigen gescande/aangemaakte producten (tag ze per maaltijd bij Producten).", en: "We compose your week from your own scanned/added products (tag them per meal under Products)." },
+  planAiHint: { nl: "Onze AI kiest passende maaltijden en porties die precies op jouw dagdoelen uitkomen. Niks zelf in te vullen — ideaal om snel te starten.", en: "Our AI picks fitting meals and portions that land exactly on your daily targets. Nothing to fill in — ideal for a quick start." },
+  planProdTitle: { nl: "Zo werkt 'Mijn producten'", en: "How 'My products' works" },
+  planProdStep1: { nl: "Scan of voeg je eigen producten toe bij Producten.", en: "Scan or add your own products under Products." },
+  planProdStep2: { nl: "Tag elk product per maaltijd (ontbijt / lunch / diner / snack).", en: "Tag each product per meal (breakfast / lunch / dinner / snack)." },
+  planProdStep3: { nl: "Wij bouwen je weekplan uit die producten, met porties die op je eiwit- en caloriedoel uitkomen.", en: "We build your week from those products, with portions that hit your protein and calorie goals." },
+  planProdSaved: { nl: "Heb je eigen maaltijden opgeslagen bij Recepten? Die gebruiken we als hele maaltijd in je plan.", en: "Saved your own meals under Recipes? We use those as whole meals in your plan." },
+  planProdBtn: { nl: "Naar Producten", en: "Go to Products" },
   needProductsTitle: { nl: "Nog te weinig producten", en: "Not enough products yet" },
   needProductsBody: { nl: "Voeg eerst producten toe en tag ze als ontbijt, lunch of diner (bij Producten). Dan stellen we je plan uit je eigen producten samen.", en: "Add products first and tag them as breakfast, lunch or dinner (under Products). Then we'll compose your plan from your own products." },
   emptyTitle: { nl: "Fuel the work.", en: "Fuel the work." },
@@ -1743,7 +1748,21 @@ export default function App() {
                     <div key={id} onClick={() => setPlanSource(id)} style={{ flex: 1, textAlign: "center", cursor: "pointer", padding: "11px 0", ...disp, fontWeight: 700, fontSize: 13.5, letterSpacing: 0.3, background: planSource === id ? EMBER : "transparent", color: planSource === id ? PAPER : MUTED }}>{lbl}</div>
                   ))}
                 </div>
-                <div style={{ fontSize: 11, color: MUTED, lineHeight: 1.5, marginTop: 8 }}>{T(planSource === "products" ? "planProductsHint" : "planAiHint")}</div>
+                {planSource === "ai"
+                  ? <div style={{ fontSize: 11.5, color: MUTED, lineHeight: 1.55, marginTop: 8 }}>{T("planAiHint")}</div>
+                  : <div style={{ marginTop: 8, border: `1px solid ${EMBER}`, borderRadius: 10, padding: "12px 13px", background: "rgba(225,29,72,0.06)" }}>
+                      <div style={{ ...disp, fontWeight: 700, fontSize: 12.5, color: PAPER, marginBottom: 8, letterSpacing: 0.3 }}>{T("planProdTitle")}</div>
+                      <div style={{ display: "grid", gap: 7 }}>
+                        {["planProdStep1", "planProdStep2", "planProdStep3"].map((k, i) => (
+                          <div key={k} style={{ display: "flex", gap: 9, alignItems: "flex-start" }}>
+                            <span style={{ flexShrink: 0, width: 18, height: 18, borderRadius: "50%", background: EMBER, color: "#fff", ...disp, fontWeight: 700, fontSize: 11, display: "grid", placeItems: "center", marginTop: 1 }}>{i + 1}</span>
+                            <span style={{ fontSize: 11.5, color: MUTED, lineHeight: 1.45 }}>{T(k)}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <div style={{ fontSize: 11, color: MUTED, lineHeight: 1.45, marginTop: 9, paddingTop: 9, borderTop: `1px solid ${LINE}` }}>{T("planProdSaved")}</div>
+                      <div onClick={() => go("producten")} style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6, marginTop: 10, background: "transparent", border: `1px solid ${EMBER}`, color: EMBER, borderRadius: 8, padding: "8px 14px", ...disp, fontWeight: 700, fontSize: 12.5 }}>{T("planProdBtn")} →</div>
+                    </div>}
               </div>
 
               <button onClick={handleBuild} disabled={loading} style={{ width: "100%", background: EMBER, color: PAPER, border: "none", padding: "14px 0", borderRadius: 10, ...disp, fontWeight: 700, fontSize: 16, letterSpacing: 1, textTransform: "uppercase", cursor: loading ? "default" : "pointer", opacity: loading ? 0.7 : 1 }}>
