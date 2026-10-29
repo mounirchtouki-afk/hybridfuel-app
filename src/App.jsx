@@ -565,6 +565,7 @@ export default function App() {
   const [installEvt, setInstallEvt] = useState(null);
   const [installDismissed, setInstallDismissed] = useState(() => load("hf_install_dismissed", false));
   const [devMode, setDevMode] = useState(false);
+  const [demoMode, setDemoMode] = useState(false);
 
   // Dev-modus: alles zichtbaar voor review. Alleen op preview/localhost, NOOIT op de live site.
   // Aanzetten: ?dev=1 in de URL. Uitzetten: ?dev=0.
@@ -587,8 +588,37 @@ export default function App() {
     } catch (e) { setDevMode(false); }
   }, []);
 
+  // Demo-modus: prospects bekijken de ECHTE app met een voorbeeld-atleet, maar
+  // persoonlijke/opslaan-acties sturen naar de paywall. Werkt ook op de live app
+  // via ?demo=1 (los van dev-modus). Uitzetten: ?demo=0, of zodra je inlogt.
+  useEffect(() => {
+    try {
+      const q = new URLSearchParams(location.search);
+      if (q.get("demo") === "0") { try { sessionStorage.removeItem("hf_demo"); } catch (e) {} setDemoMode(false); return; }
+      if (q.get("demo") === "1") { try { sessionStorage.setItem("hf_demo", "1"); } catch (e) {} }
+      const on = (() => { try { return sessionStorage.getItem("hf_demo") === "1"; } catch (e) { return false; } })();
+      if (!on) return;
+      setDemoMode(true);
+      let saved = null; try { saved = JSON.parse(localStorage.getItem("hf_lastplan") || "null"); } catch (e) {}
+      if (!(saved && saved.week && saved.week.days)) {
+        const w = demoWeek((localStorage.getItem("hf_lang") === "nl") ? "nl" : "en");
+        setWeek(w); setTargets(DEMO_TARGETS); setStarted(true);
+      }
+      setTab("dashboard");
+    } catch (e) {}
+  }, []);
+
   // Opslag-bevestiging (toast met "Naar dashboard").
   const flashSaved = () => { setSaveFlash(true); setTimeout(() => setSaveFlash(false), 4500); };
+
+  // Demo starten vanuit de app (bv. vanaf het paywall-blok): voorbeeld-atleet laden.
+  function enterDemo() {
+    try { sessionStorage.setItem("hf_demo", "1"); } catch (e) {}
+    setDemoMode(true);
+    const w = demoWeek(lang === "nl" ? "nl" : "en");
+    setWeek(w); setTargets(DEMO_TARGETS); setStarted(true); setTab("dashboard");
+    try { window.scrollTo(0, 0); } catch (e) {}
+  }
 
   // --- Terug-knop (telefoon/PWA): altijd terug naar het dashboard, nooit de app
   // uit. Eerst open overlays sluiten, dan naar dashboard; al op het dashboard →
@@ -636,6 +666,11 @@ export default function App() {
   const hasBasis = devMode || subTier === "basis" || subTier === "pro";
   const hasPro = devMode || subTier === "pro";
   const hasPlus = devMode || subTier === "pro"; // Race Protocol, later evt. eigen Plus-laag
+  // Demo telt alleen voor niet-ingelogde bezoekers; het geeft GEEN echte toegang
+  // (opslaan/genereren blijft achter de paywall), het laat alleen de schermen zien.
+  const inDemo = demoMode && !session;
+  const canView = hasBasis || inDemo;      // basisschermen tonen in demo
+  const canViewPlus = hasPlus || inDemo;   // raceprotocol tonen in demo
   const ML = macroLetters(lang);
 
   useEffect(() => {
@@ -1411,6 +1446,15 @@ export default function App() {
         </div>
       </div>
 
+      {/* DEMO-BALK: zichtbaar in demo-modus; stuurt naar het ontgrendel-scherm */}
+      {inDemo && (
+        <div style={{ background: EMBER, color: PAPER, padding: "9px 14px", display: "flex", alignItems: "center", gap: 10, position: "relative", zIndex: 1, flexWrap: "wrap" }}>
+          <span style={{ fontSize: 11, fontWeight: 700, ...disp, letterSpacing: 1, background: "rgba(255,255,255,0.18)", borderRadius: 4, padding: "2px 7px" }}>{lang === "nl" ? "VOORBEELD" : "PREVIEW"}</span>
+          <span style={{ flex: 1, minWidth: 130, fontSize: 12.5, lineHeight: 1.4 }}>{lang === "nl" ? "Je bekijkt een voorbeeld. Ontgrendel de app voor je eigen plan." : "You're viewing a sample. Unlock the app for your own plan."}</span>
+          <div onClick={() => setShowAuth(true)} style={{ cursor: "pointer", background: PAPER, color: EMBER, padding: "7px 15px", borderRadius: 8, fontSize: 12.5, fontWeight: 700, ...disp, letterSpacing: 0.3, whiteSpace: "nowrap" }}>{lang === "nl" ? "Ontgrendel" : "Unlock"}</div>
+        </div>
+      )}
+
       {/* INSTALL-BANNER, voor iedereen die de app nog niet geïnstalleerd heeft (ook iPhone) */}
       {!isStandalone && !installDismissed && (
         <div style={{ background: "rgba(225,29,72,0.1)", borderBottom: `1px solid ${LINE}`, padding: "10px 16px", display: "flex", alignItems: "center", gap: 12, position: "relative", zIndex: 1 }}>
@@ -1591,8 +1635,9 @@ export default function App() {
                     </div>
                   )}
 
-                  {week && !loading && hasBasis && (
+                  {week && !loading && canView && (
                     <>
+                      {hasBasis && (
                       <div style={{ background: INK2, border: `1px solid ${LINE}`, borderRadius: 14, padding: 16, marginBottom: 16 }}>
                         <div style={{ ...label, marginBottom: 10 }}>{T("dlTitle")}</div>
                         {planEmail === "sent" && <div style={{ fontSize: 12, color: SAGE, marginBottom: 10, lineHeight: 1.5 }}>{T("emailedPlan")}</div>}
@@ -1602,6 +1647,7 @@ export default function App() {
                         </div>
                         <div style={{ fontSize: 11.5, color: MUTED, marginTop: 10, lineHeight: 1.5 }}>{T("dlHint")}</div>
                       </div>
+                      )}
                       <div style={{ marginBottom: 14, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                         <div style={{ display: "inline-flex", gap: 4, background: INK2, border: `1px solid ${LINE}`, borderRadius: 10, padding: 4 }}>
                           {[["plan", T("tabPlan")], ["shop", T("tabShop")]].map(([id, lbl]) => (
@@ -1656,6 +1702,9 @@ export default function App() {
                       <div onClick={() => setShowAuth(true)} style={{ cursor: "pointer", textAlign: "center", background: EMBER, color: PAPER, padding: "16px 0", borderRadius: 11, ...disp, fontWeight: 700, fontSize: 17, letterSpacing: 0.6, textTransform: "uppercase", boxShadow: "0 6px 22px rgba(225,29,72,0.38)" }}>{T("subscribeCta")}</div>
                       <div onClick={() => setShowAuth(true)} style={{ cursor: "pointer", textAlign: "center", color: EMBER_SOFT, marginTop: 11, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.3 }}>{T("subYearUpsell")}</div>
                       <div style={{ fontSize: 11, color: MUTED, marginTop: 11, textAlign: "center" }}>{T("lockFoot")}</div>
+                      {!inDemo && (
+                        <div onClick={enterDemo} style={{ cursor: "pointer", textAlign: "center", color: MUTED, marginTop: 13, fontSize: 12.5, fontWeight: 600, textDecoration: "underline" }}>{lang === "nl" ? "Of bekijk eerst de app" : "Or take a look inside first"}</div>
+                      )}
                     </div>
                   )}
 
@@ -1689,12 +1738,12 @@ export default function App() {
         )}
 
         {/* ====== OTHER TABS ====== */}
-        {tab === "today" && (hasBasis ? <Today key={"today" + syncVer} lang={lang} week={week} session={session} plus={hasPlus} units={units} onRebalance={rebalanceDay} onGoPlan={() => setTab("plan")} /> : <Locked />)}
+        {tab === "today" && (canView ? <Today key={"today" + syncVer} lang={lang} week={week} session={session} plus={hasPlus} units={units} onRebalance={rebalanceDay} onGoPlan={() => setTab("plan")} /> : <Locked />)}
         {tab === "tracker" && (hasBasis ? <Tracker lang={lang} height={height} session={session} units={units} /> : <Locked />)}
         {tab === "water" && (hasBasis ? <Water lang={lang} session={session} week={week} units={units} /> : <Locked />)}
         {tab === "producten" && (hasPro ? <Products embedded lang={lang} session={session} onProductChange={propagateProduct} /> : <Locked pro />)}
         {tab === "recipes" && <Recipes lang={lang} session={session} units={units} />}
-        {tab === "race" && (hasPlus ? <RaceProtocol lang={lang} weight={weight} session={session} week={week} /> : <Locked pro />)}
+        {tab === "race" && (canViewPlus ? <RaceProtocol lang={lang} weight={weight} session={session} week={week} /> : <Locked pro />)}
         {tab === "training" && (hasBasis ? <Training key={"training" + syncVer} lang={lang} weight={weight} session={session} /> : <Locked />)}
       </div>
 
