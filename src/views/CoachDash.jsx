@@ -50,6 +50,12 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
   const [codeShown, setCodeShown] = useState(null);  // {name, code}
   const [err, setErr] = useState("");
 
+  // AI-ledenimport (CSV/Excel → koppen herkennen → bulk aanmaken)
+  const [imp, setImp] = useState(null);     // {headers:[], rows:[[...]], map:{name,first,last,tier}, fileName}
+  const [impBusy, setImpBusy] = useState(false);
+  const [impErr, setImpErr] = useState("");
+  const [impResults, setImpResults] = useState(null); // {created,total,results:[...]}
+
   // Huisstijl (self-serve white-label)
   const [tpl, setTpl] = useState((org && org.theme && org.theme.template) || "dark");
   const [accent, setAccent] = useState((org && org.theme && org.theme.accent) || (org && org.brand_color) || "#E11D48");
@@ -345,6 +351,80 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
     } catch (e) { setErr(t("Aanmaken mislukt.", "Create failed.")); setBusy(false); }
   }
 
+  // --- AI-ledenimport ---
+  // Raadt per veld de meest waarschijnlijke kolom (op basis van de kop-tekst).
+  function guessMap(headers) {
+    const lc = headers.map((h) => String(h || "").toLowerCase().trim());
+    const find = (res) => { for (let i = 0; i < lc.length; i++) { if (res.some((re) => re.test(lc[i]))) return i; } return -1; };
+    const first = find([/voornaam/, /first\s*name/, /^first$/, /given/]);
+    const last = find([/achternaam/, /last\s*name/, /^last$/, /surname|familienaam/]);
+    let name = find([/volledige\s*naam/, /full\s*name/, /^naam$/, /^name$/, /lid\s*naam|member\s*name|naam\s*lid/]);
+    if (name < 0 && first < 0 && last < 0) name = find([/naam/, /name/]); // vang-alles
+    const tier = find([/tier/, /abonnement/, /pakket/, /plan/, /lidmaatschap|membership/, /type/]);
+    return { name, first, last, tier };
+  }
+  function normTier(v) {
+    const s = String(v || "").toLowerCase();
+    if (/basis|basic|light|start/.test(s)) return "basis";
+    if (/pro|premium|plus|full|all/.test(s)) return "pro";
+    return "pro";
+  }
+  // Zet de geparste rijen + mapping om naar de lijst leden die we aanmaken.
+  function buildImportRows() {
+    if (!imp) return [];
+    const { map, rows } = imp;
+    const out = [];
+    const seen = new Set();
+    for (const r of rows) {
+      let name = map.name >= 0 ? String(r[map.name] || "").trim() : "";
+      if (!name) { const f = map.first >= 0 ? String(r[map.first] || "").trim() : ""; const l = map.last >= 0 ? String(r[map.last] || "").trim() : ""; name = (f + " " + l).trim(); }
+      if (!name) continue;
+      const k = name.toLowerCase();
+      if (seen.has(k)) continue; seen.add(k);
+      out.push({ display_name: name.slice(0, 80), tier: map.tier >= 0 ? normTier(r[map.tier]) : "pro" });
+    }
+    return out;
+  }
+  async function onImportFile(file) {
+    setImpErr(""); setImpResults(null);
+    if (!file) return;
+    const XLSX = typeof window !== "undefined" ? window.XLSX : null;
+    if (!XLSX) { setImpErr(t("Importmodule nog aan het laden, probeer zo opnieuw.", "Import module still loading, try again.")); return; }
+    try {
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(buf, { type: "array" });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, blankrows: false, defval: "" });
+      if (!aoa || aoa.length < 2) { setImpErr(t("Geen rijen gevonden (eerste rij = koppen).", "No rows found (first row = headers).")); return; }
+      const headers = aoa[0].map((h) => String(h == null ? "" : h).trim());
+      const rows = aoa.slice(1).filter((r) => r.some((c) => String(c || "").trim() !== ""));
+      setImp({ headers, rows, map: guessMap(headers), fileName: file.name });
+    } catch (e) { setImpErr(t("Bestand kon niet worden gelezen (gebruik .csv of .xlsx).", "Could not read the file (use .csv or .xlsx).")); }
+  }
+  function setImpMap(field, idx) { setImp((s) => s ? { ...s, map: { ...s.map, [field]: idx } } : s); }
+  async function runImport() {
+    const list = buildImportRows();
+    if (!list.length) { setImpErr(t("Geen geldige namen om te importeren. Kies de juiste kolom.", "No valid names to import. Pick the right column.")); return; }
+    setImpBusy(true); setImpErr("");
+    try {
+      const r = await fetch("/api/gym", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "bulkcreate", authToken: await freshToken(), members: list }) });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) { setImpErr(d && d.error === "too_many" ? t("Maximaal 200 leden per import.", "Max 200 members per import.") : t("Importeren mislukt.", "Import failed.")); setImpBusy(false); return; }
+      setImpResults(d); setImpBusy(false); load();
+    } catch (e) { setImpErr(t("Importeren mislukt.", "Import failed.")); setImpBusy(false); }
+  }
+  function downloadImportCodes() {
+    if (!impResults || !impResults.results) return;
+    const ok = impResults.results.filter((x) => x.ok);
+    const esc = (s) => '"' + String(s == null ? "" : s).replace(/"/g, '""') + '"';
+    const lines = [["Naam", "Code", "Tier"].map(esc).join(",")].concat(ok.map((x) => [esc(x.display_name), esc(x.code), esc(x.tier || "pro")].join(",")));
+    const blob = new Blob(["﻿" + lines.join("\r\n")], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = "leden-codes-" + new Date().toISOString().slice(0, 10) + ".csv";
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1500);
+  }
+  function resetImport() { setImp(null); setImpErr(""); setImpResults(null); setImpBusy(false); }
+
   async function resetCode(m) {
     if (busy) return; setBusy(true); setErr("");
     try {
@@ -479,6 +559,8 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
   };
   const EYE_ON = <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z" /><circle cx="12" cy="12" r="3" /></svg>;
   const EYE_OFF = <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" /><path d="M1 1l22 22" /></svg>;
+  const UPLOAD_ICON = <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="M17 8l-5-5-5 5" /><path d="M12 3v12" /></svg>;
+  const DOWNLOAD_ICON = <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="M7 10l5 5 5-5" /><path d="M12 15V3" /></svg>;
 
   // Aandacht-items (voor het overzicht én de badge in de zijbalk).
   function attentionItems() {
@@ -628,6 +710,97 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
           <div style={{ fontSize: 11, color: MUTED, marginTop: 7, lineHeight: 1.5 }}>{t("basis = voeding + rooster · pro = ook persoonlijke PT", "basis = nutrition + schedule · pro = also personal PT")}</div>
           <div style={{ fontSize: 11.5, color: MUTED, marginTop: 10, lineHeight: 1.5 }}>{t("Deel de join-link + code met je lid:", "Share the join link + code with your member:")} <span style={{ color: PAPER }}>{joinUrl}</span></div>
           {err && <div style={{ fontSize: 12, color: EMBER_SOFT, marginTop: 8 }}>{err}</div>}
+        </div>
+
+        {/* AI-ledenimport */}
+        <div style={card}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+            <span style={{ color }}>{ICON.members && ICON.members({ col: color })}</span>
+            <div style={{ ...sectionTitle, color, margin: 0 }}>{t("Leden importeren", "Import members")}</div>
+          </div>
+
+          {!imp && !impResults && (
+            <>
+              <div style={{ fontSize: 12.5, color: MUTED, lineHeight: 1.55, marginBottom: 12 }}>
+                {t("Upload een CSV- of Excel-lijst met je leden. We herkennen de koppen automatisch en jij controleert de koppeling voordat we de codes aanmaken.",
+                   "Upload a CSV or Excel list of your members. We recognise the headers automatically and you confirm the mapping before we generate the codes.")}
+              </div>
+              <label style={{ display: "inline-flex", alignItems: "center", gap: 9, cursor: "pointer", background: color, color: "#fff", padding: "11px 18px", borderRadius: 8, ...disp, fontWeight: 700, fontSize: 13.5, letterSpacing: 0.3 }}>
+                {UPLOAD_ICON}
+                {t("Kies CSV / Excel", "Choose CSV / Excel")}
+                <input type="file" accept=".csv,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style={{ display: "none" }} onChange={(e) => { onImportFile(e.target.files && e.target.files[0]); e.target.value = ""; }} />
+              </label>
+            </>
+          )}
+
+          {imp && !impResults && (() => {
+            const preview = buildImportRows();
+            const opts = imp.headers.map((h, i) => ({ i, label: h || t("(kolom ", "(column ") + (i + 1) + ")" }));
+            const mapSel = (field, label, hint) => (
+              <div style={{ display: "grid", gap: 4 }}>
+                <div style={{ fontSize: 11, ...disp, fontWeight: 700, color: MUTED, letterSpacing: 0.3 }}>{label} {hint && <span style={{ fontWeight: 400, textTransform: "none" }}>· {hint}</span>}</div>
+                <select value={imp.map[field]} onChange={(e) => setImpMap(field, parseInt(e.target.value, 10))} style={{ ...input, appearance: "auto" }}>
+                  <option value={-1}>{t("— niet gebruiken —", "— don't use —")}</option>
+                  {opts.map((o) => <option key={o.i} value={o.i}>{o.label}</option>)}
+                </select>
+              </div>
+            );
+            return (
+              <>
+                <div style={{ fontSize: 12, color: MUTED, marginBottom: 12 }}>{t("Bestand", "File")}: <span style={{ color: PAPER }}>{imp.fileName}</span> · {imp.rows.length} {t("rijen", "rows")}</div>
+                <div style={{ display: "grid", gridTemplateColumns: isWide ? "1fr 1fr" : "1fr", gap: 10, marginBottom: 14 }}>
+                  {mapSel("name", t("Naam", "Name"), t("volledige naam", "full name"))}
+                  {mapSel("tier", "Tier", t("basis/pro, optioneel", "basis/pro, optional"))}
+                  {mapSel("first", t("Voornaam", "First name"), t("als geen volledige naam", "if no full name"))}
+                  {mapSel("last", t("Achternaam", "Last name"), t("als geen volledige naam", "if no full name"))}
+                </div>
+
+                <div style={{ fontSize: 11.5, ...disp, fontWeight: 700, color: MUTED, letterSpacing: 0.3, marginBottom: 6 }}>{t("Voorbeeld", "Preview")} · {preview.length} {t("leden", "members")}</div>
+                {preview.length === 0
+                  ? <div style={{ fontSize: 12.5, color: EMBER_SOFT, marginBottom: 12 }}>{t("Geen namen gevonden — kies de juiste kolom hierboven.", "No names found — pick the right column above.")}</div>
+                  : <div style={{ display: "grid", gap: 4, marginBottom: 14, maxHeight: 170, overflowY: "auto" }}>
+                      {preview.slice(0, 20).map((p, i) => (
+                        <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 10, background: INK, border: `1px solid ${LINE}`, borderRadius: 7, padding: "7px 11px", fontSize: 13 }}>
+                          <span style={{ color: PAPER }}>{p.display_name}</span>
+                          <span style={{ ...disp, fontWeight: 700, fontSize: 11, color: MUTED, textTransform: "capitalize" }}>{p.tier}</span>
+                        </div>
+                      ))}
+                      {preview.length > 20 && <div style={{ fontSize: 11.5, color: MUTED, padding: "2px 2px" }}>+ {preview.length - 20} {t("meer…", "more…")}</div>}
+                    </div>}
+
+                {impErr && <div style={{ fontSize: 12.5, color: EMBER_SOFT, marginBottom: 10 }}>{impErr}</div>}
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <div onClick={() => { if (!impBusy && preview.length) runImport(); }} style={{ cursor: impBusy || !preview.length ? "default" : "pointer", opacity: impBusy || !preview.length ? 0.6 : 1, background: color, color: "#fff", padding: "11px 18px", borderRadius: 8, ...disp, fontWeight: 700, fontSize: 13.5 }}>
+                    {impBusy ? t("Bezig…", "Working…") : t("Importeer", "Import") + " " + preview.length + " " + t("leden", "members")}
+                  </div>
+                  <div onClick={resetImport} style={{ cursor: "pointer", padding: "11px 16px", borderRadius: 8, border: `1px solid ${LINE}`, color: MUTED, ...disp, fontWeight: 700, fontSize: 13 }}>{t("Annuleer", "Cancel")}</div>
+                </div>
+              </>
+            );
+          })()}
+
+          {impResults && (
+            <>
+              <div style={{ fontSize: 14, color: PAPER, marginBottom: 4 }}>
+                <strong style={{ color }}>{impResults.created}</strong> {t("van", "of")} {impResults.total} {t("leden aangemaakt.", "members created.")}
+              </div>
+              <div style={{ fontSize: 11.5, color: MUTED, marginBottom: 12 }}>{t("Codes zijn nu zichtbaar — deel ze met je leden (daarna niet meer te zien).", "Codes are visible now — share them with your members (hidden afterwards).")}</div>
+              <div style={{ display: "grid", gap: 4, marginBottom: 14, maxHeight: 240, overflowY: "auto" }}>
+                {impResults.results.map((x, i) => (
+                  <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, background: INK, border: `1px solid ${x.ok ? LINE : EMBER_SOFT}`, borderRadius: 7, padding: "8px 11px" }}>
+                    <span style={{ color: PAPER, fontSize: 13 }}>{x.display_name}</span>
+                    {x.ok
+                      ? <span style={{ ...disp, fontWeight: 800, fontSize: 14, letterSpacing: 3, color }}>{x.code}</span>
+                      : <span style={{ fontSize: 11.5, color: EMBER_SOFT }}>{t("mislukt", "failed")}</span>}
+                  </div>
+                ))}
+              </div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <div onClick={downloadImportCodes} style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 8, background: color, color: "#fff", padding: "11px 18px", borderRadius: 8, ...disp, fontWeight: 700, fontSize: 13.5 }}>{DOWNLOAD_ICON} {t("Download codes (CSV)", "Download codes (CSV)")}</div>
+                <div onClick={resetImport} style={{ cursor: "pointer", padding: "11px 16px", borderRadius: 8, border: `1px solid ${LINE}`, color: MUTED, ...disp, fontWeight: 700, fontSize: 13 }}>{t("Nieuwe import", "New import")}</div>
+              </div>
+            </>
+          )}
         </div>
 
         {/* leden-lijst */}

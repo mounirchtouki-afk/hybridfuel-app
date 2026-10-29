@@ -34,6 +34,7 @@ export default async function handler(req, res) {
     if (action === "branding") return await branding(req, res, body);
     if (action === "login")  return await login(req, res, body);
     if (action === "create") return await create(req, res, body);
+    if (action === "bulkcreate") return await bulkcreate(req, res, body);
     if (action === "reset")  return await reset(req, res, body);
     if (action === "remove") return await remove(req, res, body);
     if (action === "addcoach")   return await addcoach(req, res, body);
@@ -100,35 +101,73 @@ async function login(req, res, body) {
 }
 
 // --- create: coach maakt lid + code ---
-async function create(req, res, body) {
-  const coachId = await userIdFromToken(String(body.authToken || "").trim());
-  if (!coachId) return res.status(401).json({ error: "invalid_token" });
-  const orgId = await coachOrgId(coachId);
-  if (!orgId) return res.status(403).json({ error: "not_a_coach" });
-
-  const displayName = String(body.display_name || "").trim().slice(0, 80);
-  const tier = ["basis", "pro"].includes(String(body.tier)) ? String(body.tier) : "pro";
+// Maakt één lid aan (auth-gebruiker + org_members-rij). Geeft {member_id, display_name, code}
+// terug, of gooit een Error met .detail bij mislukking. Gedeeld door create + bulkcreate.
+async function createOneMember(orgId, displayNameRaw, tierRaw) {
+  const displayName = String(displayNameRaw || "").trim().slice(0, 80);
+  const tier = ["basis", "pro"].includes(String(tierRaw)) ? String(tierRaw) : "pro";
   const code = genCode(8);
   const email = "m-" + crypto.randomUUID() + "@" + MEMBER_EMAIL_DOMAIN;
 
   const cr = await adminCreateUser(email, code, { org_id: orgId, role: "member", display_name: displayName });
-  if (!cr.ok) { const e = await cr.json().catch(() => ({})); return res.status(502).json({ error: "create_user_failed", detail: e && e.msg }); }
+  if (!cr.ok) { const e = await cr.json().catch(() => ({})); const err = new Error("create_user_failed"); err.detail = e && e.msg; throw err; }
   const user = await cr.json().catch(() => null);
   const uid = user && user.id;
-  if (!uid) return res.status(502).json({ error: "create_user_failed" });
+  if (!uid) throw new Error("create_user_failed");
 
   const ins = await rest("org_members", {
     method: "POST", headers: { Prefer: "return=representation" },
     body: JSON.stringify({ org_id: orgId, auth_user_id: uid, role: "member", display_name: displayName, code_hash: hashCode(code), active: true }),
   });
-  if (!ins.ok) { const e = await ins.text().catch(() => ""); return res.status(502).json({ error: "insert_failed", detail: e.slice(0, 200) }); }
+  if (!ins.ok) { const e = await ins.text().catch(() => ""); const err = new Error("insert_failed"); err.detail = e.slice(0, 200); throw err; }
   const rows = await ins.json().catch(() => []);
   const memberId = rows && rows[0] && rows[0].id;
-  // Tier zetten (guarded; kolom bestaat mogelijk nog niet vóór migratie). Default = pro.
   if (memberId && tier !== "pro") {
     try { await rest("org_members?id=eq." + encodeURIComponent(memberId), { method: "PATCH", body: JSON.stringify({ member_tier: tier }) }); } catch (e) {}
   }
-  return res.status(200).json({ ok: true, member_id: memberId, display_name: displayName, code });
+  return { member_id: memberId, display_name: displayName, code };
+}
+
+async function create(req, res, body) {
+  const coachId = await userIdFromToken(String(body.authToken || "").trim());
+  if (!coachId) return res.status(401).json({ error: "invalid_token" });
+  const orgId = await coachOrgId(coachId);
+  if (!orgId) return res.status(403).json({ error: "not_a_coach" });
+  try {
+    const m = await createOneMember(orgId, body.display_name, body.tier);
+    return res.status(200).json({ ok: true, ...m });
+  } catch (err) {
+    return res.status(502).json({ error: err.message || "create_failed", detail: err.detail });
+  }
+}
+
+// --- bulkcreate: coach importeert meerdere leden in één keer (AI-import) ---
+async function bulkcreate(req, res, body) {
+  const coachId = await userIdFromToken(String(body.authToken || "").trim());
+  if (!coachId) return res.status(401).json({ error: "invalid_token" });
+  const orgId = await coachOrgId(coachId);
+  if (!orgId) return res.status(403).json({ error: "not_a_coach" });
+
+  let list = Array.isArray(body.members) ? body.members : [];
+  // Normaliseer + filter lege namen; dedup op naam (binnen deze import).
+  const seen = new Set();
+  list = list
+    .map((m) => ({ display_name: String((m && m.display_name) || "").trim().slice(0, 80), tier: ["basis", "pro"].includes(String(m && m.tier)) ? String(m.tier) : "pro" }))
+    .filter((m) => { if (!m.display_name) return false; const k = m.display_name.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; });
+  if (!list.length) return res.status(400).json({ error: "no_rows" });
+  if (list.length > 200) return res.status(400).json({ error: "too_many", detail: "max 200 per import" });
+
+  const results = [];
+  for (const m of list) {
+    try {
+      const created = await createOneMember(orgId, m.display_name, m.tier);
+      results.push({ ok: true, display_name: created.display_name, code: created.code, member_id: created.member_id, tier: m.tier });
+    } catch (err) {
+      results.push({ ok: false, display_name: m.display_name, error: err.message || "failed" });
+    }
+  }
+  const created = results.filter((r) => r.ok).length;
+  return res.status(200).json({ ok: true, created, total: list.length, results });
 }
 
 // --- reset: coach genereert nieuwe code voor een lid ---
