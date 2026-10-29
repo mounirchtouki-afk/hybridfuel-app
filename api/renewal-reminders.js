@@ -65,7 +65,7 @@ function renewHtml(lang, tier, interval, monthLink, yearLink) {
     return wrap(
       "<p>Hoi,</p>" +
       "<p>Je HybridFuelCo " + label + "-toegang loopt binnenkort af. Verleng nu, dan blijven je weekplan, recepten en tracking gewoon doorlopen.</p>" +
-      "<p><strong>Trouwkorting: verleng 30 dagen voor " + renewMonth + " i.p.v. " + monthNormal + ".</strong></p>" +
+      "<p><strong>Omdat je al klant bent: verleng 30 dagen voor " + renewMonth + " i.p.v. " + monthNormal + ".</strong></p>" +
       "<p>" + btn(monthLink, "Verleng 30 dagen met iDEAL", true) + "</p>" +
       "<div style='background:#F7F6F4;border-left:3px solid #E11D48;padding:14px 16px;border-radius:0 8px 8px 0;margin:18px 0'>" +
         "<p style='margin:0 0 10px'><strong>Slimmer: pak meteen een heel jaar.</strong><br>Een jaar kost " + yearPrice + ", oftewel 2 maanden gratis. Nooit meer tussendoor verlengen, het hele seizoen door.</p>" +
@@ -82,7 +82,7 @@ function renewHtml(lang, tier, interval, monthLink, yearLink) {
   return wrap(
     "<p>Hi,</p>" +
     "<p>Your HybridFuelCo " + label + " access is about to end. Renew now to keep your week plan, recipes and tracking running.</p>" +
-    "<p><strong>Loyalty discount: renew 30 days for " + renewMonth + " instead of " + monthNormal + ".</strong></p>" +
+    "<p><strong>Because you are already a member: renew 30 days for " + renewMonth + " instead of " + monthNormal + ".</strong></p>" +
     "<p>" + btn(monthLink, "Renew 30 days with iDEAL", true) + "</p>" +
     "<div style='background:#F7F6F4;border-left:3px solid #E11D48;padding:14px 16px;border-radius:0 8px 8px 0;margin:18px 0'>" +
       "<p style='margin:0 0 10px'><strong>Smarter: grab a full year.</strong><br>A year is " + yearPrice + ", that is 2 months free. No more renewing in between, all season long.</p>" +
