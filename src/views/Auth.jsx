@@ -18,14 +18,15 @@ const T = {
   switchToLogin: { nl: "Al een account? Log in.", en: "Already have an account? Log in." },
   intro: { nl: "Maak een account om je plannen, tracker en recepten op al je apparaten te bewaren.", en: "Create an account to keep your plans, tracker and recipes across all your devices." },
   notReady: { nl: "De accountkoppeling is nog niet actief.", en: "Account connection is not active yet." },
-  tier: { nl: "Abonnement", en: "Plan" },
+  tier: { nl: "Toegang", en: "Access" },
   close: { nl: "Sluiten", en: "Close" },
-  upgradeTitle: { nl: "Kies je abonnement", en: "Choose your plan" },
-  month: { nl: "Maand", en: "Monthly" },
-  year: { nl: "Jaar", en: "Yearly" },
-  perMo: { nl: "/mnd", en: "/mo" },
-  perYr: { nl: "/jr", en: "/yr" },
+  upgradeTitle: { nl: "Kies je toegang", en: "Choose your access" },
+  month: { nl: "30 dagen", en: "30 days" },
+  year: { nl: "1 jaar", en: "1 year" },
+  perMo: { nl: " / 30 dgn", en: " / 30 days" },
+  perYr: { nl: " / jaar", en: " / year" },
   freeMonths: { nl: "2 maanden gratis", en: "2 months free" },
+  oneOffNote: { nl: "Eenmalige betaling, geen abonnement. Geen automatische verlenging — vóór afloop krijg je een herinnering.", en: "One-time payment, no subscription. No auto-renewal — you get a reminder before it ends." },
   basisName: { nl: "Basis", en: "Basic" },
   proName: { nl: "Pro", en: "Pro" },
   basisFeat: { nl: "Weekplan in de app · tracker · water · boodschappen", en: "Weekly plan in-app · tracker · water · shopping list" },
@@ -256,6 +257,7 @@ export default function Auth({ lang, session, tier, recovery, onClose }) {
             </div>
             {planCard("basis")}
             {planCard("pro")}
+            <div style={{ fontSize: 11, color: MUTED, lineHeight: 1.5, marginTop: 2 }}>{t("oneOffNote")}</div>
           </div>
         ) : (
           <button onClick={portal} disabled={!!subBusy} style={{ ...ghostBtn, width: "100%", marginBottom: 16, opacity: subBusy ? 0.7 : 1 }}>{subBusy === "portal" ? t("busy") : t("manage")}</button>
