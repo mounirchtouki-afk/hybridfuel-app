@@ -253,12 +253,9 @@ const TXT = {
   lb1: { nl: "Jouw weekplan in de app, automatisch op je doel", en: "Your week plan in the app, auto-built on your goal" },
   lb2: { nl: "Exacte grammen per maaltijd + 100+ recepten", en: "Exact weights per meal + 100+ recipes" },
   lb3: { nl: "Dagelijks tracken, slim herplannen en Hyrox-raceprotocol", en: "Daily tracking, smart re-plan and Hyrox race protocol" },
-  lbBundle: { nl: "+ Hyrox-voedingsgids (bundel)", en: "+ Hyrox nutrition guide (bundle)" },
-  unlockWeek: { nl: "Ontgrendel de week, €14,95", en: "Unlock the week, €14.95" },
-  unlockBundle: { nl: "Week + Hyrox-gids, €17,95", en: "Week + Hyrox guide, €17.95" },
-  lockFoot: { nl: "Direct beschikbaar na betaling.", en: "Available instantly after payment." },
-  orSubscribe: { nl: "Of ontgrendel 30 dagen · vanaf €9,95 eenmalig", en: "Or unlock 30 days · from €9.95 one-time" },
-  subscribeCta: { nl: "Ontgrendel je weekplan · vanaf €9,95", en: "Unlock your week plan · from €9.95" },
+  lockFoot: { nl: "Direct toegang na betaling. Eenmalig — geen abonnement.", en: "Instant access after payment. One-time — no subscription." },
+  subscribeCta: { nl: "Krijg de volledige app · vanaf €9,95", en: "Get the full app · from €9.95" },
+  subYearUpsell: { nl: "Of pak 1 jaar — 2 maanden gratis →", en: "Or get 1 year — 2 months free →" },
   subOk: { nl: "Betaling gelukt! Ben je al ingelogd, dan staat je plan klaar. Zo niet: check je mail voor je inlog-link.", en: "Payment complete! If you're logged in, your plan is ready. If not, check your email for your login link." },
   subCancel: { nl: "Afrekenen geannuleerd.", en: "Checkout canceled." },
   subErr: { nl: "Afrekenen is even niet beschikbaar. Probeer het later opnieuw.", en: "Checkout is temporarily unavailable. Please try again later." },
@@ -1648,36 +1645,35 @@ export default function App() {
                   )}
 
                   {targets && !loading && !error && !hasBasis && (
-                    <div style={{ border: `1px solid ${EMBER}`, borderRadius: 14, padding: 20, background: "linear-gradient(180deg, rgba(225,29,72,0.09), transparent 60%)" }}>
-                      <div style={{ ...disp, fontSize: 20, fontWeight: 700, letterSpacing: 0.3, marginBottom: 6 }}>{lockReason === "no_credits" ? T("creditsOutTitle") : T("lockTitle")}</div>
+                    <div style={{ border: `1px solid ${EMBER}`, borderRadius: 14, padding: 20, background: "linear-gradient(180deg, rgba(225,29,72,0.13), transparent 62%)", boxShadow: "0 12px 44px rgba(225,29,72,0.14)" }}>
+                      <div style={{ ...disp, fontSize: 21, fontWeight: 700, letterSpacing: 0.3, marginBottom: 6 }}>{lockReason === "no_credits" ? T("creditsOutTitle") : T("lockTitle")}</div>
                       <div style={{ fontSize: 12.5, color: MUTED, marginBottom: 16, lineHeight: 1.5 }}>{lockReason === "no_credits" ? T("creditsOutSub") : T("lockSub")}</div>
                       <div style={{ display: "grid", gap: 9, marginBottom: 18 }}>
                         {[T("lb1"), T("lb2"), T("lb3")].map((t, i) => (
                           <div key={i} style={{ display: "flex", gap: 9, alignItems: "flex-start", fontSize: 13.5 }}><span style={{ color: EMBER, fontWeight: 800 }}>✓</span><span>{t}</span></div>
                         ))}
                       </div>
-                      <div onClick={() => setShowAuth(true)} style={{ cursor: "pointer", textAlign: "center", background: EMBER, color: PAPER, padding: "14px 0", borderRadius: 10, ...disp, fontWeight: 700, fontSize: 15.5, letterSpacing: 0.5 }}>{T("subscribeCta")}</div>
-                      <div style={{ fontSize: 11, color: MUTED, marginTop: 10, textAlign: "center" }}>{T("lockFoot")}</div>
+                      <div onClick={() => setShowAuth(true)} style={{ cursor: "pointer", textAlign: "center", background: EMBER, color: PAPER, padding: "16px 0", borderRadius: 11, ...disp, fontWeight: 700, fontSize: 17, letterSpacing: 0.6, textTransform: "uppercase", boxShadow: "0 6px 22px rgba(225,29,72,0.38)" }}>{T("subscribeCta")}</div>
+                      <div onClick={() => setShowAuth(true)} style={{ cursor: "pointer", textAlign: "center", color: EMBER_SOFT, marginTop: 11, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.3 }}>{T("subYearUpsell")}</div>
+                      <div style={{ fontSize: 11, color: MUTED, marginTop: 11, textAlign: "center" }}>{T("lockFoot")}</div>
                     </div>
                   )}
 
                   {targets && !loading && !error && !hasBasis && (
-                    <div style={{ marginTop: 16, border: `1px solid ${LINE}`, borderRadius: 14, padding: 18, background: INK2 }}>
+                    <div style={{ marginTop: 16, border: `1px solid ${EMBER}`, borderRadius: 14, padding: 18, background: "linear-gradient(180deg, rgba(225,29,72,0.06), transparent 72%)" }}>
                       {leadStatus === "ok" ? (
                         <div>
-                          <div style={{ ...disp, fontSize: 16, fontWeight: 700, marginBottom: 4 }}>{T("leadOkTitle")}</div>
+                          <div style={{ ...disp, fontSize: 17, fontWeight: 700, marginBottom: 4 }}>{T("leadOkTitle")}</div>
                           <div style={{ fontSize: 12.5, color: MUTED, lineHeight: 1.5 }}>{T("leadOkBody")}</div>
                         </div>
                       ) : (
                         <div>
-                          <div style={{ ...disp, fontSize: 16, fontWeight: 700, marginBottom: 4 }}>{T("leadTitle")}</div>
+                          <div style={{ ...disp, fontSize: 17, fontWeight: 700, marginBottom: 4 }}>{T("leadTitle")}</div>
                           <div style={{ fontSize: 12.5, color: MUTED, marginBottom: 12, lineHeight: 1.5 }}>{T("leadSub")}</div>
-                          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                            <input style={{ ...input, flex: 1, minWidth: 180 }} type="email" value={email} onChange={(ev) => { setEmail(ev.target.value); if (leadStatus !== "idle") setLeadStatus("idle"); }} placeholder={T("leadPh")} />
-                            <button onClick={subscribe} disabled={leadStatus === "sending"} style={{ background: "transparent", color: EMBER, border: `1px solid ${EMBER}`, padding: "11px 18px", borderRadius: 8, ...disp, fontWeight: 700, fontSize: 13, letterSpacing: 0.3, cursor: leadStatus === "sending" ? "default" : "pointer", whiteSpace: "nowrap" }}>
-                              {leadStatus === "sending" ? T("leadSending") : T("leadBtn")}
-                            </button>
-                          </div>
+                          <input style={{ ...input, marginBottom: 9 }} type="email" value={email} onChange={(ev) => { setEmail(ev.target.value); if (leadStatus !== "idle") setLeadStatus("idle"); }} placeholder={T("leadPh")} />
+                          <button onClick={subscribe} disabled={leadStatus === "sending"} style={{ width: "100%", background: EMBER, color: PAPER, border: "none", padding: "13px 0", borderRadius: 9, ...disp, fontWeight: 700, fontSize: 14.5, letterSpacing: 0.5, textTransform: "uppercase", cursor: leadStatus === "sending" ? "default" : "pointer" }}>
+                            {leadStatus === "sending" ? T("leadSending") : T("leadBtn")}
+                          </button>
                           {leadStatus === "bad" && <div style={{ fontSize: 11.5, color: EMBER_SOFT, marginTop: 8 }}>{T("leadBad")}</div>}
                           {leadStatus === "err" && <div style={{ fontSize: 11.5, color: EMBER_SOFT, marginTop: 8 }}>{T("leadErr")}</div>}
                         </div>
