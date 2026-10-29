@@ -61,6 +61,14 @@ export async function adminSetPassword(userId, password) {
   });
   return r;
 }
+export async function adminUpdateUser(userId, fields) {
+  const r = await fetch(supaUrl() + "/auth/v1/admin/users/" + encodeURIComponent(userId), {
+    method: "PUT",
+    headers: { apikey: svcKey(), Authorization: "Bearer " + svcKey(), "Content-Type": "application/json" },
+    body: JSON.stringify(fields || {}),
+  });
+  return r;
+}
 export async function adminDeleteUser(userId) {
   const r = await fetch(supaUrl() + "/auth/v1/admin/users/" + encodeURIComponent(userId), {
     method: "DELETE",

@@ -9,7 +9,7 @@
 import crypto from "crypto";
 import { ipLimited } from "./_ratelimit.js";
 import {
-  rest, genCode, hashCode, adminCreateUser, adminGetUser, adminSetPassword, adminDeleteUser,
+  rest, genCode, hashCode, adminCreateUser, adminGetUser, adminSetPassword, adminUpdateUser, adminDeleteUser,
   passwordGrant, userIdFromToken, coachOrgId, ownerOrgId, MEMBER_EMAIL_DOMAIN, readBody,
 } from "./_gym.js";
 
@@ -241,12 +241,15 @@ async function editcoach(req, res, body) {
 
   const name = body.display_name != null ? String(body.display_name).trim().slice(0, 80) : null;
   const password = body.password != null ? String(body.password) : null;
+  const email = body.email != null ? String(body.email).trim().toLowerCase() : null;
 
   if (name != null) { try { await rest("org_members?id=eq." + encodeURIComponent(memberId), { method: "PATCH", body: JSON.stringify({ display_name: name }) }); } catch (e) {} }
-  if (password) {
-    if (password.length < 8) return res.status(400).json({ error: "pw_too_short" });
-    const up = await adminSetPassword(mem.auth_user_id, password);
-    if (!up.ok) return res.status(502).json({ error: "pw_failed" });
+  const authFields = {};
+  if (password) { if (password.length < 8) return res.status(400).json({ error: "pw_too_short" }); authFields.password = password; }
+  if (email) { authFields.email = email; authFields.email_confirm = true; }
+  if (Object.keys(authFields).length) {
+    const up = await adminUpdateUser(mem.auth_user_id, authFields);
+    if (!up.ok) { const e = await up.json().catch(() => ({})); return res.status(502).json({ error: "update_failed", detail: e && (e.msg || e.error_description) }); }
   }
   return res.status(200).json({ ok: true, member_id: memberId });
 }

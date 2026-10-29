@@ -95,7 +95,10 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
   const [permSel, setPermSel] = useState([]);
   const [openEdit, setOpenEdit] = useState(null);   // coach-id waarvan de bewerk-editor open staat
   const [edName, setEdName] = useState("");
+  const [edEmail, setEdEmail] = useState("");
   const [edPass, setEdPass] = useState("");
+  const [edPass2, setEdPass2] = useState("");
+  const [edShow, setEdShow] = useState(false);
   const [editMsg, setEditMsg] = useState("");
 
   // Rekenformule + juridisch akkoord
@@ -227,17 +230,21 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
   }
   function openCoachEdit(c) {
     if (openEdit === c.id) { setOpenEdit(null); return; }
-    setOpenEdit(c.id); setEdName(c.display_name || ""); setEdPass(""); setEditMsg("");
+    setOpenEdit(c.id); setEdName(c.display_name || ""); setEdEmail(""); setEdPass(""); setEdPass2(""); setEdShow(false); setEditMsg("");
   }
   async function saveCoachEdit(c) {
     setEditMsg("");
+    const email = edEmail.trim().toLowerCase();
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setEditMsg(t("Ongeldig e-mailadres.", "Invalid email.")); return; }
     if (edPass && edPass.length < 8) { setEditMsg(t("Wachtwoord min. 8 tekens.", "Password min. 8 chars.")); return; }
+    if (edPass && edPass !== edPass2) { setEditMsg(t("Wachtwoorden komen niet overeen.", "Passwords don't match.")); return; }
     try {
       const payload = { action: "editcoach", authToken: await freshToken(), member_id: c.id, display_name: edName.trim() };
       if (edPass) payload.password = edPass;
+      if (email) payload.email = email;
       const r = await fetch("/api/gym", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
-      if (r.ok) { setCoaches((xs) => xs.map((x) => x.id === c.id ? { ...x, display_name: edName.trim() } : x)); setEditMsg(t("Opgeslagen.", "Saved.")); setEdPass(""); }
-      else setEditMsg(t("Opslaan mislukt.", "Save failed."));
+      if (r.ok) { setCoaches((xs) => xs.map((x) => x.id === c.id ? { ...x, display_name: edName.trim() } : x)); setEditMsg(t("Opgeslagen.", "Saved.")); setEdPass(""); setEdPass2(""); }
+      else { const e = await r.json().catch(() => ({})); setEditMsg(e && e.error === "update_failed" ? t("E-mail/wachtwoord kon niet worden opgeslagen (bestaat de e-mail al?).", "Email/password could not be saved (email already in use?).") : t("Opslaan mislukt.", "Save failed.")); }
     } catch (e) { setEditMsg(t("Opslaan mislukt.", "Save failed.")); }
   }
   async function removeCoach(c) {
@@ -470,6 +477,8 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
     wave: svg(<><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></>),
     calendar2: svg(<><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18M8 14h.01M12 14h.01M16 14h.01" /></>),
   };
+  const EYE_ON = <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z" /><circle cx="12" cy="12" r="3" /></svg>;
+  const EYE_OFF = <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" /><path d="M1 1l22 22" /></svg>;
 
   // Aandacht-items (voor het overzicht én de badge in de zijbalk).
   function attentionItems() {
@@ -952,11 +961,32 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
                       </>
                     )}
                     {openEdit === c.id && (
-                      <div style={{ padding: "0 12px 12px", display: "grid", gap: 8 }}>
-                        <input style={input} value={edName} onChange={(e) => setEdName(e.target.value)} placeholder={t("Naam", "Name")} />
-                        <input style={input} type="text" value={edPass} onChange={(e) => setEdPass(e.target.value)} placeholder={t("Nieuw wachtwoord (leeg = niet wijzigen)", "New password (empty = keep)")} />
-                        <div onClick={() => saveCoachEdit(c)} style={{ cursor: "pointer", background: color, color: "#fff", padding: "8px 0", borderRadius: 7, textAlign: "center", ...disp, fontWeight: 700, fontSize: 12.5 }}>{t("Opslaan", "Save")}</div>
-                        {editMsg && <div style={{ fontSize: 11.5, color: SAGE }}>{editMsg}</div>}
+                      <div style={{ padding: "0 12px 14px", display: "grid", gap: 10 }}>
+                        <div style={{ display: "grid", gap: 4 }}>
+                          <div style={{ fontSize: 11, ...disp, fontWeight: 700, color: MUTED, letterSpacing: .3 }}>{t("Naam", "Name")}</div>
+                          <input style={input} value={edName} onChange={(e) => setEdName(e.target.value)} placeholder={t("Naam", "Name")} />
+                        </div>
+                        <div style={{ display: "grid", gap: 4 }}>
+                          <div style={{ fontSize: 11, ...disp, fontWeight: 700, color: MUTED, letterSpacing: .3 }}>{t("E-mail (leeg = niet wijzigen)", "Email (empty = keep)")}</div>
+                          <input style={input} type="email" value={edEmail} onChange={(e) => setEdEmail(e.target.value)} placeholder={t("nieuw@e-mail.nl", "new@email.com")} autoCapitalize="none" autoCorrect="off" />
+                        </div>
+                        <div style={{ display: "grid", gap: 4 }}>
+                          <div style={{ fontSize: 11, ...disp, fontWeight: 700, color: MUTED, letterSpacing: .3 }}>{t("Nieuw wachtwoord (leeg = niet wijzigen)", "New password (empty = keep)")}</div>
+                          <div style={{ position: "relative" }}>
+                            <input style={{ ...input, paddingRight: 44 }} type={edShow ? "text" : "password"} value={edPass} onChange={(e) => setEdPass(e.target.value)} placeholder="••••••••" autoComplete="new-password" />
+                            <div onClick={() => setEdShow((v) => !v)} title={edShow ? t("Verbergen", "Hide") : t("Tonen", "Show")} style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", cursor: "pointer", color: MUTED, display: "grid", placeItems: "center", width: 28, height: 28 }}>
+                              {edShow ? EYE_OFF : EYE_ON}
+                            </div>
+                          </div>
+                        </div>
+                        {edPass && (
+                          <div style={{ display: "grid", gap: 4 }}>
+                            <div style={{ fontSize: 11, ...disp, fontWeight: 700, color: MUTED, letterSpacing: .3 }}>{t("Bevestig wachtwoord", "Confirm password")}</div>
+                            <input style={input} type={edShow ? "text" : "password"} value={edPass2} onChange={(e) => setEdPass2(e.target.value)} placeholder="••••••••" autoComplete="new-password" />
+                          </div>
+                        )}
+                        <div onClick={() => saveCoachEdit(c)} style={{ cursor: "pointer", background: color, color: "#fff", padding: "10px 0", borderRadius: 8, textAlign: "center", ...disp, fontWeight: 700, fontSize: 13 }}>{t("Opslaan", "Save")}</div>
+                        {editMsg && <div style={{ fontSize: 11.5, color: editMsg === t("Opgeslagen.", "Saved.") ? SAGE : EMBER_SOFT }}>{editMsg}</div>}
                       </div>
                     )}
                     {openPerms === c.id && (
