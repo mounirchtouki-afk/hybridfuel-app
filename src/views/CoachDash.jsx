@@ -8,9 +8,20 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
   const t = (nl, en) => (lang === "nl" ? nl : en);
   const color = (org && org.brand_color) || "#E11D48";
   const token = session && session.access_token;
-  // Altijd een VERS access-token ophalen (het vastgelegde token kan verlopen zijn → 401).
+  // Altijd een VERS, geldig access-token ophalen (anders 401 op de server). Forceer een
+  // refresh als het token (bijna) verlopen is.
   async function freshToken() {
-    try { const { data } = await supabase.auth.getSession(); return (data && data.session && data.session.access_token) || token; } catch (e) { return token; }
+    try {
+      const { data } = await supabase.auth.getSession();
+      const s = data && data.session;
+      let tok = s && s.access_token;
+      const expMs = s && s.expires_at ? s.expires_at * 1000 : 0;
+      if (!tok || (expMs && expMs < Date.now() + 10000)) {
+        const r = await supabase.auth.refreshSession();
+        tok = r && r.data && r.data.session && r.data.session.access_token;
+      }
+      return tok || token;
+    } catch (e) { return token; }
   }
 
   // Modules (datagedreven/uitbreidbaar). De org heeft een beschikbare set (superuser-gestuurd);
