@@ -28,7 +28,11 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
   // de eigenaar ziet alles + Team, een coach alleen z'n toegewezen rechten.
   const MODS = (org && org.enabled_modules && org.enabled_modules.length) ? org.enabled_modules : ["members", "classes", "pt", "plans", "branding", "formula"];
   const LABEL = { overview: t("Overzicht", "Overview"), members: t("Leden", "Members"), classes: t("Lessen", "Classes"), pt: t("PT-agenda", "PT"), plans: t("Abonnementen", "Plans"), branding: t("Huisstijl", "Branding"), formula: t("Formule", "Formula"), team: t("Team", "Team") };
-  const myTabs = ["overview", ...(isOwner ? [...MODS, "team"] : (Array.isArray(perms) ? MODS.filter((m) => perms.includes(m)) : []))];
+  const [previewRole, setPreviewRole] = useState("owner"); // demo: eigenaar bekijkt als coach
+  const demoCoachMods = ["members", "pt", "classes"].filter((m) => MODS.includes(m));
+  const myTabs = ["overview", ...(isOwner
+    ? (previewRole === "coach" ? demoCoachMods : [...MODS, "team"])
+    : (Array.isArray(perms) ? MODS.filter((m) => perms.includes(m)) : []))];
   const [active, setActive] = useState(null);
   const current = active && myTabs.includes(active) ? active : (myTabs[0] || null);
   const [navOpen, setNavOpen] = useState(false);     // nav-uitklapmenu (mobiel drawer)
@@ -540,6 +544,16 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
 
       {/* Content-kolom */}
       <div style={{ flex: 1, minWidth: 0, paddingBottom: 40 }}>
+        {isOwner && (
+          <div style={{ padding: "9px 16px", borderBottom: `1px solid ${LINE}`, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", background: INK2 }}>
+            <span style={{ fontSize: 11, color: MUTED, ...disp, fontWeight: 700, letterSpacing: 0.5, textTransform: "uppercase" }}>{t("Bekijk als", "View as")}</span>
+            {[["owner", t("Eigenaar", "Owner")], ["coach", t("Coach", "Coach")]].map(([k, lbl]) => (
+              <div key={k} onClick={() => { setPreviewRole(k); setActive("overview"); }} style={{ cursor: "pointer", fontSize: 12.5, ...disp, fontWeight: 700, padding: "6px 12px", borderRadius: 7, background: previewRole === k ? color : "transparent", color: previewRole === k ? "#fff" : MUTED, border: `1px solid ${previewRole === k ? color : LINE}` }}>{lbl}</div>
+            ))}
+            <a href={joinUrl} target="_blank" rel="noreferrer" style={{ textDecoration: "none", fontSize: 12.5, color: MUTED, ...disp, fontWeight: 700, padding: "6px 12px", borderRadius: 7, border: `1px solid ${LINE}` }}>{t("Leden-app ↗", "Member app ↗")}</a>
+            {previewRole === "coach" && <span style={{ fontSize: 11.5, color: MUTED }}>{t("(voorbeeld van een beperkte coach)", "(preview of a limited coach)")}</span>}
+          </div>
+        )}
         {!isWide && (
           <div style={{ borderBottom: `1px solid ${LINE}`, padding: "12px 14px", display: "flex", alignItems: "center", gap: 10, position: "sticky", top: 0, background: INK, zIndex: 20 }}>
             <div onClick={() => setNavOpen(true)} style={{ cursor: "pointer", color: PAPER, border: `1px solid ${LINE}`, borderRadius: 8, padding: "7px 10px", display: "flex" }}>
