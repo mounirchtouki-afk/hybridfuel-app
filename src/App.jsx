@@ -1024,6 +1024,22 @@ export default function App() {
     try { return JSON.parse(localStorage.getItem("hf_products") || "[]") || []; } catch (e) { return []; }
   }
 
+  // Laadt de eigen opgeslagen maaltijden (recepten) van de klant → als hele maaltijd
+  // in het plan (heeft voorrang boven los samengestelde productmaaltijden).
+  async function loadUserMeals() {
+    let rows = [];
+    if (supabase && session) {
+      try { const { data } = await supabase.from("recipes").select("name,type,ingredients,macros").eq("user_id", session.user.id); rows = data || []; } catch (e) { rows = []; }
+    } else {
+      try { rows = JSON.parse(localStorage.getItem("hf_recipes") || "[]") || []; } catch (e) { rows = []; }
+    }
+    return (rows || []).map((r) => ({
+      name: r.name, type: r.type,
+      macros: r.macros || {},
+      ing: (r.ingredients || []).map((i) => ({ n: i.name || i.n || i.nl || i.en || "", g: i.grams != null ? i.grams : (i.g != null ? i.g : 0) })),
+    })).filter((m) => m.macros && (m.macros.kcal || 0) > 0 && m.ing.length);
+  }
+
   // #3-keuze: plan samenstellen uit de EIGEN producten (geen AI).
   async function buildFromProducts(intake) {
     setLoading(true); setError("");
@@ -1034,14 +1050,15 @@ export default function App() {
       if (!hasBasis) { setLoading(false); return; } // zonder abo: targets + paywall
 
       const products = await loadUserProducts();
-      const ready = productPlanReadiness(products);
+      const meals = await loadUserMeals();
+      const ready = productPlanReadiness(products, meals);
       if (!ready.mainsCovered) {
         setWeek(null);
         setError(T("needProductsBody"));
         setLoading(false);
         return;
       }
-      const { days } = buildDaysFromProducts({ products, targets: tg.targets, intake, WD });
+      const { days } = buildDaysFromProducts({ products, meals, targets: tg.targets, intake, WD });
       setWeek({ days });
       try { localStorage.setItem("hf_lastplan", JSON.stringify({ targets: tg.targets, week: { days } })); } catch (e) {}
       if (supabase && session) {
@@ -1825,7 +1842,7 @@ export default function App() {
                       </div>
 
                       {view === "plan" && planEdit && <div style={{ fontSize: 11.5, color: MUTED, marginBottom: 12, lineHeight: 1.5 }}>{T("editHint")}</div>}
-                      {view === "plan" && (<div style={{ display: "grid", gap: 12 }}>{week.days.map((day, di) => planEdit ? <EditDayCard key={di} day={day} di={di} api={{ T, ML, sIn, R, disp, mutDay, patchMeal, scaleMeal, patchIng, addIngr, removeIngr, removeMeal, addMealTo, saveMealAsRecipe, applyIngVals, saveIngProduct, setCopyPick, setMovePlan, setPickTarget, setShowProducts, setRecipePick, savedMsg, units, pro: hasPro }} /> : <DayCard key={di} day={day} />)}</div>)}
+                      {view === "plan" && (<div style={{ display: "grid", gap: 12 }}>{week.days.map((day, di) => planEdit ? <EditDayCard key={di} day={day} di={di} api={{ T, ML, sIn, R, disp, mutDay, patchMeal, scaleMeal, patchIng, addIngr, removeIngr, removeMeal, addMealTo, saveMealAsRecipe, applyIngVals, saveIngProduct, setCopyPick, setMovePlan, setPickTarget, setShowProducts, setRecipePick, savedMsg, units, pro: hasPro || isGymMember }} /> : <DayCard key={di} day={day} />)}</div>)}
                       {view === "shop" && (
                         <div style={{ display: "grid", gap: 12 }}>
                           <div style={{ fontSize: 12, color: MUTED }}>{T("shopHint")}</div>
@@ -1900,7 +1917,7 @@ export default function App() {
         {tab === "today" && (canView ? <Today key={"today" + syncVer} lang={lang} week={week} session={session} plus={hasPlus} demo={inDemo} onUnlock={() => setShowAuth(true)} units={units} onRebalance={rebalanceDay} onGoPlan={() => setTab("plan")} /> : <Locked />)}
         {tab === "tracker" && (hasBasis ? <Tracker lang={lang} height={height} session={session} units={units} /> : <Locked />)}
         {tab === "water" && (hasBasis ? <Water lang={lang} session={session} week={week} units={units} /> : <Locked />)}
-        {tab === "producten" && (hasPro ? <Products embedded lang={lang} session={session} onProductChange={propagateProduct} /> : <Locked pro />)}
+        {tab === "producten" && ((hasPro || isGymMember) ? <Products embedded lang={lang} session={session} onProductChange={propagateProduct} /> : <Locked pro />)}
         {tab === "recipes" && <Recipes lang={lang} session={session} units={units} />}
         {tab === "race" && (canViewPlus ? <RaceProtocol lang={lang} weight={weight} session={session} week={week} /> : <Locked pro />)}
         {tab === "training" && (hasBasis ? <Training key={"training" + syncVer} lang={lang} weight={weight} session={session} /> : <Locked />)}
