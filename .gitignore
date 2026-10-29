@@ -13,3 +13,4 @@ dist/
 # logs & os
 npm-debug.log*
 .DS_Store
+.harness/

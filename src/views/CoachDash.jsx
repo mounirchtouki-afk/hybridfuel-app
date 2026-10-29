@@ -636,6 +636,35 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
     return [{ label: "Pro", n: pro, col: color }, { label: "Basis", n: basis, col: "#60A5FA" }].filter((s) => s.n > 0);
   };
 
+  // Relatieve tijd ("12 min geleden", "over 2 uur", "3 dagen geleden").
+  const relTime = (iso) => {
+    if (!iso) return "";
+    const d = new Date(iso), diff = (d - new Date()) / 1000, abs = Math.abs(diff), fut = diff > 30;
+    const mins = Math.round(abs / 60), hrs = Math.round(abs / 3600), days = Math.round(abs / 86400);
+    let s;
+    if (abs < 60) return t("zojuist", "just now");
+    else if (abs < 3600) s = mins + " " + t("min", "min");
+    else if (abs < 86400) s = hrs + " " + t("uur", "h");
+    else if (days < 7) s = days + " " + (days === 1 ? t("dag", "d") : t("dagen", "d"));
+    else return d.toLocaleDateString(lang === "nl" ? "nl-NL" : "en-GB", { day: "numeric", month: "short" });
+    return fut ? (t("over", "in") + " " + s) : (s + " " + t("geleden", "ago"));
+  };
+  // Echte activiteiten-feed: samengevoegd uit leden (aangemaakt, laatst actief) + PT-sessies.
+  function activityFeed() {
+    const byId = {}; (members || []).forEach((m) => { byId[m.id] = m; });
+    const ev = [];
+    (members || []).forEach((m) => {
+      if (m.created_at) ev.push({ ts: m.created_at, name: m.display_name || t("Naamloos", "Unnamed"), action: t("Nieuw lid aangemaakt", "New member added"), kind: "new", chip: (m.member_tier || "pro"), chipCol: MUTED });
+      if (m.progress && m.progress.last_active) { const adh = m.progress.adherence; ev.push({ ts: m.progress.last_active, name: m.display_name || t("Naamloos", "Unnamed"), action: t("Actief in de app", "Active in the app"), kind: "active", chip: adh != null ? Math.round(adh) + "%" : null, chipCol: adh != null && adh < 50 ? color : "#34D399" }); }
+    });
+    (sessions || []).forEach((s) => {
+      const nm = (byId[s.member_id] && byId[s.member_id].display_name) || s.title || t("PT-sessie", "PT session");
+      if (s.starts_at) ev.push({ ts: s.starts_at, name: nm, action: t("PT-sessie gepland", "PT session scheduled"), kind: "pt", chip: null });
+    });
+    ev.sort((a, b) => (b.ts || "").localeCompare(a.ts || ""));
+    return ev.slice(0, 7);
+  }
+
   const navCount = (m) => {
     if (m === "overview") { const n = attentionItems().length; return n || null; }
     if (m === "members") return members ? members.length : null;
@@ -788,7 +817,7 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
 
           // KPI-tegels (alleen die onder je rechten vallen).
           const tiles = [];
-          const brandTint = (color || "#E11D48") + "22";
+          const brandTint = (color || "#E11D48") + "2E";
           if (canSee("members")) tiles.push({ k: "leden", ic: "members", col: color, tint: brandTint, label: t("Actieve leden", "Active members"), val: String(st.active), sub: st.newThisMonth ? "▲ " + st.newThisMonth + " " + t("deze maand", "this month") : t("stabiel", "steady"), subCol: st.newThisMonth ? SAGE2 : MUTED, spark: st.growth, sparkCol: SAGE2 });
           if (canSee("members")) tiles.push({ k: "adh", ic: "formula", col: BLUE, tint: "rgba(96,165,250,0.15)", label: t("Gem. adherentie", "Avg. adherence"), val: st.adhAvg == null ? "—" : st.adhAvg + "%", sub: st.adhAvg == null ? t("nog geen data", "no data yet") : (st.adhLow ? st.adhLow + " " + t("onder 50%", "below 50%") : t("iedereen ≥ 50%", "all ≥ 50%")), subCol: st.adhLow ? color : MUTED });
           if (canSee("classes")) tiles.push({ k: "bezet", ic: "classes", col: AMBER, tint: "rgba(245,158,11,0.15)", label: t("Lesbezetting", "Class occupancy"), val: st.occ == null ? (st.classCount + " " + t("lessen", "classes")) : st.occ + "%", sub: st.occ == null ? t("zet capaciteit per les", "set capacity per class") : st.enrSum + " " + t("ingeschreven", "enrolled"), subCol: MUTED });
@@ -821,7 +850,7 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
                 <div style={{ ...card, border: `1px solid ${color}` }}>
                   <div style={{ fontSize: 12.5, color: MUTED, marginBottom: 10 }}>{t("Kies wat je op je dashboard ziet:", "Choose what shows on your dashboard:")}</div>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                    {[["kpis", t("Kerncijfers", "Key figures")], ["feed", t("Aandacht", "Attention")], ["growth", t("Ledengroei", "Member growth")], ["abo", t("Abonnementen", "Plans")], ["classes", t("Lessen vandaag", "Classes today")], ["team", "Team"], ["newmembers", t("Nieuwe leden", "New members")]].map(([k, lbl]) => {
+                    {[["kpis", t("Kerncijfers", "Key figures")], ["feed", t("Aandacht", "Attention")], ["growth", t("Ledengroei", "Member growth")], ["abo", t("Abonnementen", "Plans")], ["classes", t("Lessen vandaag", "Classes today")], ["team", "Team"], ["activity", t("Recente activiteit", "Recent activity")]].map(([k, lbl]) => {
                       const vis = on(k);
                       return <div key={k} onClick={() => toggleWidget(k)} style={{ cursor: "pointer", fontSize: 12.5, ...disp, fontWeight: 700, padding: "7px 13px", borderRadius: 8, border: `1px solid ${vis ? color : LINE}`, background: vis ? color : "transparent", color: vis ? "#fff" : MUTED }}>{vis ? "✓ " : ""}{lbl}</div>;
                     })}
@@ -898,7 +927,7 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
                       <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
                         <svg width="104" height="104" viewBox="0 0 42 42">
                           <circle cx="21" cy="21" r="15.9" fill="none" stroke="#242c38" strokeWidth="6.5" />
-                          {(() => { let acc = 0; return segs.map((s, i) => { const len = (s.n / totalAbo) * 100; const el = <circle key={i} cx="21" cy="21" r="15.9" fill="none" stroke={s.col} strokeWidth="6.5" strokeDasharray={`${len} ${100 - len}`} strokeDashoffset={25 - acc} transform="rotate(-90 21 21)" />; acc += len; return el; }); })()}
+                          {(() => { let acc = 0; return segs.map((s, i) => { const len = (s.n / totalAbo) * 100; const el = <circle key={i} cx="21" cy="21" r="15.9" fill="none" stroke={s.col} strokeWidth="6.5" strokeDasharray={`${len} ${100 - len}`} strokeDashoffset={-acc} transform="rotate(-90 21 21)" />; acc += len; return el; }); })()}
                           <text x="21" y="20.5" textAnchor="middle" fontSize="7" fontWeight="700" fill={PAPER}>{st.active}</text>
                           <text x="21" y="26" textAnchor="middle" fontSize="3.2" fill={MUTED}>{t("leden", "members")}</text>
                         </svg>
@@ -918,7 +947,7 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
                             const cnt = enrollCounts ? (enrollCounts[c.id] || 0) : null; const cap = c.capacity || null;
                             const full = cap != null && cnt != null && cnt >= cap;
                             const warn = cap != null && cnt != null && !full && cnt / cap >= 0.8;
-                            const pillBg = full ? EMBER_SOFT : warn ? "rgba(245,158,11,0.15)" : "rgba(52,211,153,0.14)";
+                            const pillBg = full ? (color + "22") : warn ? "rgba(245,158,11,0.15)" : "rgba(52,211,153,0.14)";
                             const pillCol = full ? color : warn ? AMBER : SAGE2;
                             return (
                               <div key={c.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 2px", borderBottom: `1px solid ${LINE}` }}>
@@ -948,30 +977,30 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
                 </div>
               </div>
 
-              {/* nieuwe leden */}
-              {canSee("members") && on("newmembers") && recentMembers.length > 0 && (
-                <div style={card}>
-                  {cardHead(t("Laatste nieuwe leden", "Latest new members"))}
-                  <div style={{ overflowX: "auto" }}>
-                    <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                      <tbody>
-                        <tr>{[t("Lid", "Member"), t("Tier", "Tier"), t("Adherentie", "Adherence"), t("Toegevoegd", "Added")].map((th, i) => <th key={i} style={{ textAlign: "left", fontSize: 10.5, letterSpacing: 0.5, textTransform: "uppercase", color: "#5c6676", fontWeight: 700, padding: "0 10px 10px" }}>{th}</th>)}</tr>
-                        {recentMembers.map((m) => {
-                          const adh = m.progress && m.progress.adherence != null ? Math.round(m.progress.adherence) : null;
-                          return (
-                            <tr key={m.id}>
-                              <td style={{ padding: "11px 10px", borderTop: `1px solid ${LINE}`, fontSize: 13 }}><span style={{ width: 26, height: 26, borderRadius: "50%", background: "#2a333f", display: "inline-grid", placeItems: "center", fontSize: 10.5, fontWeight: 700, color: "#cfd5de", marginRight: 9, verticalAlign: "middle" }}>{(m.display_name || "?").slice(0, 2).toUpperCase()}</span>{m.display_name || t("Naamloos", "Unnamed")}</td>
-                              <td style={{ padding: "11px 10px", borderTop: `1px solid ${LINE}`, fontSize: 12.5, color: MUTED, textTransform: "capitalize" }}>{m.member_tier || "pro"}</td>
-                              <td style={{ padding: "11px 10px", borderTop: `1px solid ${LINE}`, fontSize: 12.5, color: adh == null ? MUTED : adh < 50 ? color : SAGE2, fontWeight: 700 }}>{adh == null ? "—" : adh + "%"}</td>
-                              <td style={{ padding: "11px 10px", borderTop: `1px solid ${LINE}`, fontSize: 12.5, color: MUTED }}>{fmtDate(m.created_at)}</td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
+              {/* recente activiteit */}
+              {canSee("members") && on("activity") && (() => {
+                const feed = activityFeed();
+                if (!feed.length) return null;
+                const kindIcon = { new: "members", active: "wave", pt: "pt" };
+                const kindCol = { new: color, active: "#60A5FA", pt: "#34D399" };
+                return (
+                  <div style={card}>
+                    {cardHead(t("Recente activiteit", "Recent activity"), t("laatste gebeurtenissen", "latest events"))}
+                    <div style={{ display: "grid", gap: 2 }}>
+                      {feed.map((e, i) => (
+                        <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 2px", borderTop: i ? `1px solid ${LINE}` : "none" }}>
+                          <div style={{ width: 30, height: 30, borderRadius: 8, background: (kindCol[e.kind] || color) + "22", display: "grid", placeItems: "center", color: kindCol[e.kind] || color, flexShrink: 0 }}>{ICON[kindIcon[e.kind]] && ICON[kindIcon[e.kind]]({ col: kindCol[e.kind] || color })}</div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 13, color: PAPER }}><span style={{ fontWeight: 700 }}>{e.name}</span> <span style={{ color: MUTED }}>— {e.action}</span></div>
+                          </div>
+                          {e.chip != null && <span style={{ fontSize: 11, fontWeight: 700, borderRadius: 20, padding: "3px 10px", background: (e.chipCol || MUTED) + "22", color: e.chipCol || MUTED, textTransform: "capitalize", flexShrink: 0 }}>{e.chip}</span>}
+                          <span style={{ fontSize: 11.5, color: MUTED, whiteSpace: "nowrap", flexShrink: 0, minWidth: 70, textAlign: "right" }}>{relTime(e.ts)}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
             </>
           );
         })()}
