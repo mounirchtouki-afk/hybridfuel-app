@@ -8,6 +8,10 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
   const t = (nl, en) => (lang === "nl" ? nl : en);
   const color = (org && org.brand_color) || "#E11D48";
   const token = session && session.access_token;
+  // Altijd een VERS access-token ophalen (het vastgelegde token kan verlopen zijn → 401).
+  async function freshToken() {
+    try { const { data } = await supabase.auth.getSession(); return (data && data.session && data.session.access_token) || token; } catch (e) { return token; }
+  }
 
   // Modules (datagedreven/uitbreidbaar). De org heeft een beschikbare set (superuser-gestuurd);
   // de eigenaar ziet alles + Team, een coach alleen z'n toegewezen rechten.
@@ -66,6 +70,10 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
   const [teamMsg, setTeamMsg] = useState("");
   const [openPerms, setOpenPerms] = useState(null); // coach-id waarvan de rechten-editor open staat
   const [permSel, setPermSel] = useState([]);
+  const [openEdit, setOpenEdit] = useState(null);   // coach-id waarvan de bewerk-editor open staat
+  const [edName, setEdName] = useState("");
+  const [edPass, setEdPass] = useState("");
+  const [editMsg, setEditMsg] = useState("");
 
   // Rekenformule + juridisch akkoord
   const [termsOk, setTermsOk] = useState(null);     // null = nog niet geladen
@@ -97,7 +105,7 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
       // Tier + lestoegang apart + guarded (kolommen bestaan mogelijk nog niet vóór migratie).
       const tmap = {};
       try {
-        const { data: tr } = await supabase.from("org_members").select("id,member_tier,class_access,coach_note,calc_override,plan_id").eq("role", "member");
+        const { data: tr } = await supabase.from("org_members").select("*").eq("role", "member"); // * = ontbrekende kolommen breken niks
         (tr || []).forEach((x) => { tmap[x.id] = x; });
       } catch (e) {}
       setMembers((mem || []).map((m) => ({ ...m, progress: pmap[m.auth_user_id] || null, member_tier: (tmap[m.id] && tmap[m.id].member_tier) || "pro", class_access: tmap[m.id] ? tmap[m.id].class_access : null, coach_note: (tmap[m.id] && tmap[m.id].coach_note) || "", calc_override: (tmap[m.id] && tmap[m.id].calc_override) || null, plan_id: (tmap[m.id] && tmap[m.id].plan_id) || null })));
@@ -106,7 +114,8 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
   async function loadClasses() {
     if (!supabase) return;
     try {
-      const { data } = await supabase.from("org_classes").select("id,name,day_of_week,start_time,duration_min,capacity").order("day_of_week", { ascending: true }).order("start_time", { ascending: true });
+      let { data, error } = await supabase.from("org_classes").select("id,name,day_of_week,start_time,duration_min,capacity").order("day_of_week", { ascending: true }).order("start_time", { ascending: true });
+      if (error) { const r2 = await supabase.from("org_classes").select("id,name,day_of_week,start_time,duration_min").order("day_of_week", { ascending: true }).order("start_time", { ascending: true }); data = r2.data; } // capacity-kolom bestaat nog niet
       setClasses(data || []);
     } catch (e) { setClasses([]); }
   }
@@ -177,7 +186,7 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
     if (!email || ncPass.length < 8 || teamBusy) { if (ncPass.length < 8) setTeamMsg(t("Wachtwoord min. 8 tekens.", "Password min. 8 chars.")); return; }
     setTeamBusy(true); setTeamMsg("");
     try {
-      const r = await fetch("/api/gym", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "addcoach", authToken: token, email, password: ncPass, display_name: ncName.trim(), perms: ncPerms }) });
+      const r = await fetch("/api/gym", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "addcoach", authToken: await freshToken(), email, password: ncPass, display_name: ncName.trim(), perms: ncPerms }) });
       const d = await r.json().catch(() => ({}));
       if (!r.ok) { setTeamMsg(d.error === "coach_exists_or_failed" ? t("E-mail bestaat al of ongeldig.", "Email exists or invalid.") : t("Aanmaken mislukt.", "Create failed.")); setTeamBusy(false); return; }
       setNcEmail(""); setNcPass(""); setNcName(""); setNcPerms(["members", "pt"]); setTeamBusy(false); setTeamMsg(t("Coach aangemaakt.", "Coach created.")); loadCoaches();
@@ -189,14 +198,29 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
   }
   async function saveCoachPerms(c) {
     try {
-      const r = await fetch("/api/gym", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "setperms", authToken: token, member_id: c.id, perms: permSel }) });
+      const r = await fetch("/api/gym", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "setperms", authToken: await freshToken(), member_id: c.id, perms: permSel }) });
       if (r.ok) { setCoaches((xs) => xs.map((x) => x.id === c.id ? { ...x, perms: permSel } : x)); setOpenPerms(null); }
     } catch (e) {}
+  }
+  function openCoachEdit(c) {
+    if (openEdit === c.id) { setOpenEdit(null); return; }
+    setOpenEdit(c.id); setEdName(c.display_name || ""); setEdPass(""); setEditMsg("");
+  }
+  async function saveCoachEdit(c) {
+    setEditMsg("");
+    if (edPass && edPass.length < 8) { setEditMsg(t("Wachtwoord min. 8 tekens.", "Password min. 8 chars.")); return; }
+    try {
+      const payload = { action: "editcoach", authToken: await freshToken(), member_id: c.id, display_name: edName.trim() };
+      if (edPass) payload.password = edPass;
+      const r = await fetch("/api/gym", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      if (r.ok) { setCoaches((xs) => xs.map((x) => x.id === c.id ? { ...x, display_name: edName.trim() } : x)); setEditMsg(t("Opgeslagen.", "Saved.")); setEdPass(""); }
+      else setEditMsg(t("Opslaan mislukt.", "Save failed."));
+    } catch (e) { setEditMsg(t("Opslaan mislukt.", "Save failed.")); }
   }
   async function removeCoach(c) {
     if (typeof window !== "undefined" && !window.confirm(t("Coach verwijderen?", "Delete coach?"))) return;
     try {
-      const r = await fetch("/api/gym", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "removecoach", authToken: token, member_id: c.id }) });
+      const r = await fetch("/api/gym", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "removecoach", authToken: await freshToken(), member_id: c.id }) });
       if (r.ok) setCoaches((xs) => xs.filter((x) => x.id !== c.id));
     } catch (e) {}
   }
@@ -284,7 +308,7 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
     if (!name || busy) return;
     setBusy(true); setErr("");
     try {
-      const r = await fetch("/api/gym", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "create", authToken: token, display_name: name, tier: newTier }) });
+      const r = await fetch("/api/gym", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "create", authToken: await freshToken(), display_name: name, tier: newTier }) });
       const d = await r.json().catch(() => ({}));
       if (!r.ok || !d.code) { setErr(t("Aanmaken mislukt.", "Create failed.")); setBusy(false); return; }
       setCodeShown({ name, code: d.code }); setNewName(""); setBusy(false); load();
@@ -294,7 +318,7 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
   async function resetCode(m) {
     if (busy) return; setBusy(true); setErr("");
     try {
-      const r = await fetch("/api/gym", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "reset", authToken: token, member_id: m.id }) });
+      const r = await fetch("/api/gym", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "reset", authToken: await freshToken(), member_id: m.id }) });
       const d = await r.json().catch(() => ({}));
       if (!r.ok || !d.code) { setErr(t("Reset mislukt.", "Reset failed.")); setBusy(false); return; }
       setCodeShown({ name: m.display_name, code: d.code }); setBusy(false);
@@ -354,7 +378,7 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
     if (!ok) return;
     setBusy(true);
     try {
-      const r = await fetch("/api/gym", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "remove", authToken: token, member_id: m.id }) });
+      const r = await fetch("/api/gym", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "remove", authToken: await freshToken(), member_id: m.id }) });
       if (r.ok) setMembers((xs) => xs.filter((x) => x.id !== m.id));
       setBusy(false);
     } catch (e) { setBusy(false); }
@@ -767,9 +791,18 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
                         <div style={{ ...disp, fontWeight: 700, fontSize: 14.5 }}>{c.display_name || t("Coach", "Coach")}</div>
                         <div style={{ fontSize: 11.5, color: MUTED, marginTop: 2 }}>{c.is_owner ? t("Eigenaar · alle rechten", "Owner · all access") : (Array.isArray(c.perms) && c.perms.length ? c.perms.map((p) => LABEL[p] || p).join(", ") : t("geen rechten", "no access"))}</div>
                       </div>
+                      {!c.is_owner && <div onClick={() => openCoachEdit(c)} style={{ cursor: "pointer", fontSize: 11.5, color: MUTED, border: `1px solid ${LINE}`, borderRadius: 7, padding: "5px 9px" }}>{t("Bewerk", "Edit")}</div>}
                       {!c.is_owner && <div onClick={() => openCoachPerms(c)} style={{ cursor: "pointer", fontSize: 11.5, color: MUTED, border: `1px solid ${LINE}`, borderRadius: 7, padding: "5px 9px" }}>{t("Rechten", "Perms")}</div>}
                       {!c.is_owner && <div onClick={() => removeCoach(c)} style={{ cursor: "pointer", fontSize: 11.5, color: EMBER_SOFT, border: `1px solid ${LINE}`, borderRadius: 7, padding: "5px 9px" }}>{t("Verwijderen", "Delete")}</div>}
                     </div>
+                    {openEdit === c.id && (
+                      <div style={{ padding: "0 12px 12px", display: "grid", gap: 8 }}>
+                        <input style={input} value={edName} onChange={(e) => setEdName(e.target.value)} placeholder={t("Naam", "Name")} />
+                        <input style={input} type="text" value={edPass} onChange={(e) => setEdPass(e.target.value)} placeholder={t("Nieuw wachtwoord (leeg = niet wijzigen)", "New password (empty = keep)")} />
+                        <div onClick={() => saveCoachEdit(c)} style={{ cursor: "pointer", background: color, color: "#fff", padding: "8px 0", borderRadius: 7, textAlign: "center", ...disp, fontWeight: 700, fontSize: 12.5 }}>{t("Opslaan", "Save")}</div>
+                        {editMsg && <div style={{ fontSize: 11.5, color: SAGE }}>{editMsg}</div>}
+                      </div>
+                    )}
                     {openPerms === c.id && (
                       <div style={{ padding: "0 12px 12px" }}>
                         <div style={{ display: "flex", gap: 7, flexWrap: "wrap", marginBottom: 8 }}>

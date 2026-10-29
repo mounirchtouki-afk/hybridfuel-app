@@ -38,6 +38,7 @@ export default async function handler(req, res) {
     if (action === "remove") return await remove(req, res, body);
     if (action === "addcoach")   return await addcoach(req, res, body);
     if (action === "setperms")   return await setperms(req, res, body);
+    if (action === "editcoach")  return await editcoach(req, res, body);
     if (action === "removecoach") return await removecoach(req, res, body);
     if (action === "setup")  return await setup(req, res, body);
     return res.status(400).json({ error: "unknown_action" });
@@ -221,6 +222,33 @@ async function setperms(req, res, body) {
   const up = await rest("org_members?id=eq." + encodeURIComponent(memberId), { method: "PATCH", body: JSON.stringify({ perms }) });
   if (!up.ok) return res.status(502).json({ error: "update_failed" });
   return res.status(200).json({ ok: true, member_id: memberId, perms });
+}
+
+// --- editcoach: EIGENAAR wijzigt naam en/of wachtwoord van een coach ---
+async function editcoach(req, res, body) {
+  const callerId = await userIdFromToken(String(body.authToken || "").trim());
+  if (!callerId) return res.status(401).json({ error: "invalid_token" });
+  const orgId = await ownerOrgId(callerId);
+  if (!orgId) return res.status(403).json({ error: "not_owner" });
+
+  const memberId = String(body.member_id || "").trim();
+  if (!memberId) return res.status(400).json({ error: "bad_request" });
+
+  const mr = await rest("org_members?select=id,auth_user_id,org_id,role,is_owner&id=eq." + encodeURIComponent(memberId) + "&limit=1");
+  const rows = mr.ok ? await mr.json().catch(() => []) : [];
+  const mem = rows && rows[0];
+  if (!mem || mem.org_id !== orgId || mem.role !== "coach" || mem.is_owner) return res.status(404).json({ error: "not_found" });
+
+  const name = body.display_name != null ? String(body.display_name).trim().slice(0, 80) : null;
+  const password = body.password != null ? String(body.password) : null;
+
+  if (name != null) { try { await rest("org_members?id=eq." + encodeURIComponent(memberId), { method: "PATCH", body: JSON.stringify({ display_name: name }) }); } catch (e) {} }
+  if (password) {
+    if (password.length < 8) return res.status(400).json({ error: "pw_too_short" });
+    const up = await adminSetPassword(mem.auth_user_id, password);
+    if (!up.ok) return res.status(502).json({ error: "pw_failed" });
+  }
+  return res.status(200).json({ ok: true, member_id: memberId });
 }
 
 // --- removecoach: EIGENAAR verwijdert een coach (niet zichzelf) ---
