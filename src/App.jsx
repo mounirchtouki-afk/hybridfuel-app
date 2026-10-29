@@ -829,6 +829,7 @@ export default function App() {
   function currentIntake() { return { ...common(), trainingDays: [...trainingDays] }; }
 
   async function handleBuild() {
+    if (inDemo) { setShowAuth(true); return; } // demo: 'jouw' plan is het betaalde moment
     setError(""); setStarted(true); setView("plan"); setChecked({}); setWeek(null); setLockReason(""); setPlanEmail("");
     const intake = currentIntake();
     try { localStorage.setItem("hf_intake", JSON.stringify(intake)); } catch (e) {}
@@ -846,6 +847,7 @@ export default function App() {
 
   // Zelf een plan samenstellen: leeg weekschema dat de klant zelf vult via de +.
   async function buildOwnPlan() {
+    if (inDemo) { setShowAuth(true); return; } // demo: zelf samenstellen is betaald
     setError(""); setStarted(true); setView("plan"); setChecked({}); setWeek(null); setLockReason(""); setPlanEmail("");
     const intake = currentIntake();
     try { localStorage.setItem("hf_intake", JSON.stringify(intake)); } catch (e) {}
