@@ -37,7 +37,15 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
   const [cDay, setCDay] = useState("1");
   const [cTime, setCTime] = useState("");
   const [cDur, setCDur] = useState("");
+  const [cCap, setCCap] = useState("");
   const [cBusy, setCBusy] = useState(false);
+
+  // Abonnementen
+  const [plans, setPlans] = useState(null);
+  const [pName, setPName] = useState("");
+  const [pPt, setPPt] = useState(false);
+  const [pClassIds, setPClassIds] = useState([]);
+  const [planBusy, setPlanBusy] = useState(false);
   const [openClasses, setOpenClasses] = useState(null); // member.id waarvan de les-toegang open staat
   const [sel, setSel] = useState([]);                    // werk-selectie van class-ids
   const [openNote, setOpenNote] = useState(null);        // member.id waarvan de notitie open staat
@@ -89,18 +97,49 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
       // Tier + lestoegang apart + guarded (kolommen bestaan mogelijk nog niet vóór migratie).
       const tmap = {};
       try {
-        const { data: tr } = await supabase.from("org_members").select("id,member_tier,class_access,coach_note,calc_override").eq("role", "member");
+        const { data: tr } = await supabase.from("org_members").select("id,member_tier,class_access,coach_note,calc_override,plan_id").eq("role", "member");
         (tr || []).forEach((x) => { tmap[x.id] = x; });
       } catch (e) {}
-      setMembers((mem || []).map((m) => ({ ...m, progress: pmap[m.auth_user_id] || null, member_tier: (tmap[m.id] && tmap[m.id].member_tier) || "pro", class_access: tmap[m.id] ? tmap[m.id].class_access : null, coach_note: (tmap[m.id] && tmap[m.id].coach_note) || "", calc_override: (tmap[m.id] && tmap[m.id].calc_override) || null })));
+      setMembers((mem || []).map((m) => ({ ...m, progress: pmap[m.auth_user_id] || null, member_tier: (tmap[m.id] && tmap[m.id].member_tier) || "pro", class_access: tmap[m.id] ? tmap[m.id].class_access : null, coach_note: (tmap[m.id] && tmap[m.id].coach_note) || "", calc_override: (tmap[m.id] && tmap[m.id].calc_override) || null, plan_id: (tmap[m.id] && tmap[m.id].plan_id) || null })));
     } catch (e) { setMembers([]); }
   }
   async function loadClasses() {
     if (!supabase) return;
     try {
-      const { data } = await supabase.from("org_classes").select("id,name,day_of_week,start_time,duration_min").order("day_of_week", { ascending: true }).order("start_time", { ascending: true });
+      const { data } = await supabase.from("org_classes").select("id,name,day_of_week,start_time,duration_min,capacity").order("day_of_week", { ascending: true }).order("start_time", { ascending: true });
       setClasses(data || []);
     } catch (e) { setClasses([]); }
+  }
+  async function loadPlans() {
+    if (!supabase) return;
+    try {
+      const { data } = await supabase.from("org_plans").select("id,name,pt_included,class_ids").order("created_at", { ascending: true });
+      setPlans(data || []);
+    } catch (e) { setPlans([]); }
+  }
+  async function addPlan() {
+    const name = pName.trim();
+    if (!name || planBusy) return;
+    setPlanBusy(true);
+    try {
+      const all = (classes || []).map((c) => c.id);
+      const classIds = pClassIds.length >= all.length && all.every((id) => pClassIds.includes(id)) ? null : pClassIds; // alles = null (alle lessen)
+      const { error } = await supabase.from("org_plans").insert({ org_id: org && org.id, name, pt_included: pPt, class_ids: classIds });
+      if (!error) { setPName(""); setPPt(false); setPClassIds([]); loadPlans(); }
+      setPlanBusy(false);
+    } catch (e) { setPlanBusy(false); }
+  }
+  async function delPlan(id) {
+    if (!supabase) return;
+    try { await supabase.from("org_plans").delete().eq("id", id); loadPlans(); load(); } catch (e) {}
+  }
+  async function assignPlan(m, planId) {
+    if (!supabase) return;
+    const value = planId || null;
+    try {
+      const { error } = await supabase.from("org_members").update({ plan_id: value }).eq("id", m.id);
+      if (!error) setMembers((xs) => xs.map((x) => x.id === m.id ? { ...x, plan_id: value } : x));
+    } catch (e) {}
   }
   async function loadSessions() {
     if (!supabase) return;
@@ -130,7 +169,7 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
       setCoaches(data || []);
     } catch (e) { setCoaches([]); }
   }
-  useEffect(() => { load(); loadSessions(); loadClasses(); loadConfig(); loadCoaches(); }, []);
+  useEffect(() => { load(); loadSessions(); loadClasses(); loadConfig(); loadCoaches(); loadPlans(); }, []);
 
   const togglePermIn = (arr, setArr, p) => setArr(arr.includes(p) ? arr.filter((x) => x !== p) : [...arr, p]);
   async function addCoach() {
@@ -278,9 +317,9 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
     if (!name || !cTime || cBusy) return;
     setCBusy(true);
     try {
-      const row = { org_id: org && org.id, name, day_of_week: parseInt(cDay, 10), start_time: cTime, duration_min: cDur ? parseInt(cDur, 10) : null, created_by: session && session.user && session.user.id };
+      const row = { org_id: org && org.id, name, day_of_week: parseInt(cDay, 10), start_time: cTime, duration_min: cDur ? parseInt(cDur, 10) : null, capacity: cCap ? parseInt(cCap, 10) : null, created_by: session && session.user && session.user.id };
       const { error } = await supabase.from("org_classes").insert(row);
-      if (!error) { setCName(""); setCTime(""); setCDur(""); loadClasses(); }
+      if (!error) { setCName(""); setCTime(""); setCDur(""); setCCap(""); loadClasses(); }
       setCBusy(false);
     } catch (e) { setCBusy(false); }
   }
@@ -444,8 +483,16 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
                       <div onClick={() => resetCode(m)} title={t("Nieuwe code", "New code")} style={{ cursor: "pointer", fontSize: 11.5, color: MUTED, border: `1px solid ${LINE}`, borderRadius: 7, padding: "6px 9px", whiteSpace: "nowrap" }}>{t("Reset code", "Reset code")}</div>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "0 12px 11px", flexWrap: "wrap" }}>
-                      <div onClick={() => toggleTier(m)} title={t("Tier wisselen", "Switch tier")} style={{ cursor: "pointer", fontSize: 10.5, ...disp, fontWeight: 700, letterSpacing: 0.6, textTransform: "uppercase", padding: "4px 9px", borderRadius: 6, background: pro ? color : "transparent", color: pro ? "#fff" : MUTED, border: `1px solid ${pro ? color : LINE}` }}>{m.member_tier || "pro"}</div>
-                      {classes && classes.length > 0 && (
+                      {plans && plans.length > 0 && (
+                        <select value={m.plan_id || ""} onChange={(e) => assignPlan(m, e.target.value)} style={{ ...input, width: "auto", appearance: "auto", padding: "6px 9px", fontSize: 12.5 }}>
+                          <option value="">{t("Geen abo", "No plan")}</option>
+                          {plans.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                        </select>
+                      )}
+                      {!m.plan_id && (
+                        <div onClick={() => toggleTier(m)} title={t("Tier wisselen", "Switch tier")} style={{ cursor: "pointer", fontSize: 10.5, ...disp, fontWeight: 700, letterSpacing: 0.6, textTransform: "uppercase", padding: "4px 9px", borderRadius: 6, background: pro ? color : "transparent", color: pro ? "#fff" : MUTED, border: `1px solid ${pro ? color : LINE}` }}>{m.member_tier || "pro"}</div>
+                      )}
+                      {!m.plan_id && classes && classes.length > 0 && (
                         <div onClick={() => openMemberClasses(m)} style={{ cursor: "pointer", fontSize: 11.5, color: MUTED, border: `1px solid ${LINE}`, borderRadius: 7, padding: "5px 9px" }}>
                           {t("Lessen", "Classes")} ({m.class_access == null ? t("alle", "all") : m.class_access.length})
                         </div>
@@ -514,7 +561,8 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
               {[1, 2, 3, 4, 5, 6, 0].map((d) => <option key={d} value={d}>{(lang === "nl" ? ["zondag", "maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag"] : ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"])[d]}</option>)}
             </select>
             <input style={{ ...input, width: 110 }} type="time" value={cTime} onChange={(e) => setCTime(e.target.value)} />
-            <input style={{ ...input, width: 78 }} type="number" value={cDur} onChange={(e) => setCDur(e.target.value)} placeholder={t("min", "min")} />
+            <input style={{ ...input, width: 70 }} type="number" value={cDur} onChange={(e) => setCDur(e.target.value)} placeholder={t("min", "min")} />
+            <input style={{ ...input, width: 80 }} type="number" value={cCap} onChange={(e) => setCCap(e.target.value)} placeholder={t("max pers", "max")} />
             <div onClick={addClass} style={{ cursor: cBusy ? "default" : "pointer", opacity: cBusy ? 0.7 : 1, background: color, color: "#fff", padding: "11px 16px", borderRadius: 8, ...disp, fontWeight: 700, fontSize: 13, letterSpacing: 0.3, whiteSpace: "nowrap" }}>{t("Toevoegen", "Add")}</div>
           </div>
           <div style={{ marginTop: 12, display: "grid", gap: 7 }}>
@@ -525,6 +573,7 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
                   <div style={{ ...disp, fontWeight: 700, fontSize: 12.5, color, minWidth: 64, textTransform: "capitalize" }}>{(lang === "nl" ? ["zo", "ma", "di", "wo", "do", "vr", "za"] : ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"])[c.day_of_week]} {c.start_time}</div>
                   <div style={{ flex: 1, minWidth: 0, ...disp, fontWeight: 600, fontSize: 14 }}>{c.name}</div>
                   {c.duration_min ? <div style={{ fontSize: 11.5, color: MUTED }}>{c.duration_min} min</div> : null}
+                  {c.capacity != null ? <div style={{ fontSize: 11.5, color: MUTED }}>max {c.capacity}</div> : null}
                   <div onClick={() => delClass(c.id)} style={{ cursor: "pointer", fontSize: 11.5, color: MUTED, border: `1px solid ${LINE}`, borderRadius: 7, padding: "5px 9px" }}>{t("Verwijderen", "Delete")}</div>
                 </div>
               ))}
@@ -648,12 +697,44 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
         </div>
         </>)}
 
-        {current === "plans" && (
+        {current === "plans" && (<>
           <div style={card}>
-            <div style={{ ...sectionTitle, color, marginBottom: 10 }}>{t("Abonnementen", "Plans")}</div>
-            <div style={{ fontSize: 13, color: MUTED, lineHeight: 1.6 }}>{t("Hier maak je straks je eigen abonnementen aan (eigen naam), koppel je welke lessen erin zitten en of persoonlijke PT is inbegrepen. Komt eraan.", "Here you'll create your own plans (your own name), link which classes they include and whether personal PT is included. Coming soon.")}</div>
+            <div style={{ ...sectionTitle, color, marginBottom: 10 }}>{t("Abonnement toevoegen", "Add plan")}</div>
+            <div style={{ display: "grid", gap: 8 }}>
+              <input style={input} value={pName} onChange={(e) => setPName(e.target.value)} placeholder={t("Naam (bv. Onbeperkt, Basic, HYROX-only)", "Name (e.g. Unlimited, Basic)")} />
+              <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, color: PAPER }}>
+                <input type="checkbox" checked={pPt} onChange={(e) => setPPt(e.target.checked)} /> {t("Persoonlijke PT inbegrepen", "Personal PT included")}
+              </label>
+              <div style={{ fontSize: 11.5, color: MUTED }}>{t("Welke lessen zitten in dit abo:", "Which classes are included:")}</div>
+              <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
+                {(classes || []).length === 0 ? <div style={{ fontSize: 12, color: MUTED }}>{t("Voeg eerst lessen toe (tab Lessen).", "Add classes first (Classes tab).")}</div>
+                  : (classes || []).map((cl) => (
+                    <div key={cl.id} onClick={() => togglePermIn(pClassIds, setPClassIds, cl.id)} style={{ cursor: "pointer", fontSize: 12, ...disp, fontWeight: 700, padding: "6px 11px", borderRadius: 7, border: `1px solid ${pClassIds.includes(cl.id) ? color : LINE}`, background: pClassIds.includes(cl.id) ? color : "transparent", color: pClassIds.includes(cl.id) ? "#fff" : MUTED }}>{cl.name}</div>
+                  ))}
+              </div>
+              <div onClick={addPlan} style={{ cursor: planBusy ? "default" : "pointer", opacity: planBusy ? 0.7 : 1, background: color, color: "#fff", padding: "11px 0", borderRadius: 8, textAlign: "center", ...disp, fontWeight: 700, fontSize: 13.5, marginTop: 4 }}>{planBusy ? t("Opslaan…", "Saving…") : t("Abonnement opslaan", "Save plan")}</div>
+              <div style={{ fontSize: 11, color: MUTED, lineHeight: 1.5 }}>{t("Daarna kies je per lid alleen nog het abo (tab Leden) — de lessen + PT-toegang volgen automatisch.", "Then just pick a plan per member (Members tab) — classes + PT access follow automatically.")}</div>
+            </div>
           </div>
-        )}
+          <div style={card}>
+            <div style={{ ...sectionTitle, color, marginBottom: 12 }}>{t("Abonnementen", "Plans")} {plans ? "(" + plans.length + ")" : ""}</div>
+            {!plans ? <div style={{ fontSize: 13, color: MUTED }}>{t("Laden…", "Loading…")}</div>
+              : plans.length === 0 ? <div style={{ fontSize: 12.5, color: MUTED }}>{t("Nog geen abonnementen.", "No plans yet.")}</div>
+              : (
+                <div style={{ display: "grid", gap: 8 }}>
+                  {plans.map((p) => (
+                    <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 12px", background: INK, border: `1px solid ${LINE}`, borderRadius: 10 }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ ...disp, fontWeight: 700, fontSize: 14.5 }}>{p.name}</div>
+                        <div style={{ fontSize: 11.5, color: MUTED, marginTop: 2 }}>{p.class_ids == null ? t("alle lessen", "all classes") : (p.class_ids.length + " " + t("lessen", "classes"))}{p.pt_included ? " · " + t("incl. PT", "incl. PT") : ""}</div>
+                      </div>
+                      <div onClick={() => delPlan(p.id)} style={{ cursor: "pointer", fontSize: 11.5, color: EMBER_SOFT, border: `1px solid ${LINE}`, borderRadius: 7, padding: "5px 9px" }}>{t("Verwijderen", "Delete")}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+          </div>
+        </>)}
 
         {current === "team" && isOwner && (
           <>
