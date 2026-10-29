@@ -78,6 +78,17 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
 
   const [members, setMembers] = useState(null);
   const [newName, setNewName] = useState("");
+  const [newFirst, setNewFirst] = useState("");
+  const [newLast, setNewLast] = useState("");
+  const [newPlan, setNewPlan] = useState("");
+  const [openMEdit, setOpenMEdit] = useState(null); // lid-id waarvan de bewerk-editor open staat
+  const [meFirst, setMeFirst] = useState("");
+  const [meLast, setMeLast] = useState("");
+  const [meMsg, setMeMsg] = useState("");
+  const [meBusy, setMeBusy] = useState(false);
+  const [selIds, setSelIds] = useState([]); // bulk-selectie van leden
+  const [bulkPlan, setBulkPlan] = useState("");
+  const [bulkTier, setBulkTier] = useState("");
   const [busy, setBusy] = useState(false);
   const [codeShown, setCodeShown] = useState(null);  // {name, code}
   const [err, setErr] = useState("");
@@ -92,6 +103,14 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
   const [tpl, setTpl] = useState((org && org.theme && org.theme.template) || "dark");
   const [accent, setAccent] = useState((org && org.theme && org.theme.accent) || (org && org.brand_color) || "#E11D48");
   const [logoData, setLogoData] = useState((org && org.logo_url) || null);
+  const _co = (org && org.theme && org.theme.company) || {};
+  const [coName, setCoName] = useState(_co.name || (org && org.name) || "");
+  const [coAddr, setCoAddr] = useState(_co.address || "");
+  const [coEmail, setCoEmail] = useState(_co.email || "");
+  const [coPhone, setCoPhone] = useState(_co.phone || "");
+  const [coKvk, setCoKvk] = useState(_co.kvk || "");
+  const [coBtw, setCoBtw] = useState(_co.btw || "");
+  const [showName, setShowName] = useState(!!(org && org.theme && org.theme.showName));
   const [brandBusy, setBrandBusy] = useState(false);
   const [brandMsg, setBrandMsg] = useState("");
 
@@ -388,7 +407,7 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
     if (!supabase || !org || !org.id || brandBusy) return;
     setBrandBusy(true); setBrandMsg("");
     try {
-      const theme = { template: tpl, accent };
+      const theme = { template: tpl, accent, showName, company: { name: coName.trim(), address: coAddr.trim(), email: coEmail.trim(), phone: coPhone.trim(), kvk: coKvk.trim(), btw: coBtw.trim() } };
       const { error } = await supabase.from("org_config").update({ brand_color: accent, logo_url: logoData || null, theme }).eq("org_id", org.id);
       if (error) { setBrandMsg(t("Opslaan mislukt.", "Save failed.")); setBrandBusy(false); return; }
       applyOrgTheme(theme);
@@ -397,15 +416,48 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
   }
 
   async function addMember() {
-    const name = newName.trim();
+    const name = (newFirst.trim() + " " + newLast.trim()).trim();
     if (!name || busy) return;
     setBusy(true); setErr("");
     try {
       const r = await fetch("/api/gym", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "create", authToken: await freshToken(), display_name: name, tier: newTier }) });
       const d = await r.json().catch(() => ({}));
       if (!r.ok || !d.code) { setErr(t("Aanmaken mislukt.", "Create failed.")); setBusy(false); return; }
-      setCodeShown({ name, code: d.code }); setNewName(""); setBusy(false); load();
+      // Abonnement meteen koppelen als gekozen (guarded; plan_id-kolom bestaat na migratie).
+      if (newPlan && d.member_id) { try { await supabase.from("org_members").update({ plan_id: newPlan }).eq("id", d.member_id); } catch (e) {} }
+      setCodeShown({ name, code: d.code }); setNewFirst(""); setNewLast(""); setNewPlan(""); setBusy(false); load();
     } catch (e) { setErr(t("Aanmaken mislukt.", "Create failed.")); setBusy(false); }
+  }
+  // Lid bewerken: voor- en achternaam (uit display_name gesplitst) + code opnieuw sturen.
+  function openMemberEdit(m) {
+    if (openMEdit === m.id) { setOpenMEdit(null); return; }
+    const parts = (m.display_name || "").trim().split(/\s+/);
+    setMeFirst(parts[0] || ""); setMeLast(parts.slice(1).join(" "));
+    setMeMsg(""); setOpenMEdit(m.id);
+    setOpenNote(null); setOpenFormula(null); setOpenClasses(null);
+  }
+  async function saveMemberEdit(m) {
+    const name = (meFirst.trim() + " " + meLast.trim()).trim();
+    if (!name || meBusy || !supabase) return;
+    setMeBusy(true); setMeMsg("");
+    try {
+      const { error } = await supabase.from("org_members").update({ display_name: name }).eq("id", m.id);
+      if (error) { setMeMsg(t("Opslaan mislukt.", "Save failed.")); setMeBusy(false); return; }
+      setMembers((xs) => xs.map((x) => x.id === m.id ? { ...x, display_name: name } : x));
+      setMeMsg(t("Opgeslagen.", "Saved.")); setMeBusy(false);
+    } catch (e) { setMeMsg(t("Opslaan mislukt.", "Save failed.")); setMeBusy(false); }
+  }
+  // Bulk: selectie + toepassen van abonnement/tier op meerdere leden tegelijk.
+  function toggleSelId(id) { setSelIds((xs) => xs.includes(id) ? xs.filter((x) => x !== id) : [...xs, id]); }
+  async function applyBulk() {
+    if (!supabase || (!bulkPlan && !bulkTier) || !selIds.length) return;
+    const patch = {};
+    if (bulkPlan) patch.plan_id = bulkPlan === "__none__" ? null : bulkPlan;
+    if (bulkTier) patch.member_tier = bulkTier;
+    try {
+      for (const id of selIds) { try { await supabase.from("org_members").update(patch).eq("id", id); } catch (e) {} }
+      setSelIds([]); setBulkPlan(""); setBulkTier(""); load();
+    } catch (e) {}
   }
 
   // --- AI-ledenimport ---
@@ -761,18 +813,22 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
       })}
     </div>
   );
-  const brandInitials = ((org && org.name) || "HF").replace(/[^A-Za-z0-9 ]/g, "").split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase() || "HF";
+  const brandName = (coName && coName.trim()) || (org && org.name) || "Coach";
+  const brandInitials = (brandName || "HF").replace(/[^A-Za-z0-9 ]/g, "").split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase() || "HF";
   const navBrand = (
-    <div style={{ display: "flex", alignItems: "center", gap: 11, padding: "4px 8px 14px" }}>
+    <div style={{ padding: "4px 8px 14px" }}>
       {org && org.logo_url
-        ? <img src={org.logo_url} alt={org.name} style={{ maxHeight: 34, maxWidth: 150, objectFit: "contain" }} />
-        : <>
+        ? <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+            <img src={org.logo_url} alt={brandName} style={{ maxHeight: 40, maxWidth: 160, objectFit: "contain", alignSelf: "flex-start" }} />
+            {showName && brandName && <div style={{ ...disp, fontWeight: 800, fontSize: 14.5, color: PAPER, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{brandName}</div>}
+          </div>
+        : <div style={{ display: "flex", alignItems: "center", gap: 11 }}>
             <div style={{ width: 34, height: 34, borderRadius: 9, background: color, display: "grid", placeItems: "center", color: "#fff", ...disp, fontWeight: 800, fontSize: 14, flexShrink: 0 }}>{brandInitials}</div>
             <div style={{ minWidth: 0 }}>
-              <div style={{ ...disp, fontWeight: 800, fontSize: 15, color: PAPER, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{(org && org.name) || "Coach"}</div>
+              <div style={{ ...disp, fontWeight: 800, fontSize: 15, color: PAPER, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{brandName}</div>
               <div style={{ fontSize: 10.5, color: MUTED, marginTop: 1 }}>{t("Beheer · white-label", "Admin · white-label")}</div>
             </div>
-          </>}
+          </div>}
     </div>
   );
   const myInitials = (myName || (org && org.name) || "?").slice(0, 2).toUpperCase();
@@ -1072,15 +1128,22 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
         {/* lid toevoegen */}
         <div style={card}>
           <div style={{ ...sectionTitle, color, marginBottom: 10 }}>{t("Lid toevoegen", "Add member")}</div>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-            <input style={{ ...input, flex: 1, minWidth: 160 }} value={newName} onChange={(e) => setNewName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") addMember(); }} placeholder={t("Naam van het lid", "Member name")} />
-            <select value={newTier} onChange={(e) => setNewTier(e.target.value)} style={{ ...input, width: "auto", appearance: "auto", WebkitAppearance: "auto", padding: "11px 12px", cursor: "pointer", textTransform: "capitalize" }}>
+          <div style={{ display: "grid", gridTemplateColumns: isWide ? "1fr 1fr auto auto auto" : "1fr 1fr", gap: 8, alignItems: "center" }}>
+            <input style={input} value={newFirst} onChange={(e) => setNewFirst(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") addMember(); }} placeholder={t("Voornaam", "First name")} />
+            <input style={input} value={newLast} onChange={(e) => setNewLast(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") addMember(); }} placeholder={t("Achternaam", "Last name")} />
+            <select value={newTier} onChange={(e) => setNewTier(e.target.value)} style={{ ...input, appearance: "auto", WebkitAppearance: "auto", padding: "11px 12px", cursor: "pointer", textTransform: "capitalize" }}>
               <option value="basis">{t("Basis", "Basis")}</option>
               <option value="pro">Pro</option>
             </select>
-            <div onClick={addMember} style={{ cursor: busy ? "default" : "pointer", opacity: busy ? 0.7 : 1, background: color, color: "#fff", padding: "11px 18px", borderRadius: 8, ...disp, fontWeight: 700, fontSize: 13.5, letterSpacing: 0.3, whiteSpace: "nowrap" }}>{t("Aanmaken", "Create")}</div>
+            {plans && plans.length > 0
+              ? <select value={newPlan} onChange={(e) => setNewPlan(e.target.value)} style={{ ...input, appearance: "auto", WebkitAppearance: "auto", padding: "11px 12px", cursor: "pointer" }}>
+                  <option value="">{t("Geen abo", "No plan")}</option>
+                  {plans.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              : <span style={{ display: isWide ? "block" : "none" }} />}
+            <div onClick={addMember} style={{ cursor: busy ? "default" : "pointer", opacity: busy ? 0.7 : 1, background: color, color: "#fff", padding: "11px 18px", borderRadius: 8, ...disp, fontWeight: 700, fontSize: 13.5, letterSpacing: 0.3, whiteSpace: "nowrap", textAlign: "center" }}>{busy ? t("Bezig…", "…") : t("Aanmaken", "Create")}</div>
           </div>
-          <div style={{ fontSize: 11, color: MUTED, marginTop: 7, lineHeight: 1.5 }}>{t("basis = voeding + rooster · pro = ook persoonlijke PT", "basis = nutrition + schedule · pro = also personal PT")}</div>
+          <div style={{ fontSize: 11, color: MUTED, marginTop: 7, lineHeight: 1.5 }}>{t("basis = voeding + rooster · pro = ook persoonlijke PT · abo bepaalt les/PT-toegang", "basis = nutrition + schedule · pro = also personal PT · plan sets class/PT access")}</div>
           <div style={{ fontSize: 11.5, color: MUTED, marginTop: 10, lineHeight: 1.5 }}>{t("Deel de join-link + code met je lid:", "Share the join link + code with your member:")} <span style={{ color: PAPER }}>{joinUrl}</span></div>
           {err && <div style={{ fontSize: 12, color: EMBER_SOFT, marginTop: 8 }}>{err}</div>}
         </div>
@@ -1187,6 +1250,26 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
               {memberQuery && <span onClick={() => setMemberQuery("")} style={{ cursor: "pointer", color: MUTED, fontSize: 15, lineHeight: 1 }}>×</span>}
             </div>
           </div>
+          {selIds.length > 0 && (
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", background: color + "14", border: `1px solid ${color}`, borderRadius: 10, padding: "10px 12px", marginBottom: 12 }}>
+              <span style={{ ...disp, fontWeight: 700, fontSize: 12.5, color: PAPER }}>{selIds.length} {t("geselecteerd", "selected")}</span>
+              <div style={{ flex: 1 }} />
+              {plans && plans.length > 0 && (
+                <select value={bulkPlan} onChange={(e) => setBulkPlan(e.target.value)} style={{ ...input, width: "auto", appearance: "auto", padding: "8px 10px", fontSize: 12.5, cursor: "pointer" }}>
+                  <option value="">{t("Abonnement…", "Plan…")}</option>
+                  <option value="__none__">{t("Geen abo", "No plan")}</option>
+                  {plans.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              )}
+              <select value={bulkTier} onChange={(e) => setBulkTier(e.target.value)} style={{ ...input, width: "auto", appearance: "auto", padding: "8px 10px", fontSize: 12.5, cursor: "pointer", textTransform: "capitalize" }}>
+                <option value="">{t("Tier…", "Tier…")}</option>
+                <option value="basis">{t("Basis", "Basis")}</option>
+                <option value="pro">Pro</option>
+              </select>
+              <div onClick={applyBulk} style={{ cursor: (bulkPlan || bulkTier) ? "pointer" : "default", opacity: (bulkPlan || bulkTier) ? 1 : 0.5, background: color, color: "#fff", padding: "8px 15px", borderRadius: 8, ...disp, fontWeight: 700, fontSize: 12.5 }}>{t("Toepassen", "Apply")}</div>
+              <div onClick={() => setSelIds([])} style={{ cursor: "pointer", color: MUTED, fontSize: 12.5, ...disp, fontWeight: 700, padding: "8px 10px" }}>{t("Wis", "Clear")}</div>
+            </div>
+          )}
           {!members ? <div style={{ fontSize: 13, color: MUTED }}>{t("Laden…", "Loading…")}</div>
             : members.length === 0 ? <div style={{ fontSize: 13, color: MUTED, lineHeight: 1.5 }}>{t("Nog geen leden. Voeg je eerste lid toe.", "No members yet. Add your first one.")}</div>
             : (() => {
@@ -1200,8 +1283,9 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
                 const attention = adh != null && adh < 50;
                 const pro = (m.member_tier || "pro") === "pro";
                 return (
-                  <div key={m.id} style={{ background: INK, border: `1px solid ${LINE}`, borderRadius: 10, position: "relative" }}>
+                  <div key={m.id} style={{ background: selIds.includes(m.id) ? color + "12" : INK, border: `1px solid ${selIds.includes(m.id) ? color : LINE}`, borderRadius: 10, position: "relative" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 12px" }}>
+                      <span onClick={() => toggleSelId(m.id)} title={t("Selecteer", "Select")} style={{ cursor: "pointer", width: 18, height: 18, borderRadius: 5, border: `1.5px solid ${selIds.includes(m.id) ? color : LINE}`, background: selIds.includes(m.id) ? color : "transparent", display: "grid", placeItems: "center", flexShrink: 0 }}>{selIds.includes(m.id) && <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>}</span>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ ...disp, fontWeight: 700, fontSize: 14.5 }}>{m.display_name || t("Naamloos", "Unnamed")}{(m.coach_note || m.calc_override) ? <span style={{ color, fontSize: 13, marginLeft: 6 }}>•</span> : null}</div>
                         <div style={{ fontSize: 11.5, color: MUTED, marginTop: 2 }}>{t("Laatst actief", "Last active")}: {fmtDate(m.progress && m.progress.last_active)}</div>
@@ -1223,7 +1307,7 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
                         <div onClick={() => setRowMenu(null)} style={{ position: "fixed", inset: 0, zIndex: 28 }} />
                         <div style={{ position: "absolute", right: 10, top: 48, background: INK2, border: `1px solid ${LINE}`, borderRadius: 10, overflow: "hidden", zIndex: 29, minWidth: 180, boxShadow: "0 12px 34px rgba(0,0,0,.4)" }}>
                           {[
-                            [t("Code resetten", "Reset code"), () => resetCode(m), false],
+                            [t("Bewerken", "Edit"), () => openMemberEdit(m), false],
                             ...(!m.plan_id ? [[(t("Tier: ", "Tier: ") + (m.member_tier || "pro")), () => toggleTier(m), false]] : []),
                             ...(!m.plan_id && classes && classes.length > 0 ? [[t("Lessen", "Classes"), () => openMemberClasses(m), false]] : []),
                             [m.coach_note ? t("Notitie •", "Note •") : t("Notitie", "Note"), () => openMemberNote(m), false],
@@ -1234,6 +1318,25 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
                           ))}
                         </div>
                       </>
+                    )}
+                    {openMEdit === m.id && (
+                      <div style={{ padding: "0 12px 14px", display: "grid", gap: 10 }}>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                          <div style={{ display: "grid", gap: 4 }}>
+                            <div style={{ fontSize: 11, ...disp, fontWeight: 700, color: MUTED, letterSpacing: 0.3 }}>{t("Voornaam", "First name")}</div>
+                            <input style={input} value={meFirst} onChange={(e) => setMeFirst(e.target.value)} placeholder={t("Voornaam", "First name")} />
+                          </div>
+                          <div style={{ display: "grid", gap: 4 }}>
+                            <div style={{ fontSize: 11, ...disp, fontWeight: 700, color: MUTED, letterSpacing: 0.3 }}>{t("Achternaam", "Last name")}</div>
+                            <input style={input} value={meLast} onChange={(e) => setMeLast(e.target.value)} placeholder={t("Achternaam", "Last name")} />
+                          </div>
+                        </div>
+                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                          <div onClick={() => saveMemberEdit(m)} style={{ cursor: "pointer", background: color, color: "#fff", padding: "9px 18px", borderRadius: 8, ...disp, fontWeight: 700, fontSize: 13 }}>{meBusy ? t("Opslaan…", "Saving…") : t("Opslaan", "Save")}</div>
+                          <div onClick={() => resetCode(m)} style={{ cursor: "pointer", border: `1px solid ${LINE}`, color: PAPER, padding: "9px 16px", borderRadius: 8, ...disp, fontWeight: 700, fontSize: 13 }}>{t("Code opnieuw sturen", "Resend code")}</div>
+                          {meMsg && <span style={{ fontSize: 11.5, color: meMsg === t("Opgeslagen.", "Saved.") ? SAGE : EMBER_SOFT }}>{meMsg}</span>}
+                        </div>
+                      </div>
                     )}
                     {openNote === m.id && (
                       <div style={{ padding: "0 12px 12px" }}>
@@ -1390,6 +1493,32 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
         </>)}
 
         {current === "branding" && (<>
+        {/* Accountgegevens (bedrijf) */}
+        <div style={card}>
+          <div style={{ ...sectionTitle, color: accent, marginBottom: 12 }}>{t("Accountgegevens", "Account details")}</div>
+          <div style={{ display: "grid", gridTemplateColumns: isWide ? "1fr 1fr" : "1fr", gap: 10 }}>
+            {[
+              [t("Bedrijfsnaam", "Company name"), coName, setCoName, "text", t("Bv. In Shape Zevenaar", "e.g. In Shape")],
+              [t("Adres", "Address"), coAddr, setCoAddr, "text", t("Straat 1, 6901 AA Zevenaar", "Street 1, City")],
+              [t("E-mail", "Email"), coEmail, setCoEmail, "email", "info@bedrijf.nl"],
+              [t("Telefoon", "Phone"), coPhone, setCoPhone, "tel", "0316 000000"],
+              [t("KvK-nummer", "Chamber of Commerce no."), coKvk, setCoKvk, "text", "12345678"],
+              [t("BTW-id", "VAT ID"), coBtw, setCoBtw, "text", "NL000000000B00"],
+            ].map(([lbl, val, setter, type, ph], i) => (
+              <div key={i} style={{ display: "grid", gap: 4 }}>
+                <div style={{ fontSize: 11, ...disp, fontWeight: 700, color: MUTED, letterSpacing: 0.3 }}>{lbl}</div>
+                <input style={input} type={type} value={val} onChange={(e) => setter(e.target.value)} placeholder={ph} />
+              </div>
+            ))}
+          </div>
+          <label style={{ display: "flex", alignItems: "center", gap: 9, cursor: "pointer", fontSize: 13, color: PAPER, marginTop: 14 }}>
+            <input type="checkbox" checked={showName} onChange={(e) => setShowName(e.target.checked)} /> {t("Toon bedrijfsnaam onder het logo", "Show company name under the logo")}
+          </label>
+          <div style={{ fontSize: 11, color: MUTED, marginTop: 4, lineHeight: 1.5 }}>{t("Deze gegevens gebruiken we later o.a. voor facturen. De bedrijfsnaam verschijnt in de zijbalk onder je logo als je dit aanzet.", "We'll use these later e.g. for invoices. The company name shows in the sidebar under your logo when enabled.")}</div>
+          <div onClick={saveBrand} style={{ cursor: brandBusy ? "default" : "pointer", opacity: brandBusy ? 0.7 : 1, background: accent, color: "#fff", padding: "11px 0", borderRadius: 8, textAlign: "center", ...disp, fontWeight: 700, fontSize: 13.5, letterSpacing: 0.3, marginTop: 14 }}>{brandBusy ? t("Opslaan…", "Saving…") : t("Accountgegevens opslaan", "Save account details")}</div>
+          {brandMsg && <div style={{ fontSize: 12, color: SAGE, marginTop: 8 }}>{brandMsg}</div>}
+        </div>
+
         {/* Huisstijl (self-serve white-label) */}
         <div style={card}>
           <div style={{ ...sectionTitle, color: accent, marginBottom: 12 }}>{t("Huisstijl", "Branding")}</div>
