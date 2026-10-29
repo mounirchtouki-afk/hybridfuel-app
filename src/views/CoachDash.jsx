@@ -200,7 +200,7 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
       const r = await fetch("/api/gym", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "addcoach", authToken: await freshToken(), email, password: ncPass, display_name: ncName.trim(), perms: ncPerms }) });
       const d = await r.json().catch(() => ({}));
       if (!r.ok) { setTeamMsg(d.error === "coach_exists_or_failed" ? t("E-mail bestaat al of ongeldig.", "Email exists or invalid.") : t("Aanmaken mislukt.", "Create failed.")); setTeamBusy(false); return; }
-      setNcEmail(""); setNcPass(""); setNcName(""); setNcPerms(["members", "pt"]); setTeamBusy(false); setTeamMsg(t("Coach aangemaakt.", "Coach created.")); loadCoaches();
+      setNcEmail(""); setNcPass(""); setNcName(""); setNcPerms(["members", "pt"]); setTeamBusy(false); setTeamMsg(t("Coach aangemaakt.", "Coach created.")); await loadCoaches(); setTimeout(loadCoaches, 700);
     } catch (e) { setTeamMsg(t("Aanmaken mislukt.", "Create failed.")); setTeamBusy(false); }
   }
   function openCoachPerms(c) {
