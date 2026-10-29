@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { INK, INK2, PAPER, MUTED, LINE, disp } from "../shared.js";
+import { INK, INK2, PAPER, MUTED, LINE, disp, applyOrgTheme } from "../shared.js";
 import { supabase } from "../supabaseClient.js";
 
 // Branded code-login voor sportschool-leden. Leden openen /join/<slug>, voeren hun
@@ -17,9 +17,9 @@ export default function Join({ slug, lang }) {
     let alive = true;
     fetch("/api/gym", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "branding", slug }) })
       .then((r) => r.ok ? r.json() : Promise.reject())
-      .then((d) => { if (alive) setBrand(d); })
+      .then((d) => { if (alive) { setBrand(d); applyOrgTheme(d.theme || { template: "dark", accent: d.brand_color }); } })
       .catch(() => { if (alive) setNotFound(true); });
-    return () => { alive = false; };
+    return () => { alive = false; applyOrgTheme(null); };
   }, [slug]);
 
   const color = (brand && brand.brand_color) || "#E11D48";

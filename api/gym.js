@@ -49,7 +49,13 @@ async function branding(req, res, body) {
   if (!org) return res.status(404).json({ error: "not_found" });
   const cr = await rest("org_config?select=brand_color,logo_url&org_id=eq." + encodeURIComponent(org.id) + "&limit=1");
   const cfg = cr.ok ? (await cr.json().catch(() => []))[0] : null;
-  return res.status(200).json({ ok: true, name: org.name, brand_color: (cfg && cfg.brand_color) || "#E11D48", logo_url: (cfg && cfg.logo_url) || null });
+  // Thema apart + guarded: de theme-kolom bestaat mogelijk nog niet (vóór migratie).
+  let theme = null;
+  try {
+    const tr = await rest("org_config?select=theme&org_id=eq." + encodeURIComponent(org.id) + "&limit=1");
+    if (tr.ok) { const tRows = await tr.json().catch(() => []); theme = (tRows && tRows[0] && tRows[0].theme) || null; }
+  } catch (e) {}
+  return res.status(200).json({ ok: true, name: org.name, brand_color: (cfg && cfg.brand_color) || "#E11D48", logo_url: (cfg && cfg.logo_url) || null, theme });
 }
 
 // --- login: code -> sessie (publiek, rate-limited, generieke fouten) ---

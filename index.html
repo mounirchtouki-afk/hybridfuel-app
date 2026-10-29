@@ -17,8 +17,17 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+      /* Standaard-huisstijl (consumenten-app). Sportscholen overschrijven deze per org
+         via JS (applyOrgTheme), zodat de hele app meekleurt. */
+      :root {
+        --hf-ink: #0A0A0A; --hf-ink2: #161616; --hf-ember: #E11D48; --hf-ember-soft: #FB7185;
+        --hf-paper: #F4F4F4; --hf-muted: #8C8C8C; --hf-line: #242424; --hf-sage: #B5B5B5;
+      }
+      body { background: var(--hf-ink); transition: background 0.2s ease; }
+    </style>
   </head>
-  <body style="margin:0;background:#0A0A0A;">
+  <body style="margin:0;background:var(--hf-ink);">
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
     <script src="https://www.hybridfuelco.com/consent.js?v=2"></script>

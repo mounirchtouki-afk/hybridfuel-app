@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, SAGE, load, save, genSteps, todayISO, macroLetters, wUnit, bUnit, gShow, gStore, kgShow, kgStore, cmToFtIn, ftInToCm } from "./shared.js";
+import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, SAGE, load, save, genSteps, todayISO, macroLetters, wUnit, bUnit, gShow, gStore, kgShow, kgStore, cmToFtIn, ftInToCm, applyOrgTheme } from "./shared.js";
 import Today from "./views/Today.jsx";
 import Dashboard from "./views/Dashboard.jsx";
 import RecipeBuilder from "./views/RecipeBuilder.jsx";
@@ -625,11 +625,28 @@ export default function App() {
         const { data: cfgRows } = await supabase.from("org_config").select("brand_color,logo_url").eq("org_id", me.org_id).limit(1);
         const org = (orgRows && orgRows[0]) || {};
         const cfg = cfgRows && cfgRows[0];
-        if (alive) setGymCtx({ role: me.role, org: { ...org, brand_color: (cfg && cfg.brand_color) || "#E11D48", logo_url: (cfg && cfg.logo_url) || null } });
+        // Thema apart + guarded ophalen: de theme-kolom bestaat mogelijk nog niet (vóór migratie).
+        let theme = null;
+        try {
+          const { data: tRows } = await supabase.from("org_config").select("theme").eq("org_id", me.org_id).limit(1);
+          if (tRows && tRows[0]) theme = tRows[0].theme || null;
+        } catch (e) {}
+        const brand = (cfg && cfg.brand_color) || "#E11D48";
+        if (!theme) theme = { template: "dark", accent: brand }; // fallback: accent op donker
+        if (!theme.accent) theme.accent = brand;
+        if (alive) setGymCtx({ role: me.role, org: { ...org, brand_color: brand, logo_url: (cfg && cfg.logo_url) || null, theme } });
       } catch (e) { if (alive) setGymCtx(null); }
     })();
     return () => { alive = false; };
   }, [session]);
+
+  // White-label thema toepassen: zodra we weten bij welke org de gebruiker hoort, zetten
+  // we de org-huisstijl als CSS-variabelen op <html>. Geen org → defaults terug.
+  useEffect(() => {
+    applyOrgTheme(gymCtx && gymCtx.org ? gymCtx.org.theme : null);
+    return () => {}; // reset gebeurt bij de volgende run (of hieronder bij unmount)
+  }, [gymCtx]);
+  useEffect(() => () => applyOrgTheme(null), []); // opruimen bij unmount
 
   // Opslag-bevestiging (toast met "Naar dashboard").
   const flashSaved = () => { setSaveFlash(true); setTimeout(() => setSaveFlash(false), 4500); };
@@ -1449,9 +1466,9 @@ export default function App() {
   if (session && gymCtx && gymCtx.role === "coach") return <CoachDash session={session} org={gymCtx.org} lang={lang} onLogout={confirmLogout} />;
 
   return (
-    <div style={{ minHeight: "100vh", background: "linear-gradient(180deg, #1b0a11 0%, #140a0e 48%, #0e090b 100%)", position: "relative", color: PAPER, fontFamily: "Inter, sans-serif", paddingBottom: `calc(${76 + consentH}px + env(safe-area-inset-bottom))` }}>
-      <style dangerouslySetInnerHTML={{ __html: fonts + `*{box-sizing:border-box;scrollbar-width:none;-ms-overflow-style:none} *::-webkit-scrollbar{display:none;width:0;height:0} html,body{overflow-x:hidden;background:#120a0d} select option{background:${INK2};color:${PAPER}} @keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}} .dot{animation:pulse 1s infinite} input[type=date],input[type=time]{color-scheme:dark} .hf-glow{position:fixed;inset:0;pointer-events:none;z-index:-1;background:radial-gradient(125% 75% at 50% -2%,rgba(225,29,72,0.20),transparent 58%),radial-gradient(95% 55% at 100% 106%,rgba(225,29,72,0.10),transparent 62%);animation:drift 20s ease-in-out infinite alternate} @keyframes drift{from{transform:translate(0,0)}to{transform:translate(-30px,24px)}} .hf-modal{scrollbar-width:none;-ms-overflow-style:none} .hf-modal::-webkit-scrollbar{display:none;width:0;height:0}` }} />
-      <div className="hf-glow" aria-hidden="true" />
+    <div style={{ minHeight: "100vh", background: isGymMember ? INK : "linear-gradient(180deg, #1b0a11 0%, #140a0e 48%, #0e090b 100%)", position: "relative", color: PAPER, fontFamily: "Inter, sans-serif", paddingBottom: `calc(${76 + consentH}px + env(safe-area-inset-bottom))` }}>
+      <style dangerouslySetInnerHTML={{ __html: fonts + `*{box-sizing:border-box;scrollbar-width:none;-ms-overflow-style:none} *::-webkit-scrollbar{display:none;width:0;height:0} html,body{overflow-x:hidden;background:var(--hf-ink)} select option{background:${INK2};color:${PAPER}} @keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}} .dot{animation:pulse 1s infinite} input[type=date],input[type=time]{color-scheme:${isGymMember ? "light dark" : "dark"}} .hf-glow{position:fixed;inset:0;pointer-events:none;z-index:-1;background:radial-gradient(125% 75% at 50% -2%,rgba(225,29,72,0.20),transparent 58%),radial-gradient(95% 55% at 100% 106%,rgba(225,29,72,0.10),transparent 62%);animation:drift 20s ease-in-out infinite alternate} @keyframes drift{from{transform:translate(0,0)}to{transform:translate(-30px,24px)}} .hf-modal{scrollbar-width:none;-ms-overflow-style:none} .hf-modal::-webkit-scrollbar{display:none;width:0;height:0}` }} />
+      {!isGymMember && <div className="hf-glow" aria-hidden="true" />}
       {subMsg && (
         <div onClick={() => setSubMsg("")} style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 120, background: subMsg === "ok" ? EMBER : INK2, color: PAPER, padding: "12px 16px", paddingTop: "calc(12px + env(safe-area-inset-top))", textAlign: "center", fontSize: 13.5, lineHeight: 1.5, cursor: "pointer", boxShadow: "0 4px 18px rgba(0,0,0,.4)" }}>
           {subMsg === "ok" ? T("subOk") : subMsg === "cancel" ? T("subCancel") : T("subErr")}
@@ -1460,7 +1477,7 @@ export default function App() {
       )}
 
       {/* HEADER */}
-      <div style={{ borderBottom: `1px solid ${LINE}`, padding: "12px 14px", display: "flex", alignItems: "center", gap: 8, position: "sticky", top: 0, background: `radial-gradient(130% 320% at 94% 0%, rgba(225,29,72,0.18), #19090f 58%), #150a0e`, zIndex: 20 }}>
+      <div style={{ borderBottom: `1px solid ${LINE}`, padding: "12px 14px", display: "flex", alignItems: "center", gap: 8, position: "sticky", top: 0, background: isGymMember ? INK2 : `radial-gradient(130% 320% at 94% 0%, rgba(225,29,72,0.18), #19090f 58%), #150a0e`, zIndex: 20 }}>
         {isGymMember && gymCtx.org.logo_url ? (
           <img src={gymCtx.org.logo_url} alt={gymCtx.org.name || ""} style={{ height: 30, maxWidth: 140, objectFit: "contain", flexShrink: 0 }} />
         ) : isGymMember ? (

@@ -1,8 +1,40 @@
 // Gedeelde huisstijl-tokens, stijlhelpers en kleine utils.
 // Eén bron van waarheid zodat App én de losse views er identiek uitzien.
 
-export const INK = "#0A0A0A", INK2 = "#161616", EMBER = "#E11D48", EMBER_SOFT = "#FB7185",
-  PAPER = "#F4F4F4", MUTED = "#8C8C8C", LINE = "#242424", SAGE = "#B5B5B5";
+// Kleur-tokens verwijzen naar CSS-variabelen (default in index.html :root). Zo kan
+// één set variabelen per sportschool de HELE app herthemen zonder de inline-styles aan
+// te raken. Een gewone gebruiker ziet de defaults; een gym-lid krijgt de org-set.
+export const INK = "var(--hf-ink)", INK2 = "var(--hf-ink2)", EMBER = "var(--hf-ember)", EMBER_SOFT = "var(--hf-ember-soft)",
+  PAPER = "var(--hf-paper)", MUTED = "var(--hf-muted)", LINE = "var(--hf-line)", SAGE = "var(--hf-sage)";
+
+// Basis-templates: coherente, leesbare sets (achtergrond + tekst samen). De gym kiest
+// er één als basis en overschrijft de accentkleur (knoppen/accenten). Zo geen onleesbare
+// combinaties. ember (accent) komt apart, want die stelt de gym zelf in.
+export const THEME_TEMPLATES = {
+  dark:  { ink: "#0A0A0A", ink2: "#161616", paper: "#F4F4F4", muted: "#8C8C8C", line: "#242424", sage: "#B5B5B5" },
+  light: { ink: "#FFFFFF", ink2: "#F5F6F8", paper: "#15181D", muted: "#6B7280", line: "#E4E7EC", sage: "#4B5563" },
+  slate: { ink: "#0F172A", ink2: "#1E293B", paper: "#F1F5F9", muted: "#94A3B8", line: "#334155", sage: "#CBD5E1" },
+  sand:  { ink: "#FAF7F2", ink2: "#F1EBE1", paper: "#1C1814", muted: "#7A7267", line: "#E4DBCD", sage: "#5A5349" },
+};
+export const THEME_KEYS = ["ink", "ink2", "ember", "ember-soft", "paper", "muted", "line", "sage"];
+
+// Zet de org-huisstijl als CSS-variabelen op <html>. theme = {template, accent, accentSoft, vars{}}.
+// null = alles terugzetten naar de defaults (voor gewone gebruikers / na uitloggen).
+export function applyOrgTheme(theme) {
+  try {
+    const root = document.documentElement;
+    if (!root || !root.style) return;
+    if (!theme) { THEME_KEYS.forEach((k) => root.style.removeProperty("--hf-" + k)); return; }
+    const base = THEME_TEMPLATES[theme.template] || THEME_TEMPLATES.dark;
+    const resolved = {
+      ink: base.ink, ink2: base.ink2, paper: base.paper, muted: base.muted, line: base.line, sage: base.sage,
+      ember: theme.accent || "#E11D48",
+      "ember-soft": theme.accentSoft || theme.accent || "#FB7185",
+      ...(theme.vars || {}),
+    };
+    Object.entries(resolved).forEach(([k, val]) => { if (val) root.style.setProperty("--hf-" + k, val); });
+  } catch (e) {}
+}
 
 export const disp = { fontFamily: "Oswald, sans-serif" };
 export const num = (v, d = 0) => { const n = parseFloat(v); return isNaN(n) ? d : n; };
