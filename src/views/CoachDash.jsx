@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { INK, INK2, PAPER, MUTED, LINE, SAGE, EMBER_SOFT, disp, sectionTitle } from "../shared.js";
+import { INK, INK2, PAPER, MUTED, LINE, SAGE, EMBER_SOFT, disp, sectionTitle, applyOrgTheme, THEME_TEMPLATES } from "../shared.js";
 import { supabase } from "../supabaseClient.js";
 
 // Coach-dashboard: verschijnt als een ingelogde gebruiker de rol 'coach' heeft.
@@ -14,6 +14,13 @@ export default function CoachDash({ session, org, lang, onLogout }) {
   const [busy, setBusy] = useState(false);
   const [codeShown, setCodeShown] = useState(null);  // {name, code}
   const [err, setErr] = useState("");
+
+  // Huisstijl (self-serve white-label)
+  const [tpl, setTpl] = useState((org && org.theme && org.theme.template) || "dark");
+  const [accent, setAccent] = useState((org && org.theme && org.theme.accent) || (org && org.brand_color) || "#E11D48");
+  const [logoData, setLogoData] = useState((org && org.logo_url) || null);
+  const [brandBusy, setBrandBusy] = useState(false);
+  const [brandMsg, setBrandMsg] = useState("");
 
   // PT-agenda
   const [sessions, setSessions] = useState(null);
@@ -65,6 +72,44 @@ export default function CoachDash({ session, org, lang, onLogout }) {
 
   const memberName = (uid) => { const m = (members || []).find((x) => x.auth_user_id === uid); return m ? (m.display_name || t("Lid", "Member")) : t("Lid", "Member"); };
   const fmtWhen = (s) => { try { return new Date(s).toLocaleString(lang === "nl" ? "nl-NL" : "en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }); } catch (e) { return s; } };
+
+  // Live-preview van de huisstijl terwijl de coach schuift.
+  useEffect(() => { applyOrgTheme({ template: tpl, accent }); }, [tpl, accent]);
+
+  // Logo kiezen → verkleinen naar max 320px breed → als data-URL bewaren (geen aparte opslag nodig).
+  function onLogoFile(e) {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    if (f.size > 4 * 1024 * 1024) { setBrandMsg(t("Logo te groot (max 4MB).", "Logo too large (max 4MB).")); return; }
+    const rd = new FileReader();
+    rd.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const max = 320; let w = img.width, h = img.height;
+          if (w > max) { h = Math.round(h * max / w); w = max; }
+          const c = document.createElement("canvas"); c.width = w; c.height = h;
+          c.getContext("2d").drawImage(img, 0, 0, w, h);
+          setLogoData(c.toDataURL("image/png"));
+        } catch (err) { setLogoData(rd.result); }
+      };
+      img.onerror = () => setLogoData(rd.result); // bv. SVG zonder afmetingen
+      img.src = rd.result;
+    };
+    rd.readAsDataURL(f);
+  }
+
+  async function saveBrand() {
+    if (!supabase || !org || !org.id || brandBusy) return;
+    setBrandBusy(true); setBrandMsg("");
+    try {
+      const theme = { template: tpl, accent };
+      const { error } = await supabase.from("org_config").update({ brand_color: accent, logo_url: logoData || null, theme }).eq("org_id", org.id);
+      if (error) { setBrandMsg(t("Opslaan mislukt.", "Save failed.")); setBrandBusy(false); return; }
+      applyOrgTheme(theme);
+      setBrandMsg(t("Opgeslagen. Leden zien het na verversen van de app.", "Saved. Members see it after refreshing the app.")); setBrandBusy(false);
+    } catch (e) { setBrandMsg(t("Opslaan mislukt.", "Save failed.")); setBrandBusy(false); }
+  }
 
   async function addMember() {
     const name = newName.trim();
@@ -183,6 +228,47 @@ export default function CoachDash({ session, org, lang, onLogout }) {
                 </div>
               ))}
           </div>
+        </div>
+
+        {/* Huisstijl (self-serve white-label) */}
+        <div style={card}>
+          <div style={{ ...sectionTitle, color: accent, marginBottom: 12 }}>{t("Huisstijl", "Branding")}</div>
+
+          <div style={{ fontSize: 12.5, color: MUTED, marginBottom: 6 }}>{t("Logo", "Logo")}</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
+            <div style={{ height: 46, minWidth: 90, maxWidth: 190, background: INK, border: `1px solid ${LINE}`, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", padding: "4px 10px" }}>
+              {logoData ? <img src={logoData} alt="logo" style={{ maxHeight: 36, maxWidth: 170, objectFit: "contain" }} /> : <span style={{ fontSize: 11, color: MUTED }}>{t("Geen logo", "No logo")}</span>}
+            </div>
+            <label style={{ cursor: "pointer", fontSize: 12.5, color: PAPER, border: `1px solid ${LINE}`, borderRadius: 8, padding: "9px 13px", ...disp, fontWeight: 600 }}>
+              {t("Logo kiezen", "Choose logo")}
+              <input type="file" accept="image/*" onChange={onLogoFile} style={{ display: "none" }} />
+            </label>
+            {logoData && <div onClick={() => setLogoData(null)} style={{ cursor: "pointer", fontSize: 12, color: MUTED }}>{t("Verwijderen", "Remove")}</div>}
+          </div>
+
+          <div style={{ fontSize: 12.5, color: MUTED, marginBottom: 6 }}>{t("Basis-template", "Base template")}</div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
+            {Object.keys(THEME_TEMPLATES).map((k) => {
+              const on = tpl === k; const base = THEME_TEMPLATES[k];
+              return (
+                <div key={k} onClick={() => setTpl(k)} style={{ cursor: "pointer", border: `2px solid ${on ? accent : LINE}`, borderRadius: 10, padding: 8, display: "flex", alignItems: "center", gap: 8, background: INK }}>
+                  <div style={{ width: 24, height: 24, borderRadius: 6, background: base.ink, border: `1px solid ${base.line}`, position: "relative" }}>
+                    <div style={{ position: "absolute", right: 3, bottom: 3, width: 8, height: 8, borderRadius: "50%", background: accent }} />
+                  </div>
+                  <span style={{ fontSize: 12.5, color: PAPER, textTransform: "capitalize", ...disp, fontWeight: 600 }}>{k}</span>
+                </div>
+              );
+            })}
+          </div>
+
+          <div style={{ fontSize: 12.5, color: MUTED, marginBottom: 6 }}>{t("Accentkleur (knoppen & accenten)", "Accent color (buttons & accents)")}</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+            <input type="color" value={accent} onChange={(e) => setAccent(e.target.value)} style={{ width: 46, height: 38, border: `1px solid ${LINE}`, borderRadius: 8, background: INK, cursor: "pointer", padding: 2 }} />
+            <input value={accent} onChange={(e) => setAccent(e.target.value)} style={{ ...input, width: 130 }} />
+          </div>
+
+          <div onClick={saveBrand} style={{ cursor: brandBusy ? "default" : "pointer", opacity: brandBusy ? 0.7 : 1, background: accent, color: "#fff", padding: "11px 0", borderRadius: 8, textAlign: "center", ...disp, fontWeight: 700, fontSize: 13.5, letterSpacing: 0.3 }}>{brandBusy ? t("Opslaan…", "Saving…") : t("Huisstijl opslaan", "Save branding")}</div>
+          {brandMsg && <div style={{ fontSize: 12, color: SAGE, marginTop: 8 }}>{brandMsg}</div>}
         </div>
       </div>
     </div>
