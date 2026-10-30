@@ -36,13 +36,15 @@ jobs:
       - name: Build web (native config, absolute API)
         run: npx cross-env VITE_API_BASE=https://app.hybridfuelco.com vite build
 
-      - name: Kopieer web-assets naar android
-        # cap copy/sync struikelt op de TS-config in CI; het android-project heeft
-        # de config + plugins al ingebakken, dus we verversen alleen de web-assets.
+      - name: Capacitor sync (android)
         run: |
-          rm -rf android/app/src/main/assets/public
-          mkdir -p android/app/src/main/assets/public
-          cp -r dist/* android/app/src/main/assets/public/
+          set +e
+          npx cap sync android 2>&1 | tee "$GITHUB_WORKSPACE/cap-sync.log"
+          code=${PIPESTATUS[0]}
+          if [ "$code" != "0" ]; then
+            tail -10 "$GITHUB_WORKSPACE/cap-sync.log" | while IFS= read -r l; do echo "::error::$l"; done
+          fi
+          exit $code
 
       - name: Android SDK 36 + build-tools installeren
         run: |
