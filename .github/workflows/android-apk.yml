@@ -36,8 +36,13 @@ jobs:
       - name: Build web (native config, absolute API)
         run: npx cross-env VITE_API_BASE=https://app.hybridfuelco.com vite build
 
-      - name: Capacitor copy (web-assets -> android)
-        run: npx cap copy android
+      - name: Kopieer web-assets naar android
+        # cap copy/sync struikelt op de TS-config in CI; het android-project heeft
+        # de config + plugins al ingebakken, dus we verversen alleen de web-assets.
+        run: |
+          rm -rf android/app/src/main/assets/public
+          mkdir -p android/app/src/main/assets/public
+          cp -r dist/* android/app/src/main/assets/public/
 
       - name: Build debug APK
         run: |
