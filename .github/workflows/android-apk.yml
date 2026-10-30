@@ -20,14 +20,15 @@ jobs:
         with:
           node-version: 20
 
-      - name: Java 17
+      - name: Java 21
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 21
 
-      - name: Android SDK
-        uses: android-actions/setup-android@v3
+      # De ubuntu-latest runner heeft de Android-SDK al voorgeïnstalleerd
+      # (ANDROID_HOME/ANDROID_SDK_ROOT gezet, licenties geaccepteerd), dus
+      # geen aparte setup-android-stap nodig; Gradle gebruikt die SDK.
 
       - name: Install deps
         run: npm ci
