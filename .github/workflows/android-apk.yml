@@ -11,6 +11,8 @@ on:
 jobs:
   build-apk:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -79,3 +81,15 @@ jobs:
           name: hybridfuelco-debug-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
+
+      # Publiceer de APK als GitHub Release met een vaste tag, zodat er altijd
+      # dezelfde directe download-URL is (login-vrij, want repo is public).
+      # Op de telefoon opent die link meteen als .apk (geen zip uitpakken).
+      - name: Publish APK to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: android-latest
+          name: HybridFuelCo Android (debug)
+          body: "Laatste debug-APK. Open op je Android-toestel en installeer. Build-commit ${{ github.sha }}."
+          files: android/app/build/outputs/apk/debug/app-debug.apk
+          fail_on_unmatched_files: true
