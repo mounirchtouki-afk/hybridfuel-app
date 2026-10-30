@@ -55,8 +55,13 @@ jobs:
         run: |
           cd android
           chmod +x gradlew
-          set -o pipefail
+          set +e
           ./gradlew assembleDebug --no-daemon --stacktrace 2>&1 | tee "$GITHUB_WORKSPACE/gradle-build.log"
+          code=${PIPESTATUS[0]}
+          if [ "$code" != "0" ]; then
+            grep -iE "What went wrong|FAILURE:|Caused by|Could not|error:|requires|incompatible|Unsupported|not found|SDK location|No such" "$GITHUB_WORKSPACE/gradle-build.log" | head -8 | while IFS= read -r l; do echo "::error::$l"; done
+          fi
+          exit $code
 
       - name: Upload build log
         if: always()
