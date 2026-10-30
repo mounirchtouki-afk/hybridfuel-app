@@ -1,4 +1,5 @@
 import { apiUrl, API_BASE } from "./apiBase";
+import { initPush } from "./push";
 import React, { useState, useEffect, useRef } from "react";
 import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, SAGE, load, save, genSteps, todayISO, macroLetters, wUnit, bUnit, gShow, gStore, kgShow, kgStore, cmToFtIn, ftInToCm, applyOrgTheme } from "./shared.js";
 import Today from "./views/Today.jsx";
@@ -586,6 +587,9 @@ export default function App() {
   const [devMode, setDevMode] = useState(false);
   const [demoMode, setDemoMode] = useState(false);
   const [gymCtx, setGymCtx] = useState(null); // {role:'coach'|'member', org:{...}} als de gebruiker bij een sportschool hoort
+
+  // Push-notificaties registreren op de native app (web: no-op).
+  useEffect(() => { initPush(); }, []);
 
   // Dev-modus: alles zichtbaar voor review. Alleen op preview/localhost, NOOIT op de live site.
   // Aanzetten: ?dev=1 in de URL. Uitzetten: ?dev=0.

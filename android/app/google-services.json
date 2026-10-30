@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "89679657657",
+    "project_id": "hybridfuelco-adbb6",
+    "storage_bucket": "hybridfuelco-adbb6.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:89679657657:android:b6ac70d19777f4656e7968",
+        "android_client_info": {
+          "package_name": "com.hybridfuelco.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAY8lwKxtAwcLlmYWR6eW90ceju4-89KnQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
