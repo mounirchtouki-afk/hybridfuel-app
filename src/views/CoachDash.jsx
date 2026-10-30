@@ -1,3 +1,4 @@
+import { apiUrl } from "../apiBase";
 import React, { useState, useEffect } from "react";
 import { INK, INK2, PAPER, MUTED, LINE, SAGE, EMBER_SOFT, disp, sectionTitle, applyOrgTheme, THEME_TEMPLATES } from "../shared.js";
 import { supabase } from "../supabaseClient.js";
@@ -294,7 +295,7 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
     if (!email || ncPass.length < 8 || teamBusy) { if (ncPass.length < 8) setTeamMsg(t("Wachtwoord min. 8 tekens.", "Password min. 8 chars.")); return; }
     setTeamBusy(true); setTeamMsg("");
     try {
-      const r = await fetch("/api/gym", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "addcoach", authToken: await freshToken(), email, password: ncPass, display_name: ncName.trim(), perms: ncPerms }) });
+      const r = await fetch(apiUrl("/api/gym"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "addcoach", authToken: await freshToken(), email, password: ncPass, display_name: ncName.trim(), perms: ncPerms }) });
       const d = await r.json().catch(() => ({}));
       if (!r.ok) { setTeamMsg(d.error === "coach_exists_or_failed" ? t("E-mail bestaat al of ongeldig.", "Email exists or invalid.") : t("Aanmaken mislukt.", "Create failed.")); setTeamBusy(false); return; }
       setNcEmail(""); setNcPass(""); setNcName(""); setNcPerms(["members", "pt"]); setTeamBusy(false); setTeamMsg(t("Coach aangemaakt.", "Coach created.")); await loadCoaches(); setTimeout(loadCoaches, 700);
@@ -306,7 +307,7 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
   }
   async function saveCoachPerms(c) {
     try {
-      const r = await fetch("/api/gym", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "setperms", authToken: await freshToken(), member_id: c.id, perms: permSel }) });
+      const r = await fetch(apiUrl("/api/gym"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "setperms", authToken: await freshToken(), member_id: c.id, perms: permSel }) });
       if (r.ok) { setCoaches((xs) => xs.map((x) => x.id === c.id ? { ...x, perms: permSel } : x)); setOpenPerms(null); }
     } catch (e) {}
   }
@@ -324,7 +325,7 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
       const payload = { action: "editcoach", authToken: await freshToken(), member_id: c.id, display_name: edName.trim() };
       if (edPass) payload.password = edPass;
       if (email) payload.email = email;
-      const r = await fetch("/api/gym", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      const r = await fetch(apiUrl("/api/gym"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
       if (r.ok) { setCoaches((xs) => xs.map((x) => x.id === c.id ? { ...x, display_name: edName.trim() } : x)); setEditMsg(t("Opgeslagen.", "Saved.")); setEdPass(""); setEdPass2(""); }
       else { const e = await r.json().catch(() => ({})); setEditMsg(e && e.error === "update_failed" ? t("E-mail/wachtwoord kon niet worden opgeslagen (bestaat de e-mail al?).", "Email/password could not be saved (email already in use?).") : t("Opslaan mislukt.", "Save failed.")); }
     } catch (e) { setEditMsg(t("Opslaan mislukt.", "Save failed.")); }
@@ -332,7 +333,7 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
   async function removeCoach(c) {
     if (typeof window !== "undefined" && !window.confirm(t("Coach verwijderen?", "Delete coach?"))) return;
     try {
-      const r = await fetch("/api/gym", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "removecoach", authToken: await freshToken(), member_id: c.id }) });
+      const r = await fetch(apiUrl("/api/gym"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "removecoach", authToken: await freshToken(), member_id: c.id }) });
       if (r.ok) setCoaches((xs) => xs.filter((x) => x.id !== c.id));
     } catch (e) {}
   }
@@ -420,7 +421,7 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
     if (!name || busy) return;
     setBusy(true); setErr("");
     try {
-      const r = await fetch("/api/gym", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "create", authToken: await freshToken(), display_name: name, tier: newTier }) });
+      const r = await fetch(apiUrl("/api/gym"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "create", authToken: await freshToken(), display_name: name, tier: newTier }) });
       const d = await r.json().catch(() => ({}));
       if (!r.ok || !d.code) { setErr(t("Aanmaken mislukt.", "Create failed.")); setBusy(false); return; }
       // Abonnement meteen koppelen als gekozen (guarded; plan_id-kolom bestaat na migratie).
@@ -516,7 +517,7 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
     if (!list.length) { setImpErr(t("Geen geldige namen om te importeren. Kies de juiste kolom.", "No valid names to import. Pick the right column.")); return; }
     setImpBusy(true); setImpErr("");
     try {
-      const r = await fetch("/api/gym", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "bulkcreate", authToken: await freshToken(), members: list }) });
+      const r = await fetch(apiUrl("/api/gym"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "bulkcreate", authToken: await freshToken(), members: list }) });
       const d = await r.json().catch(() => ({}));
       if (!r.ok) { setImpErr(d && d.error === "too_many" ? t("Maximaal 200 leden per import.", "Max 200 members per import.") : t("Importeren mislukt.", "Import failed.")); setImpBusy(false); return; }
       setImpResults(d); setImpBusy(false); load();
@@ -537,7 +538,7 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
   async function resetCode(m) {
     if (busy) return; setBusy(true); setErr("");
     try {
-      const r = await fetch("/api/gym", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "reset", authToken: await freshToken(), member_id: m.id }) });
+      const r = await fetch(apiUrl("/api/gym"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "reset", authToken: await freshToken(), member_id: m.id }) });
       const d = await r.json().catch(() => ({}));
       if (!r.ok || !d.code) { setErr(t("Reset mislukt.", "Reset failed.")); setBusy(false); return; }
       setCodeShown({ name: m.display_name, code: d.code }); setBusy(false);
@@ -610,7 +611,7 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
     if (!ok) return;
     setBusy(true);
     try {
-      const r = await fetch("/api/gym", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "remove", authToken: await freshToken(), member_id: m.id }) });
+      const r = await fetch(apiUrl("/api/gym"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "remove", authToken: await freshToken(), member_id: m.id }) });
       if (r.ok) setMembers((xs) => xs.filter((x) => x.id !== m.id));
       setBusy(false);
     } catch (e) { setBusy(false); }

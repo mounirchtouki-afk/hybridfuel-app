@@ -1,3 +1,4 @@
+import { apiUrl } from "../apiBase";
 import React, { useState, useEffect } from "react";
 import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, disp, input, label, sectionTitle, primaryBtn, ghostBtn } from "../shared.js";
 import { supabase, supaReady } from "../supabaseClient.js";
@@ -101,7 +102,7 @@ export default function Auth({ lang, session, tier, recovery, onClose, gym }) {
 
   function setNewsletter(email, on) {
     try { localStorage.setItem("hf_newsletter", on ? "1" : "0"); } catch (e) {}
-    fetch("/api/subscribe", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "newsletter", email, on }) }).catch(() => {});
+    fetch(apiUrl("/api/subscribe"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "newsletter", email, on }) }).catch(() => {});
   }
 
   async function submit() {
@@ -149,7 +150,7 @@ export default function Auth({ lang, session, tier, recovery, onClose, gym }) {
     if (!session) return;
     setErr(""); setBusy(true);
     try {
-      const r = await fetch("/api/delete-account", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ authToken: session.access_token }) });
+      const r = await fetch(apiUrl("/api/delete-account"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ authToken: session.access_token }) });
       const d = await r.json().catch(() => ({}));
       if (!d || !d.ok) throw new Error((d && d.error) || "error");
       try { await supabase.auth.signOut(); } catch (e) {}
@@ -162,7 +163,7 @@ export default function Auth({ lang, session, tier, recovery, onClose, gym }) {
     if (!session) return;
     setErr(""); setSubBusy(plan);
     try {
-      const r = await fetch("/api/create-subscription", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: session.user.id, email: session.user.email, tier: plan, interval: billInterval }) });
+      const r = await fetch(apiUrl("/api/create-subscription"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: session.user.id, email: session.user.email, tier: plan, interval: billInterval }) });
       const d = await r.json().catch(() => ({}));
       if (d && d.url) { window.location.href = d.url; return; }
       setErr(d && d.error === "not_configured" ? t("notConfigured") : (d && d.detail) || "error");
@@ -172,7 +173,7 @@ export default function Auth({ lang, session, tier, recovery, onClose, gym }) {
     if (!session) return;
     setErr(""); setSubBusy("portal");
     try {
-      const r = await fetch("/api/billing-portal", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ authToken: session.access_token }) });
+      const r = await fetch(apiUrl("/api/billing-portal"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ authToken: session.access_token }) });
       const d = await r.json().catch(() => ({}));
       if (d && d.url) { window.location.href = d.url; return; }
       setErr(t("notConfigured"));

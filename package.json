@@ -6,9 +6,9 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "cap:sync": "npm run build && cap sync",
-    "cap:android": "npm run build && cap sync android && cap open android",
-    "cap:ios": "npm run build && cap sync ios && cap open ios"
+    "cap:sync": "cross-env VITE_API_BASE=https://app.hybridfuelco.com vite build && cap sync",
+    "cap:android": "cross-env VITE_API_BASE=https://app.hybridfuelco.com vite build && cap sync android && cap open android",
+    "cap:ios": "cross-env VITE_API_BASE=https://app.hybridfuelco.com vite build && cap sync ios && cap open ios"
   },
   "dependencies": {
     "@capacitor/android": "^8.6.0",
@@ -25,6 +25,7 @@
   "devDependencies": {
     "@capacitor/cli": "^8.6.0",
     "@vitejs/plugin-react": "^4.3.1",
+    "cross-env": "^10.1.0",
     "vite": "^5.4.0"
   }
 }

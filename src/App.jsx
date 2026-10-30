@@ -1,3 +1,4 @@
+import { apiUrl, API_BASE } from "./apiBase";
 import React, { useState, useEffect, useRef } from "react";
 import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, SAGE, load, save, genSteps, todayISO, macroLetters, wUnit, bUnit, gShow, gStore, kgShow, kgStore, cmToFtIn, ftInToCm, applyOrgTheme } from "./shared.js";
 import Today from "./views/Today.jsx";
@@ -360,7 +361,7 @@ function categoryIndex(name) {
 }
 
 async function fetchChunk(payload) {
-  const res = await fetch("/api/plan", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+  const res = await fetch(apiUrl("/api/plan"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || ("Fout " + res.status));
   return data;
@@ -790,7 +791,7 @@ export default function App() {
     } catch (e) {}
 
     if (sid) {
-      fetch("/api/verify?session_id=" + encodeURIComponent(sid))
+      fetch(apiUrl("/api/verify?session_id=") + encodeURIComponent(sid))
         .then((r) => r.json())
         .then((j) => {
           if (j && j.ok && j.token) {
@@ -969,7 +970,7 @@ export default function App() {
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) { setLeadStatus("bad"); return; }
     setLeadStatus("sending");
     try {
-      const res = await fetch("/api/subscribe", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: e, lang }) });
+      const res = await fetch(apiUrl("/api/subscribe"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: e, lang }) });
       if (!res.ok) throw new Error("fail");
       setLeadStatus("ok");
     } catch (_) { setLeadStatus("err"); }
@@ -1117,7 +1118,7 @@ export default function App() {
     if (!week || trackerBusy) return;
     setTrackerBusy(true);
     try {
-      const res = await fetch("/api/tracker", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ week, shopping: shoppingFor(week), lang }) });
+      const res = await fetch(apiUrl("/api/tracker"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ week, shopping: shoppingFor(week), lang }) });
       if (!res.ok) throw new Error("fail");
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
@@ -1134,7 +1135,7 @@ export default function App() {
     let tok = "";
     try { tok = localStorage.getItem("hf_token") || ""; } catch (e) {}
     if (!tok) { alert(lang === "en" ? "No access token found, re-open the app from your purchase confirmation." : "Geen toegangstoken gevonden, open de app opnieuw via je aankoopbevestiging."); return; }
-    const u = "/api/guide?lang=" + encodeURIComponent(lang) + "&token=" + encodeURIComponent(tok);
+    const u = API_BASE + "/api/guide?lang=" + encodeURIComponent(lang) + "&token=" + encodeURIComponent(tok);
     window.open(u, "_blank", "noopener");
   }
 
@@ -1143,7 +1144,7 @@ export default function App() {
     try {
       const token = (() => { try { return localStorage.getItem("hf_token") || ""; } catch (e) { return ""; } })();
       setPlanEmail("sending");
-      const res = await fetch("/api/email-plan", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ lang, week: wk, shopping: shoppingFor(wk), token }) });
+      const res = await fetch(apiUrl("/api/email-plan"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ lang, week: wk, shopping: shoppingFor(wk), token }) });
       const j = await res.json().catch(() => ({}));
       setPlanEmail(j && j.emailed ? "sent" : "");
     } catch (e) { setPlanEmail(""); }

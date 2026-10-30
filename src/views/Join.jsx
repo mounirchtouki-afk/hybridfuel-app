@@ -1,3 +1,4 @@
+import { apiUrl } from "../apiBase";
 import React, { useState, useEffect } from "react";
 import { INK, INK2, PAPER, MUTED, LINE, disp, applyOrgTheme } from "../shared.js";
 import { supabase } from "../supabaseClient.js";
@@ -15,7 +16,7 @@ export default function Join({ slug, lang }) {
 
   useEffect(() => {
     let alive = true;
-    fetch("/api/gym", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "branding", slug }) })
+    fetch(apiUrl("/api/gym"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "branding", slug }) })
       .then((r) => r.ok ? r.json() : Promise.reject())
       .then((d) => { if (alive) { setBrand(d); applyOrgTheme(d.theme || { template: "dark", accent: d.brand_color }); } })
       .catch(() => { if (alive) setNotFound(true); });
@@ -29,7 +30,7 @@ export default function Join({ slug, lang }) {
     if (!c) return;
     setBusy(true); setErr("");
     try {
-      const r = await fetch("/api/gym", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "login", orgSlug: slug, code: c }) });
+      const r = await fetch(apiUrl("/api/gym"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "login", orgSlug: slug, code: c }) });
       const d = await r.json().catch(() => ({}));
       if (r.status === 429) { setErr(t("Te veel pogingen. Wacht even.", "Too many attempts. Please wait.")); setBusy(false); return; }
       if (!r.ok || !d.access_token) { setErr(t("Onjuiste code. Vraag je coach om een nieuwe.", "Invalid code. Ask your coach for a new one.")); setBusy(false); return; }
