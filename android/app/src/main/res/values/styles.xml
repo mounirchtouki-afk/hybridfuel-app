@@ -13,6 +13,11 @@
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
         <item name="android:background">@null</item>
+        <!-- Huiskleur-accent voor native controls (o.a. de datumkiezer-popup). -->
+        <item name="colorAccent">#E11D48</item>
+        <item name="colorControlActivated">#E11D48</item>
+        <item name="colorControlHighlight">#33E11D48</item>
+        <item name="android:colorControlActivated">#E11D48</item>
     </style>
 
 

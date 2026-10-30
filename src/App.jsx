@@ -63,6 +63,9 @@ function demoWeek(lang, nSnack = 0, snackLikes = []) {
 const STRIPE_WEEK_LINK = "https://buy.stripe.com/fZu4gBdvz1oQgru0Sd1wY00";
 const STRIPE_BUNDLE_LINK = "https://buy.stripe.com/7sYbJ3gHL2sU7UY30l1wY01";
 
+// Draait de app als native (Capacitor) app? Gebruikt om web-only UI te verbergen.
+const IS_NATIVE = (() => { try { return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()); } catch (e) { return false; } })();
+
 const ACTIVITY = [
   { id: "light", nl: "Licht (1–2 sessies/wk)", en: "Light (1–2 sessions/wk)" },
   { id: "moderate", nl: "Gemiddeld (3–4/wk)", en: "Moderate (3–4/wk)" },
@@ -1582,7 +1585,7 @@ export default function App() {
 
   return (
     <div style={{ minHeight: "100vh", background: isGymMember ? INK : "linear-gradient(180deg, #1b0a11 0%, #140a0e 48%, #0e090b 100%)", position: "relative", color: PAPER, fontFamily: "Inter, sans-serif", paddingBottom: `calc(${76 + consentH}px + env(safe-area-inset-bottom))` }}>
-      <style dangerouslySetInnerHTML={{ __html: fonts + `*{box-sizing:border-box;scrollbar-width:none;-ms-overflow-style:none} *::-webkit-scrollbar{display:none;width:0;height:0} html,body{overflow-x:hidden;background:var(--hf-ink)} select option{background:${INK2};color:${PAPER}} @keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}} .dot{animation:pulse 1s infinite} input[type=date],input[type=time]{color-scheme:${isGymMember ? "light dark" : "dark"}} .hf-glow{position:fixed;inset:0;pointer-events:none;z-index:-1;background:radial-gradient(125% 75% at 50% -2%,rgba(225,29,72,0.20),transparent 58%),radial-gradient(95% 55% at 100% 106%,rgba(225,29,72,0.10),transparent 62%);animation:drift 20s ease-in-out infinite alternate} @keyframes drift{from{transform:translate(0,0)}to{transform:translate(-30px,24px)}} .hf-modal{scrollbar-width:none;-ms-overflow-style:none} .hf-modal::-webkit-scrollbar{display:none;width:0;height:0}` }} />
+      <style dangerouslySetInnerHTML={{ __html: fonts + `*{box-sizing:border-box;scrollbar-width:none;-ms-overflow-style:none} *::-webkit-scrollbar{display:none;width:0;height:0} html,body{overflow-x:hidden;background:var(--hf-ink)} select option{background:${INK2};color:${PAPER}} @keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}} .dot{animation:pulse 1s infinite} input[type=date],input[type=time]{color-scheme:${isGymMember ? "light dark" : "dark"};accent-color:${EMBER}} :root{accent-color:${EMBER}} .hf-glow{position:fixed;inset:0;pointer-events:none;z-index:-1;background:radial-gradient(125% 75% at 50% -2%,rgba(225,29,72,0.20),transparent 58%),radial-gradient(95% 55% at 100% 106%,rgba(225,29,72,0.10),transparent 62%);animation:drift 20s ease-in-out infinite alternate} @keyframes drift{from{transform:translate(0,0)}to{transform:translate(-30px,24px)}} .hf-modal{scrollbar-width:none;-ms-overflow-style:none} .hf-modal::-webkit-scrollbar{display:none;width:0;height:0}` }} />
       {!isGymMember && <div className="hf-glow" aria-hidden="true" />}
       {subMsg && (
         <div onClick={() => setSubMsg("")} style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 120, background: subMsg === "ok" ? EMBER : INK2, color: PAPER, padding: "12px 16px", paddingTop: "calc(12px + env(safe-area-inset-top))", textAlign: "center", fontSize: 13.5, lineHeight: 1.5, cursor: "pointer", boxShadow: "0 4px 18px rgba(0,0,0,.4)" }}>
@@ -1841,7 +1844,7 @@ export default function App() {
 
                   {week && !loading && canView && (
                     <>
-                      {hasBasis && (
+                      {hasBasis && !IS_NATIVE && (
                       <div style={{ background: INK2, border: `1px solid ${LINE}`, borderRadius: 14, padding: 16, marginBottom: 16 }}>
                         <div style={{ ...label, marginBottom: 10 }}>{T("dlTitle")}</div>
                         {planEmail === "sent" && <div style={{ fontSize: 12, color: SAGE, marginBottom: 10, lineHeight: 1.5 }}>{T("emailedPlan")}</div>}
