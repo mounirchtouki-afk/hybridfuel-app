@@ -4,6 +4,7 @@ import { supabase } from "../supabaseClient.js";
 import Products from "./Products.jsx";
 import { RECIPES } from "../recipes.js";
 import { weekDatesFrom, planReductions, baseDayFor, dayTotal, upcomingSaturday, Rn } from "../weekbalance.js";
+import BrandCalendar from "./BrandCalendar.jsx";
 
 const T = {
   title: { nl: "Dagboek", en: "Diary" },
@@ -60,6 +61,7 @@ export default function Today({ lang, week, onGoPlan, session, plus, units, onRe
   const ml = macroLetters(lang);
   const cloud = !!(session && supabase);
   const [d, setD] = useState(todayISO());
+  const [calOpen, setCalOpen] = useState(false);
   const [eaten, setEaten] = useState({});
   const [extras, setExtras] = useState([]);
   const [showAdd, setShowAdd] = useState(false);
@@ -217,10 +219,12 @@ export default function Today({ lang, week, onGoPlan, session, plus, units, onRe
   const dateNav = (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
       <div onClick={() => shiftDay(-1)} style={{ cursor: "pointer", width: 34, height: 34, borderRadius: 9, border: `1px solid ${LINE}`, display: "flex", alignItems: "center", justifyContent: "center", color: PAPER, fontSize: 18 }}>‹</div>
-      <div style={{ textAlign: "center" }}>
+      <div onClick={() => setCalOpen(true)} style={{ textAlign: "center", cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
         <div style={{ ...disp, fontSize: 15, fontWeight: 600, letterSpacing: 0.5 }}>{isToday ? t("today") : wd} · {fmtDate(d, lang)}</div>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6" /></svg>
       </div>
       <div onClick={() => shiftDay(1)} style={{ cursor: "pointer", width: 34, height: 34, borderRadius: 9, border: `1px solid ${LINE}`, display: "flex", alignItems: "center", justifyContent: "center", color: PAPER, fontSize: 18 }}>›</div>
+      {calOpen && <BrandCalendar value={d} lang={lang} onPick={(v) => { if (v) setD(v); }} onClose={() => setCalOpen(false)} />}
     </div>
   );
 

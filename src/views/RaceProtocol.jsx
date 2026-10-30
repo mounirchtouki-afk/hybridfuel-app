@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, SAGE, disp, num, input, label, sectionTitle, load, save, jsDayToIdx } from "../shared.js";
+import BrandCalendar from "./BrandCalendar.jsx";
 
 const T = {
   title: { nl: "Race Protocol", en: "Race Protocol" },
@@ -45,6 +46,7 @@ export default function RaceProtocol({ lang, weight, session, week }) {
   const saved = load("hf_race", {});
   const [linked, setLinked] = useState(() => load("hf_race_linked", []));
   const [date, setDate] = useState(saved.date || "");
+  const [calOpen, setCalOpen] = useState(false);
   const [time, setTime] = useState(saved.time || "10:00");
   const [w, setW] = useState(saved.weight || String(num(weight) || 80));
   const [goal, setGoal] = useState(saved.goal || "finish");
@@ -164,7 +166,11 @@ export default function RaceProtocol({ lang, weight, session, week }) {
         <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
           <div style={{ flex: 1 }}>
             <label style={label}>{t("date")}</label>
-            <input type="date" value={date} onChange={(e) => { setDate(e.target.value); persist({ date: e.target.value }); }} style={input} />
+            <div onClick={() => setCalOpen(true)} style={{ ...input, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span style={{ color: date ? PAPER : MUTED }}>{date ? (() => { const dd = new Date(date + "T12:00:00"); return dd.getDate() + "/" + (dd.getMonth() + 1) + "/" + dd.getFullYear(); })() : (lang === "nl" ? "Kies datum" : "Pick date")}</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 9h18M8 3v4M16 3v4" /></svg>
+            </div>
+            {calOpen && <BrandCalendar value={date} lang={lang} allowClear onPick={(v) => { setDate(v); persist({ date: v }); }} onClose={() => setCalOpen(false)} />}
           </div>
           <div style={{ width: 110 }}>
             <label style={label}>{t("time")}</label>
