@@ -6,8 +6,11 @@
 // Env-vars: SUPABASE_URL (of VITE_SUPABASE_URL), SUPABASE_SERVICE_ROLE_KEY,
 //           SUPABASE_ANON_KEY (of VITE_SUPABASE_ANON_KEY / publishable fallback).
 
+import { ipLimited } from "./_ratelimit.js";
+
 export default async function handler(req, res) {
   if (req.method !== "POST") { res.setHeader("Allow", "POST"); return res.status(405).json({ error: "Method not allowed" }); }
+  if (await ipLimited(req, "delete-account", 5, 3600)) return res.status(429).json({ error: "rate_limited" });
   let body = req.body;
   if (typeof body === "string") { try { body = JSON.parse(body); } catch (e) { body = {}; } }
   const authToken = (body && body.authToken || "").trim();

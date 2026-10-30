@@ -7,6 +7,8 @@
 // Env-vars: STRIPE_SECRET_KEY, SUPABASE_URL (of VITE_SUPABASE_URL),
 //           SUPABASE_SERVICE_ROLE_KEY, PUBLIC_APP_URL (optioneel).
 
+import { ipLimited } from "./_ratelimit.js";
+
 function appBase(req) {
   if (process.env.PUBLIC_APP_URL) return process.env.PUBLIC_APP_URL.replace(/\/$/, "");
   const proto = (req.headers["x-forwarded-proto"] || "https").split(",")[0];
@@ -16,6 +18,7 @@ function appBase(req) {
 
 export default async function handler(req, res) {
   if (req.method !== "POST") { res.setHeader("Allow", "POST"); return res.status(405).end(); }
+  if (await ipLimited(req, "billing-portal", 20, 3600)) return res.status(429).json({ error: "rate_limited" });
 
   let body = req.body;
   if (typeof body === "string") { try { body = JSON.parse(body); } catch (e) { body = {}; } }

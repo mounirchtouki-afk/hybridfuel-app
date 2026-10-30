@@ -10,6 +10,7 @@
 
 import crypto from "crypto";
 import { fillTracker } from "./tracker.js";
+import { ipLimited } from "./_ratelimit.js";
 
 function tokenSid(token) {
   if (typeof token !== "string") return "";
@@ -32,6 +33,7 @@ export default async function handler(req, res) {
     res.setHeader("Allow", "POST");
     return res.status(405).json({ error: "Method not allowed" });
   }
+  if (await ipLimited(req, "email-plan", 10, 3600)) return res.status(429).json({ error: "rate_limited" });
   try {
     let body = req.body;
     if (typeof body === "string") { try { body = JSON.parse(body); } catch (e) { body = {}; } }

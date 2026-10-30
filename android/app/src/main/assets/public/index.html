@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>HybridFuelCo — Fuel Plans for Hyrox & Hybrid Athletes</title>
+    <meta name="description" content="Personal nutrition plans, a progress tracker and recipes for Hyrox & hybrid athletes." />
+
+    <!-- PWA -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#0A0A0A" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="HybridFuelCo" />
+    <link rel="icon" href="/icon-192.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+      /* Standaard-huisstijl (consumenten-app). Sportscholen overschrijven deze per org
+         via JS (applyOrgTheme), zodat de hele app meekleurt. */
+      :root {
+        --hf-ink: #0A0A0A; --hf-ink2: #161616; --hf-ember: #E11D48; --hf-ember-soft: #FB7185;
+        --hf-paper: #F4F4F4; --hf-muted: #8C8C8C; --hf-line: #242424; --hf-sage: #B5B5B5;
+      }
+      body { background: var(--hf-ink); transition: background 0.2s ease; }
+    </style>
+    <script type="module" crossorigin src="/assets/index-BHwNyyWL.js"></script>
+  </head>
+  <body style="margin:0;background:var(--hf-ink);">
+    <div id="root"></div>
+    <script src="https://www.hybridfuelco.com/consent.js?v=2"></script>
+  </body>
+</html>

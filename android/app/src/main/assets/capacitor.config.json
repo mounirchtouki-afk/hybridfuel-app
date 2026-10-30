@@ -1,0 +1,21 @@
+{
+	"appId": "com.hybridfuelco.app",
+	"appName": "HybridFuelCo",
+	"webDir": "dist",
+	"plugins": {
+		"CapacitorHttp": {
+			"enabled": true
+		},
+		"PushNotifications": {
+			"presentationOptions": [
+				"badge",
+				"sound",
+				"alert"
+			]
+		},
+		"SplashScreen": {
+			"backgroundColor": "#0A0A0A",
+			"showSpinner": false
+		}
+	}
+}

@@ -6,6 +6,7 @@
 // raakt alleen de ingevulde cellen aan).
 
 import XlsxPopulate from "xlsx-populate";
+import { ipLimited } from "./_ratelimit.js";
 
 const r0 = (v) => { const n = Math.round(parseFloat(v)); return isNaN(n) ? 0 : n; };
 
@@ -64,6 +65,7 @@ export default async function handler(req, res) {
     res.setHeader("Allow", "POST");
     return res.status(405).json({ error: "Method not allowed" });
   }
+  if (await ipLimited(req, "tracker", 20, 3600)) return res.status(429).json({ error: "rate_limited" });
   try {
     let body = req.body;
     if (typeof body === "string") { try { body = JSON.parse(body); } catch (e) { body = {}; } }

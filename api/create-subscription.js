@@ -32,21 +32,45 @@ function appBase(req) {
   return proto + "://" + host;
 }
 
+import { ipLimited } from "./_ratelimit.js";
+
+// Verifieert een Supabase access-token en geeft de user-id terug (of null).
+async function verifyUser(authToken) {
+  try {
+    const url = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "https://tkmyjpsmdijaalwgzqdy.supabase.co").replace(/\/$/, "");
+    const anon = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || "sb_publishable_5CJ_waXIVhhzkkqD96iqMA_63yJJnaH";
+    const r = await fetch(url + "/auth/v1/user", { headers: { apikey: anon, Authorization: "Bearer " + authToken } });
+    if (!r.ok) return null;
+    const u = await r.json().catch(() => ({}));
+    return (u && u.id) || null;
+  } catch (e) { return null; }
+}
+
 export default async function handler(req, res) {
   const isGet = req.method === "GET";
   if (req.method !== "POST" && !isGet) {
     res.setHeader("Allow", "GET, POST");
     return res.status(405).json({ error: "Method not allowed" });
   }
+  if (await ipLimited(req, "create-sub", 20, 3600)) return res.status(429).json({ error: "rate_limited" });
 
   let body = req.body;
   if (typeof body === "string") { try { body = JSON.parse(body); } catch (e) { body = {}; } }
   const src = isGet ? (req.query || {}) : (body || {});
-  const userId = (src.userId || "").toString().trim();
+  let userId = (src.userId || "").toString().trim();
   const email = (src.email || "").toString().trim().toLowerCase();
   const tier = src.tier === "pro" ? "pro" : "basis";
   const interval = src.interval === "year" ? "year" : "month";
   const renew = String(src.renew || "") === "1";
+  // Authz: is er een authToken, verifieer die en gebruik DIE user-id. Nooit een losse,
+  // onbevestigde client-userId vertrouwen (anders kan iemand een checkout op andermans
+  // account starten). De publieke GET-flow heeft geen user.
+  const authToken = (src.authToken || "").toString().trim();
+  if (authToken) {
+    const vu = await verifyUser(authToken);
+    if (!vu) return res.status(401).json({ error: "invalid_token" });
+    userId = vu;
+  }
   // Alleen de in-app (POST) flow eist een ingelogde user. De publieke GET-flow niet.
   if (!isGet && !userId) return res.status(400).json({ error: "no_user" });
 

@@ -157,7 +157,7 @@ export default function Auth({ lang, session, tier, recovery, onClose }) {
     if (!session) return;
     setErr(""); setSubBusy(plan);
     try {
-      const r = await fetch("/api/create-subscription", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: session.user.id, email: session.user.email, tier: plan, interval: billInterval }) });
+      const r = await fetch("/api/create-subscription", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ authToken: session.access_token, email: session.user.email, tier: plan, interval: billInterval }) });
       const d = await r.json().catch(() => ({}));
       if (d && d.url) { window.location.href = d.url; return; }
       setErr(d && d.error === "not_configured" ? t("notConfigured") : (d && d.detail) || "error");

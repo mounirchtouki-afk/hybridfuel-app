@@ -10,8 +10,10 @@
 
 import crypto from "crypto";
 import { kv } from "./_kv.js";
+import { ipLimited } from "./_ratelimit.js";
 
 export default async function handler(req, res) {
+  if (await ipLimited(req, "verify", 30, 3600)) return res.status(429).json({ ok: false, error: "rate_limited" });
   const sid =
     (req.query && req.query.session_id) ||
     (req.body && (typeof req.body === "string" ? JSON.parse(req.body).session_id : req.body.session_id));
