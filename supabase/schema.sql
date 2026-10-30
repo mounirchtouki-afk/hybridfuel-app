@@ -138,7 +138,7 @@ alter table public.sleep_logs     enable row level security;
 do $$
 declare t text;
 begin
-  foreach t in array array['profiles','subscriptions','weights','plans','water_logs','food_logs','sleep_logs']
+  foreach t in array array['profiles','weights','plans','water_logs','food_logs','sleep_logs']
   loop
     execute format('drop policy if exists own_all on public.%I;', t);
     execute format($f$create policy own_all on public.%I
@@ -148,6 +148,15 @@ begin
       case when t = 'profiles' then 'id' else 'user_id' end);
   end loop;
 end $$;
+
+-- Abonnementen: gebruikers mogen hun eigen rij ALLEEN LEZEN, nooit schrijven.
+-- Schrijven gebeurt uitsluitend server-side door de Stripe-webhook met de
+-- service-role key (die RLS omzeilt). Zonder deze restrictie kan een ingelogde
+-- gebruiker zijn eigen tier op 'pro' zetten en de betaalde app gratis ontgrendelen.
+drop policy if exists own_all on public.subscriptions;
+drop policy if exists subscriptions_read_own on public.subscriptions;
+create policy subscriptions_read_own on public.subscriptions
+  for select using (auth.uid() = user_id);
 
 -- Recepten & producten: eigen rijen volledig; systeem/gedeelde rijen (user_id NULL) leesbaar.
 drop policy if exists recipes_read on public.recipes;
