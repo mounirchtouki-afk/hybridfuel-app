@@ -8,10 +8,10 @@ export async function initNative() {
 
   try {
     const { StatusBar, Style } = await import("@capacitor/status-bar");
-    // Webview onder de statusbalk laten beginnen (geen overlap).
-    await StatusBar.setOverlaysWebView({ overlay: false });
-    await StatusBar.setBackgroundColor({ color: "#0A0A0A" });
-    // Style.Dark = donkere balk met lichte (witte) iconen.
+    // Moderne Android (API 35+) dwingt edge-to-edge af: de webview tekent onder
+    // de statusbalk. We omarmen dat (overlay true) en vangen de hoogte op met
+    // env(safe-area-inset-top) in de header-CSS. Style.Dark = lichte iconen.
+    await StatusBar.setOverlaysWebView({ overlay: true });
     await StatusBar.setStyle({ style: Style.Dark });
   } catch (e) {
     console.warn("[native] statusbar init", e);

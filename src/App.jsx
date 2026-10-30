@@ -1592,7 +1592,7 @@ export default function App() {
       )}
 
       {/* HEADER */}
-      <div style={{ borderBottom: `1px solid ${LINE}`, padding: "12px 14px", display: "flex", alignItems: "center", gap: 8, position: "sticky", top: 0, background: isGymMember ? INK2 : `radial-gradient(130% 320% at 94% 0%, rgba(225,29,72,0.18), #19090f 58%), #150a0e`, zIndex: 20 }}>
+      <div style={{ borderBottom: `1px solid ${LINE}`, padding: "12px 14px", paddingTop: "calc(12px + env(safe-area-inset-top))", display: "flex", alignItems: "center", gap: 8, position: "sticky", top: 0, background: isGymMember ? INK2 : `radial-gradient(130% 320% at 94% 0%, rgba(225,29,72,0.18), #19090f 58%), #150a0e`, zIndex: 20 }}>
         {isGymMember && gymCtx.org.logo_url ? (
           <img src={gymCtx.org.logo_url} alt={gymCtx.org.name || ""} style={{ height: 30, maxWidth: 140, objectFit: "contain", flexShrink: 0 }} />
         ) : isGymMember ? (
