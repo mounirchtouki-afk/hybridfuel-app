@@ -1,0 +1,52 @@
+name: Build Android APK
+
+# Bouwt een installeerbare debug-APK in de cloud (GitHub-servers hebben internet,
+# dus de Android-SDK + Gradle-deps worden hier wél opgehaald). De APK verschijnt
+# als artifact onderaan de run (tab "Actions" -> deze run -> "Artifacts").
+on:
+  push:
+    branches: [capacitor-wrap]
+  workflow_dispatch: {}
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Build web (native config, absolute API)
+        run: npx cross-env VITE_API_BASE=https://app.hybridfuelco.com vite build
+
+      - name: Capacitor sync
+        run: npx cap sync android
+
+      - name: Build debug APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: hybridfuelco-debug-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
