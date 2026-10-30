@@ -36,8 +36,8 @@ jobs:
       - name: Build web (native config, absolute API)
         run: npx cross-env VITE_API_BASE=https://app.hybridfuelco.com vite build
 
-      - name: Capacitor sync
-        run: npx cap sync android
+      - name: Capacitor copy (web-assets -> android)
+        run: npx cap copy android
 
       - name: Build debug APK
         run: |
