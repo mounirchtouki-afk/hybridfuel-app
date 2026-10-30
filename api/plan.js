@@ -379,7 +379,7 @@ export default async function handler(req, res) {
         headers: { "Content-Type": "application/json", "x-api-key": anKey, "anthropic-version": "2023-06-01" },
         body: JSON.stringify({
           model: process.env.AI_MODEL_ANTHROPIC || "claude-sonnet-4-6",
-          max_tokens: 3000,
+          max_tokens: 8000,
           messages: [{ role: "user", content: prompt }],
         }),
       });
@@ -400,7 +400,7 @@ export default async function handler(req, res) {
         },
         body: JSON.stringify({
           model: process.env.AI_MODEL || "anthropic/claude-sonnet-4",
-          max_tokens: 3000,
+          max_tokens: 8000,
           messages: [{ role: "user", content: prompt }],
         }),
       });
@@ -428,7 +428,15 @@ export default async function handler(req, res) {
     try {
       plan = JSON.parse(text);
     } catch (e) {
-      return res.status(502).json({ error: "Antwoord onleesbaar (mogelijk afgekapt).", detail: text.slice(0, 120) });
+      // Robuuster: pak het JSON-object tussen de eerste { en de laatste }
+      // (vangt omringende tekst of lichte rommel op).
+      try {
+        const a = text.indexOf("{"), b = text.lastIndexOf("}");
+        if (a >= 0 && b > a) plan = JSON.parse(text.slice(a, b + 1));
+        else throw e;
+      } catch (e2) {
+        return res.status(502).json({ error: "Antwoord onleesbaar (mogelijk afgekapt).", detail: text.slice(0, 120) });
+      }
     }
 
     return res.status(200).json({ targets, plan });
