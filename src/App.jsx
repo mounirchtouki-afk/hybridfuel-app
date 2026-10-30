@@ -1,5 +1,6 @@
 import { apiUrl, API_BASE } from "./apiBase";
 import { initPush } from "./push";
+import { initNative } from "./native";
 import React, { useState, useEffect, useRef } from "react";
 import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, SAGE, load, save, genSteps, todayISO, macroLetters, wUnit, bUnit, gShow, gStore, kgShow, kgStore, cmToFtIn, ftInToCm, applyOrgTheme } from "./shared.js";
 import Today from "./views/Today.jsx";
@@ -589,7 +590,7 @@ export default function App() {
   const [gymCtx, setGymCtx] = useState(null); // {role:'coach'|'member', org:{...}} als de gebruiker bij een sportschool hoort
 
   // Push-notificaties registreren op de native app (web: no-op).
-  useEffect(() => { initPush(); }, []);
+  useEffect(() => { initPush(); initNative(); }, []);
 
   // Dev-modus: alles zichtbaar voor review. Alleen op preview/localhost, NOOIT op de live site.
   // Aanzetten: ?dev=1 in de URL. Uitzetten: ?dev=0.
@@ -620,7 +621,10 @@ export default function App() {
       const q = new URLSearchParams(location.search);
       if (q.get("demo") === "0") { try { sessionStorage.removeItem("hf_demo"); } catch (e) {} setDemoMode(false); return; }
       if (q.get("demo") === "1") { try { sessionStorage.setItem("hf_demo", "1"); } catch (e) {} }
-      const on = (() => { try { return sessionStorage.getItem("hf_demo") === "1"; } catch (e) { return false; } })();
+      // Native app: standaard in demo zodat de volledige app meteen bladerbaar is
+      // (zolang je niet ingelogd bent). Inloggen heft demo op (inDemo = demo && !session).
+      const isNative = (() => { try { return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()); } catch (e) { return false; } })();
+      const on = isNative || (() => { try { return sessionStorage.getItem("hf_demo") === "1"; } catch (e) { return false; } })();
       if (!on) return;
       setDemoMode(true);
       let saved = null; try { saved = JSON.parse(localStorage.getItem("hf_lastplan") || "null"); } catch (e) {}

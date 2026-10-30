@@ -30,6 +30,15 @@
   <body style="margin:0;background:var(--hf-ink);">
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
-    <script src="https://www.hybridfuelco.com/consent.js?v=2"></script>
+    <script>
+      // Cookie-consent alleen op web laden, niet in de native app (Capacitor).
+      (function () {
+        var native = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+        if (native) return;
+        var s = document.createElement("script");
+        s.src = "https://www.hybridfuelco.com/consent.js?v=2";
+        document.body.appendChild(s);
+      })();
+    </script>
   </body>
 </html>
