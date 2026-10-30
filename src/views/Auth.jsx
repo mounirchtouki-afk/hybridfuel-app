@@ -3,6 +3,20 @@ import React, { useState, useEffect } from "react";
 import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, disp, input, label, sectionTitle, primaryBtn, ghostBtn } from "../shared.js";
 import { supabase, supaReady } from "../supabaseClient.js";
 
+// Opent de Stripe-checkout. Op native (Capacitor) via de externe/in-app browser
+// zodat de app-webview niet wegnavigeert; op web gewoon in dezelfde tab.
+async function openCheckout(url) {
+  try {
+    const { Capacitor } = await import("@capacitor/core");
+    if (Capacitor.isNativePlatform()) {
+      const { Browser } = await import("@capacitor/browser");
+      await Browser.open({ url });
+      return;
+    }
+  } catch (e) {}
+  window.location.href = url;
+}
+
 const T = {
   account: { nl: "Account", en: "Account" },
   login: { nl: "Inloggen", en: "Log in" },
@@ -165,7 +179,7 @@ export default function Auth({ lang, session, tier, recovery, onClose, gym }) {
     try {
       const r = await fetch(apiUrl("/api/create-subscription"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: session.user.id, email: session.user.email, tier: plan, interval: billInterval }) });
       const d = await r.json().catch(() => ({}));
-      if (d && d.url) { window.location.href = d.url; return; }
+      if (d && d.url) { await openCheckout(d.url); return; }
       setErr(d && d.error === "not_configured" ? t("notConfigured") : (d && d.detail) || "error");
     } catch (e) { setErr(t("notConfigured")); } finally { setSubBusy(""); }
   }
@@ -175,7 +189,7 @@ export default function Auth({ lang, session, tier, recovery, onClose, gym }) {
     try {
       const r = await fetch(apiUrl("/api/billing-portal"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ authToken: session.access_token }) });
       const d = await r.json().catch(() => ({}));
-      if (d && d.url) { window.location.href = d.url; return; }
+      if (d && d.url) { await openCheckout(d.url); return; }
       setErr(t("notConfigured"));
     } catch (e) { setErr(t("notConfigured")); } finally { setSubBusy(""); }
   }

@@ -846,17 +846,28 @@ export default function App() {
     return () => { try { sub.data.subscription.unsubscribe(); } catch (e) {} };
   }, []);
 
-  // Abonnement-laag ophalen zodra er een sessie is.
+  // Abonnement-laag ophalen zodra er een sessie is, én telkens als de app weer in
+  // beeld komt (bv. terug van de Stripe-checkout in de externe browser) zodat de
+  // toegang meteen klopt zonder opnieuw in te loggen.
   useEffect(() => {
     if (!supabase || !session) { setSubTier("free"); return; }
-    supabase.from("subscriptions").select("tier,current_period_end").eq("user_id", session.user.id).single()
-      .then(({ data }) => {
-        // Eenmalige betaling: toegang geldt tot current_period_end. Zonder geldige,
-        // niet-verlopen datum = geen toegang.
-        const live = data && data.tier && data.tier !== "free" &&
-          data.current_period_end && new Date(data.current_period_end).getTime() > Date.now();
-        setSubTier(live ? data.tier : "free");
-      }).catch(() => {});
+    let active = true;
+    const refresh = () => {
+      supabase.from("subscriptions").select("tier,current_period_end").eq("user_id", session.user.id).single()
+        .then(({ data }) => {
+          if (!active) return;
+          // Eenmalige betaling: toegang geldt tot current_period_end. Zonder geldige,
+          // niet-verlopen datum = geen toegang.
+          const live = data && data.tier && data.tier !== "free" &&
+            data.current_period_end && new Date(data.current_period_end).getTime() > Date.now();
+          setSubTier(live ? data.tier : "free");
+        }).catch(() => {});
+    };
+    refresh();
+    const onVis = () => { if (!document.hidden) refresh(); };
+    document.addEventListener("visibilitychange", onVis);
+    window.addEventListener("focus", onVis);
+    return () => { active = false; document.removeEventListener("visibilitychange", onVis); window.removeEventListener("focus", onVis); };
   }, [session]);
 
   // Laatste plan uit de cloud laden zodra er een sessie is (volgt je over apparaten).
