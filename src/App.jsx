@@ -12,6 +12,7 @@ import Products from "./views/Products.jsx";
 import Recipes from "./views/Recipes.jsx";
 import RaceProtocol from "./views/RaceProtocol.jsx";
 import Training from "./views/Training.jsx";
+import AccessQR from "./views/AccessQR.jsx";
 import { RECIPES, snackOptions } from "./recipes.js";
 import { buildDaysFromProducts, productPlanReadiness } from "./ownplan.js";
 import Reminders, { checkReminders } from "./views/Reminders.jsx";
@@ -1963,6 +1964,7 @@ export default function App() {
         {tab === "recipes" && <Recipes lang={lang} session={session} units={units} />}
         {tab === "race" && (canViewPlus ? <RaceProtocol lang={lang} weight={weight} session={session} week={week} /> : <Locked pro />)}
         {tab === "training" && (hasBasis ? <Training key={"training" + syncVer} lang={lang} weight={weight} session={session} /> : <Locked />)}
+        {tab === "access" && <AccessQR lang={lang} session={session} />}
       </div>
 
       {/* QUICK-ADD + (centraal, verhoogd) */}
@@ -2001,6 +2003,7 @@ export default function App() {
               {moreTile(mIcon("water"), T("navWater"), () => go("water"))}
               {moreTile(mIcon("producten"), T("navProducts"), () => go("producten"))}
               {moreTile(mIcon("race"), T("navRace"), () => go("race"))}
+              {moreTile(<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><path d="M14 14h3v3M20 14v.01M14 20h.01M17 20h.01M20 17v3" /></svg>, lang === "nl" ? "Toegang" : "Access", () => go("access"))}
               {moreTile(<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M6.5 6.5l11 11M4 9l-1.5 1.5a1.5 1.5 0 000 2L4 14M20 9l1.5 1.5a1.5 1.5 0 010 2L20 14M7 4l1.5 1.5M17 20l-1.5-1.5" /></svg>, lang === "nl" ? "Training" : "Training", () => go("training"))}
               {moreTile(<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 4-6.5 8-6.5s8 2.5 8 6.5" /></svg>, lang === "nl" ? "Account" : "Account", () => { setShowMore(false); setShowAuth(true); })}
               {moreTile(<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0" /></svg>, lang === "nl" ? "Herinneringen" : "Reminders", () => { setShowMore(false); setShowReminders(true); })}
