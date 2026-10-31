@@ -1,31 +1,46 @@
-// /api/access-verify — valideert een toegangstoken dat een deur-scanner aanbiedt.
-// Controleert handtekening + vervaltijd. Geeft { ok, userId } terug. De deur-kant
-// (scanner -> deze endpoint -> ontgrendelen via UniFi-API of relay) is een aparte
-// hardware-stap; dit endpoint is de beslisser.
-//
-// Secret: UNLOCK_SECRET.
+// /api/access-verify — valideert een toegangs-token van de QR. Bedoeld voor een
+// deurscanner / toegangssysteem: scan de QR, POST (of GET) het token hierheen, en
+// krijg {ok, uid, exp} terug. Controleert de handtekening (timing-safe) en of het
+// token nog niet verlopen is. De scanner/backend beslist daarna wat te doen
+// (bv. UniFi Access-deur ontgrendelen of een relay schakelen).
+
 import crypto from "crypto";
 import { ipLimited } from "./_ratelimit.js";
 
-export default async function handler(req, res) {
-  if (req.method !== "POST") { res.setHeader("Allow", "POST"); return res.status(405).json({ ok: false, error: "Method not allowed" }); }
-  if (await ipLimited(req, "access-verify", 600, 3600)) return res.status(429).json({ ok: false, error: "rate_limited" });
+function secret() { return process.env.ACCESS_QR_SECRET || process.env.UNLOCK_SECRET || ""; }
+function b64url(buf) { return Buffer.from(buf).toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); }
 
-  let body = req.body;
-  if (typeof body === "string") { try { body = JSON.parse(body); } catch (e) { body = {}; } }
-  const token = (body && body.token || "").trim();
-  const secret = process.env.UNLOCK_SECRET;
-  if (!secret) return res.status(503).json({ ok: false, error: "not_configured" });
+export default async function handler(req, res) {
+  if (await ipLimited(req, "access-verify", 120, 3600)) return res.status(429).json({ ok: false, error: "rate_limited" });
+
+  const sec = secret();
+  if (!sec) return res.status(503).json({ ok: false, error: "not_configured" });
+
+  let token = "";
+  if (req.method === "GET") {
+    token = (req.query && req.query.token) || "";
+  } else {
+    let body = req.body;
+    if (typeof body === "string") { try { body = JSON.parse(body); } catch (e) { body = {}; } }
+    token = (body && body.token) || "";
+  }
+  token = (token || "").toString().trim();
 
   const parts = token.split(".");
-  if (parts.length !== 3) return res.status(400).json({ ok: false, error: "bad_token" });
-  const [userId, exp, sig] = parts;
+  if (parts.length !== 3 || parts[0] !== "HF1") return res.status(200).json({ ok: false, error: "bad_token" });
+  const payload = parts[1], sig = parts[2];
 
-  const expected = crypto.createHmac("sha256", secret).update("access:" + userId + "." + exp).digest("hex").slice(0, 32);
-  let okSig = false;
-  try { okSig = crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected)); } catch (e) { okSig = false; }
-  if (!okSig) return res.status(200).json({ ok: false, error: "bad_sig" });
-  if (Number(exp) < Math.floor(Date.now() / 1000)) return res.status(200).json({ ok: false, error: "expired" });
+  const expect = b64url(crypto.createHmac("sha256", sec).update(payload).digest());
+  let good = false;
+  try { good = crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expect)); } catch (e) { good = false; }
+  if (!good) return res.status(200).json({ ok: false, error: "bad_sig" });
 
-  return res.status(200).json({ ok: true, userId });
+  let data = {};
+  try { data = JSON.parse(Buffer.from(payload.replace(/-/g, "+").replace(/_/g, "/"), "base64").toString()); }
+  catch (e) { return res.status(200).json({ ok: false, error: "bad_payload" }); }
+
+  const now = Math.floor(Date.now() / 1000);
+  if (!data.exp || data.exp < now) return res.status(200).json({ ok: false, error: "expired" });
+
+  return res.status(200).json({ ok: true, uid: data.uid, exp: data.exp });
 }
