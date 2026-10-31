@@ -31,6 +31,9 @@ const T = {
   today: { nl: "Vandaag getraind", en: "Trained today" },
   planned: { nl: "Gepland vandaag", en: "Planned today" },
   logIt: { nl: "✓ Log", en: "✓ Log" },
+  markAll: { nl: "Hele training afvinken", en: "Mark whole training done" },
+  trainDone: { nl: "Training voltooid ✓", en: "Training complete ✓" },
+  undoAll: { nl: "Ongedaan maken", en: "Undo" },
   empty: { nl: "Nog geen training vandaag. Voeg je eerste sessie toe.", en: "No training yet today. Add your first session." },
   min: { nl: "min", en: "min" },
   disclaimer: { nl: "Verbranding is een schatting (op basis van intensiteit, gewicht en tijd) en wordt niet van je voedingsdoelen afgetrokken.", en: "Burn is an estimate (based on intensity, bodyweight and time) and is not subtracted from your nutrition targets." },
@@ -72,6 +75,7 @@ export default function Training({ lang, session, weight }) {
   const kg = bodyKg(weight);
   const [tab, setTab] = useState("today");
   const [list, setList] = useState(() => load("hf_workouts_" + d, []));
+  const [checked, setChecked] = useState(() => load("hf_trainchecked_" + d, []));
   const [plan, setPlan] = useState(loadPlan);
   const [planAdd, setPlanAdd] = useState(null);
   const [move, setMove] = useState(null);
@@ -85,7 +89,7 @@ export default function Training({ lang, session, weight }) {
   const [, tickState] = useState(0);
   const iv = useRef(null);
 
-  useEffect(() => { setList(load("hf_workouts_" + d, [])); setPlan(loadPlan()); }, [d]);
+  useEffect(() => { setList(load("hf_workouts_" + d, [])); setChecked(load("hf_trainchecked_" + d, [])); setPlan(loadPlan()); }, [d]);
   useEffect(() => {
     if (run) { iv.current = setInterval(() => tickState((x) => x + 1), 1000); if (!adding) setAdding(true); }
     return () => { if (iv.current) clearInterval(iv.current); };
@@ -112,6 +116,30 @@ export default function Training({ lang, session, weight }) {
   }
   function delLog(id) { persistLog(list.filter((x) => x.id !== id)); }
   function logPlanned(it) { persistLog([...list, { id: "w" + Date.now(), name: it.name, met: it.met, min: it.min, kcal: it.kcal, ts: Date.now() }]); }
+
+  // --- Afvinken van geplande sessies (los of de hele training in één tik) ---
+  const planKey = (i) => d + ":" + i;
+  function setCheckedSave(next) { setChecked(next); save("hf_trainchecked_" + d, next); }
+  function togglePlanned(i, it) {
+    if (checked.includes(i)) {
+      persistLog(list.filter((x) => x.planKey !== planKey(i)));
+      setCheckedSave(checked.filter((c) => c !== i));
+    } else {
+      persistLog([...list, { id: "w" + Date.now() + "_" + i, name: it.name, met: it.met, min: it.min, kcal: it.kcal, ts: Date.now(), planKey: planKey(i) }]);
+      setCheckedSave([...checked, i]);
+    }
+  }
+  function markAllPlanned(items) {
+    const adds = items.map((it, i) => ({ it, i })).filter(({ i }) => !checked.includes(i))
+      .map(({ it, i }) => ({ id: "w" + Date.now() + "_" + i, name: it.name, met: it.met, min: it.min, kcal: it.kcal, ts: Date.now(), planKey: planKey(i) }));
+    if (adds.length) persistLog([...list, ...adds]);
+    setCheckedSave(items.map((_, i) => i));
+  }
+  function undoAllPlanned(items) {
+    const keys = items.map((_, i) => planKey(i));
+    persistLog(list.filter((x) => !keys.includes(x.planKey)));
+    setCheckedSave([]);
+  }
 
   function persistPlan(next) { setPlan(next); save("hf_trainplan", next); }
   function addToDay(di, row) { const days = plan.days.map((dd, i) => i === di ? { items: [...dd.items, row] } : dd); persistPlan({ days }); }
@@ -285,19 +313,39 @@ export default function Training({ lang, session, weight }) {
             </div>
           </div>
 
-          {plannedToday.length > 0 && (
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ ...label, marginBottom: 8 }}>{t("planned")}</div>
-              <div style={{ display: "grid", gap: 8 }}>
-                {plannedToday.map((x, i) => (
-                  <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: INK2, border: `1px dashed ${SAGE}`, borderRadius: 12, padding: "11px 14px" }}>
-                    <div><div style={{ fontSize: 14, fontWeight: 600, color: PAPER }}>{x.name}</div><div style={{ fontSize: 11, color: MUTED, marginTop: 2 }}>{x.min} {t("min")} · ~{x.kcal} kcal</div></div>
-                    <div onClick={() => logPlanned(x)} style={{ cursor: "pointer", fontSize: 12, color: EMBER, fontWeight: 700, border: `1px solid ${EMBER}`, borderRadius: 8, padding: "6px 12px", ...disp }}>{t("logIt")}</div>
+          {plannedToday.length > 0 && (() => {
+            const allDone = plannedToday.every((_, i) => checked.includes(i));
+            const GREEN = "#58C27D";
+            return (
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                  <div style={{ ...label, marginBottom: 0 }}>{t("planned")}</div>
+                  {allDone
+                    ? <div onClick={() => undoAllPlanned(plannedToday)} className="hf-tap" style={{ cursor: "pointer", fontSize: 11.5, color: MUTED, fontWeight: 600, ...disp }}>{t("undoAll")}</div>
+                    : <div onClick={() => markAllPlanned(plannedToday)} className="hf-tap" style={{ cursor: "pointer", fontSize: 12, color: EMBER, fontWeight: 700, border: `1px solid ${EMBER}`, borderRadius: 8, padding: "6px 12px", ...disp }}>{t("markAll")}</div>}
+                </div>
+                {allDone && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(88,194,125,0.12)", border: `1px solid ${GREEN}`, borderRadius: 10, padding: "9px 12px", marginBottom: 8, color: GREEN, ...disp, fontWeight: 700, fontSize: 13.5 }}>
+                    <span style={{ fontSize: 15 }}>✓</span>{t("trainDone")}
                   </div>
-                ))}
+                )}
+                <div style={{ display: "grid", gap: 8 }}>
+                  {plannedToday.map((x, i) => {
+                    const on = checked.includes(i);
+                    return (
+                      <div key={i} onClick={() => togglePlanned(i, x)} className="hf-tap" style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: 12, background: INK2, border: `1px ${on ? "solid " + GREEN : "dashed " + SAGE}`, borderRadius: 12, padding: "11px 14px" }}>
+                        <div style={{ width: 24, height: 24, flexShrink: 0, borderRadius: "50%", border: `2px solid ${on ? GREEN : MUTED}`, background: on ? GREEN : "transparent", display: "flex", alignItems: "center", justifyContent: "center", color: "#0A0A0A", fontSize: 14, fontWeight: 800 }}>{on ? "✓" : ""}</div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 14, fontWeight: 600, color: on ? MUTED : PAPER, textDecoration: on ? "line-through" : "none" }}>{x.name}</div>
+                          <div style={{ fontSize: 11, color: MUTED, marginTop: 2 }}>{x.min} {t("min")} · ~{x.kcal} kcal</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {!adding && <div onClick={() => setAdding(true)} style={{ cursor: "pointer", textAlign: "center", background: INK2, border: `1px solid ${EMBER}`, color: EMBER, padding: "13px 0", borderRadius: 12, ...disp, fontWeight: 700, fontSize: 15, marginBottom: 16 }}>{t("add")}</div>}
 
