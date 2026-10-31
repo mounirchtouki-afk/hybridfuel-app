@@ -22,6 +22,9 @@ export default async function handler(req, res) {
   if (typeof body === "string") { try { body = JSON.parse(body); } catch (e) { body = {}; } }
   const email = ((body && body.email) || "").trim().toLowerCase();
   const lang = (body && body.lang) === "nl" ? "nl" : "en";
+  // Nieuwsbrief aan/uit (voorheen /api/newsletter): aanwezig = toggle, afwezig = lead-add.
+  const hasOn = body && typeof body.on === "boolean";
+  const on = hasOn ? body.on : true;
 
   // Simpele validatie
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
@@ -44,7 +47,8 @@ export default async function handler(req, res) {
         email,
         fields: { source: "app", language: lang },
       };
-      if (ML_GROUP) payload.groups = [ML_GROUP];
+      if (hasOn) payload.status = on ? "active" : "unsubscribed";
+      if (ML_GROUP && on) payload.groups = [ML_GROUP];
       const r = await fetch("https://connect.mailerlite.com/api/subscribers", {
         method: "POST",
         headers: {
@@ -67,7 +71,7 @@ export default async function handler(req, res) {
       await fetch(WEBHOOK, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, lang, ts: new Date().toISOString() }),
+        body: JSON.stringify({ email, lang, newsletter: on, ts: new Date().toISOString() }),
       }).catch(() => {});
       return res.status(200).json({ ok: true, stored: true });
     }
