@@ -4,7 +4,7 @@ import { INK2, EMBER, PAPER, MUTED, LINE, disp } from "../shared.js";
 import { apiUrl } from "../apiBase";
 
 // Dynamische toegangs-QR: haalt elke minuut een nieuw, kortlevend ondertekend
-// token op en toont het als QR. Een deur-scanner valideert het via /api/access-verify.
+// token op en toont het als QR. Een deur-scanner valideert het via /api/access (met ?token=).
 export default function AccessQR({ lang, session }) {
   const [src, setSrc] = useState("");
   const [err, setErr] = useState("");
@@ -14,7 +14,7 @@ export default function AccessQR({ lang, session }) {
   async function refresh() {
     if (!session) { setErr(t("Log in om je toegangs-QR te zien.", "Log in to see your access QR.")); setSrc(""); return; }
     try {
-      const r = await fetch(apiUrl("/api/access-token"), {
+      const r = await fetch(apiUrl("/api/access"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ authToken: session.access_token }),
