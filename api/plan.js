@@ -288,6 +288,24 @@ Return ONLY valid JSON, no markdown, exactly this shape (keep the JSON keys in E
 ${L.example}`;
 }
 
+// Weekreview-prompt: vat gepland-vs-werkelijk samen BINNEN onze normen. Geeft JSON terug.
+function buildReviewPrompt(s, lang) {
+  const L = lang === "nl" ? "Nederlands" : "English";
+  return `You are a coaching assistant for HybridFuelCo (Hyrox/hybrid nutrition & training). Review the athlete's PAST week and reply with STRICT JSON only, written in ${L}.
+
+HARD GUARDRAILS (never break):
+- Targets follow HybridFuelCo's fixed method: Mifflin-St Jeor BMR, fixed activity factors, a safety floor against unsafe fat loss; macros = protein/fat per kg, carbs fill the rest. NEVER propose calories/macros outside a safe range, no crash diets, no unsafe cuts.
+- You only SUGGEST small adjustments for the coming week (move a session, hit the protein target, swap or time a meal, add a rest day). You do NOT change the core targets.
+- Be concrete, short, practical. Max 3 actions. No medical claims.
+
+Week data (planned vs actual):
+${JSON.stringify(s)}
+
+Return EXACTLY this JSON shape, nothing outside it:
+{"headline":"one short line summarising the week","summary":"2-3 plain sentences","actions":["short action","short action"],"tone":"ok"}
+Use "tone":"attention" if the week clearly went off-plan, otherwise "ok".`;
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
@@ -298,6 +316,54 @@ export default async function handler(req, res) {
 
   try {
     const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body || {};
+
+    // ---- WEEKREVIEW (coaching-engine op logging). Ingelogd = genoeg, geen plan-credit. ----
+    if (body.mode === "weekreview") {
+      const uid = jwtSub(body.authToken);
+      if (!uid) return res.status(401).json({ error: "no_auth" });
+      if (!trusted) {
+        const ip = (req.headers["x-forwarded-for"] || "unknown").split(",")[0].trim();
+        if (rateLimited(ip)) return res.status(429).json({ error: "Te veel aanvragen. Probeer het zo opnieuw." });
+      }
+      const anKey = process.env.ANTHROPIC_API_KEY, orKey = process.env.OPENROUTER_API_KEY;
+      if (!anKey && !orKey) return res.status(500).json({ error: "no_ai_key" });
+      const rlang = body.lang === "nl" ? "nl" : "en";
+      const reviewPrompt = buildReviewPrompt(body.review || {}, rlang);
+      const callReviewAI = async () => {
+        if (anKey) {
+          try {
+            const r = await fetch("https://api.anthropic.com/v1/messages", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", "x-api-key": anKey, "anthropic-version": "2023-06-01" },
+              body: JSON.stringify({ model: process.env.AI_MODEL_ANTHROPIC || "claude-sonnet-4-6", max_tokens: 1200, messages: [{ role: "user", content: reviewPrompt }] }),
+            });
+            if (r.ok) { const d = await r.json(); return (d.content || []).filter((x) => x.type === "text").map((x) => x.text).join("").trim(); }
+          } catch (e) {}
+        }
+        if (orKey) {
+          try {
+            const r = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", "Authorization": "Bearer " + orKey },
+              body: JSON.stringify({ model: process.env.AI_MODEL || "anthropic/claude-sonnet-4", max_tokens: 1200, messages: [{ role: "user", content: reviewPrompt }] }),
+            });
+            if (r.ok) { const d = await r.json(); const m = d.choices && d.choices[0] && d.choices[0].message; let c = m && m.content; if (Array.isArray(c)) c = c.map((x) => (x && x.text) || "").join(""); return (c || "").trim(); }
+          } catch (e) {}
+        }
+        return "";
+      };
+      let rtext = (await callReviewAI()).replace(/```json/gi, "").replace(/```/g, "").trim();
+      let parsed;
+      try { parsed = JSON.parse(rtext); }
+      catch (e) {
+        const a = rtext.indexOf("{"), b = rtext.lastIndexOf("}");
+        try { parsed = JSON.parse(rtext.slice(a, b + 1)); } catch (e2) { return res.status(502).json({ error: "Antwoord onleesbaar, probeer opnieuw." }); }
+      }
+      if (!parsed || !parsed.headline) return res.status(502).json({ error: "Antwoord onleesbaar, probeer opnieuw." });
+      if (!Array.isArray(parsed.actions)) parsed.actions = [];
+      return res.status(200).json({ ok: true, review: parsed });
+    }
+
     const base = computeBase(body);
     const cyc = computeCycle(base, body.trainingCount);
     const targets = {
