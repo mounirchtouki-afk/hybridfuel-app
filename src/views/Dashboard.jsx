@@ -151,12 +151,12 @@ export default function Dashboard({ lang, session, week, targets, units, onGo })
       )}
 
       {/* Vandaag, grote kaart */}
-      <div className="hf-tap" onClick={() => onGo("today")} style={{ cursor: "pointer", borderRadius: 18, padding: 18, background: `linear-gradient(135deg, ${EMBER} 0%, #9f1239 100%)`, position: "relative", overflow: "hidden" }}>
+      <div className="hf-tap" onClick={() => onGo("today")} style={{ cursor: "pointer", borderRadius: 16, padding: 18, background: INK2, border: `1px solid ${LINE}`, borderLeft: `3px solid ${EMBER}`, boxShadow: "0 8px 24px rgba(0,0,0,0.5)", position: "relative", overflow: "hidden" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
-            <div style={{ fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", color: "rgba(255,255,255,0.85)", fontWeight: 700 }}>{t("today")}</div>
-            <div style={{ ...disp, fontSize: 30, fontWeight: 700, color: PAPER, lineHeight: 1.1, marginTop: 4 }}>{Math.round(consumed)}<span style={{ fontSize: 15, color: "rgba(255,255,255,0.8)", fontWeight: 500 }}> / {Math.round(goalKcal)} kcal</span></div>
-            <div style={{ fontSize: 11.5, color: "rgba(255,255,255,0.9)", marginTop: 6 }}>{day ? `${nDone}/${nMeals} ${t("mealsDone")}` : t("noPlan")}</div>
+            <div style={{ fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", color: MUTED, fontWeight: 700 }}>{t("today")}</div>
+            <div style={{ ...disp, fontSize: 30, fontWeight: 700, color: PAPER, lineHeight: 1.1, marginTop: 4 }}>{Math.round(consumed)}<span style={{ fontSize: 15, color: MUTED, fontWeight: 500 }}> / {Math.round(goalKcal)} kcal</span></div>
+            <div style={{ fontSize: 11.5, color: MUTED, marginTop: 6 }}>{day ? `${nDone}/${nMeals} ${t("mealsDone")}` : t("noPlan")}</div>
           </div>
           <Ring pct={pct} size={64} />
         </div>

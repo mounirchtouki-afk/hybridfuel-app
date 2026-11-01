@@ -586,6 +586,17 @@ export default function App() {
   const [showLogout, setShowLogout] = useState(false);
   const [units, setUnits] = useState(() => load("hf_units", "metric"));
   const setUnitsSave = (u) => { setUnits(u); try { save("hf_units", u); } catch (e) {} };
+  // Thema: 'auto' volgt het systeem, 'light'/'dark' expliciet. Alleen voor consumenten
+  // (gym-leden krijgen de org-huisstijl). Zet data-theme op <html>; leeg = auto.
+  const [theme, setTheme] = useState(() => { try { return localStorage.getItem("hf_theme") || "auto"; } catch (e) { return "auto"; } });
+  const setThemeSave = (v) => {
+    setTheme(v);
+    try { localStorage.setItem("hf_theme", v); } catch (e) {}
+    try { const el = document.documentElement; if (v === "auto") el.removeAttribute("data-theme"); else el.setAttribute("data-theme", v); } catch (e) {}
+  };
+  useEffect(() => {
+    try { const el = document.documentElement; if (theme === "auto") el.removeAttribute("data-theme"); else el.setAttribute("data-theme", theme); } catch (e) {}
+  }, [theme]);
   const [saveFlash, setSaveFlash] = useState(false);
   const [showInstallHelp, setShowInstallHelp] = useState(false);
   const [subTier, setSubTier] = useState("free");
@@ -638,7 +649,7 @@ export default function App() {
         const w = demoWeek((localStorage.getItem("hf_lang") === "nl") ? "nl" : "en");
         setWeek(w); setTargets(DEMO_TARGETS); setStarted(true);
       }
-      setTab("dashboard");
+      const qt = q.get("tab"); setTab(qt || "dashboard");
     } catch (e) {}
   }, []);
 
@@ -1598,9 +1609,9 @@ export default function App() {
   if (session && gymCtx && gymCtx.role === "coach") return <CoachDash session={session} org={gymCtx.org} isOwner={gymCtx.isOwner} perms={gymCtx.perms} lang={lang} onLogout={confirmLogout} />;
 
   return (
-    <div style={{ minHeight: "100vh", background: isGymMember ? INK : "linear-gradient(180deg, #2c121b 0%, #200e15 48%, #180b10 100%)", position: "relative", color: PAPER, fontFamily: "Inter, sans-serif", paddingBottom: `calc(${76 + consentH}px + env(safe-area-inset-bottom))` }}>
+    <div style={{ minHeight: "100vh", background: INK, position: "relative", color: PAPER, fontFamily: "Inter, sans-serif", paddingBottom: `calc(${76 + consentH}px + env(safe-area-inset-bottom))` }}>
       <style dangerouslySetInnerHTML={{ __html: fonts + `*{box-sizing:border-box;scrollbar-width:none;-ms-overflow-style:none} *::-webkit-scrollbar{display:none;width:0;height:0} html,body{overflow-x:hidden;background:var(--hf-ink)} select option{background:${INK2};color:${PAPER}} @keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}} .dot{animation:pulse 1s infinite} input[type=date],input[type=time]{color-scheme:${isGymMember ? "light dark" : "dark"};accent-color:${EMBER}} :root{accent-color:${EMBER}} .hf-glow{position:fixed;inset:0;pointer-events:none;z-index:-1;background:radial-gradient(125% 80% at 50% -2%,rgba(225,29,72,0.34),transparent 60%),radial-gradient(100% 60% at 100% 106%,rgba(225,29,72,0.20),transparent 64%);animation:drift 20s ease-in-out infinite alternate} @keyframes drift{from{transform:translate(0,0)}to{transform:translate(-30px,24px)}} .hf-modal{scrollbar-width:none;-ms-overflow-style:none} .hf-modal::-webkit-scrollbar{display:none;width:0;height:0} .hf-tap{transition:transform .09s ease,box-shadow .09s ease,background-color .09s ease;-webkit-tap-highlight-color:transparent;cursor:pointer} .hf-tap:active{transform:scale(.985);background-color:rgba(225,29,72,0.14)!important;box-shadow:0 0 22px rgba(225,29,72,0.33),inset 0 0 0 1px rgba(225,29,72,0.45)}` }} />
-      {!isGymMember && <div className="hf-glow" aria-hidden="true" />}
+      {false && <div className="hf-glow" aria-hidden="true" />}
       {subMsg && (
         <div onClick={() => setSubMsg("")} style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 120, background: subMsg === "ok" ? EMBER : INK2, color: PAPER, padding: "12px 16px", paddingTop: "calc(12px + env(safe-area-inset-top))", textAlign: "center", fontSize: 13.5, lineHeight: 1.5, cursor: "pointer", boxShadow: "0 4px 18px rgba(0,0,0,.4)" }}>
           {subMsg === "ok" ? T("subOk") : subMsg === "cancel" ? T("subCancel") : T("subErr")}
@@ -1609,7 +1620,7 @@ export default function App() {
       )}
 
       {/* HEADER */}
-      <div style={{ borderBottom: `1px solid ${LINE}`, padding: "12px 14px", paddingTop: "calc(12px + env(safe-area-inset-top))", display: "flex", alignItems: "center", gap: 8, position: "sticky", top: 0, background: isGymMember ? INK2 : `radial-gradient(130% 320% at 94% 0%, rgba(225,29,72,0.18), #19090f 58%), #150a0e`, zIndex: 20 }}>
+      <div style={{ borderBottom: `1px solid ${LINE}`, padding: "12px 14px", paddingTop: "calc(12px + env(safe-area-inset-top))", display: "flex", alignItems: "center", gap: 8, position: "sticky", top: 0, background: INK2, borderBottom: `1px solid ${LINE}`, zIndex: 20 }}>
         {isGymMember && gymCtx.org.logo_url ? (
           <img src={gymCtx.org.logo_url} alt={gymCtx.org.name || ""} style={{ height: 30, maxWidth: 140, objectFit: "contain", flexShrink: 0 }} />
         ) : isGymMember ? (
@@ -2023,6 +2034,17 @@ export default function App() {
               </div>
               <div style={{ fontSize: 10.5, color: MUTED, marginTop: 7, lineHeight: 1.5 }}>{lang === "nl" ? "Geldt voor gewichten in de hele app, altijd aanpasbaar." : "Applies to weights across the app, change it anytime."}</div>
             </div>
+            {!isGymMember && (
+              <div style={{ marginTop: 14, borderTop: `1px solid ${LINE}`, paddingTop: 14 }}>
+                <div style={{ fontSize: 10.5, letterSpacing: 1, textTransform: "uppercase", color: MUTED, fontWeight: 700, marginBottom: 8 }}>{lang === "nl" ? "Weergave" : "Appearance"}</div>
+                <div style={{ display: "flex", gap: 6, background: INK2, border: `1px solid ${LINE}`, borderRadius: 10, padding: 4 }}>
+                  {[["auto", lang === "nl" ? "Automatisch" : "Automatic"], ["light", lang === "nl" ? "Licht" : "Light"], ["dark", lang === "nl" ? "Donker" : "Dark"]].map(([v, lbl]) => (
+                    <div key={v} onClick={() => setThemeSave(v)} style={{ flex: 1, textAlign: "center", cursor: "pointer", ...disp, fontWeight: 700, fontSize: 12.5, letterSpacing: 0.3, padding: "10px 0", borderRadius: 7, background: theme === v ? EMBER : "transparent", color: theme === v ? "#fff" : MUTED }}>{lbl}</div>
+                  ))}
+                </div>
+                <div style={{ fontSize: 10.5, color: MUTED, marginTop: 7, lineHeight: 1.5 }}>{lang === "nl" ? "Automatisch volgt je telefoon (licht of donker)." : "Automatic follows your phone (light or dark)."}</div>
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -5,7 +5,8 @@
 // één set variabelen per sportschool de HELE app herthemen zonder de inline-styles aan
 // te raken. Een gewone gebruiker ziet de defaults; een gym-lid krijgt de org-set.
 export const INK = "var(--hf-ink)", INK2 = "var(--hf-ink2)", EMBER = "var(--hf-ember)", EMBER_SOFT = "var(--hf-ember-soft)",
-  PAPER = "var(--hf-paper)", MUTED = "var(--hf-muted)", LINE = "var(--hf-line)", SAGE = "var(--hf-sage)";
+  PAPER = "var(--hf-paper)", MUTED = "var(--hf-muted)", LINE = "var(--hf-line)", SAGE = "var(--hf-sage)",
+  TRACK = "var(--hf-track)", SHADOW = "var(--hf-shadow)";
 
 // Basis-templates: coherente, leesbare sets (achtergrond + tekst samen). De gym kiest
 // er één als basis en overschrijft de accentkleur (knoppen/accenten). Zo geen onleesbare
@@ -103,12 +104,14 @@ export const jsDayToIdx = (d) => (d === 0 ? 6 : d - 1);
 
 export const label = { fontFamily: "Inter, sans-serif", fontSize: 11, letterSpacing: 1, textTransform: "uppercase", color: MUTED, marginBottom: 6, display: "block", fontWeight: 600 };
 export const input = { width: "100%", background: INK, border: `1px solid ${LINE}`, color: PAPER, padding: "11px 12px", fontFamily: "Inter, sans-serif", fontSize: 14, borderRadius: 8, outline: "none", boxSizing: "border-box" };
-export const card = { background: INK2, border: `1px solid ${LINE}`, borderRadius: 14, padding: 16 };
+export const card = { background: INK2, border: `1px solid ${LINE}`, borderRadius: 14, padding: 16, boxShadow: SHADOW };
+// Uitgelichte kaart: zelfde, met rode omlijning links (de gekozen huisstijl).
+export const cardHero = { background: INK2, border: `1px solid ${LINE}`, borderLeft: `3px solid ${EMBER}`, borderRadius: 14, padding: 16, boxShadow: SHADOW };
 export const sectionTitle = { ...disp, fontSize: 15, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1.5, color: EMBER };
 
 export const chipS = (on) => ({ padding: "7px 12px", borderRadius: 20, border: `1px solid ${on ? EMBER : LINE}`, background: on ? "rgba(225,29,72,0.14)" : "transparent", fontSize: 12.5, fontWeight: 600, cursor: "pointer", color: on ? PAPER : MUTED });
 export const segS = (on) => ({ flex: 1, textAlign: "center", padding: "9px 4px", borderRadius: 8, border: `1px solid ${on ? EMBER : LINE}`, background: on ? "rgba(225,29,72,0.12)" : "transparent", fontSize: 12, fontWeight: 600, cursor: "pointer", color: on ? PAPER : MUTED });
-export const primaryBtn = { width: "100%", background: EMBER, color: PAPER, border: "none", padding: "13px 0", borderRadius: 10, ...disp, fontWeight: 700, fontSize: 15, letterSpacing: 1, textTransform: "uppercase", cursor: "pointer" };
+export const primaryBtn = { width: "100%", background: EMBER, color: "#fff", border: "none", padding: "13px 0", borderRadius: 10, ...disp, fontWeight: 700, fontSize: 15, letterSpacing: 1, textTransform: "uppercase", cursor: "pointer" };
 export const ghostBtn = { background: "transparent", color: EMBER, border: `1px solid ${EMBER}`, padding: "11px 18px", borderRadius: 8, ...disp, fontWeight: 700, fontSize: 13, letterSpacing: 0.3, cursor: "pointer" };
 
 // localStorage helpers (nooit crashen)

@@ -18,11 +18,25 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
-      /* Standaard-huisstijl (consumenten-app). Sportscholen overschrijven deze per org
-         via JS (applyOrgTheme), zodat de hele app meekleurt. */
+      /* Standaard-huisstijl (consumenten-app). Rustig wit/rood/zwart.
+         Dark is de basis; light-overrides eronder. "Auto" volgt het systeem
+         (prefers-color-scheme) zolang er geen expliciete data-theme op <html> staat.
+         Sportscholen overschrijven deze per org via JS (applyOrgTheme). */
       :root {
-        --hf-ink: #0A0A0A; --hf-ink2: #262029; --hf-ember: #E11D48; --hf-ember-soft: #FB7185;
-        --hf-paper: #F4F4F4; --hf-muted: #DED8DA; --hf-line: #3A3242; --hf-sage: #CFC9CB;
+        --hf-ink: #09090A; --hf-ink2: #161618; --hf-ember: #E11D48; --hf-ember-soft: #FB7185;
+        --hf-paper: #F4F4F4; --hf-muted: #9A9AA0; --hf-line: #232326; --hf-sage: #CFC9CB;
+        --hf-track: #242427; --hf-shadow: 0 9px 26px rgba(0,0,0,0.55);
+      }
+      /* Light-tokens (zelfde rollen, omgedraaid): ink=achtergrond, ink2=kaart, paper=tekst */
+      :root[data-theme="light"] {
+        --hf-ink: #F5F5F6; --hf-ink2: #FFFFFF; --hf-paper: #16161A; --hf-muted: #6E6E78;
+        --hf-line: #E8E8EC; --hf-sage: #5A5A62; --hf-track: #ECECEF; --hf-shadow: 0 6px 18px rgba(20,20,30,0.08);
+      }
+      @media (prefers-color-scheme: light) {
+        :root:not([data-theme="dark"]):not([data-theme="light"]) {
+          --hf-ink: #F5F5F6; --hf-ink2: #FFFFFF; --hf-paper: #16161A; --hf-muted: #6E6E78;
+          --hf-line: #E8E8EC; --hf-sage: #5A5A62; --hf-track: #ECECEF; --hf-shadow: 0 6px 18px rgba(20,20,30,0.08);
+        }
       }
       body { background: var(--hf-ink); transition: background 0.2s ease; }
     </style>
