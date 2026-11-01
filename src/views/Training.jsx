@@ -695,8 +695,8 @@ function Prestaties({ lang, sessions }) {
         const unit = lang === "nl" ? m.unitNl : m.unitEn;
         return (
           <div key={m.key} style={{ background: INK2, border: `1px solid ${LINE}`, borderRadius: 14, padding: "13px 14px", marginBottom: 10, display: "flex", gap: 13, alignItems: "center", boxShadow: SHADOW }}>
-            <div style={{ width: 46, height: 46, borderRadius: "50%", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", border: `1.5px solid ${earned ? "rgba(225,29,72,0.30)" : LINE}`, background: earned ? "rgba(225,29,72,0.12)" : TRACK }}>
-              {medalIcon(m.key, earned ? EMBER : MUTED)}
+            <div style={{ width: 46, height: 46, borderRadius: "50%", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", border: `1.5px solid ${LINE}`, background: TRACK }}>
+              {medalIcon(m.key, MUTED)}
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
