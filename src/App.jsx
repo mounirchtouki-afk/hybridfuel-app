@@ -1610,7 +1610,7 @@ export default function App() {
   if (session && gymCtx && gymCtx.role === "coach") return <CoachDash session={session} org={gymCtx.org} isOwner={gymCtx.isOwner} perms={gymCtx.perms} lang={lang} onLogout={confirmLogout} />;
 
   return (
-    <div style={{ minHeight: "100vh", background: isGymMember ? INK : "var(--hf-bg)", backgroundAttachment: "fixed", position: "relative", color: PAPER, fontFamily: "Inter, sans-serif", paddingBottom: `calc(${76 + consentH}px + env(safe-area-inset-bottom))` }}>
+    <div style={{ minHeight: "100vh", background: isGymMember ? INK : "var(--hf-bg)", backgroundAttachment: "fixed", position: "relative", color: PAPER, fontFamily: "Inter, sans-serif", paddingBottom: `calc(${98 + consentH}px + env(safe-area-inset-bottom))` }}>
       <style dangerouslySetInnerHTML={{ __html: fonts + `*{box-sizing:border-box;scrollbar-width:none;-ms-overflow-style:none} *::-webkit-scrollbar{display:none;width:0;height:0} html,body{overflow-x:hidden;background:var(--hf-ink)} select option{background:${INK2};color:${PAPER}} @keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}} .dot{animation:pulse 1s infinite} input[type=date],input[type=time]{color-scheme:${isGymMember ? "light dark" : "dark"};accent-color:${EMBER}} :root{accent-color:${EMBER}} .hf-glow{position:fixed;inset:0;pointer-events:none;z-index:-1;background:radial-gradient(125% 80% at 50% -2%,rgba(225,29,72,0.34),transparent 60%),radial-gradient(100% 60% at 100% 106%,rgba(225,29,72,0.20),transparent 64%);animation:drift 20s ease-in-out infinite alternate} @keyframes drift{from{transform:translate(0,0)}to{transform:translate(-30px,24px)}} .hf-modal{scrollbar-width:none;-ms-overflow-style:none} .hf-modal::-webkit-scrollbar{display:none;width:0;height:0} .hf-tap{transition:transform .09s ease,box-shadow .09s ease,background-color .09s ease;-webkit-tap-highlight-color:transparent;cursor:pointer} .hf-tap:active{transform:scale(.98);background-color:rgba(225,29,72,0.16)!important;box-shadow:inset 0 0 0 1.5px rgba(225,29,72,0.55),0 4px 14px rgba(225,29,72,0.18)!important}` }} />
       {false && <div className="hf-glow" aria-hidden="true" />}
       {subMsg && (
@@ -1994,12 +1994,12 @@ export default function App() {
           {fabAct(lang === "nl" ? "Scan / log eten" : "Scan / log food", <svg width="20" height="20" viewBox="0 0 24 24" fill={EMBER} aria-hidden="true"><rect x="3" y="5" width="1.7" height="14" /><rect x="6" y="5" width="1" height="14" /><rect x="8.5" y="5" width="2" height="14" /><rect x="12" y="5" width="1" height="14" /><rect x="14.6" y="5" width="1.7" height="14" /><rect x="17.6" y="5" width="1" height="14" /><rect x="20" y="5" width="1.4" height="14" /></svg>, () => { setFab(false); if (!hasPro) { setShowAuth(true); return; } setFabScan(true); setShowProducts(true); })}
         </div>
       )}
-      <div onClick={() => setFab(!fab)} title="+" style={{ position: "fixed", left: "50%", bottom: "calc(env(safe-area-inset-bottom) + 28px)", zIndex: 47, width: 58, height: 58, borderRadius: "50%", background: EMBER, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 6px 20px rgba(225,29,72,0.5)", cursor: "pointer", transition: "transform .2s", transform: `translateX(-50%) ${fab ? "rotate(45deg)" : ""}`, border: `3px solid ${INK}` }}>
-        <svg width="27" height="27" viewBox="0 0 24 24" fill="none" stroke={PAPER} strokeWidth="2.4" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+      <div onClick={() => setFab(!fab)} title="+" style={{ position: "fixed", left: "50%", bottom: "calc(env(safe-area-inset-bottom) + 48px)", zIndex: 47, width: 58, height: 58, borderRadius: "50%", background: EMBER, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 8px 22px rgba(225,29,72,0.45)", cursor: "pointer", transition: "transform .2s", transform: `translateX(-50%) ${fab ? "rotate(45deg)" : ""}`, border: `4px solid ${INK}` }}>
+        <svg width="27" height="27" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
       </div>
 
       {/* BOTTOM NAV, 2 links, +, 2 rechts */}
-      <div style={{ position: "fixed", left: 0, right: 0, bottom: 0, background: INK, borderTop: `1px solid ${LINE}`, display: "flex", zIndex: 45, paddingBottom: "env(safe-area-inset-bottom)" }}>
+      <div style={{ position: "fixed", left: 14, right: 14, bottom: "calc(env(safe-area-inset-bottom) + 14px)", background: INK2, border: `1px solid ${LINE}`, borderRadius: 24, display: "flex", zIndex: 45, boxShadow: "0 2px 10px rgba(0,0,0,0.10), 0 14px 34px rgba(0,0,0,0.22)", overflow: "hidden" }}>
         {navCell("dashboard", "navDash", () => go("dashboard"), tab === "dashboard")}
         {navCell("plan", "navPlan", () => go("plan"), tab === "plan")}
         <div style={{ flex: 1 }} />

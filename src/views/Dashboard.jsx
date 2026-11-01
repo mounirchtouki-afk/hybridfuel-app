@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, SAGE, SHADOW, TRACK, disp, num, sectionTitle, load, save, todayISO, WD, jsDayToIdx, kgShow, bUnit, mlShow, vUnit } from "../shared.js";
 import { supabase } from "../supabaseClient.js";
 
@@ -57,6 +57,29 @@ export default function Dashboard({ lang, session, week, targets, units, onGo })
   const d = todayISO();
   const [eaten, setEaten] = useState(() => load("hf_eaten_" + d, {}));
   const [extras, setExtras] = useState([]);
+  const [avatar, setAvatar] = useState(() => load("hf_avatar", null));
+  const avatarRef = useRef(null);
+  // Foto uploaden: verklein naar 256px (vierkant, cover) en bewaar lokaal als dataURL.
+  function onPickAvatar(e) {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    const r = new FileReader();
+    r.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const S = 256, cv = document.createElement("canvas"); cv.width = S; cv.height = S;
+          const ctx = cv.getContext("2d");
+          const m = Math.min(img.width, img.height), sx = (img.width - m) / 2, sy = (img.height - m) / 2;
+          ctx.drawImage(img, sx, sy, m, m, 0, 0, S, S);
+          const data = cv.toDataURL("image/jpeg", 0.85);
+          setAvatar(data); save("hf_avatar", data);
+        } catch (err) {}
+      };
+      img.src = r.result;
+    };
+    r.readAsDataURL(f);
+  }
   const [waterMl, setWaterMl] = useState(0);
   const [weightKg, setWeightKg] = useState(0);
   const [race] = useState(() => load("hf_race", {}));
@@ -126,16 +149,25 @@ export default function Dashboard({ lang, session, week, targets, units, onGo })
 
   return (
     <div style={{ display: "grid", gap: 16 }}>
-      {/* Greeting */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
-        <div style={{ minWidth: 0 }}>
-          <div style={{ ...disp, fontSize: 24, fontWeight: 700, letterSpacing: -0.3 }}>{greet}, <span style={{ color: EMBER, textTransform: "capitalize" }}>{name}</span></div>
-          <div style={{ fontSize: 12.5, color: MUTED, marginTop: 3 }}>{t("sub")}</div>
+      {/* Kopzone: ronde avatar (foto uploaden) + begroeting + aanpassen */}
+      <div style={{ paddingTop: 6 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+          <div style={{ position: "relative", width: 64, height: 64, flexShrink: 0 }}>
+            <div onClick={() => avatarRef.current && avatarRef.current.click()} className="hf-tap" style={{ width: 64, height: 64, borderRadius: "50%", overflow: "hidden", background: INK2, border: `1px solid ${LINE}`, boxShadow: SHADOW, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+              {avatar ? <img src={avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ ...disp, fontWeight: 700, fontSize: 26, color: PAPER }}>{(name || "A").slice(0, 1).toUpperCase()}</span>}
+            </div>
+            <div onClick={() => avatarRef.current && avatarRef.current.click()} style={{ position: "absolute", right: -2, bottom: -2, width: 24, height: 24, borderRadius: "50%", background: EMBER, border: `2px solid ${INK}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 8h3l2-2h8l2 2h3v12H3z" /><circle cx="12" cy="13" r="3.2" /></svg>
+            </div>
+            <input ref={avatarRef} type="file" accept="image/*" onChange={onPickAvatar} style={{ display: "none" }} />
+          </div>
+          <div onClick={() => setCust(!cust)} style={{ cursor: "pointer", flexShrink: 0, display: "flex", alignItems: "center", gap: 5, border: `1px solid ${cust ? EMBER : LINE}`, color: cust ? EMBER : MUTED, borderRadius: 8, padding: "6px 10px", fontSize: 11.5, fontWeight: 600, marginTop: 4, background: INK2, boxShadow: SHADOW }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z" /></svg>
+            {cust ? t("doneTxt") : t("customize")}
+          </div>
         </div>
-        <div onClick={() => setCust(!cust)} style={{ cursor: "pointer", flexShrink: 0, display: "flex", alignItems: "center", gap: 5, border: `1px solid ${cust ? EMBER : LINE}`, color: cust ? EMBER : MUTED, borderRadius: 8, padding: "6px 10px", fontSize: 11.5, fontWeight: 600, marginTop: 4 }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z" /></svg>
-          {cust ? t("doneTxt") : t("customize")}
-        </div>
+        <div style={{ ...disp, fontSize: 27, fontWeight: 700, letterSpacing: -0.3, marginTop: 14 }}>{greet}, <span style={{ color: EMBER, textTransform: "capitalize" }}>{name}</span></div>
+        <div style={{ fontSize: 13, color: MUTED, marginTop: 3 }}>{t("sub")}</div>
       </div>
 
       {/* Aanpas-paneel */}
