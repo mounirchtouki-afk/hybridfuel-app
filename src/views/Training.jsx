@@ -695,15 +695,15 @@ function Prestaties({ lang, sessions }) {
         const unit = lang === "nl" ? m.unitNl : m.unitEn;
         return (
           <div key={m.key} style={{ background: INK2, border: `1px solid ${LINE}`, borderRadius: 14, padding: "13px 14px", marginBottom: 10, display: "flex", gap: 13, alignItems: "center", boxShadow: SHADOW }}>
-            <div style={{ width: 46, height: 46, borderRadius: "50%", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", border: `2px solid ${earned ? col : LINE}`, background: earned ? col : TRACK }}>
-              {medalIcon(m.key, earned ? "#fff" : MUTED)}
+            <div style={{ width: 46, height: 46, borderRadius: "50%", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", border: `1.5px solid ${earned ? "rgba(225,29,72,0.30)" : LINE}`, background: earned ? "rgba(225,29,72,0.12)" : TRACK }}>
+              {medalIcon(m.key, earned ? EMBER : MUTED)}
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <span style={{ ...disp, fontWeight: 700, fontSize: 15 }}>{lang === "nl" ? m.nl : m.en}</span>
-                <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.5, textTransform: "uppercase", padding: "3px 8px", borderRadius: 5, background: earned ? col : "transparent", border: earned ? "none" : `1px solid ${LINE}`, color: earned ? "#fff" : MUTED }}>{earned ? TN[st.level] : (lang === "nl" ? "Op slot" : "Locked")}</span>
+                <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.5, textTransform: "uppercase", padding: "3px 8px", borderRadius: 5, background: earned ? "rgba(225,29,72,0.12)" : "transparent", border: earned ? "none" : `1px solid ${LINE}`, color: earned ? EMBER : MUTED }}>{earned ? TN[st.level] : (lang === "nl" ? "Op slot" : "Locked")}</span>
               </div>
-              <div style={{ height: 6, borderRadius: 4, background: TRACK, overflow: "hidden", margin: "8px 0 5px" }}><div style={{ height: "100%", width: Math.max(earned ? 0 : 3, Math.round(st.progress * 100)) + "%", borderRadius: 4, background: earned ? col : EMBER }} /></div>
+              <div style={{ height: 6, borderRadius: 4, background: TRACK, overflow: "hidden", margin: "8px 0 5px" }}><div style={{ height: "100%", width: Math.max(3, Math.round(st.progress * 100)) + "%", borderRadius: 4, background: EMBER }} /></div>
               <div style={{ fontSize: 11, color: MUTED }}>
                 {st.maxed
                   ? (lang === "nl" ? "Max niveau ✓ — " : "Max level ✓ — ") + nf(st.value) + " " + unit
