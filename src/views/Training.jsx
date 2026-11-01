@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
-import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, SAGE, disp, num, load, save, todayISO, label, sectionTitle, WD, jsDayToIdx } from "../shared.js";
+import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, SAGE, disp, num, load, save, todayISO, fmtDate, label, sectionTitle, WD, jsDayToIdx } from "../shared.js";
+import BrandCalendar from "./BrandCalendar.jsx";
 import { EXERCISES, WORKOUT_CATS, INTENSITY, kcalFor, exerciseByName } from "../workouts.js";
 import { Dropdown } from "../ui.jsx";
 import { MEDALS, TIER_NAMES, TIER_COLORS, aggregate, medalState } from "../achievements.js";
@@ -108,7 +109,10 @@ function loadPlan() { const p = load("hf_trainplan", null); if (!p || !Array.isA
 
 export default function Training({ lang, session, weight }) {
   const t = (k) => (T[k] ? T[k][lang] : k);
-  const d = todayISO();
+  const [d, setD] = useState(todayISO());
+  const [calOpen, setCalOpen] = useState(false);
+  const shiftDay = (n) => { const dt = new Date(d + "T12:00:00"); dt.setDate(dt.getDate() + n); setD(dt.getFullYear() + "-" + String(dt.getMonth() + 1).padStart(2, "0") + "-" + String(dt.getDate()).padStart(2, "0")); };
+  const isToday = d === todayISO();
   const kg = bodyKg(weight);
   const [tab, setTab] = useState("today");
   const [list, setList] = useState(() => load("hf_workouts_" + d, []));
@@ -382,6 +386,18 @@ export default function Training({ lang, session, weight }) {
 
       {tab === "today" && (
         <>
+          <div style={{ background: INK2, border: `1px solid ${LINE}`, borderRadius: 14, padding: 10, marginBottom: 14 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+              <div onClick={() => shiftDay(-1)} className="hf-tap" style={{ cursor: "pointer", width: 34, height: 34, borderRadius: 9, border: `1px solid ${LINE}`, display: "flex", alignItems: "center", justifyContent: "center", color: PAPER, fontSize: 18 }}>‹</div>
+              <div onClick={() => setCalOpen(true)} style={{ textAlign: "center", cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+                <div style={{ ...disp, fontSize: 15, fontWeight: 600, letterSpacing: 0.5 }}>{isToday ? t("tabToday") : WD[lang === "nl" ? "nl" : "en"][todayIdx]} · {fmtDate(d, lang)}</div>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6" /></svg>
+              </div>
+              <div onClick={() => shiftDay(1)} className="hf-tap" style={{ cursor: "pointer", width: 34, height: 34, borderRadius: 9, border: `1px solid ${LINE}`, display: "flex", alignItems: "center", justifyContent: "center", color: PAPER, fontSize: 18 }}>›</div>
+            </div>
+          </div>
+          {calOpen && <BrandCalendar value={d} lang={lang} onPick={(v) => { if (v) setD(v); }} onClose={() => setCalOpen(false)} />}
+
           <div style={{ background: `linear-gradient(135deg, ${EMBER}, #9f1239)`, borderRadius: 16, padding: "18px", marginBottom: 14, color: PAPER }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
               <div>
