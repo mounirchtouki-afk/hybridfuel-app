@@ -25,17 +25,22 @@
       :root {
         --hf-ink: #09090A; --hf-ink2: #161618; --hf-ember: #E11D48; --hf-ember-soft: #FB7185;
         --hf-paper: #F4F4F4; --hf-muted: #9A9AA0; --hf-line: #232326; --hf-sage: #CFC9CB;
-        --hf-track: #242427; --hf-shadow: 0 9px 26px rgba(0,0,0,0.55);
+        --hf-track: #242427;
+        /* Gelaagde schaduw: dichtbij scherp + midden + ver zacht = echt verloop/diepte */
+        --hf-shadow: 0 1px 2px rgba(0,0,0,0.40), 0 6px 14px rgba(0,0,0,0.48), 0 18px 38px rgba(0,0,0,0.60);
       }
-      /* Light-tokens (zelfde rollen, omgedraaid): ink=achtergrond, ink2=kaart, paper=tekst */
+      /* Light-tokens (zelfde rollen, omgedraaid): ink=achtergrond, ink2=kaart, paper=tekst.
+         Diepere, zachte "zwevende" schaduw op de witte kaarten (zoals ChefLabels). */
       :root[data-theme="light"] {
-        --hf-ink: #F5F5F6; --hf-ink2: #FFFFFF; --hf-paper: #16161A; --hf-muted: #6E6E78;
-        --hf-line: #E8E8EC; --hf-sage: #5A5A62; --hf-track: #ECECEF; --hf-shadow: 0 6px 18px rgba(20,20,30,0.08);
+        --hf-ink: #F4F3F6; --hf-ink2: #FFFFFF; --hf-paper: #16161A; --hf-muted: #6E6E78;
+        --hf-line: #ECEBEF; --hf-sage: #5A5A62; --hf-track: #ECECEF;
+        --hf-shadow: 0 1px 2px rgba(22,18,44,0.05), 0 8px 16px rgba(22,18,44,0.08), 0 22px 42px rgba(22,18,44,0.13);
       }
       @media (prefers-color-scheme: light) {
         :root:not([data-theme="dark"]):not([data-theme="light"]) {
-          --hf-ink: #F5F5F6; --hf-ink2: #FFFFFF; --hf-paper: #16161A; --hf-muted: #6E6E78;
-          --hf-line: #E8E8EC; --hf-sage: #5A5A62; --hf-track: #ECECEF; --hf-shadow: 0 6px 18px rgba(20,20,30,0.08);
+          --hf-ink: #F4F3F6; --hf-ink2: #FFFFFF; --hf-paper: #16161A; --hf-muted: #6E6E78;
+          --hf-line: #ECEBEF; --hf-sage: #5A5A62; --hf-track: #ECECEF;
+          --hf-shadow: 0 1px 2px rgba(22,18,44,0.05), 0 8px 16px rgba(22,18,44,0.08), 0 22px 42px rgba(22,18,44,0.13);
         }
       }
       body { background: var(--hf-ink); transition: background 0.2s ease; }
