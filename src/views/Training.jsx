@@ -691,7 +691,7 @@ function Prestaties({ lang, sessions }) {
       {MEDALS.map((m) => {
         const st = medalState(m, totals);
         const earned = st.level >= 0;
-        const col = earned ? TIER_COLORS[st.level] : MUTED;
+        const col = earned ? EMBER : MUTED; // binnen de huiskleuren: behaald = rood, op slot = grijs
         const unit = lang === "nl" ? m.unitNl : m.unitEn;
         return (
           <div key={m.key} style={{ background: INK2, border: `1px solid ${LINE}`, borderRadius: 14, padding: "13px 14px", marginBottom: 10, display: "flex", gap: 13, alignItems: "center", boxShadow: SHADOW }}>
