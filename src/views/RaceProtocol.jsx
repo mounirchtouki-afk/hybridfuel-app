@@ -260,7 +260,7 @@ export default function RaceProtocol({ lang, weight, session, week }) {
             ) : (
               <>
                 <div style={{ fontSize: 11.5, color: MUTED, lineHeight: 1.55, marginBottom: 12 }}>{t("linkNote")}</div>
-                <button onClick={linkDiary} style={{ background: EMBER, color: PAPER, border: "none", borderRadius: 9, padding: "11px 18px", ...disp, fontWeight: 700, fontSize: 13, letterSpacing: 0.5, cursor: "pointer" }}>{t("linkBtn")}</button>
+                <button onClick={linkDiary} style={{ background: EMBER, color: "#fff", border: "none", borderRadius: 9, padding: "11px 18px", ...disp, fontWeight: 700, fontSize: 13, letterSpacing: 0.5, cursor: "pointer" }}>{t("linkBtn")}</button>
               </>
             )}
           </div>

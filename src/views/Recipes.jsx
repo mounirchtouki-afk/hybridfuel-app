@@ -91,7 +91,7 @@ export default function Recipes({ lang, session, units }) {
                         : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: LINE, ...disp, fontSize: 40 }}>{(r.name || "?").slice(0, 1).toUpperCase()}</div>}
                       <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, transparent 45%, rgba(10,10,10,0.9) 100%)" }} />
                       <div style={{ position: "absolute", left: 14, right: 14, bottom: 12 }}>
-                        <div style={{ display: "inline-block", fontSize: 9.5, color: PAPER, background: EMBER, borderRadius: 5, padding: "2px 7px", letterSpacing: 0.5, fontWeight: 700, ...disp, marginBottom: 6 }}>{TYPE_LBL[r.type] ? TYPE_LBL[r.type][lang] : r.type}</div>
+                        <div style={{ display: "inline-block", fontSize: 9.5, color: "#fff", background: EMBER, borderRadius: 5, padding: "2px 7px", letterSpacing: 0.5, fontWeight: 700, ...disp, marginBottom: 6 }}>{TYPE_LBL[r.type] ? TYPE_LBL[r.type][lang] : r.type}</div>
                         <div style={{ ...disp, fontWeight: 600, fontSize: 19, letterSpacing: 0.3, color: PAPER, textShadow: "0 2px 8px rgba(0,0,0,.6)" }}>{r.name}</div>
                       </div>
                     </div>
@@ -138,7 +138,7 @@ export default function Recipes({ lang, session, units }) {
                     <img src={r.image_url || `/recipes/${r.id}.jpg`} alt={r.name[lang]} loading="lazy" onError={(e) => { e.currentTarget.style.display = "none"; }} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                     <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, transparent 45%, rgba(10,10,10,0.9) 100%)" }} />
                     <div style={{ position: "absolute", left: 14, right: 14, bottom: 12 }}>
-                      <div style={{ display: "inline-block", fontSize: 9.5, color: PAPER, background: EMBER, borderRadius: 5, padding: "2px 7px", letterSpacing: 0.5, fontWeight: 700, ...disp, marginBottom: 6 }}>{r.goal[lang]}</div>
+                      <div style={{ display: "inline-block", fontSize: 9.5, color: "#fff", background: EMBER, borderRadius: 5, padding: "2px 7px", letterSpacing: 0.5, fontWeight: 700, ...disp, marginBottom: 6 }}>{r.goal[lang]}</div>
                       <div style={{ ...disp, fontWeight: 600, fontSize: 19, letterSpacing: 0.3, color: PAPER, textShadow: "0 2px 8px rgba(0,0,0,.6)" }}>{r.name[lang]}</div>
                     </div>
                   </div>

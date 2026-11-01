@@ -1,5 +1,17 @@
 import React, { useState, useEffect, useRef } from "react";
-import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, SAGE, disp, num, load, save, todayISO, fmtDate, label, sectionTitle, WD, jsDayToIdx } from "../shared.js";
+import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, SAGE, TRACK, SHADOW, disp, num, load, save, todayISO, fmtDate, label, sectionTitle, WD, jsDayToIdx } from "../shared.js";
+
+// SVG-iconen per medaille-categorie (ipv emoji). col = stroke-kleur.
+function medalIcon(key, col) {
+  const p = { strokeWidth: 1.9, strokeLinecap: "round", strokeLinejoin: "round", fill: "none", stroke: col };
+  const paths = {
+    dist: <path d="M13 2L3 14h7l-1 8 10-12h-7z" {...p} />,
+    sessions: <g {...p}><path d="M6.5 6.5l11 11M4 9l-1.5 1.5a1.5 1.5 0 000 2L4 14M20 9l1.5 1.5a1.5 1.5 0 010 2L20 14M7 4l1.5 1.5M17 20l-1.5-1.5" /></g>,
+    kcal: <path d="M12 3c1 3-1 4-1 6a2 2 0 004 0c0-1-.5-2-.5-2 2 1 3.5 3 3.5 6a6 6 0 01-12 0c0-4 4-6 6-10z" {...p} />,
+    streak: <g {...p}><rect x="3" y="4.5" width="18" height="16.5" rx="2" /><path d="M3 9.5h18M8 2.5v4M16 2.5v4" /></g>,
+  };
+  return <svg width="22" height="22" viewBox="0 0 24 24">{paths[key] || paths.dist}</svg>;
+}
 import BrandCalendar from "./BrandCalendar.jsx";
 import { EXERCISES, WORKOUT_CATS, INTENSITY, kcalFor, exerciseByName } from "../workouts.js";
 import { Dropdown } from "../ui.jsx";
@@ -227,7 +239,7 @@ export default function Training({ lang, session, weight }) {
   const totMin = list.reduce((a, x) => a + num(x.min), 0);
   const mmss = (ms) => { const s = Math.floor(ms / 1000); return String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0"); };
   const sIn = { width: "100%", background: INK, border: `1px solid ${LINE}`, color: PAPER, padding: "11px 12px", fontFamily: "Inter, sans-serif", fontSize: 14, borderRadius: 8, outline: "none", boxSizing: "border-box" };
-  const tabBtn = (id, lbl) => <div onClick={() => setTab(id)} style={{ flex: 1, textAlign: "center", cursor: "pointer", padding: "9px 0", borderRadius: 8, background: tab === id ? EMBER : "transparent", color: PAPER, fontSize: 13.5, fontWeight: 700, ...disp, letterSpacing: 0.5 }}>{lbl}</div>;
+  const tabBtn = (id, lbl) => <div onClick={() => setTab(id)} style={{ flex: 1, textAlign: "center", cursor: "pointer", padding: "9px 0", borderRadius: 8, background: tab === id ? EMBER : "transparent", color: tab === id ? "#fff" : PAPER, fontSize: 13.5, fontWeight: 700, ...disp, letterSpacing: 0.5 }}>{lbl}</div>;
   const catOpts = Object.keys(WORKOUT_CATS).map((c) => ({ id: c, label: WORKOUT_CATS[c][lang] }));
   const intOpts = INTENSITY.map((i) => ({ id: i.met, label: i[lang] }));
 
@@ -272,7 +284,7 @@ export default function Training({ lang, session, weight }) {
           <div style={{ marginBottom: 14 }}><Dropdown value={intens} onChange={setIntens} options={intOpts} /></div>
           <div style={{ display: "flex", gap: 10 }}>
             <div onClick={() => setCust(false)} style={{ cursor: "pointer", padding: "11px 16px", borderRadius: 9, border: `1px solid ${LINE}`, color: MUTED, fontSize: 13, fontWeight: 700, ...disp }}>{t("back")}</div>
-            <div onClick={() => { if (!nm.trim()) return; onPick({ name: nm.trim(), met: num(intens), cat, metric: "reps" }); }} style={{ cursor: "pointer", flex: 1, textAlign: "center", background: EMBER, color: PAPER, padding: "11px 0", borderRadius: 9, ...disp, fontWeight: 700, fontSize: 14 }}>{t("addCustom")}</div>
+            <div onClick={() => { if (!nm.trim()) return; onPick({ name: nm.trim(), met: num(intens), cat, metric: "reps" }); }} style={{ cursor: "pointer", flex: 1, textAlign: "center", background: EMBER, color: "#fff", padding: "11px 0", borderRadius: 9, ...disp, fontWeight: 700, fontSize: 14 }}>{t("addCustom")}</div>
           </div>
         </div>
       );
@@ -364,7 +376,7 @@ export default function Training({ lang, session, weight }) {
               <div style={{ fontSize: 12, color: MUTED, marginBottom: 14 }}>{t("estBurn")}: <span style={{ color: EMBER_SOFT, fontWeight: 700 }}>~{kc} kcal</span></div>
               <div style={{ display: "flex", gap: 10 }}>
                 <div onClick={onClose} style={{ cursor: "pointer", padding: "11px 16px", borderRadius: 9, border: `1px solid ${LINE}`, color: MUTED, fontSize: 13, fontWeight: 700, ...disp }}>{t("cancel")}</div>
-                <div onClick={() => { if (num(mn) <= 0) return; addToDay(di, { id: "p" + Date.now(), name: ch.name, met: ch.met, min: num(mn), kcal: kc, metric, exId: ch.exId || null, sets: num(sets) || null, reps: num(reps) || null, dist: num(dist) || null }); onClose(); }} style={{ cursor: "pointer", flex: 1, textAlign: "center", background: EMBER, color: PAPER, padding: "11px 0", borderRadius: 9, ...disp, fontWeight: 700, fontSize: 14 }}>{t("save")}</div>
+                <div onClick={() => { if (num(mn) <= 0) return; addToDay(di, { id: "p" + Date.now(), name: ch.name, met: ch.met, min: num(mn), kcal: kc, metric, exId: ch.exId || null, sets: num(sets) || null, reps: num(reps) || null, dist: num(dist) || null }); onClose(); }} style={{ cursor: "pointer", flex: 1, textAlign: "center", background: EMBER, color: "#fff", padding: "11px 0", borderRadius: 9, ...disp, fontWeight: 700, fontSize: 14 }}>{t("save")}</div>
               </div>
             </div>
           )}
@@ -398,7 +410,7 @@ export default function Training({ lang, session, weight }) {
           </div>
           {calOpen && <BrandCalendar value={d} lang={lang} onPick={(v) => { if (v) setD(v); }} onClose={() => setCalOpen(false)} />}
 
-          <div style={{ background: `linear-gradient(135deg, ${EMBER}, #9f1239)`, borderRadius: 16, padding: "18px", marginBottom: 14, color: PAPER }}>
+          <div style={{ background: `linear-gradient(135deg, ${EMBER}, #9f1239)`, borderRadius: 16, padding: "18px", marginBottom: 14, color: "#fff" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
               <div>
                 <div style={{ fontSize: 10.5, letterSpacing: 1, textTransform: "uppercase", fontWeight: 700, opacity: 0.85 }}>{t("todayBurn")}</div>
@@ -465,7 +477,7 @@ export default function Training({ lang, session, weight }) {
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}><div style={{ ...disp, fontSize: 16, fontWeight: 700 }}>{chosen.name}</div><div onClick={resetPanel} style={{ cursor: "pointer", fontSize: 11.5, color: MUTED, fontWeight: 600 }}>{t("change")}</div></div>
                   <label style={label}>{t("timer")}</label>
                   <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 12 }}>
-                    {!run ? <div onClick={startTimer} style={{ cursor: "pointer", flex: 1, textAlign: "center", background: EMBER, color: PAPER, padding: "11px 0", borderRadius: 9, ...disp, fontWeight: 700 }}>▶ {t("start")}</div>
+                    {!run ? <div onClick={startTimer} style={{ cursor: "pointer", flex: 1, textAlign: "center", background: EMBER, color: "#fff", padding: "11px 0", borderRadius: 9, ...disp, fontWeight: 700 }}>▶ {t("start")}</div>
                       : <><div style={{ ...disp, fontSize: 26, fontWeight: 700, color: EMBER_SOFT, minWidth: 92 }}>{mmss(Date.now() - run.start)}</div><div onClick={stopTimer} style={{ cursor: "pointer", flex: 1, textAlign: "center", background: INK, border: `1px solid ${EMBER}`, color: EMBER, padding: "11px 0", borderRadius: 9, ...disp, fontWeight: 700 }}>■ {t("stop")}</div></>}
                   </div>
                   {!run && <div style={{ marginBottom: 12 }}><label style={label}>{t("minutes")}</label><input value={mins} onChange={(e) => { setMins(e.target.value.replace(/[^0-9]/g, "")); setKcalEdit(null); }} inputMode="numeric" placeholder="15" style={sIn} /></div>}
@@ -475,7 +487,7 @@ export default function Training({ lang, session, weight }) {
                   </div>
                   <div style={{ display: "flex", gap: 10 }}>
                     <div onClick={() => { resetPanel(); setAdding(false); }} style={{ cursor: "pointer", padding: "11px 16px", borderRadius: 9, border: `1px solid ${LINE}`, color: MUTED, fontSize: 13, fontWeight: 700, ...disp }}>{t("cancel")}</div>
-                    <div onClick={addSession} style={{ cursor: "pointer", flex: 1, textAlign: "center", background: EMBER, color: PAPER, padding: "11px 0", borderRadius: 9, ...disp, fontWeight: 700, fontSize: 14 }}>{t("save")}</div>
+                    <div onClick={addSession} style={{ cursor: "pointer", flex: 1, textAlign: "center", background: EMBER, color: "#fff", padding: "11px 0", borderRadius: 9, ...disp, fontWeight: 700, fontSize: 14 }}>{t("save")}</div>
                   </div>
                 </div>
               )}
@@ -650,7 +662,7 @@ function Prestaties({ lang, sessions }) {
   const TN = TIER_NAMES[lang === "nl" ? "nl" : "en"];
   const nf = (n) => n.toLocaleString(lang === "nl" ? "nl-NL" : "en-US");
   const statTile = (v, unit, l) => (
-    <div style={{ background: INK2, border: `1px solid ${LINE}`, borderRadius: 14, padding: 14 }}>
+    <div style={{ background: INK2, border: `1px solid ${LINE}`, borderLeft: `3px solid ${EMBER}`, borderRadius: 14, padding: 14, boxShadow: SHADOW }}>
       <div style={{ ...disp, fontWeight: 700, fontSize: 26, color: PAPER, lineHeight: 1 }}>{v}<span style={{ fontSize: 13, color: MUTED, marginLeft: 4 }}>{unit}</span></div>
       <div style={{ fontSize: 10.5, letterSpacing: 0.5, textTransform: "uppercase", color: MUTED, marginTop: 6, fontWeight: 600 }}>{l}</div>
     </div>
@@ -679,21 +691,23 @@ function Prestaties({ lang, sessions }) {
       {MEDALS.map((m) => {
         const st = medalState(m, totals);
         const earned = st.level >= 0;
-        const col = earned ? TIER_COLORS[st.level] : LINE;
+        const col = earned ? TIER_COLORS[st.level] : MUTED;
         const unit = lang === "nl" ? m.unitNl : m.unitEn;
         return (
-          <div key={m.key} style={{ background: INK2, border: `1px solid ${LINE}`, borderRadius: 14, padding: "13px 14px", marginBottom: 10, display: "flex", gap: 13, alignItems: "center" }}>
-            <div style={{ width: 46, height: 46, borderRadius: "50%", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, border: `2px solid ${col}`, background: earned ? col + "22" : "#1b1620", filter: earned ? "none" : "grayscale(1)", opacity: earned ? 1 : 0.5 }}>{m.icon}</div>
+          <div key={m.key} style={{ background: INK2, border: `1px solid ${LINE}`, borderRadius: 14, padding: "13px 14px", marginBottom: 10, display: "flex", gap: 13, alignItems: "center", boxShadow: SHADOW }}>
+            <div style={{ width: 46, height: 46, borderRadius: "50%", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", border: `2px solid ${earned ? col : LINE}`, background: earned ? col : TRACK }}>
+              {medalIcon(m.key, earned ? "#fff" : MUTED)}
+            </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <span style={{ ...disp, fontWeight: 700, fontSize: 15 }}>{lang === "nl" ? m.nl : m.en}</span>
-                <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.5, textTransform: "uppercase", padding: "2px 7px", borderRadius: 5, background: earned ? col + "22" : "#1b1620", color: earned ? col : MUTED }}>{earned ? TN[st.level] : (lang === "nl" ? "Op slot" : "Locked")}</span>
+                <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.5, textTransform: "uppercase", padding: "3px 8px", borderRadius: 5, background: earned ? col : "transparent", border: earned ? "none" : `1px solid ${LINE}`, color: earned ? "#fff" : MUTED }}>{earned ? TN[st.level] : (lang === "nl" ? "Op slot" : "Locked")}</span>
               </div>
-              <div style={{ height: 6, borderRadius: 4, background: "#1b1620", overflow: "hidden", margin: "8px 0 5px" }}><div style={{ height: "100%", width: Math.round(st.progress * 100) + "%", borderRadius: 4, background: earned ? col : LINE }} /></div>
+              <div style={{ height: 6, borderRadius: 4, background: TRACK, overflow: "hidden", margin: "8px 0 5px" }}><div style={{ height: "100%", width: Math.max(earned ? 0 : 3, Math.round(st.progress * 100)) + "%", borderRadius: 4, background: earned ? col : EMBER }} /></div>
               <div style={{ fontSize: 11, color: MUTED }}>
                 {st.maxed
                   ? (lang === "nl" ? "Max niveau ✓ — " : "Max level ✓ — ") + nf(st.value) + " " + unit
-                  : <>{nf(st.value)} / {nf(st.nextTarget)} {unit} — {lang === "nl" ? "nog" : "still"} <b style={{ color: SAGE, fontWeight: 600 }}>{nf(Math.max(0, st.nextTarget - st.value))}</b> {lang === "nl" ? "tot " : "to "}{TN[Math.min(st.level + 1, TN.length - 1)]}</>}
+                  : <>{nf(st.value)} / {nf(st.nextTarget)} {unit} — {lang === "nl" ? "nog" : "still"} <b style={{ color: EMBER, fontWeight: 700 }}>{nf(Math.max(0, st.nextTarget - st.value))}</b> {lang === "nl" ? "tot " : "to "}{TN[Math.min(st.level + 1, TN.length - 1)]}</>}
               </div>
             </div>
           </div>

@@ -199,7 +199,7 @@ export default function Auth({ lang, session, tier, recovery, onClose, gym }) {
     const popular = plan === "pro";
     return (
       <div style={{ position: "relative", background: INK2, border: `1px solid ${popular ? EMBER : LINE}`, borderRadius: 12, padding: 11, marginBottom: 8 }}>
-        {popular && <div style={{ position: "absolute", top: -9, right: 12, background: EMBER, color: PAPER, fontSize: 9.5, fontWeight: 700, ...disp, letterSpacing: 0.8, textTransform: "uppercase", padding: "2px 8px", borderRadius: 5 }}>{t("popular")}</div>}
+        {popular && <div style={{ position: "absolute", top: -9, right: 12, background: EMBER, color: "#fff", fontSize: 9.5, fontWeight: 700, ...disp, letterSpacing: 0.8, textTransform: "uppercase", padding: "2px 8px", borderRadius: 5 }}>{t("popular")}</div>}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
           <div style={{ ...disp, fontSize: 16, fontWeight: 700, color: PAPER, textTransform: "uppercase", letterSpacing: 0.5 }}>{t(plan + "Name")}</div>
           <div style={{ ...disp, fontSize: 19, fontWeight: 700, color: popular ? EMBER : PAPER }}>{price}<span style={{ fontSize: 11, color: MUTED, fontWeight: 500 }}>{billInterval === "year" ? t("perYr") : t("perMo")}</span></div>
@@ -215,7 +215,7 @@ export default function Auth({ lang, session, tier, recovery, onClose, gym }) {
       <div onClick={(e) => e.stopPropagation()} className="hf-modal" style={{ position: "relative", background: INK, border: `1px solid ${LINE}`, borderRadius: 20, width: "100%", maxWidth: 420, maxHeight: "90dvh", overflowY: "auto", padding: 18, boxShadow: "0 24px 70px rgba(0,0,0,.65)", backgroundImage: "radial-gradient(130% 70% at 92% -10%, rgba(225,29,72,0.13), transparent 58%)" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ width: 28, height: 28, borderRadius: 8, background: EMBER, display: "flex", alignItems: "center", justifyContent: "center", ...disp, fontWeight: 700, color: PAPER, fontSize: 16 }}>H</div>
+            <div style={{ width: 28, height: 28, borderRadius: 8, background: EMBER, display: "flex", alignItems: "center", justifyContent: "center", ...disp, fontWeight: 700, color: "#fff", fontSize: 16 }}>H</div>
             <div style={sectionTitle}>{t("account")}</div>
           </div>
           <div onClick={onClose} style={{ cursor: "pointer", color: MUTED, fontSize: 17, lineHeight: 1, width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 9, border: `1px solid ${LINE}` }}>×</div>
@@ -321,7 +321,7 @@ export default function Auth({ lang, session, tier, recovery, onClose, gym }) {
           <div style={{ padding: "12px 0" }}>
             <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.5, marginBottom: 12 }}>{t("delConfirm")}</div>
             <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={deleteAccount} disabled={busy} style={{ flex: 1, background: EMBER, color: PAPER, border: "none", padding: "12px 0", borderRadius: 10, ...disp, fontWeight: 700, fontSize: 13.5, letterSpacing: 0.5, cursor: "pointer", opacity: busy ? 0.7 : 1 }}>{busy ? t("deleting") : t("delYes")}</button>
+              <button onClick={deleteAccount} disabled={busy} style={{ flex: 1, background: EMBER, color: "#fff", border: "none", padding: "12px 0", borderRadius: 10, ...disp, fontWeight: 700, fontSize: 13.5, letterSpacing: 0.5, cursor: "pointer", opacity: busy ? 0.7 : 1 }}>{busy ? t("deleting") : t("delYes")}</button>
               <button onClick={() => setPanel("")} style={{ ...ghostBtn }}>{t("cancel")}</button>
             </div>
           </div>

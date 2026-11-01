@@ -57,7 +57,7 @@ export default function BrandCalendar({ value, onPick, onClose, lang = "nl", all
     <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
       <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 360, background: "#fff", borderRadius: 18, overflow: "hidden", boxShadow: "0 20px 60px rgba(0,0,0,0.5)" }}>
         {/* Rode koptekst */}
-        <div style={{ background: EMBER, color: PAPER, padding: "18px 22px" }}>
+        <div style={{ background: EMBER, color: "#fff", padding: "18px 22px" }}>
           <div style={{ fontSize: 14, opacity: 0.85, fontWeight: 600 }}>{headDate.getFullYear()}</div>
           <div style={{ ...disp(), fontSize: 30, fontWeight: 700, marginTop: 2 }}>{headLbl}</div>
         </div>

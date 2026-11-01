@@ -488,7 +488,7 @@ const { T, ML, sIn, R, disp, mutDay, patchMeal, scaleMeal, patchIng, addIngr, re
                       <input value={ingForm.name} onChange={(e) => setIngForm({ ...ingForm, name: e.target.value })} placeholder={T("ingName")} style={{ ...miniIn, textAlign: "left", marginBottom: 8 }} />
                       {valEditor(mi, ingForm, (k, v) => setIngForm({ ...ingForm, [k]: v }))}
                       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                        <div onClick={() => { applyIngVals(di, mi, ii, { kcal: ingForm.kcal, p: ingForm.p, c: ingForm.c, f: ingForm.f }, ingForm.name); setIngForm(null); }} style={{ flex: 1, minWidth: 90, textAlign: "center", cursor: "pointer", background: EMBER, color: PAPER, borderRadius: 8, padding: "9px 0", ...disp, fontWeight: 700, fontSize: 12.5, letterSpacing: 0.3 }}>{T("applyVals")}</div>
+                        <div onClick={() => { applyIngVals(di, mi, ii, { kcal: ingForm.kcal, p: ingForm.p, c: ingForm.c, f: ingForm.f }, ingForm.name); setIngForm(null); }} style={{ flex: 1, minWidth: 90, textAlign: "center", cursor: "pointer", background: EMBER, color: "#fff", borderRadius: 8, padding: "9px 0", ...disp, fontWeight: 700, fontSize: 12.5, letterSpacing: 0.3 }}>{T("applyVals")}</div>
                         {pro && !ing.pid && <div onClick={() => { saveIngProduct(di, mi, ii, { kcal: ingForm.kcal, p: ingForm.p, c: ingForm.c, f: ingForm.f }, ingForm.name); setIngForm(null); }} style={{ cursor: "pointer", color: EMBER, border: `1px solid ${EMBER}`, borderRadius: 8, padding: "9px 12px", ...disp, fontWeight: 700, fontSize: 12, letterSpacing: 0.3 }}>{T("toProduct")}</div>}
                         <div onClick={() => setIngForm(null)} style={{ cursor: "pointer", color: MUTED, fontSize: 12, fontWeight: 600, padding: "9px 12px", border: `1px solid ${LINE}`, borderRadius: 8 }}>{T("cancelShort")}</div>
                       </div>
@@ -1537,7 +1537,7 @@ export default function App() {
           <div style={{ display: "flex", alignItems: "center", gap: 9, flexWrap: "wrap" }}>
             <div style={{ ...disp, fontWeight: 600, fontSize: 15, letterSpacing: 1, textTransform: "uppercase" }}>{day.d}</div>
             <div style={{ fontSize: 9.5, color: day.train ? EMBER : MUTED, border: `1px solid ${day.train ? EMBER : LINE}`, borderRadius: 5, padding: "2px 6px", letterSpacing: 1, fontWeight: 700 }}>{day.train ? T("trainTag") : T("restTag")}</div>
-            {sample && <div style={{ fontSize: 9.5, color: PAPER, background: EMBER, borderRadius: 5, padding: "2px 7px", letterSpacing: 0.5, fontWeight: 700, ...disp }}>{T("freeSample")}</div>}
+            {sample && <div style={{ fontSize: 9.5, color: "#fff", background: EMBER, borderRadius: 5, padding: "2px 7px", letterSpacing: 0.5, fontWeight: 700, ...disp }}>{T("freeSample")}</div>}
           </div>
           <div style={{ fontSize: 11.5, color: MUTED }}><span style={{ color: PAPER, fontWeight: 600 }}>{tot.kcal}</span> kcal · {tot.p}{ML.p}/{tot.c}{ML.c}/{tot.f}{ML.f}</div>
         </div>
@@ -1570,7 +1570,7 @@ export default function App() {
           <div style={{ marginBottom: 12, display: "flex", justifyContent: "center" }}><LockIcon c={EMBER} s={34} /></div>
           <div style={{ ...disp, fontSize: 19, fontWeight: 700, marginBottom: 6 }}>{pro ? T("lockedPro") : T("lockedTitle")}</div>
           <div style={{ fontSize: 12.5, color: MUTED, lineHeight: 1.5, marginBottom: 18, maxWidth: 300, margin: "0 auto 18px" }}>{pro ? T("lockedProSub") : T("lockedSub")}</div>
-          <button onClick={() => setShowAuth(true)} style={{ background: EMBER, color: PAPER, border: "none", padding: "13px 26px", borderRadius: 10, ...disp, fontWeight: 700, fontSize: 14.5, letterSpacing: 0.8, textTransform: "uppercase", cursor: "pointer" }}>{T("unlockBtn")}</button>
+          <button onClick={() => setShowAuth(true)} style={{ background: EMBER, color: "#fff", border: "none", padding: "13px 26px", borderRadius: 10, ...disp, fontWeight: 700, fontSize: 14.5, letterSpacing: 0.8, textTransform: "uppercase", cursor: "pointer" }}>{T("unlockBtn")}</button>
         </div>
       </div>
     );
@@ -1613,7 +1613,7 @@ export default function App() {
       <style dangerouslySetInnerHTML={{ __html: fonts + `*{box-sizing:border-box;scrollbar-width:none;-ms-overflow-style:none} *::-webkit-scrollbar{display:none;width:0;height:0} html,body{overflow-x:hidden;background:var(--hf-ink)} select option{background:${INK2};color:${PAPER}} @keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}} .dot{animation:pulse 1s infinite} input[type=date],input[type=time]{color-scheme:${isGymMember ? "light dark" : "dark"};accent-color:${EMBER}} :root{accent-color:${EMBER}} .hf-glow{position:fixed;inset:0;pointer-events:none;z-index:-1;background:radial-gradient(125% 80% at 50% -2%,rgba(225,29,72,0.34),transparent 60%),radial-gradient(100% 60% at 100% 106%,rgba(225,29,72,0.20),transparent 64%);animation:drift 20s ease-in-out infinite alternate} @keyframes drift{from{transform:translate(0,0)}to{transform:translate(-30px,24px)}} .hf-modal{scrollbar-width:none;-ms-overflow-style:none} .hf-modal::-webkit-scrollbar{display:none;width:0;height:0} .hf-tap{transition:transform .09s ease,box-shadow .09s ease,background-color .09s ease;-webkit-tap-highlight-color:transparent;cursor:pointer} .hf-tap:active{transform:scale(.98);background-color:rgba(225,29,72,0.16)!important;box-shadow:inset 0 0 0 1.5px rgba(225,29,72,0.55),0 4px 14px rgba(225,29,72,0.18)!important}` }} />
       {false && <div className="hf-glow" aria-hidden="true" />}
       {subMsg && (
-        <div onClick={() => setSubMsg("")} style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 120, background: subMsg === "ok" ? EMBER : INK2, color: PAPER, padding: "12px 16px", paddingTop: "calc(12px + env(safe-area-inset-top))", textAlign: "center", fontSize: 13.5, lineHeight: 1.5, cursor: "pointer", boxShadow: "0 4px 18px rgba(0,0,0,.4)" }}>
+        <div onClick={() => setSubMsg("")} style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 120, background: subMsg === "ok" ? EMBER : INK2, color: subMsg === "ok" ? "#fff" : PAPER, padding: "12px 16px", paddingTop: "calc(12px + env(safe-area-inset-top))", textAlign: "center", fontSize: 13.5, lineHeight: 1.5, cursor: "pointer", boxShadow: "0 4px 18px rgba(0,0,0,.4)" }}>
           {subMsg === "ok" ? T("subOk") : subMsg === "cancel" ? T("subCancel") : T("subErr")}
           <span style={{ opacity: 0.7, marginLeft: 8, fontWeight: 700 }}>✕</span>
         </div>
@@ -1669,7 +1669,7 @@ export default function App() {
             <div style={{ fontSize: 13, fontWeight: 600 }}>{T("install")}</div>
             <div style={{ fontSize: 11, color: MUTED, marginTop: 1 }}>{T("installHint")}</div>
           </div>
-          <button onClick={doInstall} style={{ background: EMBER, color: PAPER, border: "none", padding: "8px 14px", borderRadius: 8, ...disp, fontWeight: 700, fontSize: 12.5, letterSpacing: 0.5, cursor: "pointer", whiteSpace: "nowrap" }}>{T("installBtn")}</button>
+          <button onClick={doInstall} style={{ background: EMBER, color: "#fff", border: "none", padding: "8px 14px", borderRadius: 8, ...disp, fontWeight: 700, fontSize: 12.5, letterSpacing: 0.5, cursor: "pointer", whiteSpace: "nowrap" }}>{T("installBtn")}</button>
           <div onClick={dismissInstall} style={{ cursor: "pointer", color: MUTED, fontSize: 20, lineHeight: 1, padding: "0 2px" }}>×</div>
         </div>
       )}
@@ -1690,7 +1690,7 @@ export default function App() {
                 </div>
               </div>
             ))}
-            <div onClick={() => setShowInstallHelp(false)} style={{ cursor: "pointer", textAlign: "center", background: EMBER, color: PAPER, padding: "12px 0", borderRadius: 10, ...disp, fontWeight: 700, fontSize: 15, marginTop: 4 }}>{T("installClose")}</div>
+            <div onClick={() => setShowInstallHelp(false)} style={{ cursor: "pointer", textAlign: "center", background: EMBER, color: "#fff", padding: "12px 0", borderRadius: 10, ...disp, fontWeight: 700, fontSize: 15, marginTop: 4 }}>{T("installClose")}</div>
           </div>
         </div>
       )}
@@ -1802,7 +1802,7 @@ export default function App() {
                     </div>}
               </div>
 
-              <button onClick={handleBuild} disabled={loading} style={{ width: "100%", background: EMBER, color: PAPER, border: "none", padding: "14px 0", borderRadius: 10, ...disp, fontWeight: 700, fontSize: 16, letterSpacing: 1, textTransform: "uppercase", cursor: loading ? "default" : "pointer", opacity: loading ? 0.7 : 1 }}>
+              <button onClick={handleBuild} disabled={loading} style={{ width: "100%", background: EMBER, color: "#fff", border: "none", padding: "14px 0", borderRadius: 10, ...disp, fontWeight: 700, fontSize: 16, letterSpacing: 1, textTransform: "uppercase", cursor: loading ? "default" : "pointer", opacity: loading ? 0.7 : 1 }}>
                 {loading ? T("building") : T("build")}
               </button>
               <div onClick={() => { if (!loading) buildOwnPlan(); }} style={{ cursor: loading ? "default" : "pointer", textAlign: "center", marginTop: 10, color: EMBER, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.3 }}>{T("buildOwn")}</div>
@@ -1863,7 +1863,7 @@ export default function App() {
                   {error && !loading && (
                     <div style={{ background: "rgba(225,29,72,0.1)", border: `1px solid ${EMBER}`, borderRadius: 12, padding: 16, textAlign: "center" }}>
                       <div style={{ marginBottom: 12, color: PAPER, fontSize: 13, wordBreak: "break-word" }}>{error}</div>
-                      <button onClick={handleBuild} style={{ background: EMBER, color: PAPER, border: "none", padding: "9px 22px", borderRadius: 8, fontWeight: 700, cursor: "pointer", ...disp, letterSpacing: 1 }}>{T("retry")}</button>
+                      <button onClick={handleBuild} style={{ background: EMBER, color: "#fff", border: "none", padding: "9px 22px", borderRadius: 8, fontWeight: 700, cursor: "pointer", ...disp, letterSpacing: 1 }}>{T("retry")}</button>
                     </div>
                   )}
 
@@ -1875,7 +1875,7 @@ export default function App() {
                         {planEmail === "sent" && <div style={{ fontSize: 12, color: SAGE, marginBottom: 10, lineHeight: 1.5 }}>{T("emailedPlan")}</div>}
                         {planEmail === "sending" && <div style={{ fontSize: 12, color: MUTED, marginBottom: 10, lineHeight: 1.5 }}>{T("emailingPlan")}</div>}
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-                          <div onClick={downloadTracker} style={{ cursor: trackerBusy ? "default" : "pointer", opacity: trackerBusy ? 0.7 : 1, padding: "10px 16px", borderRadius: 8, border: "none", background: EMBER, color: PAPER, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.3 }}>{trackerBusy ? T("dlPreparing") : T("dlTracker")}</div>
+                          <div onClick={downloadTracker} style={{ cursor: trackerBusy ? "default" : "pointer", opacity: trackerBusy ? 0.7 : 1, padding: "10px 16px", borderRadius: 8, border: "none", background: EMBER, color: "#fff", fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.3 }}>{trackerBusy ? T("dlPreparing") : T("dlTracker")}</div>
                         </div>
                         <div style={{ fontSize: 11.5, color: MUTED, marginTop: 10, lineHeight: 1.5 }}>{T("dlHint")}</div>
                       </div>
@@ -1931,7 +1931,7 @@ export default function App() {
                           <div key={i} style={{ display: "flex", gap: 9, alignItems: "flex-start", fontSize: 13.5 }}><span style={{ color: EMBER, fontWeight: 800 }}>✓</span><span>{t}</span></div>
                         ))}
                       </div>
-                      <div onClick={() => setShowAuth(true)} style={{ cursor: "pointer", textAlign: "center", background: EMBER, color: PAPER, padding: "16px 0", borderRadius: 11, ...disp, fontWeight: 700, fontSize: 17, letterSpacing: 0.6, textTransform: "uppercase", boxShadow: "0 6px 22px rgba(225,29,72,0.38)" }}>{T("subscribeCta")}</div>
+                      <div onClick={() => setShowAuth(true)} style={{ cursor: "pointer", textAlign: "center", background: EMBER, color: "#fff", padding: "16px 0", borderRadius: 11, ...disp, fontWeight: 700, fontSize: 17, letterSpacing: 0.6, textTransform: "uppercase", boxShadow: "0 6px 22px rgba(225,29,72,0.38)" }}>{T("subscribeCta")}</div>
                       <div onClick={() => setShowAuth(true)} style={{ cursor: "pointer", textAlign: "center", color: EMBER_SOFT, marginTop: 11, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.3 }}>{T("subYearUpsell")}</div>
                       <div style={{ fontSize: 11, color: MUTED, marginTop: 11, textAlign: "center" }}>{T("lockFoot")}</div>
                       {!inDemo && (
@@ -1952,7 +1952,7 @@ export default function App() {
                           <div style={{ ...disp, fontSize: 17, fontWeight: 700, marginBottom: 4 }}>{T("leadTitle")}</div>
                           <div style={{ fontSize: 12.5, color: MUTED, marginBottom: 12, lineHeight: 1.5 }}>{T("leadSub")}</div>
                           <input style={{ ...input, marginBottom: 9 }} type="email" value={email} onChange={(ev) => { setEmail(ev.target.value); if (leadStatus !== "idle") setLeadStatus("idle"); }} placeholder={T("leadPh")} />
-                          <button onClick={subscribe} disabled={leadStatus === "sending"} style={{ width: "100%", background: EMBER, color: PAPER, border: "none", padding: "13px 0", borderRadius: 9, ...disp, fontWeight: 700, fontSize: 14.5, letterSpacing: 0.5, textTransform: "uppercase", cursor: leadStatus === "sending" ? "default" : "pointer" }}>
+                          <button onClick={subscribe} disabled={leadStatus === "sending"} style={{ width: "100%", background: EMBER, color: "#fff", border: "none", padding: "13px 0", borderRadius: 9, ...disp, fontWeight: 700, fontSize: 14.5, letterSpacing: 0.5, textTransform: "uppercase", cursor: leadStatus === "sending" ? "default" : "pointer" }}>
                             {leadStatus === "sending" ? T("leadSending") : T("leadBtn")}
                           </button>
                           {leadStatus === "bad" && <div style={{ fontSize: 11.5, color: EMBER_SOFT, marginTop: 8 }}>{T("leadBad")}</div>}
@@ -2029,7 +2029,7 @@ export default function App() {
               <div style={{ fontSize: 10.5, letterSpacing: 1, textTransform: "uppercase", color: MUTED, fontWeight: 700, marginBottom: 8 }}>{lang === "nl" ? "Eenheden" : "Units"}</div>
               <div style={{ display: "flex", gap: 6, background: INK2, border: `1px solid ${LINE}`, borderRadius: 10, padding: 4 }}>
                 {[["metric", lang === "nl" ? "Metrisch · g / kg" : "Metric · g / kg"], ["imperial", lang === "nl" ? "Imperiaal · oz / lb" : "Imperial · oz / lb"]].map(([u, lbl]) => (
-                  <div key={u} onClick={() => setUnitsSave(u)} style={{ flex: 1, textAlign: "center", cursor: "pointer", ...disp, fontWeight: 700, fontSize: 12.5, letterSpacing: 0.3, padding: "10px 0", borderRadius: 7, background: units === u ? EMBER : "transparent", color: units === u ? PAPER : MUTED }}>{lbl}</div>
+                  <div key={u} onClick={() => setUnitsSave(u)} style={{ flex: 1, textAlign: "center", cursor: "pointer", ...disp, fontWeight: 700, fontSize: 12.5, letterSpacing: 0.3, padding: "10px 0", borderRadius: 7, background: units === u ? EMBER : "transparent", color: units === u ? "#fff" : MUTED }}>{lbl}</div>
                 ))}
               </div>
               <div style={{ fontSize: 10.5, color: MUTED, marginTop: 7, lineHeight: 1.5 }}>{lang === "nl" ? "Geldt voor gewichten in de hele app, altijd aanpasbaar." : "Applies to weights across the app, change it anytime."}</div>
@@ -2075,7 +2075,7 @@ export default function App() {
         <div style={{ position: "fixed", left: "50%", transform: "translateX(-50%)", bottom: "calc(env(safe-area-inset-bottom) + 96px)", zIndex: 80, display: "flex", alignItems: "center", gap: 12, background: INK2, border: `1px solid ${SAGE}`, borderRadius: 12, padding: "11px 14px", boxShadow: "0 10px 30px rgba(0,0,0,0.5)", maxWidth: "92vw" }}>
           <span style={{ color: SAGE, fontSize: 16, fontWeight: 800 }}>✓</span>
           <span style={{ fontSize: 13.5, color: PAPER, fontWeight: 600 }}>{T("savedFlash")}</span>
-          <div onClick={() => { setSaveFlash(false); setPlanEdit(false); setTab("dashboard"); try { window.scrollTo(0, 0); } catch (e) {} }} style={{ cursor: "pointer", marginLeft: 4, background: EMBER, color: PAPER, borderRadius: 8, padding: "7px 12px", fontSize: 12.5, fontWeight: 700, ...disp, letterSpacing: 0.3, whiteSpace: "nowrap" }}>{T("toDashboard")} →</div>
+          <div onClick={() => { setSaveFlash(false); setPlanEdit(false); setTab("dashboard"); try { window.scrollTo(0, 0); } catch (e) {} }} style={{ cursor: "pointer", marginLeft: 4, background: EMBER, color: "#fff", borderRadius: 8, padding: "7px 12px", fontSize: 12.5, fontWeight: 700, ...disp, letterSpacing: 0.3, whiteSpace: "nowrap" }}>{T("toDashboard")} →</div>
           <div onClick={() => setSaveFlash(false)} style={{ cursor: "pointer", color: MUTED, fontSize: 15, padding: "0 2px" }}>×</div>
         </div>
       )}
@@ -2086,7 +2086,7 @@ export default function App() {
           <div onClick={(e) => e.stopPropagation()} style={{ background: INK, border: `1px solid ${LINE}`, borderRadius: 18, width: "100%", maxWidth: 360, padding: 22, textAlign: "center", backgroundImage: "radial-gradient(130% 70% at 50% -10%, rgba(225,29,72,0.14), transparent 60%)" }}>
             <div style={{ ...disp, fontWeight: 700, fontSize: 18, marginBottom: 18, lineHeight: 1.3 }}>{T("logoutTitle")}</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              <div onClick={confirmLogout} style={{ cursor: "pointer", background: EMBER, color: PAPER, padding: "13px 0", borderRadius: 10, ...disp, fontWeight: 700, fontSize: 15, letterSpacing: 0.5 }}>{T("logoutYes")}</div>
+              <div onClick={confirmLogout} style={{ cursor: "pointer", background: EMBER, color: "#fff", padding: "13px 0", borderRadius: 10, ...disp, fontWeight: 700, fontSize: 15, letterSpacing: 0.5 }}>{T("logoutYes")}</div>
               <div onClick={() => setShowLogout(false)} style={{ cursor: "pointer", border: `1px solid ${LINE}`, color: PAPER, padding: "13px 0", borderRadius: 10, ...disp, fontWeight: 700, fontSize: 15, letterSpacing: 0.5 }}>{T("logoutNo")}</div>
             </div>
           </div>
