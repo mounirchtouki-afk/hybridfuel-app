@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, SAGE, SHADOW, disp, num, sectionTitle, load, save, todayISO, WD, jsDayToIdx, kgShow, bUnit, mlShow, vUnit } from "../shared.js";
+import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, SAGE, SHADOW, TRACK, disp, num, sectionTitle, load, save, todayISO, WD, jsDayToIdx, kgShow, bUnit, mlShow, vUnit } from "../shared.js";
 import { supabase } from "../supabaseClient.js";
 
 const T = {
@@ -37,14 +37,17 @@ const T = {
   sessions: { nl: "sessies", en: "sessions" },
 };
 
-function Ring({ pct, size = 58 }) {
-  const R = size / 2 - 5, C = 2 * Math.PI * R, off = C * (1 - Math.max(0, Math.min(1, pct)));
+function Ring({ pct, size = 64 }) {
+  const sw = 6, R = size / 2 - sw, C = 2 * Math.PI * R, off = C * (1 - Math.max(0, Math.min(1, pct)));
+  const c = size / 2;
   return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-      <circle cx={size / 2} cy={size / 2} r={R} fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="5" />
-      <circle cx={size / 2} cy={size / 2} r={R} fill="none" stroke={PAPER} strokeWidth="5" strokeLinecap="round" strokeDasharray={C} strokeDashoffset={off} transform={`rotate(-90 ${size / 2} ${size / 2})`} />
-      <text x={size / 2} y={size / 2 + 4} textAnchor="middle" fill={PAPER} fontSize="13" fontFamily="Oswald" fontWeight="600">{Math.round(pct * 100)}%</text>
-    </svg>
+    <div style={{ position: "relative", width: size, height: size, borderRadius: "50%", boxShadow: "0 4px 14px rgba(17,17,26,0.10), 0 1px 3px rgba(17,17,26,0.08)", flexShrink: 0 }}>
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ display: "block" }}>
+        <circle cx={c} cy={c} r={R} fill={INK2} stroke={TRACK} strokeWidth={sw} />
+        <circle cx={c} cy={c} r={R} fill="none" stroke={EMBER} strokeWidth={sw} strokeLinecap="round" strokeDasharray={C} strokeDashoffset={off} transform={`rotate(-90 ${c} ${c})`} />
+      </svg>
+      <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Oswald, sans-serif", fontWeight: 700, fontSize: 13.5, color: PAPER }}>{Math.round(pct * 100)}%</div>
+    </div>
   );
 }
 
