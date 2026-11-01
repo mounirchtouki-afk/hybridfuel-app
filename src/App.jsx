@@ -1661,8 +1661,8 @@ export default function App() {
         </div>
       )}
 
-      {/* INSTALL-BANNER, voor iedereen die de app nog niet geïnstalleerd heeft (ook iPhone) */}
-      {!isStandalone && !installDismissed && !inDemo && (
+      {/* INSTALL-BANNER, alleen op web (niet in de native app, die ís al geïnstalleerd) */}
+      {!IS_NATIVE && !isStandalone && !installDismissed && !inDemo && (
         <div style={{ background: "rgba(225,29,72,0.1)", borderBottom: `1px solid ${LINE}`, padding: "10px 16px", display: "flex", alignItems: "center", gap: 12, position: "relative", zIndex: 1 }}>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M12 3v12M8 11l4 4 4-4" /><path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" /></svg>
           <div style={{ flex: 1, minWidth: 0 }}>

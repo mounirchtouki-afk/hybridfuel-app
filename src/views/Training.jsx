@@ -12,6 +12,24 @@ function medalIcon(key, col) {
   };
   return <svg width="22" height="22" viewBox="0 0 24 24">{paths[key] || paths.dist}</svg>;
 }
+
+// Alle gelogde trainingen (hf_workouts_<datum>) als records voor de prestaties.
+// Dit is de echte bron van wat de gebruiker heeft gedaan, niet alleen runner-sessies.
+function gatherWorkoutRecords() {
+  const out = [];
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.indexOf("hf_workouts_") === 0) {
+        const date = k.slice(12);
+        let arr = [];
+        try { arr = JSON.parse(localStorage.getItem(k) || "[]"); } catch (e) {}
+        if (Array.isArray(arr)) arr.forEach((w) => out.push({ date, kcal: Number(w.kcal) || 0, min: Number(w.min) || 0, km: (Number(w.dist) || 0) / 1000 }));
+      }
+    }
+  } catch (e) {}
+  return out;
+}
 import BrandCalendar from "./BrandCalendar.jsx";
 import { EXERCISES, WORKOUT_CATS, INTENSITY, kcalFor, exerciseByName } from "../workouts.js";
 import { Dropdown } from "../ui.jsx";
@@ -172,7 +190,7 @@ export default function Training({ lang, session, weight }) {
     resetPanel(); setAdding(false);
   }
   function delLog(id) { persistLog(list.filter((x) => x.id !== id)); }
-  function logPlanned(it) { persistLog([...list, { id: "w" + Date.now(), name: it.name, met: it.met, min: it.min, kcal: it.kcal, ts: Date.now() }]); }
+  function logPlanned(it) { persistLog([...list, { id: "w" + Date.now(), name: it.name, met: it.met, min: it.min, kcal: it.kcal, dist: it.dist || null, ts: Date.now() }]); }
 
   // --- Afvinken van geplande sessies (los of de hele training in één tik) ---
   const planKey = (i) => d + ":" + i;
@@ -182,13 +200,13 @@ export default function Training({ lang, session, weight }) {
       persistLog(list.filter((x) => x.planKey !== planKey(i)));
       setCheckedSave(checked.filter((c) => c !== i));
     } else {
-      persistLog([...list, { id: "w" + Date.now() + "_" + i, name: it.name, met: it.met, min: it.min, kcal: it.kcal, ts: Date.now(), planKey: planKey(i) }]);
+      persistLog([...list, { id: "w" + Date.now() + "_" + i, name: it.name, met: it.met, min: it.min, kcal: it.kcal, dist: it.dist || null, ts: Date.now(), planKey: planKey(i) }]);
       setCheckedSave([...checked, i]);
     }
   }
   function markAllPlanned(items) {
     const adds = items.map((it, i) => ({ it, i })).filter(({ i }) => !checked.includes(i))
-      .map(({ it, i }) => ({ id: "w" + Date.now() + "_" + i, name: it.name, met: it.met, min: it.min, kcal: it.kcal, ts: Date.now(), planKey: planKey(i) }));
+      .map(({ it, i }) => ({ id: "w" + Date.now() + "_" + i, name: it.name, met: it.met, min: it.min, kcal: it.kcal, dist: it.dist || null, ts: Date.now(), planKey: planKey(i) }));
     if (adds.length) persistLog([...list, ...adds]);
     setCheckedSave(items.map((_, i) => i));
   }
@@ -658,7 +676,13 @@ function SessionSummary({ lang, data, onClose, onUndo, t }) {
 // Prestaties-tab: levensloop-stats + medailles met niveaus.
 function Prestaties({ lang, sessions }) {
   const t = (nl, en) => (lang === "nl" ? nl : en);
-  const totals = aggregate(sessions);
+  // Bron: alle gelogde trainingen (kcal/min/sessies/reeks). Km uit sessie-records
+  // (die hebben afstand; losse logs nog niet), bij elkaar opgeteld.
+  const wrecs = gatherWorkoutRecords();
+  const wtot = aggregate(wrecs);
+  const sessKm = (Array.isArray(sessions) ? sessions : []).reduce((a, s) => a + (Number(s.km) || 0), 0);
+  const hasAny = wrecs.length > 0 || (Array.isArray(sessions) && sessions.length > 0);
+  const totals = { ...wtot, km: Math.round((wtot.km + sessKm) * 10) / 10 };
   const TN = TIER_NAMES[lang === "nl" ? "nl" : "en"];
   const nf = (n) => n.toLocaleString(lang === "nl" ? "nl-NL" : "en-US");
   const statTile = (v, unit, l) => (
@@ -667,7 +691,7 @@ function Prestaties({ lang, sessions }) {
       <div style={{ fontSize: 10.5, letterSpacing: 0.5, textTransform: "uppercase", color: MUTED, marginTop: 6, fontWeight: 600 }}>{l}</div>
     </div>
   );
-  if (!sessions || sessions.length === 0) {
+  if (!hasAny) {
     return (
       <div>
         <div style={{ fontSize: 12.5, color: MUTED, marginBottom: 14, lineHeight: 1.5 }}>{t("Alles wat je tot nu toe hebt neergezet. Blijf trainen, verdien je medailles.", "Everything you've put down so far. Keep training, earn your medals.")}</div>
