@@ -381,7 +381,7 @@ function FeastPlanner({ lang, week, baseIso, onClose }) {
 
   const L = {
     title: lang === "nl" ? "Uit-eten-dag plannen" : "Plan an eating-out day",
-    intro: lang === "nl" ? "Weet je dat je ergens uit eet? Kies de dag en een ruwe schatting. We trimmen de andere dagen van die week een beetje, zodat je weekgemiddelde klopt, binnen gezonde grenzen." : "Know you're eating out? Pick the day and a rough estimate. We'll trim the other days of that week a little, so your weekly average holds, within healthy limits.",
+    intro: lang === "nl" ? "Weet je dat je ergens uit eet? Kies de dag en een ruwe schatting. We trimmen de komende dagen een beetje (op een zondag loopt dat door naar de week erop), zodat je weekgemiddelde klopt, binnen gezonde grenzen." : "Know you're eating out? Pick the day and a rough estimate. We'll trim the coming days a little (on a Sunday this rolls into next week), so your weekly average holds, within healthy limits.",
     dateL: lang === "nl" ? "Welke dag?" : "Which day?",
     howL: lang === "nl" ? "Hoeveel extra, ongeveer?" : "Roughly how much extra?",
     estimate: lang === "nl" ? "Het is een schatting, op de dag zelf log je gewoon wat je echt at." : "It's an estimate, on the day you just log what you really ate.",
@@ -397,7 +397,13 @@ function FeastPlanner({ lang, week, baseIso, onClose }) {
     const base = baseDayFor(feastIso, week);
     if (!base) { setResult({ err: true }); return; }
     const surplus = preset;
-    const trimDates = weekDatesFrom(feastIso).filter((x) => x !== feastIso && x > today);
+    // Trim de komende dagen van de feast-week; heeft die te weinig dagen over
+    // (bv. een zondag), dan loopt het door naar de week erop.
+    const wk1 = weekDatesFrom(feastIso).filter((x) => x !== feastIso && x > today);
+    const nd = new Date(feastIso + "T12:00:00"); nd.setDate(nd.getDate() + 7);
+    const nextIso = nd.getFullYear() + "-" + String(nd.getMonth() + 1).padStart(2, "0") + "-" + String(nd.getDate()).padStart(2, "0");
+    const wk2 = weekDatesFrom(nextIso).filter((x) => x !== feastIso && x > today);
+    const trimDates = [...wk1, ...wk2].filter((x, i, a) => a.indexOf(x) === i).slice(0, 6);
     const { ops, applied } = planReductions(trimDates, week, surplus);
     const snap = [{ iso: feastIso, prev: load("hf_dayover_" + feastIso, null) }, ...ops.map((o) => ({ iso: o.iso, prev: load("hf_dayover_" + o.iso, null) }))];
     const T = dayTotal(base);
@@ -428,11 +434,11 @@ function FeastPlanner({ lang, week, baseIso, onClose }) {
               {result.err ? L.err
                 : (Math.abs(result.applied) < result.surplus - 40
                   ? (lang === "nl"
-                    ? `+${result.surplus} kcal ingepland. We konden ~${Math.abs(result.applied)} kcal over de week verdelen, de rest laten we gaan. Eén dag uit eten hoort erbij.`
-                    : `+${result.surplus} kcal planned. We could spread ~${Math.abs(result.applied)} kcal over the week, the rest we let go. One day out is fine.`)
+                    ? `+${result.surplus} kcal ingepland. We konden ~${Math.abs(result.applied)} kcal over de komende dagen verdelen, de rest laten we gaan. Eén dag uit eten hoort erbij.`
+                    : `+${result.surplus} kcal planned. We could spread ~${Math.abs(result.applied)} kcal over the coming days, the rest we let go. One day out is fine.`)
                   : (lang === "nl"
-                    ? `+${result.surplus} kcal ingepland. ${result.days} ${result.days === 1 ? "dag" : "dagen"} deze week licht getrimd; je weekgemiddelde blijft op doel.`
-                    : `+${result.surplus} kcal planned. ${result.days} ${result.days === 1 ? "day" : "days"} this week lightly trimmed; your weekly average holds.`))}
+                    ? `+${result.surplus} kcal ingepland. ${result.days} ${result.days === 1 ? "dag" : "dagen"} licht getrimd (ook de week erop als nodig); je weekgemiddelde blijft op doel.`
+                    : `+${result.surplus} kcal planned. ${result.days} ${result.days === 1 ? "day" : "days"} lightly trimmed (into next week if needed); your weekly average holds.`))}
             </div>
             <div style={{ display: "flex", gap: 8 }}>
               {!result.err && <button onClick={undo} style={{ background: "transparent", color: EMBER, border: `1px solid ${EMBER}`, borderRadius: 9, padding: "11px 16px", ...disp, fontWeight: 700, fontSize: 13, cursor: "pointer" }}>{L.undo}</button>}
