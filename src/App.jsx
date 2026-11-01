@@ -1653,11 +1653,11 @@ export default function App() {
 
       {/* DEMO-BALK: zichtbaar in demo-modus; stuurt naar het ontgrendel-scherm */}
       {inDemo && (
-        <div style={{ background: EMBER, color: PAPER, padding: "9px 14px", display: "flex", alignItems: "center", gap: 10, position: "relative", zIndex: 1, flexWrap: "wrap" }}>
-          <span style={{ fontSize: 11, fontWeight: 700, ...disp, letterSpacing: 1, background: "rgba(255,255,255,0.18)", borderRadius: 4, padding: "2px 7px" }}>{lang === "nl" ? "VOORBEELD" : "PREVIEW"}</span>
-          <span style={{ flex: 1, minWidth: 110, fontSize: 12.5, lineHeight: 1.4 }}>{lang === "nl" ? "Je bekijkt een voorbeeld. Ontgrendel de app voor je eigen plan." : "You're viewing a sample. Unlock the app for your own plan."}</span>
-          <a href={SITE_URL} style={{ color: PAPER, fontSize: 12.5, fontWeight: 700, ...disp, letterSpacing: 0.3, textDecoration: "none", whiteSpace: "nowrap", opacity: 0.92 }}>{lang === "nl" ? "← Website" : "← Website"}</a>
-          <div onClick={() => setShowAuth(true)} style={{ cursor: "pointer", background: PAPER, color: EMBER, padding: "7px 15px", borderRadius: 8, fontSize: 12.5, fontWeight: 700, ...disp, letterSpacing: 0.3, whiteSpace: "nowrap" }}>{lang === "nl" ? "Ontgrendel" : "Unlock"}</div>
+        <div style={{ background: EMBER, color: "#fff", padding: "9px 14px", display: "flex", alignItems: "center", gap: 10, position: "relative", zIndex: 1, flexWrap: "wrap" }}>
+          <span style={{ fontSize: 11, fontWeight: 700, ...disp, letterSpacing: 1, color: "#fff", background: "rgba(255,255,255,0.18)", borderRadius: 4, padding: "2px 7px" }}>{lang === "nl" ? "VOORBEELD" : "PREVIEW"}</span>
+          <span style={{ flex: 1, minWidth: 110, fontSize: 12.5, lineHeight: 1.4, color: "#fff" }}>{lang === "nl" ? "Je bekijkt een voorbeeld. Ontgrendel de app voor je eigen plan." : "You're viewing a sample. Unlock the app for your own plan."}</span>
+          <a href={SITE_URL} style={{ color: "#fff", fontSize: 12.5, fontWeight: 700, ...disp, letterSpacing: 0.3, textDecoration: "none", whiteSpace: "nowrap", opacity: 0.92 }}>{lang === "nl" ? "← Website" : "← Website"}</a>
+          <div onClick={() => setShowAuth(true)} style={{ cursor: "pointer", background: "#fff", color: EMBER, padding: "7px 15px", borderRadius: 8, fontSize: 12.5, fontWeight: 700, ...disp, letterSpacing: 0.3, whiteSpace: "nowrap" }}>{lang === "nl" ? "Ontgrendel" : "Unlock"}</div>
         </div>
       )}
 
