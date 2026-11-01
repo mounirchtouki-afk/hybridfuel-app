@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, SAGE, disp, num, sectionTitle, load, save, todayISO, WD, jsDayToIdx, kgShow, bUnit, mlShow, vUnit } from "../shared.js";
+import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, SAGE, SHADOW, disp, num, sectionTitle, load, save, todayISO, WD, jsDayToIdx, kgShow, bUnit, mlShow, vUnit } from "../shared.js";
 import { supabase } from "../supabaseClient.js";
 
 const T = {
@@ -103,7 +103,7 @@ export default function Dashboard({ lang, session, week, targets, units, onGo })
   if (race && race.date) { const today = new Date(); today.setHours(0, 0, 0, 0); const rd = new Date(race.date + "T12:00:00"); rd.setHours(0, 0, 0, 0); cd = Math.round((rd - today) / 86400000); }
 
   const smallCard = (label, value, sub, onClick, accent) => (
-    <div onClick={onClick} className={onClick ? "hf-tap" : undefined} style={{ flex: 1, background: INK2, border: `1px solid ${LINE}`, borderRadius: 14, padding: "13px 14px", cursor: onClick ? "pointer" : "default" }}>
+    <div onClick={onClick} className={onClick ? "hf-tap" : undefined} style={{ flex: 1, background: INK2, border: `1px solid ${LINE}`, borderRadius: 14, padding: "13px 14px", boxShadow: SHADOW, cursor: onClick ? "pointer" : "default" }}>
       <div style={{ fontSize: 10, letterSpacing: 1, textTransform: "uppercase", color: MUTED, fontWeight: 600 }}>{label}</div>
       <div style={{ ...disp, fontSize: 21, fontWeight: 700, color: accent || PAPER, marginTop: 4, lineHeight: 1 }}>{value}</div>
       {sub && <div style={{ fontSize: 10.5, color: MUTED, marginTop: 3 }}>{sub}</div>}
@@ -164,7 +164,7 @@ export default function Dashboard({ lang, session, week, targets, units, onGo })
 
       {/* Race-aftelling of uitnodiging (hoog = prominent) */}
       {prefs.race && (cd !== null ? (
-        <div className="hf-tap" onClick={() => onGo("race")} style={{ cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", background: INK2, border: `1px solid ${EMBER}`, borderRadius: 14, padding: "14px 16px", backgroundImage: "radial-gradient(120% 90% at 100% 0%, rgba(225,29,72,0.16), transparent 60%)" }}>
+        <div className="hf-tap" onClick={() => onGo("race")} style={{ cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", background: INK2, border: `1px solid ${EMBER}`, borderRadius: 14, padding: "14px 16px", boxShadow: SHADOW, backgroundImage: "radial-gradient(120% 90% at 100% 0%, rgba(225,29,72,0.16), transparent 60%)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="13" r="8" /><path d="M12 13V8.5M12 3.5V2M9.5 2h5" /></svg>
             <div><div style={{ ...disp, fontWeight: 700, fontSize: 15 }}>{t("race")}</div><div style={{ fontSize: 10.5, color: MUTED }}>Race Protocol</div></div>
@@ -175,7 +175,7 @@ export default function Dashboard({ lang, session, week, targets, units, onGo })
           </div>
         </div>
       ) : (
-        <div className="hf-tap" onClick={() => onGo("race")} style={{ cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", background: INK2, border: `1px dashed ${LINE}`, borderRadius: 14, padding: "14px 16px" }}>
+        <div className="hf-tap" onClick={() => onGo("race")} style={{ cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", background: INK2, border: `1px dashed ${LINE}`, borderRadius: 14, padding: "14px 16px", boxShadow: SHADOW }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="13" r="8" /><path d="M12 13V8.5M12 3.5V2M9.5 2h5" /></svg>
             <div style={{ minWidth: 0 }}><div style={{ ...disp, fontWeight: 700, fontSize: 14.5 }}>{t("planRace")}</div><div style={{ fontSize: 10.5, color: MUTED, marginTop: 1 }}>{t("planRaceSub")}</div></div>
@@ -194,7 +194,7 @@ export default function Dashboard({ lang, session, week, targets, units, onGo })
 
       {/* Training vandaag */}
       {prefs.train && (
-        <div className="hf-tap" onClick={() => onGo("training")} style={{ cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", background: INK2, border: `1px solid ${LINE}`, borderRadius: 14, padding: "13px 16px" }}>
+        <div className="hf-tap" onClick={() => onGo("training")} style={{ cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", background: INK2, border: `1px solid ${LINE}`, borderRadius: 14, padding: "13px 16px", boxShadow: SHADOW }}>
           <div style={{ display: "flex", alignItems: "center", gap: 11, minWidth: 0 }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6.5 6.5l11 11M4 9l-1.5 1.5a1.5 1.5 0 000 2L4 14M20 9l1.5 1.5a1.5 1.5 0 010 2L20 14M7 4l1.5 1.5M17 20l-1.5-1.5" /></svg>
             <div style={{ minWidth: 0 }}>
@@ -220,7 +220,7 @@ export default function Dashboard({ lang, session, week, targets, units, onGo })
           </div>
           <div style={{ display: "grid", gap: 8 }}>
             {day && day.m.map((m, i) => (
-              <div key={i} className="hf-tap" onClick={() => onGo("today")} style={{ cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", background: INK2, border: `1px solid ${eaten[i] ? EMBER : LINE}`, borderRadius: 12, padding: "11px 14px", opacity: eaten[i] ? 0.7 : 1 }}>
+              <div key={i} className="hf-tap" onClick={() => onGo("today")} style={{ cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", background: INK2, border: `1px solid ${eaten[i] ? EMBER : LINE}`, borderRadius: 12, padding: "11px 14px", boxShadow: SHADOW, opacity: eaten[i] ? 0.7 : 1 }}>
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontSize: 9.5, color: EMBER, letterSpacing: 1, textTransform: "uppercase", fontWeight: 600 }}>{m.t}</div>
                   <div style={{ fontSize: 13.5, fontWeight: 500, color: PAPER, textDecoration: eaten[i] ? "line-through" : "none" }}>{m.n}</div>
