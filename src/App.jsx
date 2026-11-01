@@ -15,6 +15,7 @@ import Training from "./views/Training.jsx";
 import AccessQR from "./views/AccessQR.jsx";
 import WeekReview from "./views/WeekReview.jsx";
 import WeekPlan from "./views/WeekPlan.jsx";
+import { APP_VERSION } from "./version.js";
 import { RECIPES, snackOptions } from "./recipes.js";
 import { buildDaysFromProducts, productPlanReadiness } from "./ownplan.js";
 import Reminders, { checkReminders } from "./views/Reminders.jsx";
@@ -2045,6 +2046,7 @@ export default function App() {
                 <div style={{ fontSize: 10.5, color: MUTED, marginTop: 7, lineHeight: 1.5 }}>{lang === "nl" ? "Automatisch volgt je telefoon (licht of donker)." : "Automatic follows your phone (light or dark)."}</div>
               </div>
             )}
+            <div style={{ textAlign: "center", marginTop: 16, paddingTop: 12, borderTop: `1px solid ${LINE}`, fontSize: 11, color: MUTED, letterSpacing: 0.3, ...disp, fontWeight: 600 }}>HybridFuelCo · v{APP_VERSION}</div>
           </div>
         </div>
       )}
