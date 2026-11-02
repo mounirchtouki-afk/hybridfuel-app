@@ -20,6 +20,27 @@ export default function AdminDash({ session, lang, onClose }) {
   const [demo, setDemo] = useState(null);
   const [reset, setReset] = useState(null);
   const [expBusy, setExpBusy] = useState(false);
+  const [sched, setSched] = useState(null);
+
+  function download(obj, fname) {
+    const blob = new Blob([JSON.stringify(obj, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url; link.download = fname;
+    document.body.appendChild(link); link.click(); link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  }
+  async function backupOne(a) {
+    setRowBusy(a.id); setErr("");
+    try { const d = await call("admin.export", { targetUserId: a.id }); download(d, "hybridfuel-" + (a.email || a.id).replace(/[^a-z0-9]/gi, "_") + "-" + new Date().toISOString().slice(0, 10) + ".json"); }
+    catch (e) { setErr(t("Back-up klant mislukt: ", "Customer backup failed: ") + String(e.message || e)); }
+    setRowBusy("");
+  }
+  async function changeSched(v) {
+    setSched(v);
+    try { await call("admin.setBackupSchedule", { schedule: v }); }
+    catch (e) { setErr(t("Instelling opslaan mislukt (KV niet actief?).", "Saving setting failed (KV off?).")); }
+  }
 
   async function resetPw(a) {
     setRowBusy(a.id); setErr("");
@@ -65,7 +86,7 @@ export default function AdminDash({ session, lang, onClose }) {
     catch (e) { setErr(String(e.message || e)); }
     setBusy(false);
   }
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, []);
+  useEffect(() => { load(); call("admin.getBackupSchedule").then((d) => setSched(d && d.schedule || "monthly")).catch(() => setSched("monthly")); /* eslint-disable-next-line */ }, []);
 
   async function setTier(a, tier) {
     if (a.tier === tier) return;
@@ -173,6 +194,18 @@ export default function AdminDash({ session, lang, onClose }) {
           );
         })()}
 
+        <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", background: INK2, border: `1px solid ${LINE}`, borderRadius: 12, padding: "11px 14px", marginBottom: 16 }}>
+          <div style={{ flex: 1, minWidth: 180 }}>
+            <div style={{ ...disp, fontWeight: 700, fontSize: 13, color: PAPER }}>{t("Automatische back-up", "Automatic backup")}</div>
+            <div style={{ fontSize: 11, color: MUTED, marginTop: 1 }}>{t("Volledige back-up gemaild naar jou (bijlage).", "Full backup emailed to you (attachment).")}</div>
+          </div>
+          <div style={{ display: "flex", gap: 6 }}>
+            {[["off", t("Uit", "Off")], ["weekly", t("Wekelijks", "Weekly")], ["monthly", t("Maandelijks", "Monthly")]].map(([id, lbl]) => (
+              <div key={id} onClick={() => changeSched(id)} style={{ cursor: "pointer", fontSize: 12, fontWeight: 700, ...disp, padding: "7px 12px", borderRadius: 8, border: `1px solid ${sched === id ? EMBER : LINE}`, background: sched === id ? EMBER : "transparent", color: sched === id ? "#fff" : MUTED }}>{lbl}</div>
+            ))}
+          </div>
+        </div>
+
         {demo && (
           <div style={{ background: "rgba(88,194,125,0.10)", border: `1px solid ${GREEN}`, borderRadius: 12, padding: "14px 16px", marginBottom: 16 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
@@ -227,6 +260,7 @@ export default function AdminDash({ session, lang, onClose }) {
                 ))}
                 {a.has_customer && <div onClick={() => openStripe(a)} title="Stripe" style={{ cursor: "pointer", fontSize: 10, fontWeight: 700, ...disp, padding: "4px 7px", borderRadius: 6, border: `1px solid ${LINE}`, color: MUTED }}>Stripe ↗</div>}
                 <div onClick={() => resetPw(a)} title={t("Wachtwoord resetten", "Reset password")} style={{ cursor: "pointer", fontSize: 10, fontWeight: 700, ...disp, padding: "4px 7px", borderRadius: 6, border: `1px solid ${LINE}`, color: MUTED }}>{t("Reset ww", "Reset pw")}</div>
+                <div onClick={() => backupOne(a)} title={t("Back-up van deze klant", "Back up this customer")} style={{ cursor: "pointer", fontSize: 10, fontWeight: 700, ...disp, padding: "4px 7px", borderRadius: 6, border: `1px solid ${LINE}`, color: GREEN }}>↓ {t("back-up", "backup")}</div>
               </div>
               <div style={{ fontSize: 12, color: a.gym ? PAPER : MUTED, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{a.gym || "—"}</div>
               <div style={{ fontSize: 12, color: MUTED }}>{fmtDate(a.created_at)}</div>

@@ -2,6 +2,7 @@ import { apiUrl } from "../apiBase";
 import React, { useState, useEffect } from "react";
 import { INK, INK2, PAPER, MUTED, LINE, SAGE, EMBER_SOFT, disp, sectionTitle, applyOrgTheme, THEME_TEMPLATES } from "../shared.js";
 import { supabase } from "../supabaseClient.js";
+import AdminDash from "./AdminDash.jsx";
 
 // Herbruikbaar uitklap-menu met aanvinkvakjes (meervoudige keuze, i.p.v. losse knoppen).
 function MultiPick({ options, selected, onToggle, placeholder, color }) {
@@ -37,8 +38,9 @@ function MultiPick({ options, selected, onToggle, placeholder, color }) {
 
 // Coach-dashboard: verschijnt als een ingelogde gebruiker de rol 'coach' heeft.
 // Toont de leden + voortgang, en laat de coach leden aanmaken (met code) + code resetten.
-export default function CoachDash({ session, org, isOwner, perms, lang, onLogout }) {
+export default function CoachDash({ session, org, isOwner, perms, lang, isAdmin, onLogout }) {
   const t = (nl, en) => (lang === "nl" ? nl : en);
+  const [showAdmin, setShowAdmin] = useState(false);
   const color = (org && org.brand_color) || "#E11D48";
   const token = session && session.access_token;
   // Altijd een VERS, geldig access-token ophalen (anders 401 op de server). Forceer een
@@ -809,6 +811,13 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
                 </div>
               );
             })}
+            {isAdmin && sec.items.includes("team") && (
+              <div onClick={() => { setShowAdmin(true); if (closeAfter) setNavOpen(false); }} style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: 11, padding: "10px 11px", borderRadius: 9, background: "transparent", color: "#f59e0b" }}>
+                <span style={{ display: "flex" }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l7 4v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-4z" /><path d="M9 12l2 2 4-4" /></svg></span>
+                <span style={{ ...disp, fontWeight: 700, fontSize: 13.5, flex: 1, color: "#f59e0b" }}>Admin</span>
+                <span style={{ fontSize: 9, letterSpacing: 0.5, fontWeight: 800, color: "#f59e0b", border: "1px solid #f59e0b", borderRadius: 5, padding: "1px 5px" }}>JIJ</span>
+              </div>
+            )}
           </div>
         );
       })}
@@ -848,6 +857,7 @@ export default function CoachDash({ session, org, isOwner, perms, lang, onLogout
 
   return (
     <div style={{ minHeight: "100vh", background: INK, color: PAPER, fontFamily: "Inter, sans-serif", display: "flex" }}>
+      {showAdmin && isAdmin && <AdminDash session={session} lang={lang} onClose={() => setShowAdmin(false)} />}
       {/* Zijbalk (desktop) */}
       {isWide && (
         <div style={{ width: 244, flexShrink: 0, borderRight: `1px solid ${LINE}`, background: INK, position: "sticky", top: 0, alignSelf: "flex-start", height: "100vh", display: "flex", flexDirection: "column", padding: "18px 14px", boxSizing: "border-box" }}>

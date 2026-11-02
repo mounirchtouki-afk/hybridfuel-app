@@ -1610,7 +1610,7 @@ export default function App() {
   // Sportschool-routes: join-scherm (code-login) en coach-dashboard gaan vóór de gewone app.
   const joinSlug = (() => { try { const m = location.pathname.match(/^\/join\/([a-z0-9-]+)/i); return m ? m[1].toLowerCase() : null; } catch (e) { return null; } })();
   if (joinSlug && !session) return <Join slug={joinSlug} lang={lang} />;
-  if (session && gymCtx && gymCtx.role === "coach" && !isAdmin) return <CoachDash session={session} org={gymCtx.org} isOwner={gymCtx.isOwner} perms={gymCtx.perms} lang={lang} onLogout={confirmLogout} />;
+  if (session && gymCtx && gymCtx.role === "coach") return <CoachDash session={session} org={gymCtx.org} isOwner={gymCtx.isOwner} perms={gymCtx.perms} lang={lang} isAdmin={isAdmin} onLogout={confirmLogout} />;
 
   return (
     <div style={{ minHeight: "100vh", background: isGymMember ? INK : "var(--hf-bg)", backgroundAttachment: "fixed", position: "relative", color: PAPER, fontFamily: "Inter, sans-serif", paddingBottom: `calc(${98 + consentH}px + env(safe-area-inset-bottom))` }}>

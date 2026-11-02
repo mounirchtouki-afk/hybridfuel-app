@@ -9,6 +9,8 @@
 
 // Admin-dashboard is ingevouwen in dit endpoint (Vercel Hobby zit op 12 functies).
 // Alleen dit e-mailadres mag de admin-ops aanroepen; server-side geverifieerd via het token.
+import { kv } from "./_kv.js";
+
 const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || "hybridfuelco@gmail.com").toLowerCase();
 
 function appBase(req) {
@@ -145,13 +147,32 @@ export default async function handler(req, res) {
       }
 
       if (op === "admin.export") {
-        const tables = ["profiles", "subscriptions", "weights", "plans", "recipes", "products", "orgs", "org_config", "org_members"];
+        const target = (body && body.targetUserId || "").trim();
+        // Per-klant: alleen de rijen van die gebruiker. Zonder target: alles (volledige back-up).
+        const userCol = { profiles: "id", subscriptions: "user_id", weights: "user_id", plans: "user_id", recipes: "user_id", products: "user_id", org_members: "auth_user_id" };
+        const tables = target
+          ? ["profiles", "subscriptions", "weights", "plans", "recipes", "products", "org_members"]
+          : ["profiles", "subscriptions", "weights", "plans", "recipes", "products", "orgs", "org_config", "org_members"];
         const out = {};
+        let email = "";
+        if (target) { try { const ur2 = await fetch(supaUrl + "/auth/v1/admin/users/" + encodeURIComponent(target), { headers: sv }); if (ur2.ok) { const u2 = await ur2.json().catch(() => ({})); email = (u2 && u2.email) || ""; } } catch (e) {} }
         for (const tb of tables) {
-          try { const r = await fetch(supaUrl + "/rest/v1/" + tb + "?select=*", { headers: sv }); out[tb] = r.ok ? await r.json().catch(() => []) : { error: r.status }; }
+          const filt = target && userCol[tb] ? "&" + userCol[tb] + "=eq." + encodeURIComponent(target) : "";
+          try { const r = await fetch(supaUrl + "/rest/v1/" + tb + "?select=*" + filt, { headers: sv }); out[tb] = r.ok ? await r.json().catch(() => []) : { error: r.status }; }
           catch (e) { out[tb] = { error: String(e).slice(0, 80) }; }
         }
-        return res.status(200).json({ ok: true, exportedAt: new Date().toISOString(), data: out });
+        return res.status(200).json({ ok: true, scope: target ? "customer" : "all", email, exportedAt: new Date().toISOString(), data: out });
+      }
+
+      if (op === "admin.getBackupSchedule") {
+        const d = await kv(["GET", "backup:schedule"]);
+        return res.status(200).json({ ok: true, schedule: (d && d.result) || "monthly", configured: !!(d && d.configured) });
+      }
+      if (op === "admin.setBackupSchedule") {
+        const val = ["off", "weekly", "monthly"].includes(body && body.schedule) ? body.schedule : "monthly";
+        const d = await kv(["SET", "backup:schedule", val]);
+        if (d && d.configured === false) return res.status(503).json({ error: "kv_not_configured" });
+        return res.status(200).json({ ok: true, schedule: val });
       }
 
       return res.status(400).json({ error: "unknown_op" });

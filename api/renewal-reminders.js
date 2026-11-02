@@ -207,5 +207,42 @@ export default async function handler(req, res) {
     } catch (e) { out.winback.skipped++; }
   }
 
+  // --- Segment C: automatische back-up naar de beheerder (instelbaar via KV) ---
+  try {
+    const schedRes = await kv(["GET", "backup:schedule"]);
+    const schedule = (schedRes && schedRes.result) || "monthly"; // off | weekly | monthly
+    out.backup = { schedule, due: false, sent: false };
+    if (schedule !== "off") {
+      const d = new Date(now);
+      const due = schedule === "weekly" ? (d.getUTCDay() === 1) : (d.getUTCDate() === 1); // ma of de 1e
+      out.backup.due = due;
+      if (due) {
+        const period = schedule === "weekly"
+          ? d.getUTCFullYear() + "-w" + Math.ceil(d.getUTCDate() / 7) + "-" + (d.getUTCMonth() + 1)
+          : d.getUTCFullYear() + "-" + (d.getUTCMonth() + 1);
+        if (await dedup("backup:sent:" + period, 3456000)) {
+          const tables = ["profiles", "subscriptions", "weights", "plans", "recipes", "products", "orgs", "org_config", "org_members"];
+          const data = {};
+          for (const tb of tables) {
+            try { const r = await fetch(url + "/rest/v1/" + tb + "?select=*", { headers: { apikey: svc, Authorization: "Bearer " + svc } }); data[tb] = r.ok ? await r.json().catch(() => []) : { error: r.status }; }
+            catch (e) { data[tb] = { error: String(e).slice(0, 80) }; }
+          }
+          const backup = JSON.stringify({ exportedAt: new Date().toISOString(), schedule, data });
+          const counts = tables.map((tb) => tb + ": " + (Array.isArray(data[tb]) ? data[tb].length : "?")).join(", ");
+          const admin = (process.env.ADMIN_EMAIL || "hybridfuelco@gmail.com");
+          const html = "<div style='font-family:Arial,sans-serif;color:#141215;line-height:1.6'>" +
+            "<p>Automatische HybridFuelCo back-up (" + schedule + ").</p>" +
+            "<p><b>Datum:</b> " + new Date().toISOString().slice(0, 10) + "<br><b>Inhoud:</b> " + counts + "</p>" +
+            "<p>De volledige back-up zit als bijlage (backup.json). Bewaar deze mail.</p></div>";
+          try {
+            await fetch(RENEWAL_WEBHOOK, { method: "POST", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ to: admin, subject: "HybridFuelCo back-up " + new Date().toISOString().slice(0, 10), html, filename: "backup-" + new Date().toISOString().slice(0, 10) + ".json", backup }) });
+            out.backup.sent = true;
+          } catch (e) {}
+        }
+      }
+    }
+  } catch (e) { out.backup = { error: String(e).slice(0, 80) }; }
+
   return res.status(200).json(out);
 }
