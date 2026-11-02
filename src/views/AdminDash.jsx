@@ -16,6 +16,17 @@ export default function AdminDash({ session, lang, onClose }) {
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState("all");
   const [rowBusy, setRowBusy] = useState("");
+  const [demoBusy, setDemoBusy] = useState(false);
+  const [demo, setDemo] = useState(null);
+
+  async function makeDemo() {
+    const name = window.prompt(t("Naam van de demo-sportschool?", "Name of the demo gym?"), "Demo Sportschool");
+    if (!name) return;
+    setDemoBusy(true); setErr("");
+    try { const d = await call("admin.createDemoGym", { gymName: name }); setDemo(d); }
+    catch (e) { setErr(t("Demo-gym aanmaken mislukt: ", "Demo gym failed: ") + String(e.message || e)); }
+    setDemoBusy(false);
+  }
 
   async function call(op, extra) {
     const r = await fetch(apiUrl("/api/billing-portal"), {
@@ -96,6 +107,7 @@ export default function AdminDash({ session, lang, onClose }) {
             <div style={{ fontSize: 12.5, color: MUTED, marginTop: 3 }}>{t("Alle accounts, abonnementen en sportscholen", "All accounts, subscriptions and gyms")}</div>
           </div>
           <div style={{ display: "flex", gap: 8 }}>
+            <div onClick={demoBusy ? null : makeDemo} className="hf-tap" style={{ cursor: demoBusy ? "default" : "pointer", fontSize: 12.5, fontWeight: 700, ...disp, color: "#fff", background: EMBER, borderRadius: 9, padding: "9px 13px", opacity: demoBusy ? 0.6 : 1 }}>{demoBusy ? "…" : t("+ Demo-gym", "+ Demo gym")}</div>
             <div onClick={load} className="hf-tap" style={{ cursor: "pointer", fontSize: 12.5, fontWeight: 700, ...disp, color: EMBER, border: `1px solid ${LINE}`, borderRadius: 9, padding: "9px 13px" }}>{busy ? "…" : t("Vernieuwen", "Refresh")}</div>
             <div onClick={onClose} style={{ cursor: "pointer", color: MUTED, fontSize: 18, width: 38, height: 38, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 9, border: `1px solid ${LINE}` }}>×</div>
           </div>
@@ -108,6 +120,22 @@ export default function AdminDash({ session, lang, onClose }) {
             {stat(counts.pro, "Pro")}
             {stat(counts.basis, "Basis")}
             {stat(counts.gyms, t("Sportscholen", "Gyms"))}
+          </div>
+        )}
+
+        {demo && (
+          <div style={{ background: "rgba(88,194,125,0.10)", border: `1px solid ${GREEN}`, borderRadius: 12, padding: "14px 16px", marginBottom: 16 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <div style={{ ...disp, fontWeight: 700, fontSize: 15, color: PAPER }}>{t("Demo-sportschool klaar", "Demo gym ready")} · {demo.name}</div>
+              <div onClick={() => setDemo(null)} style={{ cursor: "pointer", color: MUTED, fontSize: 16 }}>×</div>
+            </div>
+            <div style={{ fontSize: 12.5, color: PAPER, lineHeight: 1.7 }}>
+              {t("Log hiermee in om het groene gym-dashboard te zien:", "Log in with this to see the green gym dashboard:")}<br />
+              <b>{t("Coach e-mail", "Coach email")}:</b> <span style={{ color: GREEN }}>{demo.coachEmail}</span><br />
+              <b>{t("Wachtwoord", "Password")}:</b> <span style={{ color: GREEN }}>{demo.coachPass}</span><br />
+              <b>{t("Leden-link (codes)", "Member link (codes)")}:</b> <span style={{ color: GREEN, wordBreak: "break-all" }}>{demo.joinUrl}</span>
+            </div>
+            <div style={{ fontSize: 11, color: MUTED, marginTop: 8 }}>{t("Noteer dit — het wachtwoord zie je maar één keer. Log eerst uit, dan in als deze coach.", "Note this down — the password is shown once. Log out first, then in as this coach.")}</div>
           </div>
         )}
 
