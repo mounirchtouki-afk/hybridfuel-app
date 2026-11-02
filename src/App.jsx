@@ -581,9 +581,9 @@ export default function App() {
   const [tab, setTab] = useState("dashboard");
   const [showMore, setShowMore] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
-  const isAdmin = String((session && session.user && session.user.email) || "").toLowerCase() === "hybridfuelco@gmail.com";
   const [showReminders, setShowReminders] = useState(false);
   const [session, setSession] = useState(null);
+  const isAdmin = String((session && session.user && session.user.email) || "").toLowerCase() === "hybridfuelco@gmail.com";
   const [syncVer, setSyncVer] = useState(0);
   const [showAuth, setShowAuth] = useState(false);
   const [authRecovery, setAuthRecovery] = useState(false);
