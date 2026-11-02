@@ -36,6 +36,15 @@ export default function AdminDash({ session, lang, onClose }) {
     catch (e) { setErr(t("Back-up klant mislukt: ", "Customer backup failed: ") + String(e.message || e)); }
     setRowBusy("");
   }
+  const [coachBusy, setCoachBusy] = useState(false);
+  async function makeMeCoach() {
+    setCoachBusy(true); setErr("");
+    try {
+      const d = await call("admin.makeMeCoach");
+      alert(t("Gelukt! Je bent nu coach-eigenaar van: ", "Done! You are now coach-owner of: ") + (d.orgName || "—") + t(". De app herlaadt nu, daarna zie je het groene dashboard met de Admin-knop.", ". The app reloads now, then you'll see the green dashboard with the Admin button."));
+      window.location.reload();
+    } catch (e) { setErr(t("Mislukt: ", "Failed: ") + String(e.message || e)); setCoachBusy(false); }
+  }
   async function changeSched(v) {
     setSched(v);
     try { await call("admin.setBackupSchedule", { schedule: v }); }
@@ -150,6 +159,7 @@ export default function AdminDash({ session, lang, onClose }) {
             <div style={{ fontSize: 12.5, color: MUTED, marginTop: 3 }}>{t("Alle accounts, abonnementen en sportscholen", "All accounts, subscriptions and gyms")}</div>
           </div>
           <div style={{ display: "flex", gap: 8 }}>
+            <div onClick={coachBusy ? null : makeMeCoach} className="hf-tap" title={t("Maak mijn account coach-eigenaar en open het groene dashboard", "Make my account coach-owner and open the green dashboard")} style={{ cursor: coachBusy ? "default" : "pointer", fontSize: 12.5, fontWeight: 700, ...disp, color: "#fff", background: GREEN, borderRadius: 9, padding: "9px 13px", opacity: coachBusy ? 0.6 : 1 }}>{coachBusy ? "…" : t("▸ Mijn dashboard", "▸ My dashboard")}</div>
             <div onClick={demoBusy ? null : makeDemo} className="hf-tap" style={{ cursor: demoBusy ? "default" : "pointer", fontSize: 12.5, fontWeight: 700, ...disp, color: "#fff", background: EMBER, borderRadius: 9, padding: "9px 13px", opacity: demoBusy ? 0.6 : 1 }}>{demoBusy ? "…" : t("+ Nieuwe sportschool", "+ New gym")}</div>
             <div onClick={expBusy ? null : exportData} className="hf-tap" style={{ cursor: expBusy ? "default" : "pointer", fontSize: 12.5, fontWeight: 700, ...disp, color: EMBER, border: `1px solid ${LINE}`, borderRadius: 9, padding: "9px 13px", opacity: expBusy ? 0.6 : 1 }}>{expBusy ? "…" : t("↓ Back-up", "↓ Backup")}</div>
             <div onClick={load} className="hf-tap" style={{ cursor: "pointer", fontSize: 12.5, fontWeight: 700, ...disp, color: EMBER, border: `1px solid ${LINE}`, borderRadius: 9, padding: "9px 13px" }}>{busy ? "…" : t("Vernieuwen", "Refresh")}</div>

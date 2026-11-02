@@ -124,6 +124,44 @@ export default async function handler(req, res) {
         return res.status(200).json({ ok: true, name, slug, coachEmail, coachPass, joinUrl: appBase(req) + "/join/" + slug });
       }
 
+      if (op === "admin.makeMeCoach") {
+        const jsonHdr = { ...sv, "Content-Type": "application/json" };
+        // Kies de org met de meeste leden (gevuld dashboard); anders maak een HQ-org.
+        let orgId = null, orgName = "";
+        try {
+          const amR = await fetch(supaUrl + "/rest/v1/org_members?select=org_id", { headers: sv });
+          const am = amR.ok ? await amR.json().catch(() => []) : [];
+          const tally = {}; (am || []).forEach((m) => { if (m.org_id) tally[m.org_id] = (tally[m.org_id] || 0) + 1; });
+          const best = Object.keys(tally).sort((a, b) => tally[b] - tally[a])[0];
+          if (best) {
+            orgId = best;
+            const oR = await fetch(supaUrl + "/rest/v1/orgs?select=name&id=eq." + encodeURIComponent(best), { headers: sv });
+            const oo = oR.ok ? await oR.json().catch(() => []) : [];
+            orgName = (oo && oo[0] && oo[0].name) || "";
+          }
+        } catch (e) {}
+        if (!orgId) {
+          const slug = "hybridfuelco-hq-" + Math.random().toString(36).slice(2, 6);
+          const oIns = await fetch(supaUrl + "/rest/v1/orgs", { method: "POST", headers: { ...jsonHdr, Prefer: "return=representation" }, body: JSON.stringify({ name: "HybridFuelCo HQ", slug }) });
+          const oRows = await oIns.json().catch(() => []);
+          orgId = Array.isArray(oRows) && oRows[0] && oRows[0].id; orgName = "HybridFuelCo HQ";
+          if (!orgId) return res.status(502).json({ error: "org_failed", detail: JSON.stringify(oRows).slice(0, 200) });
+          await fetch(supaUrl + "/rest/v1/org_config", { method: "POST", headers: { ...jsonHdr, Prefer: "return=minimal,resolution=merge-duplicates" }, body: JSON.stringify({ org_id: orgId, brand_color: "#16A34A", theme: { template: "dark", accent: "#16A34A" } }) });
+        }
+        // Bestaat er al een lidmaatschap voor mij? Dan ombouwen naar coach-eigenaar; anders aanmaken.
+        const exR = await fetch(supaUrl + "/rest/v1/org_members?select=org_id&auth_user_id=eq." + encodeURIComponent(userId), { headers: sv });
+        const ex = exR.ok ? await exR.json().catch(() => []) : [];
+        const payload = { org_id: orgId, role: "coach", is_owner: true, active: true };
+        if (ex && ex.length) {
+          const up = await fetch(supaUrl + "/rest/v1/org_members?auth_user_id=eq." + encodeURIComponent(userId), { method: "PATCH", headers: { ...jsonHdr, Prefer: "return=minimal" }, body: JSON.stringify(payload) });
+          if (!up.ok) { const txt = await up.text().catch(() => ""); return res.status(502).json({ error: "update_failed", detail: txt.slice(0, 200) }); }
+        } else {
+          const ins = await fetch(supaUrl + "/rest/v1/org_members", { method: "POST", headers: { ...jsonHdr, Prefer: "return=minimal" }, body: JSON.stringify({ ...payload, auth_user_id: userId }) });
+          if (!ins.ok) { const txt = await ins.text().catch(() => ""); return res.status(502).json({ error: "insert_failed", detail: txt.slice(0, 200) }); }
+        }
+        return res.status(200).json({ ok: true, orgName });
+      }
+
       if (op === "admin.stripe") {
         const targetUserId = String(body.targetUserId || "").trim();
         const sr = await fetch(supaUrl + "/rest/v1/subscriptions?select=stripe_customer_id&user_id=eq." + encodeURIComponent(targetUserId), { headers: sv });
