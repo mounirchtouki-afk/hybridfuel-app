@@ -50,31 +50,10 @@
       }
       body { background: var(--hf-ink); transition: background 0.2s ease; }
     </style>
-    <script>
-      /* Pas de gecachte org-huisstijl (gym-kleur) toe vóór de eerste paint — geen rood->klantkleur flits. */
-      (function () {
-        try {
-          var raw = localStorage.getItem("hf_org_theme");
-          if (!raw) return;
-          var t = JSON.parse(raw);
-          var el = document.documentElement;
-          Object.keys(t).forEach(function (k) { if (t[k]) el.style.setProperty("--hf-" + k, t[k]); });
-        } catch (e) {}
-      })();
-    </script>
+    <script src="/boot.js"></script>
   </head>
   <body style="margin:0;background:var(--hf-ink);">
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
-    <script>
-      // Cookie-consent alleen op web laden, niet in de native app (Capacitor).
-      (function () {
-        var native = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
-        if (native) return;
-        var s = document.createElement("script");
-        s.src = "https://www.hybridfuelco.com/consent.js?v=2";
-        document.body.appendChild(s);
-      })();
-    </script>
   </body>
 </html>

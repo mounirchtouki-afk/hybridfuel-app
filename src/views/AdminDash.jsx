@@ -20,11 +20,11 @@ export default function AdminDash({ session, lang, onClose }) {
   const [demo, setDemo] = useState(null);
 
   async function makeDemo() {
-    const name = window.prompt(t("Naam van de demo-sportschool?", "Name of the demo gym?"), "Demo Sportschool");
-    if (!name) return;
+    const name = window.prompt(t("Naam van de nieuwe sportschool?", "Name of the new gym?"), "");
+    if (!name || !name.trim()) return;
     setDemoBusy(true); setErr("");
-    try { const d = await call("admin.createDemoGym", { gymName: name }); setDemo(d); }
-    catch (e) { setErr(t("Demo-gym aanmaken mislukt: ", "Demo gym failed: ") + String(e.message || e)); }
+    try { const d = await call("admin.createDemoGym", { gymName: name.trim() }); setDemo(d); await load(); }
+    catch (e) { setErr(t("Sportschool aanmaken mislukt: ", "Creating gym failed: ") + String(e.message || e)); }
     setDemoBusy(false);
   }
 
@@ -107,7 +107,7 @@ export default function AdminDash({ session, lang, onClose }) {
             <div style={{ fontSize: 12.5, color: MUTED, marginTop: 3 }}>{t("Alle accounts, abonnementen en sportscholen", "All accounts, subscriptions and gyms")}</div>
           </div>
           <div style={{ display: "flex", gap: 8 }}>
-            <div onClick={demoBusy ? null : makeDemo} className="hf-tap" style={{ cursor: demoBusy ? "default" : "pointer", fontSize: 12.5, fontWeight: 700, ...disp, color: "#fff", background: EMBER, borderRadius: 9, padding: "9px 13px", opacity: demoBusy ? 0.6 : 1 }}>{demoBusy ? "…" : t("+ Demo-gym", "+ Demo gym")}</div>
+            <div onClick={demoBusy ? null : makeDemo} className="hf-tap" style={{ cursor: demoBusy ? "default" : "pointer", fontSize: 12.5, fontWeight: 700, ...disp, color: "#fff", background: EMBER, borderRadius: 9, padding: "9px 13px", opacity: demoBusy ? 0.6 : 1 }}>{demoBusy ? "…" : t("+ Nieuwe sportschool", "+ New gym")}</div>
             <div onClick={load} className="hf-tap" style={{ cursor: "pointer", fontSize: 12.5, fontWeight: 700, ...disp, color: EMBER, border: `1px solid ${LINE}`, borderRadius: 9, padding: "9px 13px" }}>{busy ? "…" : t("Vernieuwen", "Refresh")}</div>
             <div onClick={onClose} style={{ cursor: "pointer", color: MUTED, fontSize: 18, width: 38, height: 38, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 9, border: `1px solid ${LINE}` }}>×</div>
           </div>
@@ -123,10 +123,37 @@ export default function AdminDash({ session, lang, onClose }) {
           </div>
         )}
 
+        {counts && counts.total > 0 && (() => {
+          const free = Math.max(0, counts.total - counts.paying);
+          const segs = [
+            { k: "Pro", n: counts.pro, c: EMBER },
+            { k: "Basis", n: counts.basis, c: "#6366F1" },
+            { k: t("Gratis", "Free"), n: free, c: MUTED },
+          ];
+          const tot = counts.total || 1;
+          return (
+            <div style={{ background: INK2, border: `1px solid ${LINE}`, borderRadius: 14, padding: "14px 16px", marginBottom: 18, boxShadow: "var(--hf-shadow)" }}>
+              <div style={{ fontSize: 10, letterSpacing: 0.8, textTransform: "uppercase", color: MUTED, fontWeight: 700, marginBottom: 10 }}>{t("Verdeling betaald / gratis", "Paid / free breakdown")}</div>
+              <div style={{ display: "flex", height: 22, borderRadius: 7, overflow: "hidden", background: "var(--hf-track)" }}>
+                {segs.map((s, i) => s.n > 0 ? <div key={i} style={{ width: (s.n / tot * 100) + "%", background: s.c }} title={s.k + ": " + s.n} /> : null)}
+              </div>
+              <div style={{ display: "flex", gap: 18, marginTop: 11, flexWrap: "wrap" }}>
+                {segs.map((s, i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 12 }}>
+                    <span style={{ width: 11, height: 11, borderRadius: 3, background: s.c, flexShrink: 0 }} />
+                    <span style={{ color: PAPER, fontWeight: 600 }}>{s.k}</span>
+                    <span style={{ color: MUTED }}>{s.n} · {Math.round(s.n / tot * 100)}%</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
+
         {demo && (
           <div style={{ background: "rgba(88,194,125,0.10)", border: `1px solid ${GREEN}`, borderRadius: 12, padding: "14px 16px", marginBottom: 16 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-              <div style={{ ...disp, fontWeight: 700, fontSize: 15, color: PAPER }}>{t("Demo-sportschool klaar", "Demo gym ready")} · {demo.name}</div>
+              <div style={{ ...disp, fontWeight: 700, fontSize: 15, color: PAPER }}>{t("Sportschool aangemaakt", "Gym created")} · {demo.name}</div>
               <div onClick={() => setDemo(null)} style={{ cursor: "pointer", color: MUTED, fontSize: 16 }}>×</div>
             </div>
             <div style={{ fontSize: 12.5, color: PAPER, lineHeight: 1.7 }}>
