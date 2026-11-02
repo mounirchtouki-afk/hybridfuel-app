@@ -2,7 +2,7 @@ import { apiUrl } from "../apiBase";
 import React, { useState, useEffect } from "react";
 import { INK, INK2, PAPER, MUTED, LINE, SAGE, EMBER_SOFT, disp, sectionTitle, applyOrgTheme, THEME_TEMPLATES } from "../shared.js";
 import { supabase } from "../supabaseClient.js";
-import AdminDash from "./AdminDash.jsx";
+import { AdminOverview, AdminAccount } from "./AdminViews.jsx";
 
 // Herbruikbaar uitklap-menu met aanvinkvakjes (meervoudige keuze, i.p.v. losse knoppen).
 function MultiPick({ options, selected, onToggle, placeholder, color }) {
@@ -40,7 +40,6 @@ function MultiPick({ options, selected, onToggle, placeholder, color }) {
 // Toont de leden + voortgang, en laat de coach leden aanmaken (met code) + code resetten.
 export default function CoachDash({ session, org, isOwner, perms, lang, isAdmin, onLogout }) {
   const t = (nl, en) => (lang === "nl" ? nl : en);
-  const [showAdmin, setShowAdmin] = useState(false);
   const color = (org && org.brand_color) || "#E11D48";
   const token = session && session.access_token;
   // Altijd een VERS, geldig access-token ophalen (anders 401 op de server). Forceer een
@@ -62,14 +61,15 @@ export default function CoachDash({ session, org, isOwner, perms, lang, isAdmin,
   // Modules (datagedreven/uitbreidbaar). De org heeft een beschikbare set (superuser-gestuurd);
   // de eigenaar ziet alles + Team, een coach alleen z'n toegewezen rechten.
   const MODS = (org && org.enabled_modules && org.enabled_modules.length) ? org.enabled_modules : ["members", "classes", "pt", "plans", "branding", "formula"];
-  const LABEL = { overview: t("Overzicht", "Overview"), members: t("Leden", "Members"), classes: t("Lessen", "Classes"), pt: t("PT-agenda", "PT"), plans: t("Abonnementen", "Plans"), branding: t("Huisstijl", "Branding"), formula: t("Formule", "Formula"), team: t("Team", "Team") };
+  const LABEL = { overview: t("Overzicht", "Overview"), members: t("Leden", "Members"), classes: t("Lessen", "Classes"), pt: t("PT-agenda", "PT"), plans: t("Abonnementen", "Plans"), branding: t("Huisstijl", "Branding"), formula: t("Formule", "Formula"), team: t("Team", "Team"), adm_overview: t("Overzicht", "Overview"), adm_account: t("Account", "Account") };
   const [previewRole, setPreviewRole] = useState("owner"); // demo: eigenaar bekijkt als coach
   const demoCoachMods = ["members", "pt", "classes"].filter((m) => MODS.includes(m));
   const myTabs = ["overview", ...(isOwner
     ? (previewRole === "coach" ? demoCoachMods : [...MODS, "team"])
     : (Array.isArray(perms) ? MODS.filter((m) => perms.includes(m)) : []))];
   const [active, setActive] = useState(null);
-  const current = active && myTabs.includes(active) ? active : (myTabs[0] || null);
+  const current = active && (myTabs.includes(active) || String(active).startsWith("adm_")) ? active : (myTabs[0] || null);
+  const isAdminView = String(current).startsWith("adm_");
   const [navOpen, setNavOpen] = useState(false);     // nav-uitklapmenu (mobiel drawer)
   const [rowMenu, setRowMenu] = useState(null);       // member.id waarvan het actie-uitklapmenu open staat
   const [isWide, setIsWide] = useState(() => (typeof window !== "undefined" ? window.innerWidth >= 880 : true));
@@ -793,8 +793,24 @@ export default function CoachDash({ session, org, isOwner, perms, lang, isAdmin,
     { label: t("Beheer", "Manage"), items: ["members", "classes", "pt", "plans"] },
     { label: t("Organisatie", "Organization"), items: ["team", "branding", "formula"] },
   ];
+  const admItem = (key, label, closeAfter) => {
+    const on = current === key;
+    return (
+      <div key={key} onClick={() => { setActive(key); if (closeAfter) setNavOpen(false); }} style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: 11, padding: "10px 11px", borderRadius: 9, background: on ? "rgba(245,158,11,0.16)" : "transparent", color: on ? "#f59e0b" : PAPER }}>
+        <span style={{ display: "flex" }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={on ? "#f59e0b" : MUTED} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l7 4v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-4z" /><path d="M9 12l2 2 4-4" /></svg></span>
+        <span style={{ ...disp, fontWeight: 700, fontSize: 13.5, flex: 1, color: on ? "#f59e0b" : PAPER }}>{label}</span>
+      </div>
+    );
+  };
   const renderNav = (closeAfter) => (
     <div style={{ display: "grid", gap: 2 }}>
+      {isAdmin && (
+        <div style={{ marginBottom: 6 }}>
+          <div style={{ fontSize: 10, letterSpacing: 1.3, textTransform: "uppercase", color: "#f59e0b", fontWeight: 700, padding: "12px 10px 6px", opacity: 0.9 }}>Admin</div>
+          {admItem("adm_overview", t("Overzicht", "Overview"), closeAfter)}
+          {admItem("adm_account", t("Account", "Account"), closeAfter)}
+        </div>
+      )}
       {NAV_SECTIONS.map((sec) => {
         const items = sec.items.filter((m) => myTabs.includes(m));
         if (!items.length) return null;
@@ -811,13 +827,6 @@ export default function CoachDash({ session, org, isOwner, perms, lang, isAdmin,
                 </div>
               );
             })}
-            {isAdmin && sec.items.includes("team") && (
-              <div onClick={() => { setShowAdmin(true); if (closeAfter) setNavOpen(false); }} style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: 11, padding: "10px 11px", borderRadius: 9, background: "transparent", color: "#f59e0b" }}>
-                <span style={{ display: "flex" }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l7 4v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-4z" /><path d="M9 12l2 2 4-4" /></svg></span>
-                <span style={{ ...disp, fontWeight: 700, fontSize: 13.5, flex: 1, color: "#f59e0b" }}>Admin</span>
-                <span style={{ fontSize: 9, letterSpacing: 0.5, fontWeight: 800, color: "#f59e0b", border: "1px solid #f59e0b", borderRadius: 5, padding: "1px 5px" }}>JIJ</span>
-              </div>
-            )}
           </div>
         );
       })}
@@ -857,7 +866,6 @@ export default function CoachDash({ session, org, isOwner, perms, lang, isAdmin,
 
   return (
     <div style={{ minHeight: "100vh", background: INK, color: PAPER, fontFamily: "Inter, sans-serif", display: "flex" }}>
-      {showAdmin && isAdmin && <AdminDash session={session} lang={lang} onClose={() => setShowAdmin(false)} />}
       {/* Zijbalk (desktop) */}
       {isWide && (
         <div style={{ width: 244, flexShrink: 0, borderRight: `1px solid ${LINE}`, background: INK, position: "sticky", top: 0, alignSelf: "flex-start", height: "100vh", display: "flex", flexDirection: "column", padding: "18px 14px", boxSizing: "border-box" }}>
@@ -892,7 +900,7 @@ export default function CoachDash({ session, org, isOwner, perms, lang, isAdmin,
                 : <div style={{ ...disp, fontWeight: 800, fontSize: 20, color: PAPER }}>{LABEL[current]}</div>}
             </div>
             <div style={{ flex: 1 }} />
-            {isOwner && (
+            {!isAdminView && isOwner && (
               <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
                 <span style={{ fontSize: 11.5, color: MUTED, ...disp, fontWeight: 700, letterSpacing: 0.3 }}>{t("Bekijk als", "View as")}</span>
                 <select value={previewRole} onChange={(e) => { setPreviewRole(e.target.value); setActive("overview"); }} style={{ ...input, width: "auto", appearance: "auto", WebkitAppearance: "auto", padding: "9px 12px", fontSize: 13, cursor: "pointer" }}>
@@ -901,13 +909,13 @@ export default function CoachDash({ session, org, isOwner, perms, lang, isAdmin,
                 </select>
               </div>
             )}
-            {myTabs.includes("members") && (
+            {!isAdminView && myTabs.includes("members") && (
               <div style={{ display: "flex", alignItems: "center", gap: 8, background: INK2, border: `1px solid ${LINE}`, borderRadius: 10, padding: "8px 12px", width: 210 }}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={MUTED} strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4-4" /></svg>
                 <input value={memberQuery} onChange={(e) => { setMemberQuery(e.target.value); if (current !== "members") setActive("members"); }} placeholder={t("Zoek lid…", "Search member…")} style={{ border: "none", outline: "none", background: "transparent", color: PAPER, fontSize: 13, width: "100%", fontFamily: "Inter, sans-serif" }} />
               </div>
             )}
-            {myTabs.includes("members") && (
+            {!isAdminView && myTabs.includes("members") && (
               <div onClick={() => setActive("members")} style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 7, background: color, color: "#fff", borderRadius: 10, padding: "10px 15px", ...disp, fontWeight: 700, fontSize: 13, whiteSpace: "nowrap" }}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>{t("Lid toevoegen", "Add member")}
               </div>
@@ -926,7 +934,9 @@ export default function CoachDash({ session, org, isOwner, perms, lang, isAdmin,
             <div style={{ ...disp, fontWeight: 700, fontSize: 14, color: PAPER }}>{LABEL[current]}</div>
           </div>
         )}
-      <div style={{ maxWidth: current === "overview" ? 1320 : 1060, margin: "0 auto", padding: isWide ? "22px 26px" : "18px 14px", display: "grid", gap: 16 }}>
+      <div style={{ maxWidth: (current === "overview" || current === "adm_overview") ? 1320 : 1060, margin: "0 auto", padding: isWide ? "22px 26px" : "18px 14px", display: "grid", gap: 16 }}>
+        {current === "adm_overview" && isAdmin && <AdminOverview session={session} lang={lang} />}
+        {current === "adm_account" && isAdmin && <AdminAccount session={session} lang={lang} />}
         {current === "overview" && (() => {
           const h = new Date().getHours();
           const greet = h < 12 ? t("Goedemorgen", "Good morning") : h < 18 ? t("Goedemiddag", "Good afternoon") : t("Goedenavond", "Good evening");

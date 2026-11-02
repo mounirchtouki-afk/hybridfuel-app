@@ -162,6 +162,89 @@ export default async function handler(req, res) {
         return res.status(200).json({ ok: true, orgName });
       }
 
+      if (op === "admin.overview") {
+        const jsonHdr = { ...sv, "Content-Type": "application/json" };
+        const oR = await fetch(supaUrl + "/rest/v1/orgs?select=id,name,created_at,license_tier,license_status,license_end", { headers: sv });
+        const orgs = oR.ok ? await oR.json().catch(() => []) : [];
+        const mR = await fetch(supaUrl + "/rest/v1/org_members?select=org_id,role,active", { headers: sv });
+        const mem = mR.ok ? await mR.json().catch(() => []) : [];
+        const cnt = {}; mem.forEach((m) => { if (m.role === "member" && m.active !== false) cnt[m.org_id] = (cnt[m.org_id] || 0) + 1; });
+        const monthStart = new Date(); monthStart.setUTCDate(1); monthStart.setUTCHours(0, 0, 0, 0);
+        const soon = new Date(Date.now() + 30 * 86400000);
+        const activeOrgs = orgs.filter((o) => o.license_status !== "stopped");
+        const overview = {
+          gyms: orgs.length,
+          membersActive: Object.values(cnt).reduce((a, b) => a + b, 0),
+          gymsPaying: activeOrgs.filter((o) => (o.license_tier || "basis") !== "gratis").length,
+          gymsPro: activeOrgs.filter((o) => o.license_tier === "pro").length,
+          gymsBasis: activeOrgs.filter((o) => o.license_tier === "basis").length,
+          gymsFree: orgs.length - activeOrgs.filter((o) => (o.license_tier || "basis") !== "gratis").length,
+          newGyms: orgs.filter((o) => o.created_at && new Date(o.created_at) >= monthStart).sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 8).map((o) => ({ name: o.name, created_at: o.created_at, members: cnt[o.id] || 0 })),
+          expiring: orgs.filter((o) => o.license_end && new Date(o.license_end) <= soon && o.license_status !== "stopped").map((o) => ({ name: o.name, license_end: o.license_end })),
+        };
+        return res.status(200).json({ ok: true, overview });
+      }
+
+      if (op === "admin.listGyms") {
+        const oR = await fetch(supaUrl + "/rest/v1/orgs?select=id,name,slug,address,postal_code,city,country,contact_name,contact_email,contact_phone,kvk,vat,admin_note,license_tier,license_status,license_start,license_end,owner_user_id,created_at&order=created_at.desc", { headers: sv });
+        const orgs = oR.ok ? await oR.json().catch(() => []) : [];
+        const mR = await fetch(supaUrl + "/rest/v1/org_members?select=org_id,role,active", { headers: sv });
+        const mem = mR.ok ? await mR.json().catch(() => []) : [];
+        const cnt = {}; mem.forEach((m) => { if (m.role === "member" && m.active !== false) cnt[m.org_id] = (cnt[m.org_id] || 0) + 1; });
+        return res.status(200).json({ ok: true, gyms: orgs.map((o) => ({ ...o, members: cnt[o.id] || 0 })) });
+      }
+
+      if (op === "admin.updateGym") {
+        const orgId = String(body.orgId || "").trim();
+        if (!orgId) return res.status(400).json({ error: "no_org" });
+        const allow = ["name", "address", "postal_code", "city", "country", "contact_name", "contact_email", "contact_phone", "kvk", "vat", "admin_note", "license_tier", "license_status", "license_start", "license_end", "owner_user_id"];
+        const patch = {}; allow.forEach((k) => { if (body[k] !== undefined) patch[k] = body[k] === "" ? null : body[k]; });
+        if (!Object.keys(patch).length) return res.status(400).json({ error: "no_fields" });
+        const up = await fetch(supaUrl + "/rest/v1/orgs?id=eq." + encodeURIComponent(orgId), { method: "PATCH", headers: { ...sv, "Content-Type": "application/json", Prefer: "return=minimal" }, body: JSON.stringify(patch) });
+        if (!up.ok) { const txt = await up.text().catch(() => ""); return res.status(502).json({ error: "update_failed", detail: txt.slice(0, 200) }); }
+        return res.status(200).json({ ok: true });
+      }
+
+      if (op === "admin.createGym") {
+        const jsonHdr = { ...sv, "Content-Type": "application/json" };
+        const name = String(body.name || "").trim().slice(0, 80);
+        if (!name) return res.status(400).json({ error: "no_name" });
+        const slug = ((name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 24)) || "gym") + "-" + Math.random().toString(36).slice(2, 6);
+        const allow = ["address", "postal_code", "city", "country", "contact_name", "contact_email", "contact_phone", "kvk", "vat", "admin_note", "license_tier", "license_status", "license_start", "license_end", "owner_user_id"];
+        const rec = { name, slug }; allow.forEach((k) => { if (body[k] !== undefined && body[k] !== "") rec[k] = body[k]; });
+        const oIns = await fetch(supaUrl + "/rest/v1/orgs", { method: "POST", headers: { ...jsonHdr, Prefer: "return=representation" }, body: JSON.stringify(rec) });
+        const oRows = await oIns.json().catch(() => []);
+        const orgId = Array.isArray(oRows) && oRows[0] && oRows[0].id;
+        if (!oIns.ok || !orgId) return res.status(502).json({ error: "org_failed", detail: JSON.stringify(oRows).slice(0, 200) });
+        await fetch(supaUrl + "/rest/v1/org_config", { method: "POST", headers: { ...jsonHdr, Prefer: "return=minimal,resolution=merge-duplicates" }, body: JSON.stringify({ org_id: orgId, brand_color: "#16A34A", theme: { template: "dark", accent: "#16A34A" } }) });
+        return res.status(200).json({ ok: true, orgId, slug, joinUrl: appBase(req) + "/join/" + slug });
+      }
+
+      if (op === "admin.updateMember") {
+        const memberId = String(body.memberId || "").trim();
+        if (!memberId) return res.status(400).json({ error: "no_member" });
+        const allow = ["display_name", "member_tier", "active", "org_id", "plan_id", "class_access"];
+        const patch = {}; allow.forEach((k) => { if (body[k] !== undefined) patch[k] = body[k] === "" ? null : body[k]; });
+        if (Object.keys(patch).length) {
+          const up = await fetch(supaUrl + "/rest/v1/org_members?id=eq." + encodeURIComponent(memberId), { method: "PATCH", headers: { ...sv, "Content-Type": "application/json", Prefer: "return=minimal" }, body: JSON.stringify(patch) });
+          if (!up.ok) { const txt = await up.text().catch(() => ""); return res.status(502).json({ error: "update_failed", detail: txt.slice(0, 200) }); }
+        }
+        return res.status(200).json({ ok: true });
+      }
+
+      if (op === "admin.updateAccount") {
+        const target = String(body.targetUserId || "").trim();
+        if (!target) return res.status(400).json({ error: "no_user" });
+        const patch = {};
+        if (body.email !== undefined && String(body.email).trim()) { patch.email = String(body.email).trim().toLowerCase(); patch.email_confirm = true; }
+        if (body.password !== undefined && String(body.password).length >= 6) patch.password = String(body.password);
+        if (!Object.keys(patch).length) return res.status(400).json({ error: "no_fields" });
+        const up = await fetch(supaUrl + "/auth/v1/admin/users/" + encodeURIComponent(target), { method: "PUT", headers: { ...sv, "Content-Type": "application/json" }, body: JSON.stringify(patch) });
+        const d = await up.json().catch(() => ({}));
+        if (!up.ok) return res.status(502).json({ error: "account_update_failed", detail: JSON.stringify(d).slice(0, 200) });
+        return res.status(200).json({ ok: true });
+      }
+
       if (op === "admin.stripe") {
         const targetUserId = String(body.targetUserId || "").trim();
         const sr = await fetch(supaUrl + "/rest/v1/subscriptions?select=stripe_customer_id&user_id=eq." + encodeURIComponent(targetUserId), { headers: sv });

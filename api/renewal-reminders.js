@@ -244,5 +244,27 @@ export default async function handler(req, res) {
     }
   } catch (e) { out.backup = { error: String(e).slice(0, 80) }; }
 
+  // --- Segment D: sportschool-licentie loopt bijna af (binnen ~7 dagen) ---
+  out.license = { candidates: 0, sent: 0 };
+  try {
+    const admin = (process.env.ADMIN_EMAIL || "hybridfuelco@gmail.com");
+    const toISO = new Date(now + 7 * 86400000).toISOString().slice(0, 10);
+    const fromISO = new Date(now - 1 * 86400000).toISOString().slice(0, 10);
+    const gr = await fetch(url + "/rest/v1/orgs?select=id,name,contact_email,license_tier,license_end,license_status&license_status=eq.active&license_end=gte." + fromISO + "&license_end=lte." + toISO, { headers: { apikey: svc, Authorization: "Bearer " + svc } });
+    const gyms = gr.ok ? await gr.json().catch(() => []) : [];
+    out.license.candidates = gyms.length;
+    for (const g of gyms) {
+      if (!(await dedup("lic:" + g.id + ":" + String(g.license_end).slice(0, 10), 2592000))) continue;
+      const html = "<div style='font-family:Arial,sans-serif;color:#141215;line-height:1.6'>" +
+        "<p>Let op: de licentie van <b>" + (g.name || "een sportschool") + "</b> (" + (g.license_tier || "basis") + ") loopt af op <b>" + String(g.license_end).slice(0, 10) + "</b>.</p>" +
+        "<p>Verleng of neem contact op" + (g.contact_email ? " (" + g.contact_email + ")" : "") + ".</p></div>";
+      try {
+        await fetch(RENEWAL_WEBHOOK, { method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ to: admin, subject: "Licentie loopt af: " + (g.name || "sportschool") + " (" + String(g.license_end).slice(0, 10) + ")", html }) });
+        out.license.sent++;
+      } catch (e) {}
+    }
+  } catch (e) { out.license = { error: String(e).slice(0, 80) }; }
+
   return res.status(200).json(out);
 }
