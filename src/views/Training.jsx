@@ -192,6 +192,8 @@ export default function Training({ lang, session, weight }) {
   const [plan, setPlan] = useState(loadPlan);
   const [planAdd, setPlanAdd] = useState(null);
   const [planEdit, setPlanEdit] = useState(null); // geplande regel bewerken {di, item}
+  const [templates, setTemplates] = useState(() => load("hf_templates", [])); // eigen opgeslagen trainingen
+  const [tplBuild, setTplBuild] = useState(null); // trainingbouwer open: {} = nieuw, {tpl} = bewerken
   const [move, setMove] = useState(null);
   const [runner, setRunner] = useState(false);   // sessie-runner open
   const [logEx, setLogEx] = useState(null);       // oefening-logboek {item}
@@ -305,6 +307,20 @@ export default function Training({ lang, session, weight }) {
   }
   function delFromDay(di, id) { const days = plan.days.map((dd, i) => i === di ? { items: dd.items.filter((x) => x.id !== id) } : dd); persistPlan({ days }); }
   function editItemInDay(di, id, patch) { const days = plan.days.map((dd, i) => i === di ? { items: dd.items.map((x) => x.id === id ? { ...x, ...patch, kcal: kcalFor(x.met, kg, num(patch.min != null ? patch.min : x.min)) } : x) } : dd); persistPlan({ days }); }
+  // --- Mijn trainingen (opgeslagen templates) ---
+  function persistTemplates(next) { setTemplates(next); save("hf_templates", next); }
+  function saveTemplate(tpl) { const exists = templates.some((x) => x.id === tpl.id); persistTemplates(exists ? templates.map((x) => x.id === tpl.id ? tpl : x) : [...templates, tpl]); }
+  function deleteTemplate(id) { persistTemplates(templates.filter((x) => x.id !== id)); }
+  // Hele training (template) in één keer aan een dag toevoegen.
+  function applyTemplateToDay(di, tpl) {
+    const base = Date.now();
+    const rows = (tpl.items || []).map((r, k) => ({ id: "p" + base + "_" + k, name: r.name, met: r.met, min: num(r.min) || 0, kcal: kcalFor(r.met, kg, num(r.min) || 0), metric: r.metric || "time", exId: r.exId || null, sets: r.sets || null, reps: r.reps || null, dist: r.dist || null }));
+    const days = plan.days.map((dd, i) => i === di ? { items: [...dd.items, ...rows] } : dd);
+    persistPlan({ days });
+  }
+  // Ingebouwde Hyrox-wedstrijd als template, plus de eigen trainingen.
+  const BUILTIN_HYROX = { id: "builtin_hyrox", builtin: true, name: lang === "nl" ? "Hyrox-simulatie (full)" : "Hyrox simulation (full)", items: HYROX_RACE };
+  const allTemplates = [BUILTIN_HYROX, ...templates];
   function stampWeek(startMon, isMove) {
     plan.days.forEach((dd, i) => { try { save("hf_trainover_" + isoAdd(startMon, i), { items: dd.items.map((x) => ({ ...x })) }); } catch (e) {} });
     if (isMove) { const srcMon = mondayISO(d); for (let i = 0; i < 7; i++) { const s = isoAdd(srcMon, i); if (mondayISO(s) !== startMon) { try { localStorage.removeItem("hf_trainover_" + s); } catch (e) {} } } }
@@ -421,6 +437,7 @@ export default function Training({ lang, session, weight }) {
 
   // Modal voor een geplande sessie in het weekschema: oefening kiezen + minuten
   function PlanAddModal({ di, onClose }) {
+    const [tab2, setTab2] = useState("tpl");
     const [ch, setCh] = useState(null);
     const [mn, setMn] = useState("");
     const [sets, setSets] = useState("");
@@ -435,7 +452,36 @@ export default function Training({ lang, session, weight }) {
             <div style={{ ...disp, fontWeight: 700, fontSize: 16 }}>{ch ? ch.name : t("pickExercise")} · {WD[lang === "nl" ? "nl" : "en"][di]}</div>
             <div onClick={onClose} style={{ cursor: "pointer", color: MUTED, fontSize: 17, width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 9, border: `1px solid ${LINE}` }}>×</div>
           </div>
-          {!ch ? <ExAccordion onPick={setCh} /> : (
+          {!ch ? (
+            <div>
+              <div style={{ display: "flex", gap: 4, background: INK2, border: `1px solid ${LINE}`, borderRadius: 10, padding: 4, marginBottom: 14 }}>
+                <div onClick={() => setTab2("tpl")} style={{ cursor: "pointer", flex: 1, textAlign: "center", fontSize: 12, fontWeight: 700, ...disp, padding: "8px 0", borderRadius: 7, background: tab2 === "tpl" ? EMBER : "transparent", color: tab2 === "tpl" ? "#fff" : MUTED }}>{lang === "nl" ? "Mijn trainingen" : "My workouts"}</div>
+                <div onClick={() => setTab2("ex")} style={{ cursor: "pointer", flex: 1, textAlign: "center", fontSize: 12, fontWeight: 700, ...disp, padding: "8px 0", borderRadius: 7, background: tab2 === "ex" ? EMBER : "transparent", color: tab2 === "ex" ? "#fff" : MUTED }}>{lang === "nl" ? "Losse oefening" : "Single exercise"}</div>
+              </div>
+              {tab2 === "ex" ? <ExAccordion onPick={setCh} /> : (
+                <div>
+                  {allTemplates.map((tpl) => (
+                    <div key={tpl.id} style={{ display: "flex", alignItems: "center", gap: 11, background: INK2, border: `1px solid ${LINE}`, borderRadius: 12, padding: "11px 12px", marginBottom: 9 }}>
+                      <div onClick={() => { applyTemplateToDay(di, tpl); onClose(); }} className="hf-tap" style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: 11, flex: 1, minWidth: 0 }}>
+                        <div style={{ width: 42, height: 42, borderRadius: 11, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: tpl.builtin ? EMBER : "rgba(225,29,72,0.12)", color: tpl.builtin ? "#fff" : EMBER, ...disp, fontWeight: 700, fontSize: 15 }}>{tpl.builtin ? "H" : (tpl.name || "?").slice(0, 1).toUpperCase()}</div>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontSize: 14, fontWeight: 600, color: PAPER, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{tpl.name}</div>
+                          <div style={{ fontSize: 11, color: MUTED, marginTop: 2 }}>{(tpl.items || []).length} {lang === "nl" ? "onderdelen" : "parts"}{tpl.builtin ? (lang === "nl" ? " · standaard" : " · default") : (lang === "nl" ? " · eigen" : " · custom")}</div>
+                        </div>
+                      </div>
+                      {!tpl.builtin && (
+                        <>
+                          <div onClick={() => { onClose(); setTplBuild({ tpl }); }} style={{ cursor: "pointer", color: MUTED, fontSize: 15, flexShrink: 0, width: 26, textAlign: "center" }}>✎</div>
+                          <div onClick={() => deleteTemplate(tpl.id)} style={{ cursor: "pointer", color: MUTED, fontSize: 17, flexShrink: 0, width: 24, textAlign: "center" }}>×</div>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                  <div onClick={() => { onClose(); setTplBuild({ di }); }} className="hf-tap" style={{ cursor: "pointer", textAlign: "center", padding: "11px 0", color: EMBER, fontSize: 12.5, fontWeight: 700, ...disp, letterSpacing: 0.5, border: `1px dashed ${EMBER}`, borderRadius: 11, marginTop: 2 }}>+ {lang === "nl" ? "Nieuwe training maken" : "New workout"}</div>
+                </div>
+              )}
+            </div>
+          ) : (
             <div>
               <div onClick={() => setCh(null)} style={{ cursor: "pointer", fontSize: 11.5, color: MUTED, fontWeight: 600, marginBottom: 12 }}>‹ {t("change")}</div>
               {metric === "reps" && (
@@ -456,6 +502,98 @@ export default function Training({ lang, session, weight }) {
               </div>
             </div>
           )}
+        </div>
+      </div>
+    );
+  }
+
+  // Trainingbouwer: stel een eigen training samen en sla 'm op bij Mijn trainingen.
+  function TemplateBuilder({ init, onClose }) {
+    const editing = init && init.tpl ? init.tpl : null;
+    const di = init && init.di != null ? init.di : null;
+    const [name, setName] = useState(editing ? editing.name : "");
+    const [bItems, setBItems] = useState(editing ? (editing.items || []).map((x, k) => ({ ...x, _k: "b" + k })) : []);
+    const [picking, setPicking] = useState(false);
+    const [ch, setCh] = useState(null);
+    const [mn, setMn] = useState(""); const [sets, setSets] = useState(""); const [reps, setReps] = useState(""); const [dist, setDist] = useState("");
+    const metric = ch ? (ch.metric || "time") : "time";
+    function resetAdd() { setCh(null); setPicking(false); setMn(""); setSets(""); setReps(""); setDist(""); }
+    function addEx() {
+      if (!ch) return;
+      if (ch.exId === "hyroxsim") {
+        const base = Date.now();
+        const hy = HYROX_RACE.map((r, k) => ({ _k: "b" + base + "_" + k, name: r.name, met: r.met, min: r.min, metric: r.metric, exId: r.exId, sets: null, reps: r.reps || null, dist: r.dist || null }));
+        setBItems((prev) => [...prev, ...hy]); resetAdd(); return;
+      }
+      if (num(mn) <= 0) return;
+      setBItems((prev) => [...prev, { _k: "b" + Date.now(), name: ch.name, met: ch.met, min: num(mn), metric, exId: ch.exId || null, sets: num(sets) || null, reps: num(reps) || null, dist: num(dist) || null }]);
+      resetAdd();
+    }
+    function removeAt(k) { setBItems((prev) => prev.filter((x) => x._k !== k)); }
+    function move(k, dir) { setBItems((prev) => { const idx = prev.findIndex((x) => x._k === k); const j = idx + dir; if (j < 0 || j >= prev.length) return prev; const nx = [...prev]; const [it] = nx.splice(idx, 1); nx.splice(j, 0, it); return nx; }); }
+    function doSave() {
+      if (!name.trim() || bItems.length === 0) return;
+      const items = bItems.map(({ _k, ...rest }) => rest);
+      const tpl = { id: editing ? editing.id : "t" + Date.now(), name: name.trim(), items };
+      saveTemplate(tpl);
+      if (!editing && di != null) applyTemplateToDay(di, tpl);
+      onClose();
+    }
+    return (
+      <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 76, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+        <div onClick={(e) => e.stopPropagation()} className="hf-modal" style={{ background: INK, border: `1px solid ${LINE}`, borderRadius: 18, width: "100%", maxWidth: 420, maxHeight: "90vh", overflowY: "auto", padding: 20 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+            <div style={{ ...disp, fontWeight: 700, fontSize: 17 }}>{editing ? (lang === "nl" ? "Training bewerken" : "Edit workout") : (lang === "nl" ? "Nieuwe training" : "New workout")}</div>
+            <div onClick={onClose} style={{ cursor: "pointer", color: MUTED, fontSize: 17, width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 9, border: `1px solid ${LINE}` }}>×</div>
+          </div>
+          <label style={label}>{lang === "nl" ? "Naam" : "Name"}</label>
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder={lang === "nl" ? "bijv. Mijn Hyrox light" : "e.g. My Hyrox light"} style={{ ...sIn, marginBottom: 12 }} />
+          <label style={label}>{lang === "nl" ? "Oefeningen" : "Exercises"} · {bItems.length}</label>
+          {bItems.length > 0 && (
+            <div style={{ background: INK2, border: `1px solid ${LINE}`, borderRadius: 12, overflow: "hidden", marginBottom: 10 }}>
+              {bItems.map((x, i) => (
+                <div key={x._k} style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 11px", borderTop: i > 0 ? `1px solid ${LINE}` : "none" }}>
+                  <div style={{ display: "flex", flexDirection: "column", flexShrink: 0 }}>
+                    <div onClick={() => move(x._k, -1)} style={{ cursor: "pointer", color: i === 0 ? LINE : MUTED, fontSize: 11, lineHeight: 1 }}>▲</div>
+                    <div onClick={() => move(x._k, 1)} style={{ cursor: "pointer", color: i === bItems.length - 1 ? LINE : MUTED, fontSize: 11, lineHeight: 1 }}>▼</div>
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: PAPER, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{x.name}</div>
+                    <div style={{ fontSize: 10.5, color: MUTED, marginTop: 1 }}>{setLabel(x) ? setLabel(x) + " · " : ""}{x.min} {t("min")}</div>
+                  </div>
+                  <div onClick={() => removeAt(x._k)} style={{ cursor: "pointer", color: MUTED, fontSize: 16, flexShrink: 0 }}>×</div>
+                </div>
+              ))}
+            </div>
+          )}
+          {ch ? (
+            <div style={{ background: INK2, border: `1px solid ${LINE}`, borderRadius: 12, padding: 13, marginBottom: 10 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}><div style={{ ...disp, fontSize: 14, fontWeight: 700 }}>{ch.name}</div><div onClick={resetAdd} style={{ cursor: "pointer", fontSize: 11.5, color: MUTED, fontWeight: 600 }}>{t("change")}</div></div>
+              {ch.exId === "hyroxsim" ? (
+                <div style={{ fontSize: 12, color: MUTED, marginBottom: 12, lineHeight: 1.5 }}>{lang === "nl" ? "Voegt de 16 Hyrox-onderdelen in één keer toe." : "Adds all 16 Hyrox parts at once."}</div>
+              ) : (
+                <>
+                  {metric === "reps" && (
+                    <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
+                      <div style={{ flex: 1 }}><label style={label}>{t("sets")}</label><input value={sets} onChange={(e) => setSets(e.target.value.replace(/[^0-9]/g, ""))} inputMode="numeric" placeholder="4" style={sIn} /></div>
+                      <div style={{ flex: 1 }}><label style={label}>{t("reps")}</label><input value={reps} onChange={(e) => setReps(e.target.value.replace(/[^0-9]/g, ""))} inputMode="numeric" placeholder="12" style={sIn} /></div>
+                    </div>
+                  )}
+                  {metric === "dist" && (
+                    <div style={{ marginBottom: 10 }}><label style={label}>{t("dist")}</label><input value={dist} onChange={(e) => setDist(e.target.value.replace(/[^0-9]/g, ""))} inputMode="numeric" placeholder="1000" style={sIn} /></div>
+                  )}
+                  <label style={label}>{t("minutes")}</label>
+                  <input value={mn} onChange={(e) => setMn(e.target.value.replace(/[^0-9]/g, ""))} inputMode="numeric" placeholder="20" style={{ ...sIn, marginBottom: 12 }} />
+                </>
+              )}
+              <div onClick={addEx} className="hf-tap" style={{ cursor: "pointer", textAlign: "center", background: EMBER, color: "#fff", padding: "11px 0", borderRadius: 9, ...disp, fontWeight: 700, fontSize: 14 }}>{lang === "nl" ? "Toevoegen aan training" : "Add to workout"}</div>
+            </div>
+          ) : picking ? (
+            <div style={{ marginBottom: 10 }}><ExAccordion onPick={setCh} /><div onClick={() => setPicking(false)} style={{ cursor: "pointer", textAlign: "center", marginTop: 10, color: MUTED, fontSize: 12, fontWeight: 600 }}>{t("cancel")}</div></div>
+          ) : (
+            <div onClick={() => setPicking(true)} className="hf-tap" style={{ cursor: "pointer", textAlign: "center", padding: "11px 0", color: EMBER, fontSize: 12.5, fontWeight: 700, ...disp, letterSpacing: 0.5, border: `1px dashed ${EMBER}`, borderRadius: 11, marginBottom: 10 }}>+ {lang === "nl" ? "Oefening toevoegen" : "Add exercise"}</div>
+          )}
+          <div onClick={doSave} className="hf-tap" style={{ cursor: num(name.trim().length) > 0 && bItems.length > 0 ? "pointer" : "not-allowed", opacity: name.trim() && bItems.length > 0 ? 1 : 0.5, textAlign: "center", background: EMBER, color: "#fff", padding: "13px 0", borderRadius: 11, ...disp, fontWeight: 700, fontSize: 15, letterSpacing: 0.6, textTransform: "uppercase", marginTop: 4 }}>{lang === "nl" ? "Opslaan bij mijn trainingen" : "Save to my workouts"}</div>
         </div>
       </div>
     );
@@ -664,6 +802,7 @@ export default function Training({ lang, session, weight }) {
 
       {planAdd !== null && <PlanAddModal di={planAdd} onClose={() => setPlanAdd(null)} />}
       {planEdit && <PlanEditModal di={planEdit.di} item={planEdit.item} onClose={() => setPlanEdit(null)} />}
+      {tplBuild && <TemplateBuilder init={tplBuild} onClose={() => setTplBuild(null)} />}
       {move && <MoveModal scope={move.scope} di={move.di} onClose={() => setMove(null)} />}
       {howEx && <HowModal lang={lang} ex={howEx} onClose={() => setHowEx(null)} />}
       {runner && <SessionRunner lang={lang} kg={kg} items={plannedToday} checked={checked} toggle={togglePlanned} exOf={exOf} onFinish={finishSession} onClose={() => setRunner(false)} dateKey={d} t={t} />}
@@ -883,14 +1022,18 @@ function SessionExLog({ lang, kg, item, dateKey, ex, t }) {
   const [note, setNote] = useState((saved && saved.note) || "");
   const [vidUrl, setVidUrl] = useState(null);
   const [listening, setListening] = useState(false);
-  const fileRef = useRef(null), recRef = useRef(null), noteRef = useRef(null);
+  const fileRef = useRef(null), recRef = useRef(null), noteRef = useRef(null), baseRef = useRef("");
   const how = ex && ex.how ? ex.how[lang === "nl" ? "nl" : "en"] : "";
   const demo = ex && ex.demo ? ex.demo : null;
 
   useEffect(() => {
     let url;
     idbVideo("get", vidKey).then((blob) => { if (blob) { url = URL.createObjectURL(blob); setVidUrl(url); } });
-    return () => { if (url) URL.revokeObjectURL(url); if (recRef.current) { try { recRef.current.stop(); } catch (e) {} } };
+    return () => {
+      if (url) URL.revokeObjectURL(url);
+      if (recRef.current) { try { recRef.current.stop(); } catch (e) {} }
+      try { if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) import("@capacitor-community/speech-recognition").then(({ SpeechRecognition }) => { SpeechRecognition.stop().catch(() => {}); SpeechRecognition.removeAllListeners().catch(() => {}); }).catch(() => {}); } catch (e) {}
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   // Live opslaan.
@@ -906,7 +1049,29 @@ function SessionExLog({ lang, kg, item, dateKey, ex, t }) {
   const setVal = (i, v) => setSets((prev) => prev.map((s, j) => j === i ? { w: v } : s));
   function onFilm(e) { const f = e.target.files && e.target.files[0]; if (!f) return; idbVideo("put", vidKey, f).then(() => { const u = URL.createObjectURL(f); setVidUrl(u); }); }
   function removeClip() { idbVideo("del", vidKey).then(() => { if (vidUrl) URL.revokeObjectURL(vidUrl); setVidUrl(null); }); }
+  async function micNativeStart() {
+    const { SpeechRecognition } = await import("@capacitor-community/speech-recognition");
+    try { await SpeechRecognition.requestPermissions(); } catch (e) {}
+    try { await SpeechRecognition.removeAllListeners(); } catch (e) {}
+    baseRef.current = note;
+    await SpeechRecognition.addListener("partialResults", (data) => {
+      const m = data && data.matches && data.matches[0];
+      if (m != null) setNote((baseRef.current ? baseRef.current + " " : "") + m);
+    });
+    await SpeechRecognition.start({ language: lang === "nl" ? "nl-NL" : "en-US", partialResults: true, popup: false });
+    setListening(true);
+  }
+  async function micNativeStop() {
+    try { const { SpeechRecognition } = await import("@capacitor-community/speech-recognition"); await SpeechRecognition.stop(); await SpeechRecognition.removeAllListeners(); } catch (e) {}
+    setListening(false);
+  }
   function mic() {
+    const native = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+    if (native) {
+      if (listening) micNativeStop();
+      else micNativeStart().catch(() => { setListening(false); if (noteRef.current) noteRef.current.focus(); });
+      return;
+    }
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) { if (noteRef.current) noteRef.current.focus(); return; }
     if (listening) { try { recRef.current && recRef.current.stop(); } catch (e) {} setListening(false); return; }
@@ -1025,8 +1190,8 @@ function SessionRunner({ lang, kg, items, checked, toggle, exOf, onFinish, onClo
     <div onClick={() => saveCfg({ ...cfg, mode: val })} style={{ cursor: "pointer", flex: 1, textAlign: "center", fontSize: 11.5, fontWeight: 700, ...disp, padding: "6px 0", borderRadius: 7, background: active ? EMBER : "transparent", color: active ? "#fff" : MUTED }}>{lblTxt}</div>
   );
 
-  return (
-    <div style={{ position: "fixed", inset: 0, background: "linear-gradient(180deg,#2c121b 0%,#200e15 48%,#180b10 100%)", zIndex: 78, overflowY: "auto" }}>
+  return createPortal(
+    <div style={{ position: "fixed", inset: 0, background: "linear-gradient(180deg,#2c121b 0%,#200e15 48%,#180b10 100%)", zIndex: 999, overflowY: "auto" }}>
       <div style={{ maxWidth: 480, margin: "0 auto", padding: "calc(16px + env(safe-area-inset-top)) 16px calc(20px + env(safe-area-inset-bottom))" }}>
         <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 6 }}>
           <div onClick={onClose} style={{ cursor: "pointer", color: MUTED, fontSize: 18, width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 9, border: `1px solid ${LINE}` }}>×</div>
@@ -1096,7 +1261,8 @@ function SessionRunner({ lang, kg, items, checked, toggle, exOf, onFinish, onClo
 
         <div onClick={() => onFinish(items, { time: elapsed, splits })} className="hf-tap" style={{ cursor: "pointer", textAlign: "center", background: "transparent", border: `1px solid ${EMBER}`, color: EMBER, padding: "14px 0", borderRadius: 12, ...disp, fontWeight: 700, fontSize: 15, letterSpacing: 0.8, textTransform: "uppercase" }}>{t("finishSession")}</div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -1108,8 +1274,8 @@ function SessionSummary({ lang, data, onClose, onUndo, t }) {
       <div style={{ fontSize: 10, letterSpacing: 0.5, textTransform: "uppercase", color: MUTED, marginTop: 3, fontWeight: 600 }}>{l}</div>
     </div>
   );
-  return (
-    <div style={{ position: "fixed", inset: 0, background: "linear-gradient(180deg,#2c121b 0%,#200e15 48%,#180b10 100%)", zIndex: 80, overflowY: "auto" }}>
+  return createPortal(
+    <div style={{ position: "fixed", inset: 0, background: "linear-gradient(180deg,#2c121b 0%,#200e15 48%,#180b10 100%)", zIndex: 1000, overflowY: "auto" }}>
       <div style={{ maxWidth: 440, margin: "0 auto", padding: "calc(40px + env(safe-area-inset-top)) 20px 40px", textAlign: "center" }}>
         <div style={{ width: 84, height: 84, borderRadius: "50%", background: "rgba(88,194,125,0.14)", border: "2px solid #58C27D", display: "flex", alignItems: "center", justifyContent: "center", margin: "14px auto 16px", fontSize: 40 }}>🏆</div>
         <div style={{ ...disp, fontWeight: 700, fontSize: 24 }}>{t("sessionDone")}</div>
@@ -1147,7 +1313,8 @@ function SessionSummary({ lang, data, onClose, onUndo, t }) {
         <div onClick={onClose} className="hf-tap" style={{ cursor: "pointer", textAlign: "center", background: EMBER, color: "#fff", padding: "15px 0", borderRadius: 12, ...disp, fontWeight: 700, fontSize: 16, letterSpacing: 0.8, textTransform: "uppercase" }}>{t("backToday")}</div>
         <div onClick={onUndo} className="hf-tap" style={{ cursor: "pointer", textAlign: "center", background: "transparent", border: `1px solid ${LINE}`, color: MUTED, padding: "13px 0", borderRadius: 12, ...disp, fontWeight: 700, fontSize: 14, marginTop: 9 }}>{t("undoAll")}</div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
