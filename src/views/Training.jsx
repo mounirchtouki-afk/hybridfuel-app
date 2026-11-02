@@ -112,7 +112,46 @@ const T = {
   maxed: { nl: "Max niveau ✓", en: "Max level ✓" },
   toNext: { nl: "tot", en: "to" },
   noSessions: { nl: "Nog geen voltooide trainingen. Rond je eerste sessie af en je ziet hier je score groeien.", en: "No completed sessions yet. Finish your first session and watch your score grow here." },
+  logVideo: { nl: "Video", en: "Video" },
+  logWatch: { nl: "Bekijk oefening", en: "Watch exercise" },
+  logWatchSub: { nl: "Zo doe je 'm goed", en: "Do it right" },
+  logFilm: { nl: "Film je set", en: "Film your set" },
+  logFilmSub: { nl: "Eigen opname", en: "Your recording" },
+  logSets: { nl: "Sets · gewicht", en: "Sets · weight" },
+  logNote: { nl: "Notitie", en: "Note" },
+  logLast: { nl: "Vorige keer", en: "Last time" },
+  logNoteHint: { nl: "Typ je notitie of tik de microfoon voor spraak-naar-tekst.", en: "Type your note or tap the mic for speech-to-text." },
+  logNotePh: { nl: "Hoe voelde het? Zwaarder/lichter volgende keer?", en: "How did it feel? Heavier/lighter next time?" },
+  logSave: { nl: "Opslaan", en: "Save" },
+  logRecorded: { nl: "Opname bewaard", en: "Recording saved" },
+  logRemoveClip: { nl: "Verwijder", en: "Remove" },
+  logListening: { nl: "Luisteren…", en: "Listening…" },
+  logOpen: { nl: "tik om te loggen", en: "tap to log" },
 };
+
+// Kleine IndexedDB-opslag voor eigen set-opnames (video-blobs; te groot voor localStorage).
+function idbVideo(action, key, blob) {
+  return new Promise((res) => {
+    try {
+      const r = indexedDB.open("hf_media", 1);
+      r.onupgradeneeded = () => { try { r.result.createObjectStore("v"); } catch (e) {} };
+      r.onsuccess = () => {
+        try {
+          const db = r.result;
+          const tx = db.transaction("v", action === "get" ? "readonly" : "readwrite");
+          const st = tx.objectStore("v");
+          let rq;
+          if (action === "get") rq = st.get(key);
+          else if (action === "put") rq = st.put(blob, key);
+          else rq = st.delete(key);
+          rq.onsuccess = () => res(action === "get" ? rq.result : true);
+          rq.onerror = () => res(null);
+        } catch (e) { res(null); }
+      };
+      r.onerror = () => res(null);
+    } catch (e) { res(null); }
+  });
+}
 
 const isoAdd = (iso, n) => { const dt = new Date(iso + "T12:00:00"); dt.setDate(dt.getDate() + n); return dt.toISOString().slice(0, 10); };
 // Korte set-/afstand-omschrijving van een geplande oefening (bv. "4 × 12" of "1000 m").
@@ -151,6 +190,7 @@ export default function Training({ lang, session, weight }) {
   const [planAdd, setPlanAdd] = useState(null);
   const [move, setMove] = useState(null);
   const [runner, setRunner] = useState(false);   // sessie-runner open
+  const [logEx, setLogEx] = useState(null);       // oefening-logboek {item}
   const [howEx, setHowEx] = useState(null);       // "zo werkt het"-popover (exercise-obj)
   const [summary, setSummary] = useState(null);    // voltooi-samenvatting {name,exercises,min,kcal,km}
   const [sessions, setSessions] = useState(() => load("hf_sessions", []));
@@ -571,7 +611,8 @@ export default function Training({ lang, session, weight }) {
       {planAdd !== null && <PlanAddModal di={planAdd} onClose={() => setPlanAdd(null)} />}
       {move && <MoveModal scope={move.scope} di={move.di} onClose={() => setMove(null)} />}
       {howEx && <HowModal lang={lang} ex={howEx} onClose={() => setHowEx(null)} />}
-      {runner && <SessionRunner lang={lang} kg={kg} items={plannedToday} checked={checked} toggle={togglePlanned} onHow={setHowEx} exOf={exOf} onFinish={finishSession} onClose={() => setRunner(false)} T={T} t={t} />}
+      {runner && <SessionRunner lang={lang} kg={kg} items={plannedToday} checked={checked} toggle={togglePlanned} onHow={setHowEx} exOf={exOf} onFinish={finishSession} onClose={() => setRunner(false)} onOpenLog={(x) => setLogEx({ item: x })} T={T} t={t} />}
+      {logEx && <ExerciseLog lang={lang} item={logEx.item} dateKey={d} ex={exOf(logEx.item)} onHow={setHowEx} onClose={() => setLogEx(null)} t={t} />}
       {summary && <SessionSummary lang={lang} data={summary} onClose={() => setSummary(null)} onUndo={undoLastSession} t={t} />}
     </div>
   );
@@ -600,8 +641,140 @@ function HowModal({ lang, ex, onClose }) {
   );
 }
 
+// Oefening-logboek: gewicht per set + afvinken, notitie (typen/spraak), eigen set-opname.
+// Slaat lokaal op per dag + oefening; de laatste waarde komt terug als "vorige keer".
+function ExerciseLog({ lang, item, dateKey, ex, onHow, onClose, t }) {
+  const GREEN = "#58C27D";
+  const exId = item.exId || item.name || "ex";
+  const logKey = "hf_exlog_" + dateKey + "_" + exId;
+  const lastKey = "hf_exlast_" + exId;
+  const vidKey = logKey + "_vid";
+  const nSets = Math.max(1, Math.min(8, num(item.sets) || 3));
+  const reps = num(item.reps) || null;
+  const lastW = num(load(lastKey, 0));
+  const saved = load(logKey, null);
+  const [sets, setSets] = useState(() => Array.from({ length: nSets }, (_, i) => {
+    const s = saved && saved.sets && saved.sets[i];
+    return { w: s && s.w != null ? s.w : (lastW || ""), done: !!(s && s.done) };
+  }));
+  const [note, setNote] = useState((saved && saved.note) || "");
+  const [vidUrl, setVidUrl] = useState(null);
+  const [listening, setListening] = useState(false);
+  const fileRef = useRef(null);
+  const recRef = useRef(null);
+  const noteRef = useRef(null);
+
+  useEffect(() => {
+    let url;
+    idbVideo("get", vidKey).then((blob) => { if (blob) { url = URL.createObjectURL(blob); setVidUrl(url); } });
+    return () => { if (url) URL.revokeObjectURL(url); if (recRef.current) { try { recRef.current.stop(); } catch (e) {} } };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const fmtW = (v) => (v === "" || v == null ? "–" : String(v).replace(".", lang === "nl" ? "," : "."));
+  const stepW = (i, dv) => setSets((prev) => prev.map((s, j) => j === i ? { ...s, w: Math.max(0, Math.round(((num(s.w) || 0) + dv) * 10) / 10) } : s));
+  const toggleSet = (i) => setSets((prev) => prev.map((s, j) => j === i ? { ...s, done: !s.done } : s));
+
+  function onFilm(e) {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    idbVideo("put", vidKey, f).then(() => { const u = URL.createObjectURL(f); setVidUrl(u); });
+  }
+  function removeClip() { idbVideo("del", vidKey).then(() => { if (vidUrl) URL.revokeObjectURL(vidUrl); setVidUrl(null); }); }
+
+  function mic() {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) { if (noteRef.current) noteRef.current.focus(); return; } // val terug op toetsenbord-mic
+    if (listening) { try { recRef.current && recRef.current.stop(); } catch (e) {} setListening(false); return; }
+    try {
+      const r = new SR(); r.lang = lang === "nl" ? "nl-NL" : "en-US"; r.interimResults = false;
+      r.onresult = (ev) => { const txt = Array.from(ev.results).map((x) => x[0].transcript).join(" "); setNote((n) => (n ? n + " " : "") + txt); };
+      r.onend = () => setListening(false); r.onerror = () => setListening(false);
+      recRef.current = r; setListening(true); r.start();
+    } catch (e) { setListening(false); }
+  }
+
+  function doSave() {
+    save(logKey, { sets: sets.map((s) => ({ w: num(s.w) || null, done: !!s.done })), note: note.trim() });
+    const top = Math.max(0, ...sets.map((s) => num(s.w) || 0));
+    if (top > 0) save(lastKey, top);
+    onClose();
+  }
+
+  const field = { background: INK, border: `1px solid ${LINE}`, borderRadius: 12 };
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(5px)", WebkitBackdropFilter: "blur(5px)", zIndex: 82, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+      <div onClick={(e) => e.stopPropagation()} className="hf-modal" style={{ width: "100%", maxWidth: 480, background: INK2, borderRadius: "22px 22px 0 0", padding: "16px 16px calc(20px + env(safe-area-inset-bottom))", maxHeight: "94vh", overflowY: "auto", boxShadow: "0 -10px 40px rgba(0,0,0,0.4)" }}>
+        <div style={{ width: 40, height: 4, borderRadius: 2, background: LINE, margin: "0 auto 14px" }} />
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 3 }}>
+          <div style={{ ...disp, fontWeight: 700, fontSize: 21 }}>{item.name}</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            {ex && ex.how && <div onClick={() => onHow(ex)} style={{ cursor: "pointer", color: EMBER, fontSize: 19 }}>ⓘ</div>}
+            <div onClick={onClose} style={{ cursor: "pointer", color: MUTED, fontSize: 16, width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 9, border: `1px solid ${LINE}` }}>×</div>
+          </div>
+        </div>
+        <div style={{ fontSize: 12, color: MUTED, marginBottom: 12 }}>{setLabel(item) ? setLabel(item) + " · " : ""}~{item.kcal} kcal</div>
+        {lastW > 0 && (
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 7, background: "rgba(225,29,72,0.10)", border: "1px solid rgba(225,29,72,0.28)", color: EMBER, borderRadius: 10, padding: "8px 12px", fontSize: 12, fontWeight: 600, marginBottom: 16 }}>↗ {t("logLast")} {fmtW(lastW)} kg</div>
+        )}
+
+        {/* VIDEO */}
+        <div style={{ fontSize: 10, letterSpacing: 1.1, textTransform: "uppercase", color: MUTED, fontWeight: 700, marginBottom: 9 }}>{t("logVideo")}</div>
+        <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
+          <div onClick={() => ex && ex.how && onHow(ex)} className="hf-tap" style={{ ...field, flex: 1, display: "flex", alignItems: "center", gap: 9, padding: "11px 12px", cursor: "pointer" }}>
+            <span style={{ width: 30, height: 30, borderRadius: "50%", background: "rgba(225,29,72,0.12)", display: "flex", alignItems: "center", justifyContent: "center", color: EMBER, fontSize: 13 }}>▶</span>
+            <div><div style={{ fontSize: 13, fontWeight: 600 }}>{t("logWatch")}</div><div style={{ fontSize: 10.5, color: MUTED }}>{t("logWatchSub")}</div></div>
+          </div>
+          <div onClick={() => fileRef.current && fileRef.current.click()} className="hf-tap" style={{ ...field, flex: 1, display: "flex", alignItems: "center", gap: 9, padding: "11px 12px", cursor: "pointer" }}>
+            <span style={{ width: 30, height: 30, borderRadius: "50%", background: EMBER, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 10l5-3v10l-5-3z" /><rect x="2" y="6" width="13" height="12" rx="2" /></svg>
+            </span>
+            <div><div style={{ fontSize: 13, fontWeight: 600 }}>{t("logFilm")}</div><div style={{ fontSize: 10.5, color: MUTED }}>{t("logFilmSub")}</div></div>
+          </div>
+          <input ref={fileRef} type="file" accept="video/*" capture="environment" onChange={onFilm} style={{ display: "none" }} />
+        </div>
+        {vidUrl && (
+          <div style={{ marginBottom: 16 }}>
+            <video src={vidUrl} controls playsInline style={{ width: "100%", borderRadius: 12, maxHeight: 220, background: "#000" }} />
+            <div onClick={removeClip} style={{ cursor: "pointer", textAlign: "center", marginTop: 7, fontSize: 12, color: MUTED, fontWeight: 600 }}>{t("logRemoveClip")}</div>
+          </div>
+        )}
+
+        {/* SETS */}
+        <div style={{ fontSize: 10, letterSpacing: 1.1, textTransform: "uppercase", color: MUTED, fontWeight: 700, marginBottom: 9 }}>{t("logSets")}</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
+          {sets.map((s, i) => (
+            <div key={i} style={{ ...field, display: "flex", alignItems: "center", gap: 10, padding: "9px 11px" }}>
+              <div style={{ ...disp, fontWeight: 700, fontSize: 13, width: 44 }}>{(lang === "nl" ? "Set " : "Set ") + (i + 1)}</div>
+              {reps && <div style={{ fontSize: 12, color: MUTED, width: 56 }}><b style={{ color: PAPER, ...disp, fontSize: 15 }}>{reps}</b> reps</div>}
+              <div style={{ display: "flex", alignItems: "center", marginLeft: "auto", border: `1px solid ${LINE}`, borderRadius: 10, overflow: "hidden", background: INK2 }}>
+                <div onClick={() => stepW(i, -2.5)} className="hf-tap" style={{ width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, color: EMBER, fontWeight: 700, cursor: "pointer" }}>−</div>
+                <div style={{ minWidth: 66, textAlign: "center", ...disp, fontWeight: 700, fontSize: 15 }}>{fmtW(s.w)} <span style={{ fontSize: 11, color: MUTED, fontWeight: 500 }}>kg</span></div>
+                <div onClick={() => stepW(i, 2.5)} className="hf-tap" style={{ width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, color: EMBER, fontWeight: 700, cursor: "pointer" }}>+</div>
+              </div>
+              <div onClick={() => toggleSet(i)} className="hf-tap" style={{ cursor: "pointer", width: 26, height: 26, flexShrink: 0, borderRadius: "50%", border: `2px solid ${s.done ? GREEN : MUTED}`, background: s.done ? GREEN : "transparent", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: 13 }}>{s.done ? "✓" : ""}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* NOTITIE */}
+        <div style={{ fontSize: 10, letterSpacing: 1.1, textTransform: "uppercase", color: MUTED, fontWeight: 700, marginBottom: 9 }}>{t("logNote")}</div>
+        <div style={{ position: "relative" }}>
+          <textarea ref={noteRef} value={note} onChange={(e) => setNote(e.target.value)} placeholder={t("logNotePh")} style={{ ...field, width: "100%", minHeight: 88, padding: "12px 52px 12px 12px", color: PAPER, fontFamily: "Inter, sans-serif", fontSize: 13.5, lineHeight: 1.5, outline: "none", resize: "vertical", boxSizing: "border-box" }} />
+          <div onClick={mic} style={{ position: "absolute", right: 10, bottom: 10, width: 40, height: 40, borderRadius: "50%", background: listening ? "#9f1239" : EMBER, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 6px 16px rgba(225,29,72,0.35)" }}>
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5 11a7 7 0 0014 0M12 18v3" /></svg>
+          </div>
+        </div>
+        <div style={{ fontSize: 11, color: MUTED, marginTop: 7 }}>{listening ? t("logListening") : t("logNoteHint")}</div>
+
+        <div onClick={doSave} className="hf-tap" style={{ marginTop: 16, background: EMBER, color: "#fff", textAlign: "center", padding: "14px 0", borderRadius: 12, ...disp, fontWeight: 700, fontSize: 15, letterSpacing: 0.6, textTransform: "uppercase", cursor: "pointer" }}>{t("logSave")}</div>
+      </div>
+    </div>
+  );
+}
+
 // Begeleide sessie: voortgangsbalk, huidige oefening uitgelicht, afvinken + afronden.
-function SessionRunner({ lang, items, checked, toggle, onHow, exOf, onFinish, onClose, t }) {
+function SessionRunner({ lang, items, checked, toggle, onHow, exOf, onFinish, onClose, onOpenLog, t }) {
   const GREEN = "#58C27D";
   const total = items.length;
   const done = items.filter((_, i) => checked.includes(i)).length;
@@ -630,9 +803,9 @@ function SessionRunner({ lang, items, checked, toggle, onHow, exOf, onFinish, on
             return (
               <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, background: INK2, borderRadius: 14, padding: 12, border: `1px ${on ? "solid " + GREEN : cur ? "solid " + EMBER : "dashed " + SAGE}`, boxShadow: cur ? "0 0 22px rgba(225,29,72,0.22)" : "none" }}>
                 <div onClick={() => toggle(i, x)} className="hf-tap" style={{ cursor: "pointer", width: 28, height: 28, flexShrink: 0, borderRadius: "50%", border: `2px solid ${on ? GREEN : cur ? EMBER : MUTED}`, background: on ? GREEN : "transparent", display: "flex", alignItems: "center", justifyContent: "center", color: on ? "#0A0A0A" : EMBER, fontSize: 14, fontWeight: 800 }}>{on ? "✓" : cur ? "▶" : ""}</div>
-                <div style={{ flex: 1, minWidth: 0 }}>
+                <div onClick={() => onOpenLog(x, i)} className="hf-tap" style={{ flex: 1, minWidth: 0, cursor: "pointer", borderRadius: 10, padding: "2px 4px", margin: "-2px -4px" }}>
                   <div style={{ fontSize: 14.5, fontWeight: 600, color: on ? MUTED : PAPER, textDecoration: on ? "line-through" : "none" }}>{x.name}</div>
-                  <div style={{ fontSize: 11.5, color: MUTED, marginTop: 3 }}>{setLabel(x) ? setLabel(x) + " · " : ""}{x.min} {t("min")} · ~{x.kcal} kcal{cur ? " · " + t("nowBusy") : ""}</div>
+                  <div style={{ fontSize: 11.5, color: MUTED, marginTop: 3 }}>{setLabel(x) ? setLabel(x) + " · " : ""}{x.min} {t("min")} · ~{x.kcal} kcal · {t("logOpen")}</div>
                 </div>
                 {ex && ex.how && <div onClick={() => onHow(ex)} style={{ cursor: "pointer", color: EMBER_SOFT, fontSize: 18, width: 28, textAlign: "center", flexShrink: 0 }}>ⓘ</div>}
               </div>
