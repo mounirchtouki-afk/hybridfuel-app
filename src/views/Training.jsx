@@ -101,6 +101,7 @@ const T = {
   sessionDoneSub: { nl: "Sterk gedaan. Dit telt mee in je weekreview en prestaties.", en: "Well done. This counts toward your week review and achievements." },
   exercisesN: { nl: "Oefeningen", en: "Exercises" },
   minutesN: { nl: "Minuten", en: "Minutes" },
+  timeN: { nl: "Tijd", en: "Time" },
   backToday: { nl: "Terug naar vandaag", en: "Back to today" },
   prestIntro: { nl: "Alles wat je tot nu toe hebt neergezet. Blijf trainen, verdien je medailles.", en: "Everything you've put down so far. Keep training, earn your medals." },
   totalLbl: { nl: "Totaal", en: "Total" },
@@ -271,16 +272,18 @@ export default function Training({ lang, session, weight }) {
     const min = items.reduce((a, x) => a + num(x.min), 0);
     return { exercises: items.length, min, kcal, km };
   }
-  function finishSession(items) {
+  function finishSession(items, meta) {
     const tot = sessionTotals(items);
-    const rec = { id: "s" + Date.now(), date: d, name: null, ...tot, ts: Date.now() };
+    const sec = (meta && meta.time) || 0;
+    const rec = { id: "s" + Date.now(), date: d, name: null, ...tot, sec, ts: Date.now() };
     const next = [...sessions.filter((s) => s.date !== d || s.id !== rec.id), rec];
     // één sessie per keer-afronden; dubbele afronding op dezelfde dag vervangt de laatste
     const cleaned = next.filter((s) => !(s.date === d && s.id !== rec.id && s._auto));
     setSessions(cleaned); save("hf_sessions", cleaned);
     markAllPlanned(items);
+    try { localStorage.removeItem("hf_sessclock_" + d); localStorage.removeItem("hf_sesssplits_" + d); } catch (e) {}
     setRunner(false);
-    setSummary({ ...tot, name: null });
+    setSummary({ ...tot, name: null, sec, splits: (meta && meta.splits) || {}, items });
   }
   function undoLastSession() {
     const today = [...sessions].filter((s) => s.date === d).sort((a, b) => b.ts - a.ts)[0];
@@ -663,8 +666,7 @@ export default function Training({ lang, session, weight }) {
       {planEdit && <PlanEditModal di={planEdit.di} item={planEdit.item} onClose={() => setPlanEdit(null)} />}
       {move && <MoveModal scope={move.scope} di={move.di} onClose={() => setMove(null)} />}
       {howEx && <HowModal lang={lang} ex={howEx} onClose={() => setHowEx(null)} />}
-      {runner && <SessionRunner lang={lang} kg={kg} items={plannedToday} checked={checked} toggle={togglePlanned} onHow={setHowEx} exOf={exOf} onFinish={finishSession} onClose={() => setRunner(false)} onOpenLog={(x, i) => setLogEx({ item: x, idx: i })} T={T} t={t} />}
-      {logEx && <ExerciseLog lang={lang} item={logEx.item} dateKey={d} ex={exOf(logEx.item)} onHow={setHowEx} onClose={() => setLogEx(null)} onDone={() => { if (logEx.idx != null) markDonePlanned(logEx.idx, logEx.item); }} t={t} />}
+      {runner && <SessionRunner lang={lang} kg={kg} items={plannedToday} checked={checked} toggle={togglePlanned} exOf={exOf} onFinish={finishSession} onClose={() => setRunner(false)} dateKey={d} t={t} />}
       {summary && <SessionSummary lang={lang} data={summary} onClose={() => setSummary(null)} onUndo={undoLastSession} t={t} />}
     </div>
   );
@@ -852,46 +854,247 @@ function ExerciseLog({ lang, item, dateKey, ex, onHow, onClose, onDone, t }) {
   );
 }
 
-// Begeleide sessie: voortgangsbalk, huidige oefening uitgelicht, afvinken + afronden.
-function SessionRunner({ lang, items, checked, toggle, onHow, exOf, onFinish, onClose, onOpenLog, t }) {
+// Seconden -> klok (m:ss of u:mm:ss).
+function fmtClock(sec) {
+  sec = Math.max(0, Math.floor(sec));
+  const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
+  const p = (n) => String(n).padStart(2, "0");
+  return h > 0 ? h + ":" + p(m) + ":" + p(s) : m + ":" + p(s);
+}
+
+// Inline log-body in de sessie: uitleg + video + sets + notitie, alles op z'n plek (geen 2e scherm).
+function SessionExLog({ lang, kg, item, dateKey, ex, t }) {
+  const exId = item.exId || item.name || "ex";
+  const logKey = "hf_exlog_" + dateKey + "_" + exId;
+  const lastKey = "hf_exlast_" + exId;
+  const vidKey = logKey + "_vid";
+  const metric = item.metric || (ex && ex.metric) || "reps";
+  const unit = metric === "dist" ? "m" : metric === "time" ? "min" : "kg";
+  const step = metric === "dist" ? 50 : metric === "time" ? 1 : 2.5;
+  const defVal = metric === "dist" ? (num(item.dist) || "") : metric === "time" ? (num(item.min) || "") : "";
+  const nSets = Math.max(1, Math.min(10, num(item.sets) || (metric === "reps" ? 3 : 1)));
+  const reps = metric === "reps" ? (num(item.reps) || null) : null;
+  const lastW = num(load(lastKey, 0));
+  const saved = load(logKey, null);
+  const [sets, setSets] = useState(() => Array.from({ length: nSets }, (_, i) => {
+    const s = saved && saved.sets && saved.sets[i];
+    return { w: s && s.w != null ? s.w : (lastW || defVal || "") };
+  }));
+  const [note, setNote] = useState((saved && saved.note) || "");
+  const [vidUrl, setVidUrl] = useState(null);
+  const [listening, setListening] = useState(false);
+  const fileRef = useRef(null), recRef = useRef(null), noteRef = useRef(null);
+  const how = ex && ex.how ? ex.how[lang === "nl" ? "nl" : "en"] : "";
+  const demo = ex && ex.demo ? ex.demo : null;
+
+  useEffect(() => {
+    let url;
+    idbVideo("get", vidKey).then((blob) => { if (blob) { url = URL.createObjectURL(blob); setVidUrl(url); } });
+    return () => { if (url) URL.revokeObjectURL(url); if (recRef.current) { try { recRef.current.stop(); } catch (e) {} } };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  // Live opslaan.
+  useEffect(() => {
+    save(logKey, { sets: sets.map((s) => ({ w: num(s.w) || null })), note: note.trim() });
+    const top = Math.max(0, ...sets.map((s) => num(s.w) || 0));
+    if (top > 0) save(lastKey, top);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sets, note]);
+
+  const fmtW = (v) => (v === "" || v == null ? "–" : String(v).replace(".", lang === "nl" ? "," : "."));
+  const stepW = (i, dv) => setSets((prev) => prev.map((s, j) => j === i ? { w: Math.max(0, Math.round(((num(s.w) || 0) + dv) * 10) / 10) } : s));
+  const setVal = (i, v) => setSets((prev) => prev.map((s, j) => j === i ? { w: v } : s));
+  function onFilm(e) { const f = e.target.files && e.target.files[0]; if (!f) return; idbVideo("put", vidKey, f).then(() => { const u = URL.createObjectURL(f); setVidUrl(u); }); }
+  function removeClip() { idbVideo("del", vidKey).then(() => { if (vidUrl) URL.revokeObjectURL(vidUrl); setVidUrl(null); }); }
+  function mic() {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) { if (noteRef.current) noteRef.current.focus(); return; }
+    if (listening) { try { recRef.current && recRef.current.stop(); } catch (e) {} setListening(false); return; }
+    try {
+      const r = new SR(); r.lang = lang === "nl" ? "nl-NL" : "en-US"; r.interimResults = false;
+      r.onresult = (ev) => { const txt = Array.from(ev.results).map((x) => x[0].transcript).join(" "); setNote((n) => (n ? n + " " : "") + txt); };
+      r.onend = () => setListening(false); r.onerror = () => setListening(false);
+      recRef.current = r; setListening(true); r.start();
+    } catch (e) { setListening(false); }
+  }
+
+  const field = { background: INK, border: `1px solid ${LINE}`, borderRadius: 11 };
+  const lbl = { fontSize: 9.5, letterSpacing: 1, textTransform: "uppercase", color: MUTED, fontWeight: 700, margin: "14px 0 8px" };
+  return (
+    <div style={{ padding: "4px 2px 2px" }}>
+      {lastW > 0 && (
+        <div style={{ display: "inline-flex", alignItems: "center", gap: 7, background: "rgba(225,29,72,0.10)", border: "1px solid rgba(225,29,72,0.28)", color: EMBER, borderRadius: 10, padding: "7px 11px", fontSize: 11.5, fontWeight: 600 }}>↗ {t("logLast")} {fmtW(lastW)} {unit}</div>
+      )}
+      {how && <><div style={lbl}>{lang === "nl" ? "Zo werkt het" : "How it works"}</div><div style={{ fontSize: 13, color: PAPER, opacity: 0.9, lineHeight: 1.55 }}>{how}</div></>}
+      {demo && <video src={demo} controls playsInline style={{ width: "100%", borderRadius: 11, maxHeight: 200, background: "#000", marginTop: 10 }} />}
+
+      <div style={lbl}>{lang === "nl" ? "Je eigen opname" : "Your recording"}</div>
+      <div onClick={() => fileRef.current && fileRef.current.click()} className="hf-tap" style={{ ...field, display: "flex", alignItems: "center", gap: 9, padding: "10px 12px", cursor: "pointer" }}>
+        <span style={{ width: 30, height: 30, borderRadius: "50%", background: EMBER, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 10l5-3v10l-5-3z" /><rect x="2" y="6" width="13" height="12" rx="2" /></svg>
+        </span>
+        <div><div style={{ fontSize: 13, fontWeight: 600, color: PAPER }}>{t("logFilm")}</div><div style={{ fontSize: 10.5, color: MUTED }}>{t("logFilmSub")}</div></div>
+      </div>
+      <input ref={fileRef} type="file" accept="video/*" capture="environment" onChange={onFilm} style={{ display: "none" }} />
+      {vidUrl && (
+        <div style={{ marginTop: 10 }}>
+          <video src={vidUrl} controls playsInline style={{ width: "100%", borderRadius: 11, maxHeight: 200, background: "#000" }} />
+          <div onClick={removeClip} style={{ cursor: "pointer", textAlign: "center", marginTop: 6, fontSize: 12, color: MUTED, fontWeight: 600 }}>{t("logRemoveClip")}</div>
+        </div>
+      )}
+
+      <div style={lbl}>{lang === "nl" ? "Sets · " : "Sets · "}{unit === "kg" ? (lang === "nl" ? "gewicht" : "weight") : unit === "m" ? (lang === "nl" ? "afstand" : "distance") : (lang === "nl" ? "tijd" : "time")}</div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+        {sets.map((s, i) => (
+          <div key={i} style={{ ...field, display: "flex", alignItems: "center", gap: 10, padding: "8px 11px" }}>
+            <div style={{ ...disp, fontWeight: 700, fontSize: 13, width: 44 }}>{"Set " + (i + 1)}</div>
+            {reps && <div style={{ fontSize: 12, color: MUTED, width: 56 }}><b style={{ color: PAPER, ...disp, fontSize: 15 }}>{reps}</b> reps</div>}
+            <div style={{ display: "flex", alignItems: "center", marginLeft: "auto", border: `1px solid ${LINE}`, borderRadius: 10, overflow: "hidden", background: INK2 }}>
+              <div onClick={() => stepW(i, -step)} className="hf-tap" style={{ width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, color: EMBER, fontWeight: 700, cursor: "pointer" }}>−</div>
+              <input value={s.w} onChange={(e) => setVal(i, e.target.value.replace(/[^0-9.,]/g, "").replace(",", "."))} inputMode="decimal" placeholder="–" style={{ width: 52, textAlign: "center", background: "transparent", border: "none", color: PAPER, ...disp, fontWeight: 700, fontSize: 15, outline: "none", padding: 0 }} />
+              <span style={{ fontSize: 11, color: MUTED, fontWeight: 500, paddingRight: 6 }}>{unit}</span>
+              <div onClick={() => stepW(i, step)} className="hf-tap" style={{ width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, color: EMBER, fontWeight: 700, cursor: "pointer" }}>+</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div style={lbl}>{t("logNote")}</div>
+      <div style={{ position: "relative" }}>
+        <textarea ref={noteRef} value={note} onChange={(e) => setNote(e.target.value)} placeholder={t("logNotePh")} style={{ ...field, width: "100%", minHeight: 72, padding: "11px 50px 11px 12px", color: PAPER, fontFamily: "Inter, sans-serif", fontSize: 13.5, lineHeight: 1.5, outline: "none", resize: "vertical", boxSizing: "border-box" }} />
+        <div onClick={mic} style={{ position: "absolute", right: 9, bottom: 9, width: 38, height: 38, borderRadius: "50%", background: listening ? "#9f1239" : EMBER, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 6px 16px rgba(225,29,72,0.35)" }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5 11a7 7 0 0014 0M12 18v3" /></svg>
+        </div>
+      </div>
+      <div style={{ fontSize: 11, color: MUTED, marginTop: 6 }}>{listening ? t("logListening") : t("logNoteHint")}</div>
+    </div>
+  );
+}
+
+// Begeleide sessie: lopende klok, inline uitklap per oefening, afvinken=1 tik, splittijden, streefduur/auto-door.
+function SessionRunner({ lang, kg, items, checked, toggle, exOf, onFinish, onClose, dateKey, t }) {
   const GREEN = "#58C27D";
   const total = items.length;
-  const done = items.filter((_, i) => checked.includes(i)).length;
-  const pct = total ? Math.round((done / total) * 100) : 0;
+  const doneCount = items.filter((_, i) => checked.includes(i)).length;
+  const pct = total ? Math.round((doneCount / total) * 100) : 0;
   const curIdx = items.findIndex((_, i) => !checked.includes(i));
-  const totMin = items.reduce((a, x) => a + num(x.min), 0);
+
+  // Lopende klok (per dag, overleeft heropenen).
+  const clockKey = "hf_sessclock_" + dateKey;
+  const clockRef = useRef(null);
+  if (!clockRef.current) { const saved = load(clockKey, null); clockRef.current = saved && saved.start ? saved : { start: Date.now(), acc: 0, running: true }; }
+  const [nowTick, setNowTick] = useState(Date.now());
+  useEffect(() => { if (!load(clockKey, null)) save(clockKey, clockRef.current); const iv = setInterval(() => setNowTick(Date.now()), 1000); return () => clearInterval(iv); }, []);
+  const c = clockRef.current;
+  const elapsed = Math.floor(c.acc + (c.running ? (nowTick - c.start) / 1000 : 0));
+  function togglePause() { const cc = clockRef.current; if (cc.running) { cc.acc += (Date.now() - cc.start) / 1000; cc.running = false; } else { cc.start = Date.now(); cc.running = true; } save(clockKey, cc); setNowTick(Date.now()); }
+
+  // Splittijden (cumulatieve elapsed op moment van afvinken), per index.
+  const [splits, setSplits] = useState(() => load("hf_sesssplits_" + dateKey, {}));
+  const segStart = Object.values(splits).reduce((a, v) => Math.max(a, v || 0), 0);
+  const segElapsed = Math.max(0, elapsed - segStart);
+
+  // Streefduur / auto-door.
+  const [cfg, setCfg] = useState(() => load("hf_timercfg", { mode: "off", auto: false }));
+  function saveCfg(next) { setCfg(next); save("hf_timercfg", next); }
+  const curItem = curIdx >= 0 ? items[curIdx] : null;
+  const curTarget = curItem ? num(curItem.min) * 60 : 0;
+  const remaining = cfg.mode === "per" && curTarget > 0 ? Math.max(0, curTarget - segElapsed) : 0;
+  const sessTarget = items.reduce((a, x) => a + num(x.min), 0) * 60;
+
+  const [openIdx, setOpenIdx] = useState(curIdx >= 0 ? curIdx : 0);
+  const autoRef = useRef(-1);
+
+  function complete(i) {
+    const isOn = checked.includes(i);
+    toggle(i, items[i]);
+    const next = { ...splits };
+    if (!isOn) next[i] = elapsed; else delete next[i];
+    setSplits(next); save("hf_sesssplits_" + dateKey, next);
+    if (!isOn) { const ni = items.findIndex((_, k) => k > i && !checked.includes(k)); setOpenIdx(ni >= 0 ? ni : -1); }
+  }
+  // Auto-door: bij per-oefening streefduur op 0 vanzelf naar de volgende.
+  useEffect(() => {
+    if (cfg.mode === "per" && cfg.auto && curIdx >= 0 && curTarget > 0 && segElapsed >= curTarget && autoRef.current !== curIdx) {
+      autoRef.current = curIdx; complete(curIdx);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [elapsed]);
+
+  const seg = (lblTxt, val, active) => (
+    <div onClick={() => saveCfg({ ...cfg, mode: val })} style={{ cursor: "pointer", flex: 1, textAlign: "center", fontSize: 11.5, fontWeight: 700, ...disp, padding: "6px 0", borderRadius: 7, background: active ? EMBER : "transparent", color: active ? "#fff" : MUTED }}>{lblTxt}</div>
+  );
+
   return (
     <div style={{ position: "fixed", inset: 0, background: "linear-gradient(180deg,#2c121b 0%,#200e15 48%,#180b10 100%)", zIndex: 78, overflowY: "auto" }}>
       <div style={{ maxWidth: 480, margin: "0 auto", padding: "calc(16px + env(safe-area-inset-top)) 16px calc(20px + env(safe-area-inset-bottom))" }}>
         <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 6 }}>
           <div onClick={onClose} style={{ cursor: "pointer", color: MUTED, fontSize: 18, width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 9, border: `1px solid ${LINE}` }}>×</div>
         </div>
-        <div style={{ background: `linear-gradient(135deg, ${EMBER}, #9f1239)`, borderRadius: 16, padding: "16px 16px 18px", marginBottom: 16, color: "#fff" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
-            <div><div style={{ ...disp, fontWeight: 700, fontSize: 19 }}>{lang === "nl" ? "Training" : "Session"}</div><div style={{ fontSize: 11, opacity: 0.9, marginTop: 2 }}>{totMin} min</div></div>
-            <div style={{ textAlign: "right" }}><div style={{ ...disp, fontWeight: 700, fontSize: 26 }}>{done}/{total}</div><div style={{ fontSize: 11, opacity: 0.9 }}>{t("sessionOf")}</div></div>
+        {/* HEADER met lopende klok */}
+        <div style={{ background: `linear-gradient(135deg, ${EMBER}, #9f1239)`, borderRadius: 16, padding: "15px 16px 16px", marginBottom: 12, color: "#fff" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+            <div>
+              <div style={{ ...disp, fontWeight: 700, fontSize: 32, letterSpacing: 1, lineHeight: 1 }}>{fmtClock(elapsed)}</div>
+              <div style={{ fontSize: 10, opacity: 0.9, marginTop: 4, textTransform: "uppercase", letterSpacing: 1 }}>{c.running ? (lang === "nl" ? "Totale tijd loopt" : "Total time running") : (lang === "nl" ? "Gepauzeerd" : "Paused")}{cfg.mode === "session" ? " · " + (lang === "nl" ? "doel " : "goal ") + fmtClock(sessTarget) : ""}</div>
+            </div>
+            <div style={{ textAlign: "right" }}>
+              <div style={{ ...disp, fontWeight: 700, fontSize: 24 }}>{doneCount}/{total}</div>
+              <div onClick={togglePause} className="hf-tap" style={{ cursor: "pointer", marginTop: 6, display: "inline-flex", alignItems: "center", gap: 5, background: "rgba(255,255,255,0.16)", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 8, padding: "5px 10px", fontSize: 12, fontWeight: 700, ...disp }}>{c.running ? "⏸ " + (lang === "nl" ? "Pauze" : "Pause") : "▶ " + (lang === "nl" ? "Verder" : "Resume")}</div>
+            </div>
           </div>
-          <div style={{ height: 7, borderRadius: 5, background: "rgba(255,255,255,0.22)", overflow: "hidden" }}><div style={{ height: "100%", width: pct + "%", background: "#fff", borderRadius: 5, transition: "width .25s" }} /></div>
+          <div style={{ height: 6, borderRadius: 4, background: "rgba(255,255,255,0.22)", overflow: "hidden", marginTop: 12 }}><div style={{ height: "100%", width: pct + "%", background: "#fff", borderRadius: 4, transition: "width .25s" }} /></div>
         </div>
+
+        {/* STREEFDUUR + AUTO-DOOR */}
+        <div style={{ background: INK2, border: `1px solid ${LINE}`, borderRadius: 12, padding: "9px 11px", marginBottom: 14 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ fontSize: 10, letterSpacing: 0.6, textTransform: "uppercase", color: MUTED, fontWeight: 700, flexShrink: 0 }}>{lang === "nl" ? "Streefduur" : "Target"}</div>
+            <div style={{ display: "flex", flex: 1, background: INK, borderRadius: 8, padding: 3 }}>
+              {seg(lang === "nl" ? "Uit" : "Off", "off", cfg.mode === "off")}
+              {seg(lang === "nl" ? "Per oef." : "Per ex.", "per", cfg.mode === "per")}
+              {seg(lang === "nl" ? "Sessie" : "Session", "session", cfg.mode === "session")}
+            </div>
+          </div>
+          {cfg.mode === "per" && (
+            <div onClick={() => saveCfg({ ...cfg, auto: !cfg.auto })} className="hf-tap" style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: 10, marginTop: 10 }}>
+              <div style={{ width: 40, height: 23, borderRadius: 12, background: cfg.auto ? EMBER : "#3a2a2e", position: "relative", flexShrink: 0, transition: "background .15s" }}><div style={{ position: "absolute", top: 2, left: cfg.auto ? 19 : 2, width: 19, height: 19, borderRadius: "50%", background: "#fff", transition: "left .15s" }} /></div>
+              <div><div style={{ fontSize: 12.5, fontWeight: 600, color: PAPER }}>{lang === "nl" ? "Auto door" : "Auto advance"}</div><div style={{ fontSize: 10.5, color: MUTED }}>{lang === "nl" ? "Volgende als de tijd op is" : "Next when time is up"}</div></div>
+            </div>
+          )}
+        </div>
+
+        {/* OEFENINGEN met inline uitklap */}
         <div style={{ display: "grid", gap: 9, marginBottom: 14 }}>
           {items.map((x, i) => {
             const on = checked.includes(i);
             const cur = i === curIdx;
+            const open = openIdx === i;
             const ex = exOf(x);
+            const splitSorted = Object.entries(splits).map(([k, v]) => ({ k: Number(k), v })).sort((a, b) => a.v - b.v);
+            const myRank = splitSorted.findIndex((e) => e.k === i);
+            const mySplit = myRank >= 0 ? splits[i] - (myRank > 0 ? splitSorted[myRank - 1].v : 0) : 0;
             return (
-              <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, background: INK2, borderRadius: 14, padding: 12, border: `1px ${on ? "solid " + GREEN : cur ? "solid " + EMBER : "dashed " + SAGE}`, boxShadow: cur ? "0 0 22px rgba(225,29,72,0.22)" : "none" }}>
-                <div style={{ width: 28, height: 28, flexShrink: 0, borderRadius: "50%", border: `2px solid ${on ? GREEN : cur ? EMBER : MUTED}`, background: on ? GREEN : "transparent", display: "flex", alignItems: "center", justifyContent: "center", color: on ? "#0A0A0A" : EMBER, fontSize: 14, fontWeight: 800 }}>{on ? "✓" : cur ? "▶" : ""}</div>
-                <div onClick={() => onOpenLog(x, i)} className="hf-tap" style={{ flex: 1, minWidth: 0, cursor: "pointer", borderRadius: 10, padding: "2px 4px", margin: "-2px -4px" }}>
-                  <div style={{ fontSize: 14.5, fontWeight: 600, color: on ? MUTED : PAPER, textDecoration: on ? "line-through" : "none" }}>{x.name}</div>
-                  <div style={{ fontSize: 11.5, color: MUTED, marginTop: 3 }}>{setLabel(x) ? setLabel(x) + " · " : ""}{x.min} {t("min")} · ~{x.kcal} kcal</div>
+              <div key={i} style={{ background: INK2, borderRadius: 14, border: `1px ${on ? "solid " + GREEN : cur ? "solid " + EMBER : "dashed " + SAGE}`, boxShadow: cur && !on ? "0 0 22px rgba(225,29,72,0.18)" : "none", overflow: "hidden" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12, padding: 12 }}>
+                  <div onClick={() => complete(i)} className="hf-tap" style={{ cursor: "pointer", width: 28, height: 28, flexShrink: 0, borderRadius: "50%", border: `2px solid ${on ? GREEN : cur ? EMBER : MUTED}`, background: on ? GREEN : "transparent", display: "flex", alignItems: "center", justifyContent: "center", color: on ? "#0A0A0A" : EMBER, fontSize: 14, fontWeight: 800 }}>{on ? "✓" : cur ? "▶" : ""}</div>
+                  <div onClick={() => setOpenIdx(open ? -1 : i)} className="hf-tap" style={{ flex: 1, minWidth: 0, cursor: "pointer", borderRadius: 10, padding: "2px 4px", margin: "-2px -4px" }}>
+                    <div style={{ fontSize: 14.5, fontWeight: 600, color: on ? MUTED : PAPER, textDecoration: on ? "line-through" : "none" }}>{x.name}</div>
+                    <div style={{ fontSize: 11.5, color: MUTED, marginTop: 3 }}>
+                      {setLabel(x) ? setLabel(x) + " · " : ""}{x.min} {t("min")} · ~{x.kcal} kcal
+                      {cur && !on && cfg.mode === "per" && curTarget > 0 && <span style={{ color: EMBER_SOFT, fontWeight: 700 }}> · {lang === "nl" ? "nog" : "left"} {fmtClock(remaining)}</span>}
+                    </div>
+                  </div>
+                  {on && mySplit > 0 ? <div style={{ ...disp, fontWeight: 700, fontSize: 14, color: GREEN, flexShrink: 0 }}>{fmtClock(mySplit)}</div>
+                    : <div onClick={() => setOpenIdx(open ? -1 : i)} style={{ cursor: "pointer", color: EMBER_SOFT, fontSize: 17, width: 26, textAlign: "center", flexShrink: 0, transform: open ? "rotate(180deg)" : "none", transition: "transform .15s" }}>{ex && ex.how ? "ⓘ" : "⌄"}</div>}
                 </div>
-                {ex && ex.how && <div onClick={() => onHow(ex)} style={{ cursor: "pointer", color: EMBER_SOFT, fontSize: 18, width: 28, textAlign: "center", flexShrink: 0 }}>ⓘ</div>}
+                {open && <div style={{ padding: "0 12px 12px", borderTop: `1px solid ${LINE}` }}><SessionExLog lang={lang} kg={kg} item={x} dateKey={dateKey} ex={ex} t={t} /></div>}
               </div>
             );
           })}
         </div>
-        <div style={{ textAlign: "center", color: "rgba(255,255,255,0.5)", fontSize: 11.5, marginBottom: 12 }}>{lang === "nl" ? "Tik een oefening om te loggen · vink de laatste set af = klaar" : "Tap an exercise to log · check the last set = done"}</div>
-        <div onClick={() => onFinish(items)} className="hf-tap" style={{ cursor: "pointer", textAlign: "center", background: "transparent", border: `1px solid ${EMBER}`, color: EMBER, padding: "14px 0", borderRadius: 12, ...disp, fontWeight: 700, fontSize: 15, letterSpacing: 0.8, textTransform: "uppercase" }}>{t("finishSession")}</div>
+
+        <div onClick={() => onFinish(items, { time: elapsed, splits })} className="hf-tap" style={{ cursor: "pointer", textAlign: "center", background: "transparent", border: `1px solid ${EMBER}`, color: EMBER, padding: "14px 0", borderRadius: 12, ...disp, fontWeight: 700, fontSize: 15, letterSpacing: 0.8, textTransform: "uppercase" }}>{t("finishSession")}</div>
       </div>
     </div>
   );
@@ -911,12 +1114,36 @@ function SessionSummary({ lang, data, onClose, onUndo, t }) {
         <div style={{ width: 84, height: 84, borderRadius: "50%", background: "rgba(88,194,125,0.14)", border: "2px solid #58C27D", display: "flex", alignItems: "center", justifyContent: "center", margin: "14px auto 16px", fontSize: 40 }}>🏆</div>
         <div style={{ ...disp, fontWeight: 700, fontSize: 24 }}>{t("sessionDone")}</div>
         <div style={{ fontSize: 13, color: MUTED, margin: "6px 0 20px", lineHeight: 1.5 }}>{t("sessionDoneSub")}</div>
-        <div style={{ display: "grid", gridTemplateColumns: data.km > 0 ? "1fr 1fr 1fr 1fr" : "1fr 1fr 1fr", gap: 10, marginBottom: 20 }}>
-          {stat(data.exercises, t("exercisesN"))}
-          {stat(data.min, t("minutesN"))}
+        <div style={{ display: "grid", gridTemplateColumns: data.km > 0 ? "1fr 1fr 1fr 1fr" : "1fr 1fr 1fr", gap: 10, marginBottom: 16 }}>
+          {data.sec > 0 && stat(fmtClock(data.sec), t("timeN"))}
+          {!(data.sec > 0) && stat(data.exercises, t("exercisesN"))}
           {stat("~" + data.kcal, "kcal")}
-          {data.km > 0 && stat(data.km, "km")}
+          {data.km > 0 ? stat(data.km, "km") : stat(data.min, t("minutesN"))}
+          {data.sec > 0 && (data.km > 0 ? stat(data.km, "km") : stat(data.exercises, t("exercisesN")))}
         </div>
+        {(() => {
+          const sp = data.splits || {}; const its = data.items || [];
+          const rows = Object.entries(sp).map(([k, v]) => ({ k: Number(k), v })).sort((a, b) => a.v - b.v);
+          if (rows.length === 0) return null;
+          return (
+            <div style={{ textAlign: "left", marginBottom: 20 }}>
+              <div style={{ fontSize: 10, letterSpacing: 1, textTransform: "uppercase", color: MUTED, fontWeight: 700, marginBottom: 8 }}>{lang === "nl" ? "Splittijden" : "Splits"}</div>
+              <div style={{ background: INK2, border: `1px solid ${LINE}`, borderRadius: 12, overflow: "hidden" }}>
+                {rows.map((r, idx) => {
+                  const delta = r.v - (idx > 0 ? rows[idx - 1].v : 0);
+                  const it = its[r.k];
+                  return (
+                    <div key={r.k} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 13px", borderTop: idx > 0 ? `1px solid ${LINE}` : "none" }}>
+                      <div style={{ ...disp, fontWeight: 700, fontSize: 11, color: MUTED, width: 18 }}>{idx + 1}</div>
+                      <div style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: PAPER, fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{it ? it.name : "—"}</div>
+                      <div style={{ ...disp, fontWeight: 700, fontSize: 14, color: PAPER }}>{fmtClock(delta)}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()}
         <div onClick={onClose} className="hf-tap" style={{ cursor: "pointer", textAlign: "center", background: EMBER, color: "#fff", padding: "15px 0", borderRadius: 12, ...disp, fontWeight: 700, fontSize: 16, letterSpacing: 0.8, textTransform: "uppercase" }}>{t("backToday")}</div>
         <div onClick={onUndo} className="hf-tap" style={{ cursor: "pointer", textAlign: "center", background: "transparent", border: `1px solid ${LINE}`, color: MUTED, padding: "13px 0", borderRadius: 12, ...disp, fontWeight: 700, fontSize: 14, marginTop: 9 }}>{t("undoAll")}</div>
       </div>
