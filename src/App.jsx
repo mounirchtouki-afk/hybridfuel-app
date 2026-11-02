@@ -5,6 +5,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, SAGE, load, save, genSteps, todayISO, macroLetters, wUnit, bUnit, gShow, gStore, kgShow, kgStore, cmToFtIn, ftInToCm, applyOrgTheme } from "./shared.js";
 import Today from "./views/Today.jsx";
 import Dashboard from "./views/Dashboard.jsx";
+import AdminDash from "./views/AdminDash.jsx";
 import RecipeBuilder from "./views/RecipeBuilder.jsx";
 import Tracker from "./views/Tracker.jsx";
 import Water from "./views/Water.jsx";
@@ -579,6 +580,8 @@ export default function App() {
   // App-navigatie + PWA
   const [tab, setTab] = useState("dashboard");
   const [showMore, setShowMore] = useState(false);
+  const [showAdmin, setShowAdmin] = useState(false);
+  const isAdmin = String((session && session.user && session.user.email) || "").toLowerCase() === "hybridfuelco@gmail.com";
   const [showReminders, setShowReminders] = useState(false);
   const [session, setSession] = useState(null);
   const [syncVer, setSyncVer] = useState(0);
@@ -2025,6 +2028,7 @@ export default function App() {
               {moreTile(<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18" /><path d="M7 14l3-4 3 3 4-6" /></svg>, lang === "nl" ? "Weekreview" : "Week review", () => go("weekreview"))}
               {moreTile(<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 4-6.5 8-6.5s8 2.5 8 6.5" /></svg>, lang === "nl" ? "Account" : "Account", () => { setShowMore(false); setShowAuth(true); })}
               {moreTile(<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0" /></svg>, lang === "nl" ? "Herinneringen" : "Reminders", () => { setShowMore(false); setShowReminders(true); })}
+              {isAdmin && moreTile(<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6z" /><path d="M9 12l2 2 4-4" /></svg>, "Admin", () => { setShowMore(false); setShowAdmin(true); })}
             </div>
             <div style={{ marginTop: 16, borderTop: `1px solid ${LINE}`, paddingTop: 14 }}>
               <div style={{ fontSize: 10.5, letterSpacing: 1, textTransform: "uppercase", color: MUTED, fontWeight: 700, marginBottom: 8 }}>{lang === "nl" ? "Eenheden" : "Units"}</div>
@@ -2053,6 +2057,7 @@ export default function App() {
 
       {showReminders && <Reminders lang={lang} onClose={() => setShowReminders(false)} />}
       {showAuth && <Auth lang={lang} session={session} tier={subTier} recovery={authRecovery} gym={isGymMember ? gymCtx.org : null} onClose={() => { setShowAuth(false); setAuthRecovery(false); }} />}
+      {showAdmin && isAdmin && <AdminDash session={session} lang={lang} onClose={() => setShowAdmin(false)} />}
       {showProducts && <Products lang={lang} session={session} autoScan={fabScan} onClose={() => { setShowProducts(false); setPickTarget(null); setFabScan(false); }} onPick={pickTarget ? (prod) => { if (pickTarget.mi == null) addProductAsMeal(pickTarget.di, prod); else addProductIng(pickTarget.di, pickTarget.mi, prod); setShowProducts(false); setPickTarget(null); } : fabScan ? (prod) => { addTodayProduct(prod); setShowProducts(false); setFabScan(false); } : null} />}
       {showBuilder && <RecipeBuilder lang={lang} session={session} units={units} onClose={() => setShowBuilder(false)} onSaved={() => flashSaved()} />}
 

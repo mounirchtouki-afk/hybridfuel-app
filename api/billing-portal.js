@@ -7,6 +7,10 @@
 // Env-vars: STRIPE_SECRET_KEY, SUPABASE_URL (of VITE_SUPABASE_URL),
 //           SUPABASE_SERVICE_ROLE_KEY, PUBLIC_APP_URL (optioneel).
 
+// Admin-dashboard is ingevouwen in dit endpoint (Vercel Hobby zit op 12 functies).
+// Alleen dit e-mailadres mag de admin-ops aanroepen; server-side geverifieerd via het token.
+const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || "hybridfuelco@gmail.com").toLowerCase();
+
 function appBase(req) {
   if (process.env.PUBLIC_APP_URL) return process.env.PUBLIC_APP_URL.replace(/\/$/, "");
   const proto = (req.headers["x-forwarded-proto"] || "https").split(",")[0];
@@ -36,6 +40,72 @@ export default async function handler(req, res) {
     const who = await ur.json().catch(() => ({}));
     const userId = who && who.id;
     if (!userId) return res.status(401).json({ error: "no_user" });
+
+    // --- ADMIN-DASHBOARD (alleen ADMIN_EMAIL) ---
+    const op = (body && body.op) || "";
+    if (op.indexOf("admin.") === 0) {
+      if (String((who && who.email) || "").toLowerCase() !== ADMIN_EMAIL) return res.status(403).json({ error: "forbidden" });
+      const sv = { apikey: svcKey, Authorization: "Bearer " + svcKey };
+
+      if (op === "admin.list") {
+        const users = [];
+        for (let page = 1; page <= 50; page++) {
+          const ur2 = await fetch(supaUrl + "/auth/v1/admin/users?per_page=200&page=" + page, { headers: sv });
+          if (!ur2.ok) break;
+          const j = await ur2.json().catch(() => ({}));
+          const list = (j && j.users) || [];
+          users.push(...list);
+          if (list.length < 200) break;
+        }
+        const subsR = await fetch(supaUrl + "/rest/v1/subscriptions?select=user_id,email,tier,status,current_period_end,stripe_customer_id", { headers: sv });
+        const subs = await subsR.json().catch(() => []);
+        const subBy = {}; (Array.isArray(subs) ? subs : []).forEach((s) => { subBy[s.user_id] = s; });
+        const memR = await fetch(supaUrl + "/rest/v1/org_members?select=user_id,org_id", { headers: sv });
+        const mem = await memR.json().catch(() => []);
+        const orgR = await fetch(supaUrl + "/rest/v1/org_config?select=org_id,name", { headers: sv });
+        const orgs = await orgR.json().catch(() => []);
+        const orgName = {}; (Array.isArray(orgs) ? orgs : []).forEach((o) => { orgName[o.org_id] = o.name; });
+        const gymBy = {}; (Array.isArray(mem) ? mem : []).forEach((m) => { if (!gymBy[m.user_id]) gymBy[m.user_id] = orgName[m.org_id] || null; });
+        const accounts = users.map((u) => {
+          const s = subBy[u.id] || {};
+          return { id: u.id, email: u.email || s.email || "—", created_at: u.created_at || null, last_sign_in_at: u.last_sign_in_at || null, tier: s.tier || "free", status: s.status || null, period_end: s.current_period_end || null, has_customer: !!s.stripe_customer_id, gym: gymBy[u.id] || null };
+        });
+        accounts.sort((a, b) => String(b.created_at || "").localeCompare(String(a.created_at || "")));
+        const counts = {
+          total: accounts.length,
+          paying: accounts.filter((a) => a.tier === "pro" || a.tier === "basis").length,
+          pro: accounts.filter((a) => a.tier === "pro").length,
+          basis: accounts.filter((a) => a.tier === "basis").length,
+          gyms: Object.keys(orgName).length,
+        };
+        return res.status(200).json({ ok: true, accounts, counts });
+      }
+
+      if (op === "admin.setTier") {
+        const targetUserId = String(body.targetUserId || "").trim();
+        const tier = String(body.tier || "").trim();
+        if (!targetUserId || ["free", "basis", "pro"].indexOf(tier) < 0) return res.status(400).json({ error: "bad_request" });
+        const status = tier === "free" ? "admin_revoked" : "admin_granted";
+        const wr = await fetch(supaUrl + "/rest/v1/subscriptions?on_conflict=user_id", {
+          method: "POST",
+          headers: { ...sv, "Content-Type": "application/json", Prefer: "resolution=merge-duplicates,return=minimal" },
+          body: JSON.stringify({ user_id: targetUserId, tier, status, updated_at: new Date().toISOString() }),
+        });
+        if (!wr.ok) { const txt = await wr.text().catch(() => ""); return res.status(502).json({ error: "write_failed", detail: txt.slice(0, 200) }); }
+        return res.status(200).json({ ok: true });
+      }
+
+      if (op === "admin.stripe") {
+        const targetUserId = String(body.targetUserId || "").trim();
+        const sr = await fetch(supaUrl + "/rest/v1/subscriptions?select=stripe_customer_id&user_id=eq." + encodeURIComponent(targetUserId), { headers: sv });
+        const rows3 = await sr.json().catch(() => []);
+        const cust = rows3 && rows3[0] && rows3[0].stripe_customer_id;
+        if (!cust) return res.status(404).json({ error: "no_customer" });
+        return res.status(200).json({ ok: true, url: "https://dashboard.stripe.com/customers/" + cust });
+      }
+
+      return res.status(400).json({ error: "unknown_op" });
+    }
 
     const r = await fetch(supaUrl + "/rest/v1/subscriptions?select=stripe_customer_id&user_id=eq." + encodeURIComponent(userId), {
       headers: { apikey: svcKey, Authorization: "Bearer " + svcKey },
