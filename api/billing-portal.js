@@ -86,10 +86,13 @@ export default async function handler(req, res) {
         const tier = String(body.tier || "").trim();
         if (!targetUserId || ["free", "basis", "pro"].indexOf(tier) < 0) return res.status(400).json({ error: "bad_request" });
         const status = tier === "free" ? "admin_revoked" : "admin_granted";
+        // App geeft alleen toegang bij een geldige, niet-verlopen current_period_end.
+        // Bij toegang geven zetten we die ver in de toekomst; bij intrekken leeg.
+        const periodEnd = tier === "free" ? null : "2099-01-01T00:00:00.000Z";
         const wr = await fetch(supaUrl + "/rest/v1/subscriptions?on_conflict=user_id", {
           method: "POST",
           headers: { ...sv, "Content-Type": "application/json", Prefer: "resolution=merge-duplicates,return=minimal" },
-          body: JSON.stringify({ user_id: targetUserId, tier, status, updated_at: new Date().toISOString() }),
+          body: JSON.stringify({ user_id: targetUserId, tier, status, current_period_end: periodEnd, updated_at: new Date().toISOString() }),
         });
         if (!wr.ok) { const txt = await wr.text().catch(() => ""); return res.status(502).json({ error: "write_failed", detail: txt.slice(0, 200) }); }
         return res.status(200).json({ ok: true });
