@@ -71,7 +71,7 @@ function WeekList({ days, trItems, open, setOpen, todayIdx, lang, ML, t }) {
         const mins = items.reduce((a, x) => a + num(x.min), 0);
         const isOpen = open === i;
         return (
-          <div key={i} style={{ background: INK2, border: `1px solid ${isTrain ? "rgba(225,29,72,0.42)" : LINE}`, borderRadius: 14, padding: "13px 14px", marginBottom: 10, boxShadow: i === todayIdx ? "0 0 0 1.5px rgba(225,29,72,0.55)" : "none" }}>
+          <div key={i} style={{ background: INK2, border: `1px solid ${isTrain ? "rgba(var(--hf-ember-rgb),0.42)" : LINE}`, borderRadius: 14, padding: "13px 14px", marginBottom: 10, boxShadow: i === todayIdx ? "0 0 0 1.5px rgba(var(--hf-ember-rgb),0.55)" : "none" }}>
             <div onClick={() => setOpen(isOpen ? -1 : i)} className="hf-tap" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderRadius: 8 }}>
               <div style={{ ...disp, fontWeight: 700, fontSize: 16, letterSpacing: 0.3 }}>
                 {full[i]}{i === todayIdx && <span style={{ fontSize: 10.5, color: EMBER, marginLeft: 8, fontFamily: "Inter", fontWeight: 700, letterSpacing: 0.5 }}>{t("VANDAAG", "TODAY")}</span>}
@@ -169,7 +169,7 @@ function MonthGrid({ days, trItems, monOffset, setMonOffset, lang, t, onPickWeek
           const isToday = (y + "-" + mo + "-" + d) === todayKey;
           return (
             <div key={i} onClick={() => onPickWeekday(wdIdx)} className="hf-tap"
-              style={{ aspectRatio: "1/1.12", borderRadius: 9, border: `1px solid ${isTrain ? "rgba(225,29,72,0.5)" : LINE}`, background: isTrain ? "linear-gradient(180deg,rgba(225,29,72,0.20),rgba(225,29,72,0.05))" : INK2, padding: "5px 4px 4px", display: "flex", flexDirection: "column", alignItems: "center", position: "relative", boxShadow: isToday ? "0 0 0 2px " + EMBER : "none" }}>
+              style={{ aspectRatio: "1/1.12", borderRadius: 9, border: `1px solid ${isTrain ? "rgba(var(--hf-ember-rgb),0.5)" : LINE}`, background: isTrain ? "linear-gradient(180deg,rgba(var(--hf-ember-rgb),0.20),rgba(var(--hf-ember-rgb),0.05))" : INK2, padding: "5px 4px 4px", display: "flex", flexDirection: "column", alignItems: "center", position: "relative", boxShadow: isToday ? "0 0 0 2px " + EMBER : "none" }}>
               {isTrain && <div style={{ width: 5, height: 5, borderRadius: "50%", background: EMBER, position: "absolute", top: 5, right: 5 }} />}
               <div style={{ ...disp, fontWeight: 700, fontSize: 13, color: PAPER }}>{d}</div>
               <div style={{ fontSize: 8.5, color: SAGE, marginTop: "auto", fontWeight: 600 }}>{kcal ? kcal : ""}</div>
@@ -179,7 +179,7 @@ function MonthGrid({ days, trItems, monOffset, setMonOffset, lang, t, onPickWeek
       </div>
 
       <div style={{ display: "flex", gap: 16, marginTop: 14, fontSize: 11, color: MUTED }}>
-        <span style={{ display: "flex", alignItems: "center", gap: 6 }}><span style={{ width: 12, height: 12, borderRadius: 4, background: "linear-gradient(180deg,rgba(225,29,72,0.6),rgba(225,29,72,0.2))", border: "1px solid rgba(225,29,72,0.5)" }} /> {t("Trainingsdag", "Training day")}</span>
+        <span style={{ display: "flex", alignItems: "center", gap: 6 }}><span style={{ width: 12, height: 12, borderRadius: 4, background: "linear-gradient(180deg,rgba(var(--hf-ember-rgb),0.6),rgba(var(--hf-ember-rgb),0.2))", border: "1px solid rgba(var(--hf-ember-rgb),0.5)" }} /> {t("Trainingsdag", "Training day")}</span>
         <span style={{ display: "flex", alignItems: "center", gap: 6 }}><span style={{ width: 12, height: 12, borderRadius: 4, background: INK2, border: `1px solid ${LINE}` }} /> {t("Rustdag", "Rest day")}</span>
       </div>
       <div style={{ fontSize: 11, color: MUTED, margin: "12px 2px 0", lineHeight: 1.5, textAlign: "center" }}>

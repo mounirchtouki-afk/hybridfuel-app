@@ -24,6 +24,7 @@
          Sportscholen overschrijven deze per org via JS (applyOrgTheme). */
       :root {
         --hf-ink: #09090A; --hf-ink2: #161618; --hf-ember: #E11D48; --hf-ember-soft: #FB7185;
+        --hf-ember-rgb: 225, 29, 72; --hf-ember-deep: #9f1239;
         --hf-paper: #F4F4F4; --hf-muted: #9A9AA0; --hf-line: #232326; --hf-sage: #CFC9CB;
         --hf-track: #242427;
         /* Gelaagde, zachte schaduw: subtiel en realistisch (verloop/diepte, niet zwaar) */
@@ -49,6 +50,18 @@
       }
       body { background: var(--hf-ink); transition: background 0.2s ease; }
     </style>
+    <script>
+      /* Pas de gecachte org-huisstijl (gym-kleur) toe vóór de eerste paint — geen rood->klantkleur flits. */
+      (function () {
+        try {
+          var raw = localStorage.getItem("hf_org_theme");
+          if (!raw) return;
+          var t = JSON.parse(raw);
+          var el = document.documentElement;
+          Object.keys(t).forEach(function (k) { if (t[k]) el.style.setProperty("--hf-" + k, t[k]); });
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body style="margin:0;background:var(--hf-ink);">
     <div id="root"></div>

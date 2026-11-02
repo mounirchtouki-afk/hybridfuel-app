@@ -134,7 +134,7 @@ export default function WeekReview({ lang, session }) {
 
       {review && (
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <div style={{ ...card, borderColor: attention ? "rgba(225,29,72,0.5)" : LINE }}>
+          <div style={{ ...card, borderColor: attention ? "rgba(var(--hf-ember-rgb),0.5)" : LINE }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
               <span style={{ display: "inline-block", width: 9, height: 9, borderRadius: "50%", background: attention ? EMBER : "#58C27D" }} />
               <span style={{ ...disp, fontWeight: 700, fontSize: 17, lineHeight: 1.25 }}>{review.headline}</span>

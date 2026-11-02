@@ -1190,10 +1190,10 @@ export default function App() {
   const label = { fontFamily: "Inter, sans-serif", fontSize: 11, letterSpacing: 1, textTransform: "uppercase", color: MUTED, marginBottom: 6, display: "block", fontWeight: 600 };
   const input = { width: "100%", background: INK, border: `1px solid ${LINE}`, color: PAPER, padding: "11px 12px", fontFamily: "Inter, sans-serif", fontSize: 14, borderRadius: 8, outline: "none", boxSizing: "border-box" };
   const disp = { fontFamily: "Oswald, sans-serif" };
-  const chipS = (on) => ({ padding: "7px 12px", borderRadius: 20, border: `1px solid ${on ? EMBER : LINE}`, background: on ? "rgba(225,29,72,0.14)" : "transparent", fontSize: 12.5, fontWeight: 600, cursor: "pointer" });
-  const segS = (on) => ({ flex: 1, textAlign: "center", padding: "9px 4px", borderRadius: 8, border: `1px solid ${on ? EMBER : LINE}`, background: on ? "rgba(225,29,72,0.12)" : "transparent", fontSize: 12, fontWeight: 600, cursor: "pointer" });
-  const dayChip = (on) => ({ flex: 1, textAlign: "center", padding: "9px 2px", borderRadius: 8, border: `1px solid ${on ? EMBER : LINE}`, background: on ? "rgba(225,29,72,0.16)" : "transparent", color: on ? PAPER : MUTED, fontSize: 12, fontWeight: 700, cursor: "pointer", ...disp, letterSpacing: 0.5 });
-  const flagBtn = (on) => ({ display: "flex", alignItems: "center", cursor: "pointer", padding: "4px 5px", borderRadius: 6, border: `1px solid ${on ? EMBER : LINE}`, background: on ? "rgba(225,29,72,0.14)" : "transparent", opacity: on ? 1 : 0.5, transition: "opacity .15s, border-color .15s" });
+  const chipS = (on) => ({ padding: "7px 12px", borderRadius: 20, border: `1px solid ${on ? EMBER : LINE}`, background: on ? "rgba(var(--hf-ember-rgb),0.14)" : "transparent", fontSize: 12.5, fontWeight: 600, cursor: "pointer" });
+  const segS = (on) => ({ flex: 1, textAlign: "center", padding: "9px 4px", borderRadius: 8, border: `1px solid ${on ? EMBER : LINE}`, background: on ? "rgba(var(--hf-ember-rgb),0.12)" : "transparent", fontSize: 12, fontWeight: 600, cursor: "pointer" });
+  const dayChip = (on) => ({ flex: 1, textAlign: "center", padding: "9px 2px", borderRadius: 8, border: `1px solid ${on ? EMBER : LINE}`, background: on ? "rgba(var(--hf-ember-rgb),0.16)" : "transparent", color: on ? PAPER : MUTED, fontSize: 12, fontWeight: 700, cursor: "pointer", ...disp, letterSpacing: 0.5 });
+  const flagBtn = (on) => ({ display: "flex", alignItems: "center", cursor: "pointer", padding: "4px 5px", borderRadius: 6, border: `1px solid ${on ? EMBER : LINE}`, background: on ? "rgba(var(--hf-ember-rgb),0.14)" : "transparent", opacity: on ? 1 : 0.5, transition: "opacity .15s, border-color .15s" });
   const FlagNL = <svg width="18" height="12" viewBox="0 0 9 6" style={{ borderRadius: 2, display: "block" }}><rect width="9" height="6" fill="#fff" /><rect width="9" height="2" fill="#AE1C28" /><rect y="4" width="9" height="2" fill="#21468B" /></svg>;
   const FlagGB = <svg width="18" height="12" viewBox="0 0 60 30" style={{ borderRadius: 2, display: "block" }}><clipPath id="gbc"><rect width="60" height="30" /></clipPath><g clipPath="url(#gbc)"><rect width="60" height="30" fill="#012169" /><path d="M0,0 60,30 M60,0 0,30" stroke="#fff" strokeWidth="6" /><path d="M0,0 60,30 M60,0 0,30" stroke="#C8102E" strokeWidth="4" /><path d="M30,0 V30 M0,15 H60" stroke="#fff" strokeWidth="10" /><path d="M30,0 V30 M0,15 H60" stroke="#C8102E" strokeWidth="6" /></g></svg>;
 
@@ -1428,7 +1428,7 @@ export default function App() {
     const mineF = mine.filter((r) => !ql || (r.name || "").toLowerCase().includes(ql));
     return (
       <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 70, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-        <div onClick={(e) => e.stopPropagation()} className="hf-modal" style={{ background: INK, border: `1px solid ${LINE}`, borderRadius: 18, width: "100%", maxWidth: 400, maxHeight: "88vh", overflowY: "auto", padding: 20, backgroundImage: "radial-gradient(130% 70% at 92% -10%, rgba(225,29,72,0.12), transparent 58%)" }}>
+        <div onClick={(e) => e.stopPropagation()} className="hf-modal" style={{ background: INK, border: `1px solid ${LINE}`, borderRadius: 18, width: "100%", maxWidth: 400, maxHeight: "88vh", overflowY: "auto", padding: 20, backgroundImage: "radial-gradient(130% 70% at 92% -10%, rgba(var(--hf-ember-rgb),0.12), transparent 58%)" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
             <div style={{ ...disp, fontWeight: 700, fontSize: 16 }}>{T("pickRecipe")}</div>
             <div onClick={onClose} style={{ cursor: "pointer", color: MUTED, fontSize: 17, width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 9, border: `1px solid ${LINE}` }}>×</div>
@@ -1475,7 +1475,7 @@ export default function App() {
     const scopeLbl = scope === "week" ? T("moveWeekScope") : (week && week.days[di] ? week.days[di].d : T("moveDayScope"));
     const dIn = { ...sIn, padding: "9px 10px", fontSize: 13, width: "100%", colorScheme: "dark" };
     const seg = (on) => ({ flex: 1, textAlign: "center", cursor: "pointer", padding: "9px 0", borderRadius: 8, border: `1px solid ${on ? EMBER : LINE}`, background: on ? EMBER : "transparent", color: on ? PAPER : MUTED, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.5 });
-    const radio = (on) => ({ display: "flex", alignItems: "center", gap: 9, cursor: "pointer", padding: "10px 12px", borderRadius: 10, border: `1px solid ${on ? EMBER : LINE}`, background: on ? "rgba(225,29,72,0.08)" : INK2 });
+    const radio = (on) => ({ display: "flex", alignItems: "center", gap: 9, cursor: "pointer", padding: "10px 12px", borderRadius: 10, border: `1px solid ${on ? EMBER : LINE}`, background: on ? "rgba(var(--hf-ember-rgb),0.08)" : INK2 });
     const dot = (on) => ({ width: 16, height: 16, borderRadius: "50%", border: `2px solid ${on ? EMBER : MUTED}`, background: on ? EMBER : "transparent", flexShrink: 0 });
     function place() {
       if (scope === "week") { const startMon = tgt === "next" ? isoAdd(mondayISO(todayISO()), 7) : mondayISO(date); stampWeekFrom(startMon, act === "move"); }
@@ -1484,7 +1484,7 @@ export default function App() {
     }
     return (
       <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 72, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-        <div onClick={(e) => e.stopPropagation()} className="hf-modal" style={{ background: INK, border: `1px solid ${LINE}`, borderRadius: 18, width: "100%", maxWidth: 400, maxHeight: "88vh", overflowY: "auto", padding: 20, backgroundImage: "radial-gradient(130% 70% at 92% -10%, rgba(225,29,72,0.12), transparent 58%)" }}>
+        <div onClick={(e) => e.stopPropagation()} className="hf-modal" style={{ background: INK, border: `1px solid ${LINE}`, borderRadius: 18, width: "100%", maxWidth: 400, maxHeight: "88vh", overflowY: "auto", padding: 20, backgroundImage: "radial-gradient(130% 70% at 92% -10%, rgba(var(--hf-ember-rgb),0.12), transparent 58%)" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
             <div style={{ ...disp, fontWeight: 700, fontSize: 16 }}>{T("moveTitle")}</div>
             <div onClick={onClose} style={{ cursor: "pointer", color: MUTED, fontSize: 17, width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 9, border: `1px solid ${LINE}` }}>×</div>
@@ -1567,7 +1567,7 @@ export default function App() {
   function Locked({ pro }) {
     return (
       <div style={{ display: "grid", gap: 16 }}>
-        <div style={{ border: `1px solid ${EMBER}`, borderRadius: 14, padding: 24, background: "linear-gradient(180deg, rgba(225,29,72,0.09), transparent 60%)", textAlign: "center" }}>
+        <div style={{ border: `1px solid ${EMBER}`, borderRadius: 14, padding: 24, background: "linear-gradient(180deg, rgba(var(--hf-ember-rgb),0.09), transparent 60%)", textAlign: "center" }}>
           <div style={{ marginBottom: 12, display: "flex", justifyContent: "center" }}><LockIcon c={EMBER} s={34} /></div>
           <div style={{ ...disp, fontSize: 19, fontWeight: 700, marginBottom: 6 }}>{pro ? T("lockedPro") : T("lockedTitle")}</div>
           <div style={{ fontSize: 12.5, color: MUTED, lineHeight: 1.5, marginBottom: 18, maxWidth: 300, margin: "0 auto 18px" }}>{pro ? T("lockedProSub") : T("lockedSub")}</div>
@@ -1598,7 +1598,7 @@ export default function App() {
   );
   const moreTile = (icon, label, onClick) => (
     <div onClick={onClick} style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: 11, background: INK2, border: `1px solid ${LINE}`, borderRadius: 12, padding: "13px 13px" }}>
-      <div style={{ width: 34, height: 34, borderRadius: 9, background: "rgba(225,29,72,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{icon}</div>
+      <div style={{ width: 34, height: 34, borderRadius: 9, background: "rgba(var(--hf-ember-rgb),0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{icon}</div>
       <div style={{ fontSize: 13, fontWeight: 600, color: PAPER }}>{label}</div>
     </div>
   );
@@ -1611,7 +1611,7 @@ export default function App() {
 
   return (
     <div style={{ minHeight: "100vh", background: isGymMember ? INK : "var(--hf-bg)", backgroundAttachment: "fixed", position: "relative", color: PAPER, fontFamily: "Inter, sans-serif", paddingBottom: `calc(${98 + consentH}px + env(safe-area-inset-bottom))` }}>
-      <style dangerouslySetInnerHTML={{ __html: fonts + `*{box-sizing:border-box;scrollbar-width:none;-ms-overflow-style:none} *::-webkit-scrollbar{display:none;width:0;height:0} html,body{overflow-x:hidden;background:var(--hf-ink)} select option{background:${INK2};color:${PAPER}} @keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}} .dot{animation:pulse 1s infinite} input[type=date],input[type=time]{color-scheme:${isGymMember ? "light dark" : "dark"};accent-color:${EMBER}} :root{accent-color:${EMBER}} .hf-glow{position:fixed;inset:0;pointer-events:none;z-index:-1;background:radial-gradient(125% 80% at 50% -2%,rgba(225,29,72,0.34),transparent 60%),radial-gradient(100% 60% at 100% 106%,rgba(225,29,72,0.20),transparent 64%);animation:drift 20s ease-in-out infinite alternate} @keyframes drift{from{transform:translate(0,0)}to{transform:translate(-30px,24px)}} .hf-modal{scrollbar-width:none;-ms-overflow-style:none} .hf-modal::-webkit-scrollbar{display:none;width:0;height:0} .hf-tap{transition:transform .09s ease,box-shadow .09s ease,background-color .09s ease;-webkit-tap-highlight-color:transparent;cursor:pointer} .hf-tap:active{transform:scale(.98);background-color:rgba(225,29,72,0.16)!important;box-shadow:inset 0 0 0 1.5px rgba(225,29,72,0.55),0 4px 14px rgba(225,29,72,0.18)!important}` }} />
+      <style dangerouslySetInnerHTML={{ __html: fonts + `*{box-sizing:border-box;scrollbar-width:none;-ms-overflow-style:none} *::-webkit-scrollbar{display:none;width:0;height:0} html,body{overflow-x:hidden;background:var(--hf-ink)} select option{background:${INK2};color:${PAPER}} @keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}} .dot{animation:pulse 1s infinite} input[type=date],input[type=time]{color-scheme:${isGymMember ? "light dark" : "dark"};accent-color:${EMBER}} :root{accent-color:${EMBER}} .hf-glow{position:fixed;inset:0;pointer-events:none;z-index:-1;background:radial-gradient(125% 80% at 50% -2%,rgba(var(--hf-ember-rgb),0.34),transparent 60%),radial-gradient(100% 60% at 100% 106%,rgba(var(--hf-ember-rgb),0.20),transparent 64%);animation:drift 20s ease-in-out infinite alternate} @keyframes drift{from{transform:translate(0,0)}to{transform:translate(-30px,24px)}} .hf-modal{scrollbar-width:none;-ms-overflow-style:none} .hf-modal::-webkit-scrollbar{display:none;width:0;height:0} .hf-tap{transition:transform .09s ease,box-shadow .09s ease,background-color .09s ease;-webkit-tap-highlight-color:transparent;cursor:pointer} .hf-tap:active{transform:scale(.98);background-color:rgba(var(--hf-ember-rgb),0.16)!important;box-shadow:inset 0 0 0 1.5px rgba(var(--hf-ember-rgb),0.55),0 4px 14px rgba(var(--hf-ember-rgb),0.18)!important}` }} />
       {false && <div className="hf-glow" aria-hidden="true" />}
       {subMsg && (
         <div onClick={() => setSubMsg("")} style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 120, background: subMsg === "ok" ? EMBER : INK2, color: subMsg === "ok" ? "#fff" : PAPER, padding: "12px 16px", paddingTop: "calc(12px + env(safe-area-inset-top))", textAlign: "center", fontSize: 13.5, lineHeight: 1.5, cursor: "pointer", boxShadow: "0 4px 18px rgba(0,0,0,.4)" }}>
@@ -1643,7 +1643,7 @@ export default function App() {
         <div onClick={() => setShowReminders(true)} title="Reminders" style={{ cursor: "pointer", width: 32, height: 32, borderRadius: "50%", border: `1px solid ${LINE}`, background: "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={MUTED} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0" /></svg>
         </div>
-        <div onClick={() => setShowAuth(true)} title={session ? "Account" : (lang === "nl" ? "Inloggen" : "Log in")} style={{ cursor: "pointer", width: 32, height: 32, borderRadius: "50%", border: `1px solid ${session ? LINE : EMBER}`, background: session ? "transparent" : "rgba(225,29,72,0.14)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+        <div onClick={() => setShowAuth(true)} title={session ? "Account" : (lang === "nl" ? "Inloggen" : "Log in")} style={{ cursor: "pointer", width: 32, height: 32, borderRadius: "50%", border: `1px solid ${session ? LINE : EMBER}`, background: session ? "transparent" : "rgba(var(--hf-ember-rgb),0.14)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={session ? PAPER : EMBER} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 4-6.5 8-6.5s8 2.5 8 6.5" /></svg>
         </div>
         <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
@@ -1664,7 +1664,7 @@ export default function App() {
 
       {/* INSTALL-BANNER, alleen op web (niet in de native app, die ís al geïnstalleerd) */}
       {!IS_NATIVE && !isStandalone && !installDismissed && !inDemo && (
-        <div style={{ background: "rgba(225,29,72,0.1)", borderBottom: `1px solid ${LINE}`, padding: "10px 16px", display: "flex", alignItems: "center", gap: 12, position: "relative", zIndex: 1 }}>
+        <div style={{ background: "rgba(var(--hf-ember-rgb),0.1)", borderBottom: `1px solid ${LINE}`, padding: "10px 16px", display: "flex", alignItems: "center", gap: 12, position: "relative", zIndex: 1 }}>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M12 3v12M8 11l4 4 4-4" /><path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" /></svg>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 13, fontWeight: 600 }}>{T("install")}</div>
@@ -1788,7 +1788,7 @@ export default function App() {
                 </div>
                 {planSource === "ai"
                   ? <div style={{ fontSize: 11.5, color: MUTED, lineHeight: 1.55, marginTop: 8 }}>{T("planAiHint")}</div>
-                  : <div style={{ marginTop: 8, border: `1px solid ${EMBER}`, borderRadius: 10, padding: "12px 13px", background: "rgba(225,29,72,0.06)" }}>
+                  : <div style={{ marginTop: 8, border: `1px solid ${EMBER}`, borderRadius: 10, padding: "12px 13px", background: "rgba(var(--hf-ember-rgb),0.06)" }}>
                       <div style={{ ...disp, fontWeight: 700, fontSize: 12.5, color: PAPER, marginBottom: 8, letterSpacing: 0.3 }}>{T("planProdTitle")}</div>
                       <div style={{ display: "grid", gap: 7 }}>
                         {["planProdStep1", "planProdStep2", "planProdStep3"].map((k, i) => (
@@ -1852,7 +1852,7 @@ export default function App() {
                           </div>
                         </div>
                       )}
-                      <div style={(lowBmi || floored) ? { marginTop: 12, border: `1px solid ${EMBER}`, background: "rgba(225,29,72,0.14)", borderRadius: 10, padding: "10px 12px" } : { marginTop: 12, borderLeft: `2px solid ${EMBER}`, padding: "2px 0 2px 12px" }}>
+                      <div style={(lowBmi || floored) ? { marginTop: 12, border: `1px solid ${EMBER}`, background: "rgba(var(--hf-ember-rgb),0.14)", borderRadius: 10, padding: "10px 12px" } : { marginTop: 12, borderLeft: `2px solid ${EMBER}`, padding: "2px 0 2px 12px" }}>
                         <span style={{ fontSize: 11, fontWeight: 700, color: PAPER, textTransform: "uppercase", letterSpacing: 0.5 }}>{(lowBmi || floored) ? "⚠ " + T("lowBmiTitle") : T("safeTitle")}. </span>
                         <span style={{ fontSize: 11.5, color: (lowBmi || floored) ? PAPER : MUTED, lineHeight: 1.5 }}>{safeText}</span>
                       </div>
@@ -1862,7 +1862,7 @@ export default function App() {
                   {loading && <div style={{ textAlign: "center", padding: "40px 0", color: EMBER, ...disp, fontSize: 17, letterSpacing: 1 }}><span className="dot">{T("cooking")}</span></div>}
 
                   {error && !loading && (
-                    <div style={{ background: "rgba(225,29,72,0.1)", border: `1px solid ${EMBER}`, borderRadius: 12, padding: 16, textAlign: "center" }}>
+                    <div style={{ background: "rgba(var(--hf-ember-rgb),0.1)", border: `1px solid ${EMBER}`, borderRadius: 12, padding: 16, textAlign: "center" }}>
                       <div style={{ marginBottom: 12, color: PAPER, fontSize: 13, wordBreak: "break-word" }}>{error}</div>
                       <button onClick={handleBuild} style={{ background: EMBER, color: "#fff", border: "none", padding: "9px 22px", borderRadius: 8, fontWeight: 700, cursor: "pointer", ...disp, letterSpacing: 1 }}>{T("retry")}</button>
                     </div>
@@ -1924,7 +1924,7 @@ export default function App() {
                   )}
 
                   {targets && !loading && !error && !hasBasis && (
-                    <div style={{ border: `1px solid ${EMBER}`, borderRadius: 14, padding: 20, background: "linear-gradient(180deg, rgba(225,29,72,0.13), transparent 62%)", boxShadow: "0 12px 44px rgba(225,29,72,0.14)" }}>
+                    <div style={{ border: `1px solid ${EMBER}`, borderRadius: 14, padding: 20, background: "linear-gradient(180deg, rgba(var(--hf-ember-rgb),0.13), transparent 62%)", boxShadow: "0 12px 44px rgba(var(--hf-ember-rgb),0.14)" }}>
                       <div style={{ ...disp, fontSize: 21, fontWeight: 700, letterSpacing: 0.3, marginBottom: 6 }}>{lockReason === "no_credits" ? T("creditsOutTitle") : T("lockTitle")}</div>
                       <div style={{ fontSize: 12.5, color: MUTED, marginBottom: 16, lineHeight: 1.5 }}>{lockReason === "no_credits" ? T("creditsOutSub") : T("lockSub")}</div>
                       <div style={{ display: "grid", gap: 9, marginBottom: 18 }}>
@@ -1932,7 +1932,7 @@ export default function App() {
                           <div key={i} style={{ display: "flex", gap: 9, alignItems: "flex-start", fontSize: 13.5 }}><span style={{ color: EMBER, fontWeight: 800 }}>✓</span><span>{t}</span></div>
                         ))}
                       </div>
-                      <div onClick={() => setShowAuth(true)} style={{ cursor: "pointer", textAlign: "center", background: EMBER, color: "#fff", padding: "16px 0", borderRadius: 11, ...disp, fontWeight: 700, fontSize: 17, letterSpacing: 0.6, textTransform: "uppercase", boxShadow: "0 6px 22px rgba(225,29,72,0.38)" }}>{T("subscribeCta")}</div>
+                      <div onClick={() => setShowAuth(true)} style={{ cursor: "pointer", textAlign: "center", background: EMBER, color: "#fff", padding: "16px 0", borderRadius: 11, ...disp, fontWeight: 700, fontSize: 17, letterSpacing: 0.6, textTransform: "uppercase", boxShadow: "0 6px 22px rgba(var(--hf-ember-rgb),0.38)" }}>{T("subscribeCta")}</div>
                       <div onClick={() => setShowAuth(true)} style={{ cursor: "pointer", textAlign: "center", color: EMBER_SOFT, marginTop: 11, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.3 }}>{T("subYearUpsell")}</div>
                       <div style={{ fontSize: 11, color: MUTED, marginTop: 11, textAlign: "center" }}>{T("lockFoot")}</div>
                       {!inDemo && (
@@ -1942,7 +1942,7 @@ export default function App() {
                   )}
 
                   {targets && !loading && !error && !hasBasis && (
-                    <div style={{ marginTop: 16, border: `1px solid ${EMBER}`, borderRadius: 14, padding: 18, background: "linear-gradient(180deg, rgba(225,29,72,0.06), transparent 72%)" }}>
+                    <div style={{ marginTop: 16, border: `1px solid ${EMBER}`, borderRadius: 14, padding: 18, background: "linear-gradient(180deg, rgba(var(--hf-ember-rgb),0.06), transparent 72%)" }}>
                       {leadStatus === "ok" ? (
                         <div>
                           <div style={{ ...disp, fontSize: 17, fontWeight: 700, marginBottom: 4 }}>{T("leadOkTitle")}</div>
@@ -1994,7 +1994,7 @@ export default function App() {
           {fabAct(lang === "nl" ? "Scan / log eten" : "Scan / log food", <svg width="20" height="20" viewBox="0 0 24 24" fill={EMBER} aria-hidden="true"><rect x="3" y="5" width="1.7" height="14" /><rect x="6" y="5" width="1" height="14" /><rect x="8.5" y="5" width="2" height="14" /><rect x="12" y="5" width="1" height="14" /><rect x="14.6" y="5" width="1.7" height="14" /><rect x="17.6" y="5" width="1" height="14" /><rect x="20" y="5" width="1.4" height="14" /></svg>, () => { setFab(false); if (!hasPro) { setShowAuth(true); return; } setFabScan(true); setShowProducts(true); })}
         </div>
       )}
-      <div onClick={() => setFab(!fab)} title="+" style={{ position: "fixed", left: "50%", bottom: "calc(env(safe-area-inset-bottom) + 48px)", zIndex: 47, width: 58, height: 58, borderRadius: "50%", background: EMBER, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 8px 22px rgba(225,29,72,0.45)", cursor: "pointer", transition: "transform .2s", transform: `translateX(-50%) ${fab ? "rotate(45deg)" : ""}`, border: `4px solid ${INK}` }}>
+      <div onClick={() => setFab(!fab)} title="+" style={{ position: "fixed", left: "50%", bottom: "calc(env(safe-area-inset-bottom) + 48px)", zIndex: 47, width: 58, height: 58, borderRadius: "50%", background: EMBER, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 8px 22px rgba(var(--hf-ember-rgb),0.45)", cursor: "pointer", transition: "transform .2s", transform: `translateX(-50%) ${fab ? "rotate(45deg)" : ""}`, border: `4px solid ${INK}` }}>
         <svg width="27" height="27" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
       </div>
 
@@ -2010,7 +2010,7 @@ export default function App() {
       {/* MEER-menu */}
       {showMore && (
         <div onClick={() => setShowMore(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)", WebkitBackdropFilter: "blur(4px)", zIndex: 50, display: "flex", alignItems: "flex-end" }}>
-          <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", background: INK, borderTop: `1px solid ${LINE}`, borderRadius: "20px 20px 0 0", padding: "16px 16px calc(20px + env(safe-area-inset-bottom))", backgroundImage: "radial-gradient(130% 60% at 90% 0%, rgba(225,29,72,0.1), transparent 60%)" }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", background: INK, borderTop: `1px solid ${LINE}`, borderRadius: "20px 20px 0 0", padding: "16px 16px calc(20px + env(safe-area-inset-bottom))", backgroundImage: "radial-gradient(130% 60% at 90% 0%, rgba(var(--hf-ember-rgb),0.1), transparent 60%)" }}>
             <div style={{ width: 40, height: 4, background: LINE, borderRadius: 2, margin: "0 auto 14px" }} />
             <div style={{ ...disp, fontSize: 12.5, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", color: EMBER, marginBottom: 12 }}>{T("navMore")}</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
@@ -2058,7 +2058,7 @@ export default function App() {
 
       {copyPick && (
         <div onClick={() => setCopyPick(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 70, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-          <div onClick={(e) => e.stopPropagation()} style={{ background: INK, border: `1px solid ${LINE}`, borderRadius: 18, width: "100%", maxWidth: 340, padding: 20, backgroundImage: "radial-gradient(130% 70% at 92% -10%, rgba(225,29,72,0.12), transparent 58%)" }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ background: INK, border: `1px solid ${LINE}`, borderRadius: 18, width: "100%", maxWidth: 340, padding: 20, backgroundImage: "radial-gradient(130% 70% at 92% -10%, rgba(var(--hf-ember-rgb),0.12), transparent 58%)" }}>
             <div style={{ ...disp, fontWeight: 700, fontSize: 16, marginBottom: 4 }}>{T("copyToTitle")}</div>
             <div style={{ fontSize: 12, color: MUTED, marginBottom: 14, lineHeight: 1.4 }}>{copyPick.kind === "day" ? T("copyDayToLbl") : T("copyMealToLbl")}</div>
             <div style={{ display: "grid", gap: 8 }}>
@@ -2085,7 +2085,7 @@ export default function App() {
       {/* Uitlog-bevestiging (vanaf dashboard met de terug-knop) */}
       {showLogout && (
         <div onClick={() => setShowLogout(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 90, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-          <div onClick={(e) => e.stopPropagation()} style={{ background: INK, border: `1px solid ${LINE}`, borderRadius: 18, width: "100%", maxWidth: 360, padding: 22, textAlign: "center", backgroundImage: "radial-gradient(130% 70% at 50% -10%, rgba(225,29,72,0.14), transparent 60%)" }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ background: INK, border: `1px solid ${LINE}`, borderRadius: 18, width: "100%", maxWidth: 360, padding: 22, textAlign: "center", backgroundImage: "radial-gradient(130% 70% at 50% -10%, rgba(var(--hf-ember-rgb),0.14), transparent 60%)" }}>
             <div style={{ ...disp, fontWeight: 700, fontSize: 18, marginBottom: 18, lineHeight: 1.3 }}>{T("logoutTitle")}</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               <div onClick={confirmLogout} style={{ cursor: "pointer", background: EMBER, color: "#fff", padding: "13px 0", borderRadius: 10, ...disp, fontWeight: 700, fontSize: 15, letterSpacing: 0.5 }}>{T("logoutYes")}</div>

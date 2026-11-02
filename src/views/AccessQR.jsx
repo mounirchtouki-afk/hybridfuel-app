@@ -54,7 +54,7 @@ export default function AccessQR({ lang, session }) {
         <div style={{ background: INK2, border: `1px solid ${LINE}`, borderRadius: 14, padding: 18, fontSize: 13.5, color: MUTED, lineHeight: 1.6 }}>{err}</div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 14, marginTop: 8 }}>
-          <div style={{ background: "#fff", padding: 18, borderRadius: 20, boxShadow: "0 12px 34px rgba(225,29,72,0.28)" }}>
+          <div style={{ background: "#fff", padding: 18, borderRadius: 20, boxShadow: "0 12px 34px rgba(var(--hf-ember-rgb),0.28)" }}>
             {src
               ? <img src={src} alt="Access QR" style={{ width: 236, height: 236, display: "block" }} />
               : <div style={{ width: 236, height: 236, display: "flex", alignItems: "center", justifyContent: "center", color: "#999", fontSize: 13 }}>…</div>}

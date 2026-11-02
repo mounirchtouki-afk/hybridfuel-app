@@ -125,7 +125,7 @@ export default function RaceProtocol({ lang, weight, session, week }) {
   }
   const dateLbl = date ? (() => { const d = new Date(date + "T12:00:00"); return WD[lang][d.getDay()] + " " + d.getDate() + "/" + (d.getMonth() + 1); })() : "";
 
-  const seg = (on) => ({ flex: 1, textAlign: "center", padding: "9px 0", borderRadius: 8, cursor: "pointer", fontSize: 12.5, fontWeight: 600, border: `1px solid ${on ? EMBER : LINE}`, background: on ? "rgba(225,29,72,0.14)" : "transparent", color: on ? PAPER : MUTED });
+  const seg = (on) => ({ flex: 1, textAlign: "center", padding: "9px 0", borderRadius: 8, cursor: "pointer", fontSize: 12.5, fontWeight: 600, border: `1px solid ${on ? EMBER : LINE}`, background: on ? "rgba(var(--hf-ember-rgb),0.14)" : "transparent", color: on ? PAPER : MUTED });
 
   const Step = ({ when, rel, title, body, detail, hero }) => (
     <div style={{ display: "flex", gap: 12, marginBottom: 2 }}>
@@ -200,7 +200,7 @@ export default function RaceProtocol({ lang, weight, session, week }) {
       {ready && (
         <>
           {/* Countdown */}
-          <div style={{ ...card, display: "flex", alignItems: "center", justifyContent: "space-between", backgroundImage: "radial-gradient(120% 90% at 100% 0%, rgba(225,29,72,0.16), transparent 60%)" }}>
+          <div style={{ ...card, display: "flex", alignItems: "center", justifyContent: "space-between", backgroundImage: "radial-gradient(120% 90% at 100% 0%, rgba(var(--hf-ember-rgb),0.16), transparent 60%)" }}>
             <div>
               <div style={{ fontSize: 11, color: MUTED, letterSpacing: 1, textTransform: "uppercase" }}>{dateLbl}{startDt && time ? " · " + time : ""}</div>
               <div style={{ ...disp, fontSize: 22, fontWeight: 700, marginTop: 2 }}>HYROX</div>
@@ -248,7 +248,7 @@ export default function RaceProtocol({ lang, weight, session, week }) {
           </div>
 
           {/* Koppel aan dagboek */}
-          <div style={{ ...card, border: `1px solid ${EMBER}`, backgroundImage: "radial-gradient(120% 90% at 0% 0%, rgba(225,29,72,0.13), transparent 60%)" }}>
+          <div style={{ ...card, border: `1px solid ${EMBER}`, backgroundImage: "radial-gradient(120% 90% at 0% 0%, rgba(var(--hf-ember-rgb),0.13), transparent 60%)" }}>
             <div style={capTitle}>{t("linkTitle")}</div>
             {!hasPlan ? (
               <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.5 }}>{t("linkNoPlan")}</div>

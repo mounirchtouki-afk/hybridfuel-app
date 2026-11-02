@@ -73,7 +73,7 @@ export default function Join({ slug, lang }) {
         <div onClick={() => { if (!busy) submit(); }} style={{ cursor: busy ? "default" : "pointer", opacity: busy ? 0.7 : 1, background: color, color: "#fff", padding: "14px 0", borderRadius: 10, ...disp, fontWeight: 700, fontSize: 15, letterSpacing: 0.6, textTransform: "uppercase" }}>
           {busy ? t("Bezig…", "Loading…") : t("Inloggen", "Log in")}
         </div>
-        {err && <div style={{ fontSize: 12.5, color: "#FB7185", marginTop: 12, lineHeight: 1.4 }}>{err}</div>}
+        {err && <div style={{ fontSize: 12.5, color: "var(--hf-ember-soft)", marginTop: 12, lineHeight: 1.4 }}>{err}</div>}
         <div style={{ fontSize: 10.5, color: MUTED, marginTop: 20, letterSpacing: 0.3 }}>Powered by HybridFuel</div>
       </div>
     </div>

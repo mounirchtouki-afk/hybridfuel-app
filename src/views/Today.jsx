@@ -264,7 +264,7 @@ export default function Today({ lang, week, onGoPlan, session, plus, units, onRe
           {/* Demo-teaser van de herplanner: Pro staat uit in demo, maar prospects
               moeten deze topfunctie wél zien. Klik stuurt naar het ontgrendel-scherm. */}
           {demo && day && (
-            <div onClick={() => onUnlock && onUnlock()} style={{ cursor: "pointer", border: `1px solid ${EMBER}`, borderRadius: 14, padding: 15, backgroundImage: "radial-gradient(120% 90% at 100% 0%, rgba(225,29,72,0.14), transparent 62%)" }}>
+            <div onClick={() => onUnlock && onUnlock()} style={{ cursor: "pointer", border: `1px solid ${EMBER}`, borderRadius: 14, padding: 15, backgroundImage: "radial-gradient(120% 90% at 100% 0%, rgba(var(--hf-ember-rgb),0.14), transparent 62%)" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 7 }}>
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 2.6-6.4M3 4v4h4" /></svg>
                 <div style={{ ...disp, fontSize: 13.5, fontWeight: 700, letterSpacing: 0.5, textTransform: "uppercase", color: EMBER }}>{t("hpTitle")}</div>
@@ -283,7 +283,7 @@ export default function Today({ lang, week, onGoPlan, session, plus, units, onRe
 
           {/* "Leven gebeurt"-herplanner (Plus), vandaag of over de week */}
           {!demo && plus && day && (undo || spillUndo || canRebalance || canSpread) && (
-            <div style={{ border: `1px solid ${EMBER}`, borderRadius: 14, padding: 15, backgroundImage: "radial-gradient(120% 90% at 100% 0%, rgba(225,29,72,0.14), transparent 62%)" }}>
+            <div style={{ border: `1px solid ${EMBER}`, borderRadius: 14, padding: 15, backgroundImage: "radial-gradient(120% 90% at 100% 0%, rgba(var(--hf-ember-rgb),0.14), transparent 62%)" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 7 }}>
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 2.6-6.4M3 4v4h4" /></svg>
                 <div style={{ ...disp, fontSize: 13.5, fontWeight: 700, letterSpacing: 0.5, textTransform: "uppercase", color: EMBER }}>{t("hpTitle")}</div>
@@ -419,11 +419,11 @@ function FeastPlanner({ lang, week, baseIso, onClose }) {
     setResult(null);
   }
 
-  const chip = (on) => ({ flex: 1, textAlign: "center", cursor: "pointer", ...disp, fontWeight: 700, fontSize: 13, padding: "11px 0", borderRadius: 9, border: `1px solid ${on ? EMBER : LINE}`, background: on ? "rgba(225,29,72,0.14)" : "transparent", color: on ? EMBER : MUTED });
+  const chip = (on) => ({ flex: 1, textAlign: "center", cursor: "pointer", ...disp, fontWeight: 700, fontSize: 13, padding: "11px 0", borderRadius: 9, border: `1px solid ${on ? EMBER : LINE}`, background: on ? "rgba(var(--hf-ember-rgb),0.14)" : "transparent", color: on ? EMBER : MUTED });
 
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 65, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ position: "relative", background: INK, border: `1px solid ${LINE}`, borderRadius: 20, width: "100%", maxWidth: 420, maxHeight: "90vh", overflowY: "auto", padding: 22, boxShadow: "0 24px 70px rgba(0,0,0,.65)", backgroundImage: "radial-gradient(130% 70% at 92% -10%, rgba(225,29,72,0.13), transparent 58%)" }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ position: "relative", background: INK, border: `1px solid ${LINE}`, borderRadius: 20, width: "100%", maxWidth: 420, maxHeight: "90vh", overflowY: "auto", padding: 22, boxShadow: "0 24px 70px rgba(0,0,0,.65)", backgroundImage: "radial-gradient(130% 70% at 92% -10%, rgba(var(--hf-ember-rgb),0.13), transparent 58%)" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
           <div style={sectionTitle}>{L.title}</div>
           <div onClick={onClose} style={{ cursor: "pointer", color: MUTED, fontSize: 17, width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 9, border: `1px solid ${LINE}` }}>×</div>
@@ -529,7 +529,7 @@ function AddExtra({ lang, session, onClose, onPickProduct, onPickRecipe }) {
 
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 65, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ position: "relative", background: INK, border: `1px solid ${LINE}`, borderRadius: 20, width: "100%", maxWidth: 440, maxHeight: "90vh", overflowY: "auto", padding: 22, boxShadow: "0 24px 70px rgba(0,0,0,.65)", backgroundImage: "radial-gradient(130% 70% at 92% -10%, rgba(225,29,72,0.13), transparent 58%)" }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ position: "relative", background: INK, border: `1px solid ${LINE}`, borderRadius: 20, width: "100%", maxWidth: 440, maxHeight: "90vh", overflowY: "auto", padding: 22, boxShadow: "0 24px 70px rgba(0,0,0,.65)", backgroundImage: "radial-gradient(130% 70% at 92% -10%, rgba(var(--hf-ember-rgb),0.13), transparent 58%)" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
           <div style={sectionTitle}>{L.title}</div>
           <div onClick={onClose} style={{ cursor: "pointer", color: MUTED, fontSize: 17, width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 9, border: `1px solid ${LINE}` }}>×</div>

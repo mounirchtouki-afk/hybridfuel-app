@@ -400,8 +400,8 @@ export default function Training({ lang, session, weight }) {
     const [date, setDate] = useState(scope === "week" ? isoAdd(mondayISO(d), 7) : isoAdd(d, 1));
     const [done, setDone] = useState(false);
     const dIn = { ...sIn, colorScheme: "dark" };
-    const seg = (on) => ({ flex: 1, textAlign: "center", cursor: "pointer", padding: "9px 0", borderRadius: 8, border: `1px solid ${on ? EMBER : LINE}`, background: on ? "rgba(225,29,72,0.12)" : "transparent", color: on ? PAPER : MUTED, fontSize: 12.5, fontWeight: 700, ...disp });
-    const radio = (on) => ({ display: "flex", alignItems: "center", gap: 9, cursor: "pointer", padding: "10px 12px", borderRadius: 10, border: `1px solid ${on ? EMBER : LINE}`, background: on ? "rgba(225,29,72,0.08)" : INK2 });
+    const seg = (on) => ({ flex: 1, textAlign: "center", cursor: "pointer", padding: "9px 0", borderRadius: 8, border: `1px solid ${on ? EMBER : LINE}`, background: on ? "rgba(var(--hf-ember-rgb),0.12)" : "transparent", color: on ? PAPER : MUTED, fontSize: 12.5, fontWeight: 700, ...disp });
+    const radio = (on) => ({ display: "flex", alignItems: "center", gap: 9, cursor: "pointer", padding: "10px 12px", borderRadius: 10, border: `1px solid ${on ? EMBER : LINE}`, background: on ? "rgba(var(--hf-ember-rgb),0.08)" : INK2 });
     const dot = (on) => ({ width: 16, height: 16, borderRadius: "50%", border: `2px solid ${on ? EMBER : MUTED}`, background: on ? EMBER : "transparent", flexShrink: 0 });
     const place = () => { if (scope === "week") { stampWeek(tgt === "next" ? isoAdd(mondayISO(d), 7) : mondayISO(date), act === "move"); } else { stampDay(di, date); } setDone(true); setTimeout(onClose, 900); };
     return (
@@ -463,7 +463,7 @@ export default function Training({ lang, session, weight }) {
                   {allTemplates.map((tpl) => (
                     <div key={tpl.id} style={{ display: "flex", alignItems: "center", gap: 11, background: INK2, border: `1px solid ${LINE}`, borderRadius: 12, padding: "11px 12px", marginBottom: 9 }}>
                       <div onClick={() => { applyTemplateToDay(di, tpl); onClose(); }} className="hf-tap" style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: 11, flex: 1, minWidth: 0 }}>
-                        <div style={{ width: 42, height: 42, borderRadius: 11, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: tpl.builtin ? EMBER : "rgba(225,29,72,0.12)", color: tpl.builtin ? "#fff" : EMBER, ...disp, fontWeight: 700, fontSize: 15 }}>{tpl.builtin ? "H" : (tpl.name || "?").slice(0, 1).toUpperCase()}</div>
+                        <div style={{ width: 42, height: 42, borderRadius: 11, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: tpl.builtin ? EMBER : "rgba(var(--hf-ember-rgb),0.12)", color: tpl.builtin ? "#fff" : EMBER, ...disp, fontWeight: 700, fontSize: 15 }}>{tpl.builtin ? "H" : (tpl.name || "?").slice(0, 1).toUpperCase()}</div>
                         <div style={{ minWidth: 0 }}>
                           <div style={{ fontSize: 14, fontWeight: 600, color: PAPER, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{tpl.name}</div>
                           <div style={{ fontSize: 11, color: MUTED, marginTop: 2 }}>{(tpl.items || []).length} {lang === "nl" ? "onderdelen" : "parts"}{tpl.builtin ? (lang === "nl" ? " · standaard" : " · default") : (lang === "nl" ? " · eigen" : " · custom")}</div>
@@ -660,7 +660,7 @@ export default function Training({ lang, session, weight }) {
           </div>
           {calOpen && <BrandCalendar value={d} lang={lang} onPick={(v) => { if (v) setD(v); }} onClose={() => setCalOpen(false)} />}
 
-          <div style={{ background: `linear-gradient(135deg, ${EMBER}, #9f1239)`, borderRadius: 16, padding: "18px", marginBottom: 14, color: "#fff" }}>
+          <div style={{ background: `linear-gradient(135deg, ${EMBER}, var(--hf-ember-deep))`, borderRadius: 16, padding: "18px", marginBottom: 14, color: "#fff" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
               <div>
                 <div style={{ fontSize: 10.5, letterSpacing: 1, textTransform: "uppercase", fontWeight: 700, opacity: 0.85 }}>{t("todayBurn")}</div>
@@ -825,7 +825,7 @@ function HowModal({ lang, ex, onClose }) {
         <div style={{ height: 130, borderRadius: 12, background: "linear-gradient(135deg,#3a3242,#1b1620)", border: `1px dashed ${LINE}`, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 12 }}>
           {ex.demo
             ? <img src={ex.demo} alt="" style={{ maxWidth: "100%", maxHeight: "100%", borderRadius: 10 }} />
-            : <><div style={{ width: 46, height: 46, borderRadius: "50%", background: "rgba(225,29,72,0.15)", display: "flex", alignItems: "center", justifyContent: "center", color: EMBER_SOFT, fontSize: 20 }}>▶</div><div style={{ fontSize: 11, color: MUTED }}>{demoLbl}</div></>}
+            : <><div style={{ width: 46, height: 46, borderRadius: "50%", background: "rgba(var(--hf-ember-rgb),0.15)", display: "flex", alignItems: "center", justifyContent: "center", color: EMBER_SOFT, fontSize: 20 }}>▶</div><div style={{ fontSize: 11, color: MUTED }}>{demoLbl}</div></>}
         </div>
         <div style={{ ...disp, fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1.5, color: EMBER, marginBottom: 7 }}>{lang === "nl" ? "Zo werkt het" : "How it works"}</div>
         <div style={{ fontSize: 13.5, color: PAPER, opacity: 0.92, lineHeight: 1.6 }}>{how}</div>
@@ -933,14 +933,14 @@ function ExerciseLog({ lang, item, dateKey, ex, onHow, onClose, onDone, t }) {
         </div>
         <div style={{ fontSize: 12, color: MUTED, marginBottom: 12 }}>{setLabel(item) ? setLabel(item) + " · " : ""}~{item.kcal} kcal</div>
         {lastW > 0 && (
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 7, background: "rgba(225,29,72,0.10)", border: "1px solid rgba(225,29,72,0.28)", color: EMBER, borderRadius: 10, padding: "8px 12px", fontSize: 12, fontWeight: 600, marginBottom: 16 }}>↗ {t("logLast")} {fmtW(lastW)} {unit}</div>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 7, background: "rgba(var(--hf-ember-rgb),0.10)", border: "1px solid rgba(var(--hf-ember-rgb),0.28)", color: EMBER, borderRadius: 10, padding: "8px 12px", fontSize: 12, fontWeight: 600, marginBottom: 16 }}>↗ {t("logLast")} {fmtW(lastW)} {unit}</div>
         )}
 
         {/* VIDEO */}
         <div style={{ fontSize: 10, letterSpacing: 1.1, textTransform: "uppercase", color: MUTED, fontWeight: 700, marginBottom: 9 }}>{t("logVideo")}</div>
         <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
           <div onClick={() => ex && ex.how && onHow(ex)} className="hf-tap" style={{ ...field, flex: 1, display: "flex", alignItems: "center", gap: 9, padding: "11px 12px", cursor: "pointer" }}>
-            <span style={{ width: 30, height: 30, borderRadius: "50%", background: "rgba(225,29,72,0.12)", display: "flex", alignItems: "center", justifyContent: "center", color: EMBER, fontSize: 13 }}>▶</span>
+            <span style={{ width: 30, height: 30, borderRadius: "50%", background: "rgba(var(--hf-ember-rgb),0.12)", display: "flex", alignItems: "center", justifyContent: "center", color: EMBER, fontSize: 13 }}>▶</span>
             <div><div style={{ fontSize: 13, fontWeight: 600 }}>{t("logWatch")}</div><div style={{ fontSize: 10.5, color: MUTED }}>{t("logWatchSub")}</div></div>
           </div>
           <div onClick={() => fileRef.current && fileRef.current.click()} className="hf-tap" style={{ ...field, flex: 1, display: "flex", alignItems: "center", gap: 9, padding: "11px 12px", cursor: "pointer" }}>
@@ -980,7 +980,7 @@ function ExerciseLog({ lang, item, dateKey, ex, onHow, onClose, onDone, t }) {
         <div style={{ fontSize: 10, letterSpacing: 1.1, textTransform: "uppercase", color: MUTED, fontWeight: 700, marginBottom: 9 }}>{t("logNote")}</div>
         <div style={{ position: "relative" }}>
           <textarea ref={noteRef} value={note} onChange={(e) => setNote(e.target.value)} placeholder={t("logNotePh")} style={{ ...field, width: "100%", minHeight: 88, padding: "12px 52px 12px 12px", color: PAPER, fontFamily: "Inter, sans-serif", fontSize: 13.5, lineHeight: 1.5, outline: "none", resize: "vertical", boxSizing: "border-box" }} />
-          <div onClick={mic} style={{ position: "absolute", right: 10, bottom: 10, width: 40, height: 40, borderRadius: "50%", background: listening ? "#9f1239" : EMBER, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 6px 16px rgba(225,29,72,0.35)" }}>
+          <div onClick={mic} style={{ position: "absolute", right: 10, bottom: 10, width: 40, height: 40, borderRadius: "50%", background: listening ? "var(--hf-ember-deep)" : EMBER, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 6px 16px rgba(var(--hf-ember-rgb),0.35)" }}>
             <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5 11a7 7 0 0014 0M12 18v3" /></svg>
           </div>
         </div>
@@ -1088,7 +1088,7 @@ function SessionExLog({ lang, kg, item, dateKey, ex, t }) {
   return (
     <div style={{ padding: "4px 2px 2px" }}>
       {lastW > 0 && (
-        <div style={{ display: "inline-flex", alignItems: "center", gap: 7, background: "rgba(225,29,72,0.10)", border: "1px solid rgba(225,29,72,0.28)", color: EMBER, borderRadius: 10, padding: "7px 11px", fontSize: 11.5, fontWeight: 600 }}>↗ {t("logLast")} {fmtW(lastW)} {unit}</div>
+        <div style={{ display: "inline-flex", alignItems: "center", gap: 7, background: "rgba(var(--hf-ember-rgb),0.10)", border: "1px solid rgba(var(--hf-ember-rgb),0.28)", color: EMBER, borderRadius: 10, padding: "7px 11px", fontSize: 11.5, fontWeight: 600 }}>↗ {t("logLast")} {fmtW(lastW)} {unit}</div>
       )}
       {how && <><div style={lbl}>{lang === "nl" ? "Zo werkt het" : "How it works"}</div><div style={{ fontSize: 13, color: PAPER, opacity: 0.9, lineHeight: 1.55 }}>{how}</div></>}
       {demo && <video src={demo} controls playsInline style={{ width: "100%", borderRadius: 11, maxHeight: 200, background: "#000", marginTop: 10 }} />}
@@ -1127,7 +1127,7 @@ function SessionExLog({ lang, kg, item, dateKey, ex, t }) {
       <div style={lbl}>{t("logNote")}</div>
       <div style={{ position: "relative" }}>
         <textarea ref={noteRef} value={note} onChange={(e) => setNote(e.target.value)} placeholder={t("logNotePh")} style={{ ...field, width: "100%", minHeight: 72, padding: "11px 50px 11px 12px", color: PAPER, fontFamily: "Inter, sans-serif", fontSize: 13.5, lineHeight: 1.5, outline: "none", resize: "vertical", boxSizing: "border-box" }} />
-        <div onClick={mic} style={{ position: "absolute", right: 9, bottom: 9, width: 38, height: 38, borderRadius: "50%", background: listening ? "#9f1239" : EMBER, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 6px 16px rgba(225,29,72,0.35)" }}>
+        <div onClick={mic} style={{ position: "absolute", right: 9, bottom: 9, width: 38, height: 38, borderRadius: "50%", background: listening ? "var(--hf-ember-deep)" : EMBER, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 6px 16px rgba(var(--hf-ember-rgb),0.35)" }}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5 11a7 7 0 0014 0M12 18v3" /></svg>
         </div>
       </div>
@@ -1197,7 +1197,7 @@ function SessionRunner({ lang, kg, items, checked, toggle, exOf, onFinish, onClo
           <div onClick={onClose} style={{ cursor: "pointer", color: MUTED, fontSize: 18, width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 9, border: `1px solid ${LINE}` }}>×</div>
         </div>
         {/* HEADER met lopende klok */}
-        <div style={{ background: `linear-gradient(135deg, ${EMBER}, #9f1239)`, borderRadius: 16, padding: "15px 16px 16px", marginBottom: 12, color: "#fff" }}>
+        <div style={{ background: `linear-gradient(135deg, ${EMBER}, var(--hf-ember-deep))`, borderRadius: 16, padding: "15px 16px 16px", marginBottom: 12, color: "#fff" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
             <div>
               <div style={{ ...disp, fontWeight: 700, fontSize: 32, letterSpacing: 1, lineHeight: 1 }}>{fmtClock(elapsed)}</div>
@@ -1240,7 +1240,7 @@ function SessionRunner({ lang, kg, items, checked, toggle, exOf, onFinish, onClo
             const myRank = splitSorted.findIndex((e) => e.k === i);
             const mySplit = myRank >= 0 ? splits[i] - (myRank > 0 ? splitSorted[myRank - 1].v : 0) : 0;
             return (
-              <div key={i} style={{ background: INK2, borderRadius: 14, border: `1px ${on ? "solid " + GREEN : cur ? "solid " + EMBER : "dashed " + SAGE}`, boxShadow: cur && !on ? "0 0 22px rgba(225,29,72,0.18)" : "none", overflow: "hidden" }}>
+              <div key={i} style={{ background: INK2, borderRadius: 14, border: `1px ${on ? "solid " + GREEN : cur ? "solid " + EMBER : "dashed " + SAGE}`, boxShadow: cur && !on ? "0 0 22px rgba(var(--hf-ember-rgb),0.18)" : "none", overflow: "hidden" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 12, padding: 12 }}>
                   <div onClick={() => complete(i)} className="hf-tap" style={{ cursor: "pointer", width: 28, height: 28, flexShrink: 0, borderRadius: "50%", border: `2px solid ${on ? GREEN : cur ? EMBER : MUTED}`, background: on ? GREEN : "transparent", display: "flex", alignItems: "center", justifyContent: "center", color: on ? "#0A0A0A" : EMBER, fontSize: 14, fontWeight: 800 }}>{on ? "✓" : cur ? "▶" : ""}</div>
                   <div onClick={() => setOpenIdx(open ? -1 : i)} className="hf-tap" style={{ flex: 1, minWidth: 0, cursor: "pointer", borderRadius: 10, padding: "2px 4px", margin: "-2px -4px" }}>
@@ -1370,7 +1370,7 @@ function Prestaties({ lang, sessions }) {
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <span style={{ ...disp, fontWeight: 700, fontSize: 15 }}>{lang === "nl" ? m.nl : m.en}</span>
-                <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.5, textTransform: "uppercase", padding: "3px 8px", borderRadius: 5, background: earned ? "rgba(225,29,72,0.12)" : "transparent", border: earned ? "none" : `1px solid ${LINE}`, color: earned ? EMBER : MUTED }}>{earned ? TN[st.level] : (lang === "nl" ? "Op slot" : "Locked")}</span>
+                <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.5, textTransform: "uppercase", padding: "3px 8px", borderRadius: 5, background: earned ? "rgba(var(--hf-ember-rgb),0.12)" : "transparent", border: earned ? "none" : `1px solid ${LINE}`, color: earned ? EMBER : MUTED }}>{earned ? TN[st.level] : (lang === "nl" ? "Op slot" : "Locked")}</span>
               </div>
               <div style={{ height: 6, borderRadius: 4, background: TRACK, overflow: "hidden", margin: "8px 0 5px" }}><div style={{ height: "100%", width: Math.max(3, Math.round(st.progress * 100)) + "%", borderRadius: 4, background: EMBER }} /></div>
               <div style={{ fontSize: 11, color: MUTED }}>

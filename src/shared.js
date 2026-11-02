@@ -21,19 +21,50 @@ export const THEME_KEYS = ["ink", "ink2", "ember", "ember-soft", "paper", "muted
 
 // Zet de org-huisstijl als CSS-variabelen op <html>. theme = {template, accent, accentSoft, vars{}}.
 // null = alles terugzetten naar de defaults (voor gewone gebruikers / na uitloggen).
+// Hex -> "r, g, b" (voor rgba(var(--hf-ember-rgb), a)).
+export function hexToRgb(hex) {
+  try {
+    let h = String(hex || "").trim().replace("#", "");
+    if (h.length === 3) h = h.split("").map((c) => c + c).join("");
+    const n = parseInt(h, 16);
+    if (isNaN(n) || h.length !== 6) return "225, 29, 72";
+    return ((n >> 16) & 255) + ", " + ((n >> 8) & 255) + ", " + (n & 255);
+  } catch (e) { return "225, 29, 72"; }
+}
+// Donkerdere variant van een hex (voor gradients), factor 0..1 (0.7 = 30% donkerder).
+export function darkenHex(hex, f = 0.7) {
+  try {
+    let h = String(hex || "").trim().replace("#", "");
+    if (h.length === 3) h = h.split("").map((c) => c + c).join("");
+    const n = parseInt(h, 16); if (isNaN(n) || h.length !== 6) return "#9f1239";
+    const r = Math.round(((n >> 16) & 255) * f), g = Math.round(((n >> 8) & 255) * f), b = Math.round((n & 255) * f);
+    return "#" + [r, g, b].map((x) => x.toString(16).padStart(2, "0")).join("");
+  } catch (e) { return "#9f1239"; }
+}
+
 export function applyOrgTheme(theme) {
   try {
     const root = document.documentElement;
     if (!root || !root.style) return;
-    if (!theme) { THEME_KEYS.forEach((k) => root.style.removeProperty("--hf-" + k)); return; }
+    if (!theme) {
+      THEME_KEYS.forEach((k) => root.style.removeProperty("--hf-" + k));
+      root.style.removeProperty("--hf-ember-rgb"); root.style.removeProperty("--hf-ember-deep");
+      try { localStorage.removeItem("hf_org_theme"); } catch (e) {}
+      return;
+    }
     const base = THEME_TEMPLATES[theme.template] || THEME_TEMPLATES.dark;
+    const accent = theme.accent || "#E11D48";
     const resolved = {
       ink: base.ink, ink2: base.ink2, paper: base.paper, muted: base.muted, line: base.line, sage: base.sage,
-      ember: theme.accent || "#E11D48",
+      ember: accent,
       "ember-soft": theme.accentSoft || theme.accent || "#FB7185",
+      "ember-rgb": hexToRgb(accent),
+      "ember-deep": darkenHex(accent, 0.7),
       ...(theme.vars || {}),
     };
     Object.entries(resolved).forEach(([k, val]) => { if (val) root.style.setProperty("--hf-" + k, val); });
+    // Cache zodat de klantkleur vóór de eerste paint kan worden toegepast (geen flits).
+    try { localStorage.setItem("hf_org_theme", JSON.stringify(resolved)); } catch (e) {}
   } catch (e) {}
 }
 

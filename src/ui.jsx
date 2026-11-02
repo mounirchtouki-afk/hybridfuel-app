@@ -4,7 +4,7 @@ import { INK, INK2, EMBER, PAPER, MUTED, LINE, disp } from "./shared.js";
 // Inline-uitklappende dropdowns (geen overlay → klikt niet weg op mobiel en knipt niet).
 const trigger = (open) => ({ display: "flex", justifyContent: "space-between", alignItems: "center", background: INK, border: `1px solid ${open ? EMBER : LINE}`, borderRadius: 9, padding: "11px 13px", cursor: "pointer", boxSizing: "border-box" });
 const panel = { background: INK2, border: `1px solid ${LINE}`, borderTop: "none", borderRadius: "0 0 9px 9px", marginTop: -2, overflow: "hidden" };
-const rowS = (on) => ({ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "11px 13px", cursor: "pointer", borderTop: `1px solid ${LINE}`, background: on ? "rgba(225,29,72,0.10)" : "transparent", fontSize: 14, color: PAPER, fontWeight: on ? 600 : 500 });
+const rowS = (on) => ({ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "11px 13px", cursor: "pointer", borderTop: `1px solid ${LINE}`, background: on ? "rgba(var(--hf-ember-rgb),0.10)" : "transparent", fontSize: 14, color: PAPER, fontWeight: on ? 600 : 500 });
 
 export function Dropdown({ value, onChange, options, placeholder }) {
   const [open, setOpen] = useState(false);

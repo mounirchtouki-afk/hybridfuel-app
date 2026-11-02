@@ -199,7 +199,7 @@ export default function Dashboard({ lang, session, week, targets, units, onGo })
 
       {/* Race-aftelling of uitnodiging (hoog = prominent) */}
       {prefs.race && (cd !== null ? (
-        <div className="hf-tap" onClick={() => onGo("race")} style={{ cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", background: INK2, border: `1px solid ${EMBER}`, borderRadius: 14, padding: "14px 16px", boxShadow: SHADOW, backgroundImage: "radial-gradient(120% 90% at 100% 0%, rgba(225,29,72,0.16), transparent 60%)" }}>
+        <div className="hf-tap" onClick={() => onGo("race")} style={{ cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", background: INK2, border: `1px solid ${EMBER}`, borderRadius: 14, padding: "14px 16px", boxShadow: SHADOW, backgroundImage: "radial-gradient(120% 90% at 100% 0%, rgba(var(--hf-ember-rgb),0.16), transparent 60%)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="13" r="8" /><path d="M12 13V8.5M12 3.5V2M9.5 2h5" /></svg>
             <div><div style={{ ...disp, fontWeight: 700, fontSize: 15 }}>{t("race")}</div><div style={{ fontSize: 10.5, color: MUTED }}>Race Protocol</div></div>
