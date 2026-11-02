@@ -214,7 +214,15 @@ function MemberEditor({ token, lang, acc, onBack }) {
   async function saveEmail() { setBusy(true); setErr(""); try { await call(token, "admin.updateAccount", { targetUserId: acc.id, email }); } catch (e) { setErr(String(e.message || e)); } setBusy(false); }
   async function savePw() { if (pw.length < 6) { setErr(t("Wachtwoord min. 6 tekens.", "Password min 6 chars.")); return; } setBusy(true); setErr(""); try { await call(token, "admin.updateAccount", { targetUserId: acc.id, password: pw }); setPw(""); } catch (e) { setErr(String(e.message || e)); } setBusy(false); }
   async function resetLink() { setBusy(true); setErr(""); try { const d = await call(token, "admin.resetPassword", { email }); setResetUrl(d.url); } catch (e) { setErr(String(e.message || e)); } setBusy(false); }
-  async function changeTier(v) { setTier(v); try { await call(token, "admin.setTier", { targetUserId: acc.id, tier: v }); } catch (e) { setErr(String(e.message || e)); } }
+  async function changeTier(v) {
+    setErr("");
+    try {
+      const d = await call(token, "admin.setTier", { targetUserId: acc.id, tier: v });
+      const stored = d && d.tier ? d.tier : v;
+      setTier(stored);
+      if (stored !== v) setErr(t("Niet opgeslagen — staat nu op: ", "Not saved — now set to: ") + stored);
+    } catch (e) { setErr(t("Opslaan mislukt: ", "Save failed: ") + String(e.message || e)); }
+  }
   const segTier = (id, lbl) => (<div onClick={() => changeTier(id)} style={{ cursor: "pointer", fontSize: 12.5, fontWeight: 800, ...disp, padding: "8px 14px", borderRadius: 8, border: `1px solid ${tier === id ? GREEN : LINE}`, background: tier === id ? GREEN : "transparent", color: tier === id ? "#fff" : MUTED }}>{lbl}</div>);
   return (
     <div style={{ display: "grid", gap: 2, maxWidth: 560 }}>

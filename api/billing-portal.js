@@ -62,12 +62,12 @@ export default async function handler(req, res) {
         const subsR = await fetch(supaUrl + "/rest/v1/subscriptions?select=user_id,email,tier,status,current_period_end,stripe_customer_id", { headers: sv });
         const subs = await subsR.json().catch(() => []);
         const subBy = {}; (Array.isArray(subs) ? subs : []).forEach((s) => { subBy[s.user_id] = s; });
-        const memR = await fetch(supaUrl + "/rest/v1/org_members?select=user_id,org_id", { headers: sv });
+        const memR = await fetch(supaUrl + "/rest/v1/org_members?select=auth_user_id,org_id", { headers: sv });
         const mem = await memR.json().catch(() => []);
-        const orgR = await fetch(supaUrl + "/rest/v1/org_config?select=org_id,name", { headers: sv });
+        const orgR = await fetch(supaUrl + "/rest/v1/orgs?select=id,name", { headers: sv });
         const orgs = await orgR.json().catch(() => []);
-        const orgName = {}; (Array.isArray(orgs) ? orgs : []).forEach((o) => { orgName[o.org_id] = o.name; });
-        const gymBy = {}; (Array.isArray(mem) ? mem : []).forEach((m) => { if (!gymBy[m.user_id]) gymBy[m.user_id] = orgName[m.org_id] || null; });
+        const orgName = {}; (Array.isArray(orgs) ? orgs : []).forEach((o) => { orgName[o.id] = o.name; });
+        const gymBy = {}; (Array.isArray(mem) ? mem : []).forEach((m) => { if (!gymBy[m.auth_user_id]) gymBy[m.auth_user_id] = orgName[m.org_id] || null; });
         const accounts = users.map((u) => {
           const s = subBy[u.id] || {};
           return { id: u.id, email: u.email || s.email || "—", created_at: u.created_at || null, last_sign_in_at: u.last_sign_in_at || null, tier: s.tier || "free", status: s.status || null, period_end: s.current_period_end || null, has_customer: !!s.stripe_customer_id, gym: gymBy[u.id] || null };
@@ -93,11 +93,17 @@ export default async function handler(req, res) {
         const periodEnd = tier === "free" ? null : "2099-01-01T00:00:00.000Z";
         const wr = await fetch(supaUrl + "/rest/v1/subscriptions?on_conflict=user_id", {
           method: "POST",
-          headers: { ...sv, "Content-Type": "application/json", Prefer: "resolution=merge-duplicates,return=minimal" },
+          headers: { ...sv, "Content-Type": "application/json", Prefer: "resolution=merge-duplicates,return=representation" },
           body: JSON.stringify({ user_id: targetUserId, tier, status, current_period_end: periodEnd, updated_at: new Date().toISOString() }),
         });
         if (!wr.ok) { const txt = await wr.text().catch(() => ""); return res.status(502).json({ error: "write_failed", detail: txt.slice(0, 200) }); }
-        return res.status(200).json({ ok: true });
+        const saved = await wr.json().catch(() => []);
+        const row = Array.isArray(saved) ? saved[0] : saved;
+        // Teruglezen wat de DB nu daadwerkelijk heeft (bevestiging).
+        const vr = await fetch(supaUrl + "/rest/v1/subscriptions?select=tier,current_period_end&user_id=eq." + encodeURIComponent(targetUserId), { headers: sv });
+        const vrows = vr.ok ? await vr.json().catch(() => []) : [];
+        const stored = (vrows && vrows[0]) || row || {};
+        return res.status(200).json({ ok: true, tier: stored.tier || tier, current_period_end: stored.current_period_end || periodEnd });
       }
 
       if (op === "admin.createDemoGym") {
