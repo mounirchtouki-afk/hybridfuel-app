@@ -85,6 +85,28 @@ export function exerciseByName(name) {
   return EXERCISES.find((e) => e.nl.toLowerCase() === n || e.en.toLowerCase() === n) || null;
 }
 
+// De originele Hyrox-wedstrijd: 8× 1 km hardlopen afgewisseld met de 8 stations,
+// met de officiële afstanden/reps en standaardgewichten (Open/Men; andere divisies
+// kun je zelf aanpassen). Gewichten staan in de naam; de metric is de afstand/reps.
+export const HYROX_RACE = [
+  { name: "Run 1 km",                    exId: "runtempo", metric: "dist", dist: 1000, met: 11,  min: 5 },
+  { name: "SkiErg 1000 m",               exId: "ski",      metric: "dist", dist: 1000, met: 9.5, min: 4 },
+  { name: "Run 1 km",                    exId: "runtempo", metric: "dist", dist: 1000, met: 11,  min: 5 },
+  { name: "Sled Push 50 m · 152 kg",     exId: "sledpush", metric: "dist", dist: 50,   met: 14,  min: 3 },
+  { name: "Run 1 km",                    exId: "runtempo", metric: "dist", dist: 1000, met: 11,  min: 5 },
+  { name: "Sled Pull 50 m · 103 kg",     exId: "sledpull", metric: "dist", dist: 50,   met: 12,  min: 3 },
+  { name: "Run 1 km",                    exId: "runtempo", metric: "dist", dist: 1000, met: 11,  min: 5 },
+  { name: "Burpee Broad Jumps 80 m",     exId: "burpees",  metric: "dist", dist: 80,   met: 10,  min: 4 },
+  { name: "Run 1 km",                    exId: "runtempo", metric: "dist", dist: 1000, met: 11,  min: 5 },
+  { name: "Rowing 1000 m",               exId: "row",      metric: "dist", dist: 1000, met: 8.5, min: 4 },
+  { name: "Run 1 km",                    exId: "runtempo", metric: "dist", dist: 1000, met: 11,  min: 5 },
+  { name: "Farmers Carry 200 m · 2×24 kg", exId: "carry",  metric: "dist", dist: 200,  met: 8,   min: 3 },
+  { name: "Run 1 km",                    exId: "runtempo", metric: "dist", dist: 1000, met: 11,  min: 5 },
+  { name: "Sandbag Lunges 100 m · 20 kg", exId: "lunges",  metric: "dist", dist: 100,  met: 9.5, min: 4 },
+  { name: "Run 1 km",                    exId: "runtempo", metric: "dist", dist: 1000, met: 11,  min: 5 },
+  { name: "Wall Balls 100 · 6 kg",       exId: "wallballs", metric: "reps", reps: 100,  met: 9,   min: 5 },
+];
+
 // Intensiteit-presets voor een handmatige oefening zonder bekende MET.
 export const INTENSITY = [
   { id: "light",  met: 4,  nl: "Licht",  en: "Light" },

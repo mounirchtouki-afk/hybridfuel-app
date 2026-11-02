@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, SAGE, TRACK, SHADOW, disp, num, load, save, todayISO, fmtDate, label, sectionTitle, WD, jsDayToIdx } from "../shared.js";
 
 // SVG-iconen per medaille-categorie (ipv emoji). col = stroke-kleur.
@@ -31,7 +32,7 @@ function gatherWorkoutRecords() {
   return out;
 }
 import BrandCalendar from "./BrandCalendar.jsx";
-import { EXERCISES, WORKOUT_CATS, INTENSITY, kcalFor, exerciseByName } from "../workouts.js";
+import { EXERCISES, WORKOUT_CATS, INTENSITY, kcalFor, exerciseByName, HYROX_RACE } from "../workouts.js";
 import { Dropdown } from "../ui.jsx";
 import { MEDALS, TIER_NAMES, TIER_COLORS, aggregate, medalState } from "../achievements.js";
 
@@ -127,6 +128,7 @@ const T = {
   logRemoveClip: { nl: "Verwijder", en: "Remove" },
   logListening: { nl: "Luisteren…", en: "Listening…" },
   logOpen: { nl: "tik om te loggen", en: "tap to log" },
+  delete: { nl: "Verwijder", en: "Delete" },
 };
 
 // Kleine IndexedDB-opslag voor eigen set-opnames (video-blobs; te groot voor localStorage).
@@ -188,6 +190,7 @@ export default function Training({ lang, session, weight }) {
   const [checked, setChecked] = useState(() => load("hf_trainchecked_" + d, []));
   const [plan, setPlan] = useState(loadPlan);
   const [planAdd, setPlanAdd] = useState(null);
+  const [planEdit, setPlanEdit] = useState(null); // geplande regel bewerken {di, item}
   const [move, setMove] = useState(null);
   const [runner, setRunner] = useState(false);   // sessie-runner open
   const [logEx, setLogEx] = useState(null);       // oefening-logboek {item}
@@ -286,7 +289,14 @@ export default function Training({ lang, session, weight }) {
 
   function persistPlan(next) { setPlan(next); save("hf_trainplan", next); }
   function addToDay(di, row) { const days = plan.days.map((dd, i) => i === di ? { items: [...dd.items, row] } : dd); persistPlan({ days }); }
+  // Hele Hyrox-wedstrijd (8 runs + 8 stations) in één keer aan een dag toevoegen.
+  function addRaceToDay(di) {
+    const rows = HYROX_RACE.map((r, k) => ({ id: "p" + Date.now() + "_" + k, name: r.name, met: r.met, min: r.min, kcal: kcalFor(r.met, kg, r.min), metric: r.metric, exId: r.exId, sets: null, reps: r.reps || null, dist: r.dist || null }));
+    const days = plan.days.map((dd, i) => i === di ? { items: [...dd.items, ...rows] } : dd);
+    persistPlan({ days });
+  }
   function delFromDay(di, id) { const days = plan.days.map((dd, i) => i === di ? { items: dd.items.filter((x) => x.id !== id) } : dd); persistPlan({ days }); }
+  function editItemInDay(di, id, patch) { const days = plan.days.map((dd, i) => i === di ? { items: dd.items.map((x) => x.id === id ? { ...x, ...patch, kcal: kcalFor(x.met, kg, num(patch.min != null ? patch.min : x.min)) } : x) } : dd); persistPlan({ days }); }
   function stampWeek(startMon, isMove) {
     plan.days.forEach((dd, i) => { try { save("hf_trainover_" + isoAdd(startMon, i), { items: dd.items.map((x) => ({ ...x })) }); } catch (e) {} });
     if (isMove) { const srcMon = mondayISO(d); for (let i = 0; i < 7; i++) { const s = isoAdd(srcMon, i); if (mondayISO(s) !== startMon) { try { localStorage.removeItem("hf_trainover_" + s); } catch (e) {} } } }
@@ -434,10 +444,46 @@ export default function Training({ lang, session, weight }) {
               <div style={{ fontSize: 12, color: MUTED, marginBottom: 14 }}>{t("estBurn")}: <span style={{ color: EMBER_SOFT, fontWeight: 700 }}>~{kc} kcal</span></div>
               <div style={{ display: "flex", gap: 10 }}>
                 <div onClick={onClose} style={{ cursor: "pointer", padding: "11px 16px", borderRadius: 9, border: `1px solid ${LINE}`, color: MUTED, fontSize: 13, fontWeight: 700, ...disp }}>{t("cancel")}</div>
-                <div onClick={() => { if (num(mn) <= 0) return; addToDay(di, { id: "p" + Date.now(), name: ch.name, met: ch.met, min: num(mn), kcal: kc, metric, exId: ch.exId || null, sets: num(sets) || null, reps: num(reps) || null, dist: num(dist) || null }); onClose(); }} style={{ cursor: "pointer", flex: 1, textAlign: "center", background: EMBER, color: "#fff", padding: "11px 0", borderRadius: 9, ...disp, fontWeight: 700, fontSize: 14 }}>{t("save")}</div>
+                <div onClick={() => { if (ch.exId === "hyroxsim") { addRaceToDay(di); onClose(); return; } if (num(mn) <= 0) return; addToDay(di, { id: "p" + Date.now(), name: ch.name, met: ch.met, min: num(mn), kcal: kc, metric, exId: ch.exId || null, sets: num(sets) || null, reps: num(reps) || null, dist: num(dist) || null }); onClose(); }} style={{ cursor: "pointer", flex: 1, textAlign: "center", background: EMBER, color: "#fff", padding: "11px 0", borderRadius: 9, ...disp, fontWeight: 700, fontSize: 14 }}>{ch.exId === "hyroxsim" ? (lang === "nl" ? "Hele Hyrox toevoegen" : "Add full Hyrox") : t("save")}</div>
               </div>
             </div>
           )}
+        </div>
+      </div>
+    );
+  }
+
+  // Modal om een reeds-geplande regel aan te passen (meters/kg/reps/min).
+  function PlanEditModal({ di, item, onClose }) {
+    const metric = item.metric || "time";
+    const [mn, setMn] = useState(String(item.min || ""));
+    const [sets, setSets] = useState(item.sets ? String(item.sets) : "");
+    const [reps, setReps] = useState(item.reps ? String(item.reps) : "");
+    const [dist, setDist] = useState(item.dist ? String(item.dist) : "");
+    const kc = kcalFor(item.met, kg, num(mn));
+    return (
+      <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 74, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+        <div onClick={(e) => e.stopPropagation()} className="hf-modal" style={{ background: INK, border: `1px solid ${LINE}`, borderRadius: 18, width: "100%", maxWidth: 400, maxHeight: "88vh", overflowY: "auto", padding: 20 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+            <div style={{ ...disp, fontWeight: 700, fontSize: 16 }}>{item.name}</div>
+            <div onClick={onClose} style={{ cursor: "pointer", color: MUTED, fontSize: 17, width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 9, border: `1px solid ${LINE}` }}>×</div>
+          </div>
+          {metric === "reps" && (
+            <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
+              <div style={{ flex: 1 }}><label style={label}>{t("sets")} <span style={{ color: MUTED, fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>· {t("optional")}</span></label><input value={sets} onChange={(e) => setSets(e.target.value.replace(/[^0-9]/g, ""))} inputMode="numeric" placeholder="4" style={sIn} /></div>
+              <div style={{ flex: 1 }}><label style={label}>{t("reps")}</label><input value={reps} onChange={(e) => setReps(e.target.value.replace(/[^0-9]/g, ""))} inputMode="numeric" placeholder="12" style={sIn} /></div>
+            </div>
+          )}
+          {metric === "dist" && (
+            <div style={{ marginBottom: 10 }}><label style={label}>{t("dist")} <span style={{ color: MUTED, fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>· {t("optional")}</span></label><input value={dist} onChange={(e) => setDist(e.target.value.replace(/[^0-9]/g, ""))} inputMode="numeric" placeholder="1000" style={sIn} /></div>
+          )}
+          <label style={label}>{t("minutes")}</label>
+          <input value={mn} onChange={(e) => setMn(e.target.value.replace(/[^0-9]/g, ""))} inputMode="numeric" placeholder="20" style={{ ...sIn, marginBottom: 10 }} />
+          <div style={{ fontSize: 12, color: MUTED, marginBottom: 14 }}>{t("estBurn")}: <span style={{ color: EMBER_SOFT, fontWeight: 700 }}>~{kc} kcal</span></div>
+          <div style={{ display: "flex", gap: 10 }}>
+            <div onClick={() => { delFromDay(di, item.id); onClose(); }} style={{ cursor: "pointer", padding: "11px 16px", borderRadius: 9, border: `1px solid ${LINE}`, color: EMBER_SOFT, fontSize: 13, fontWeight: 700, ...disp }}>{t("delete")}</div>
+            <div onClick={() => { if (num(mn) <= 0) return; editItemInDay(di, item.id, { min: num(mn), sets: num(sets) || null, reps: num(reps) || null, dist: num(dist) || null }); onClose(); }} style={{ cursor: "pointer", flex: 1, textAlign: "center", background: EMBER, color: "#fff", padding: "11px 0", borderRadius: 9, ...disp, fontWeight: 700, fontSize: 14 }}>{t("save")}</div>
+          </div>
         </div>
       </div>
     );
@@ -589,7 +635,7 @@ export default function Training({ lang, session, weight }) {
                   <div style={{ padding: "4px 0" }}>
                     {dd.items.map((x) => (
                       <div key={x.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 14px", borderBottom: `1px solid ${LINE}` }}>
-                        <div><span style={{ fontSize: 13.5, color: PAPER, fontWeight: 500 }}>{x.name}</span> <span style={{ fontSize: 11, color: MUTED }}>· {setLabel(x) ? setLabel(x) + " · " : ""}{x.min} {t("min")} · ~{x.kcal} kcal</span></div>
+                        <div onClick={() => setPlanEdit({ di, item: x })} style={{ cursor: "pointer", flex: 1, minWidth: 0 }}><span style={{ fontSize: 13.5, color: PAPER, fontWeight: 500 }}>{x.name}</span> <span style={{ fontSize: 11, color: MUTED }}>· {setLabel(x) ? setLabel(x) + " · " : ""}{x.min} {t("min")} · ~{x.kcal} kcal</span></div>
                         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                           {exOf(x) && exOf(x).how && <div onClick={() => setHowEx(exOf(x))} style={{ cursor: "pointer", color: EMBER_SOFT, fontSize: 17 }}>ⓘ</div>}
                           <div onClick={() => delFromDay(di, x.id)} style={{ cursor: "pointer", color: MUTED, fontSize: 15 }}>×</div>
@@ -609,6 +655,7 @@ export default function Training({ lang, session, weight }) {
       {tab === "prestaties" && <Prestaties lang={lang} sessions={sessions} />}
 
       {planAdd !== null && <PlanAddModal di={planAdd} onClose={() => setPlanAdd(null)} />}
+      {planEdit && <PlanEditModal di={planEdit.di} item={planEdit.item} onClose={() => setPlanEdit(null)} />}
       {move && <MoveModal scope={move.scope} di={move.di} onClose={() => setMove(null)} />}
       {howEx && <HowModal lang={lang} ex={howEx} onClose={() => setHowEx(null)} />}
       {runner && <SessionRunner lang={lang} kg={kg} items={plannedToday} checked={checked} toggle={togglePlanned} onHow={setHowEx} exOf={exOf} onFinish={finishSession} onClose={() => setRunner(false)} onOpenLog={(x) => setLogEx({ item: x })} T={T} t={t} />}
@@ -622,8 +669,8 @@ export default function Training({ lang, session, weight }) {
 function HowModal({ lang, ex, onClose }) {
   const how = ex.how ? ex.how[lang === "nl" ? "nl" : "en"] : "";
   const demoLbl = lang === "nl" ? "Videodemo volgt" : "Video demo coming";
-  return (
-    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 76, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+  return createPortal(
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 210, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
       <div onClick={(e) => e.stopPropagation()} style={{ background: INK, border: `1px solid ${EMBER_SOFT}`, borderRadius: 18, width: "100%", maxWidth: 400, padding: 20 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
           <div style={{ ...disp, fontWeight: 700, fontSize: 17 }}>{ex[lang === "nl" ? "nl" : "en"]}</div>
@@ -637,7 +684,8 @@ function HowModal({ lang, ex, onClose }) {
         <div style={{ ...disp, fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1.5, color: EMBER, marginBottom: 7 }}>{lang === "nl" ? "Zo werkt het" : "How it works"}</div>
         <div style={{ fontSize: 13.5, color: PAPER, opacity: 0.92, lineHeight: 1.6 }}>{how}</div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -649,13 +697,18 @@ function ExerciseLog({ lang, item, dateKey, ex, onHow, onClose, t }) {
   const logKey = "hf_exlog_" + dateKey + "_" + exId;
   const lastKey = "hf_exlast_" + exId;
   const vidKey = logKey + "_vid";
-  const nSets = Math.max(1, Math.min(8, num(item.sets) || 3));
-  const reps = num(item.reps) || null;
+  // Eenheid volgt het type: kracht = kg, afstand = m, tijd = min.
+  const metric = item.metric || (ex && ex.metric) || "reps";
+  const unit = metric === "dist" ? "m" : metric === "time" ? "min" : "kg";
+  const step = metric === "dist" ? 50 : metric === "time" ? 1 : 2.5;
+  const defVal = metric === "dist" ? (num(item.dist) || "") : metric === "time" ? (num(item.min) || "") : "";
+  const nSets = Math.max(1, Math.min(10, num(item.sets) || (metric === "reps" ? 3 : 1)));
+  const reps = metric === "reps" ? (num(item.reps) || null) : null;
   const lastW = num(load(lastKey, 0));
   const saved = load(logKey, null);
   const [sets, setSets] = useState(() => Array.from({ length: nSets }, (_, i) => {
     const s = saved && saved.sets && saved.sets[i];
-    return { w: s && s.w != null ? s.w : (lastW || ""), done: !!(s && s.done) };
+    return { w: s && s.w != null ? s.w : (lastW || defVal || ""), done: !!(s && s.done) };
   }));
   const [note, setNote] = useState((saved && saved.note) || "");
   const [vidUrl, setVidUrl] = useState(null);
@@ -673,6 +726,7 @@ function ExerciseLog({ lang, item, dateKey, ex, onHow, onClose, t }) {
 
   const fmtW = (v) => (v === "" || v == null ? "–" : String(v).replace(".", lang === "nl" ? "," : "."));
   const stepW = (i, dv) => setSets((prev) => prev.map((s, j) => j === i ? { ...s, w: Math.max(0, Math.round(((num(s.w) || 0) + dv) * 10) / 10) } : s));
+  const setVal = (i, v) => setSets((prev) => prev.map((s, j) => j === i ? { ...s, w: v } : s));
   const toggleSet = (i) => setSets((prev) => prev.map((s, j) => j === i ? { ...s, done: !s.done } : s));
 
   function onFilm(e) {
@@ -702,8 +756,8 @@ function ExerciseLog({ lang, item, dateKey, ex, onHow, onClose, t }) {
   }
 
   const field = { background: INK, border: `1px solid ${LINE}`, borderRadius: 12 };
-  return (
-    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(5px)", WebkitBackdropFilter: "blur(5px)", zIndex: 82, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+  return createPortal(
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(5px)", WebkitBackdropFilter: "blur(5px)", zIndex: 200, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
       <div onClick={(e) => e.stopPropagation()} className="hf-modal" style={{ width: "100%", maxWidth: 480, background: INK2, borderRadius: "22px 22px 0 0", padding: "16px 16px calc(20px + env(safe-area-inset-bottom))", maxHeight: "94vh", overflowY: "auto", boxShadow: "0 -10px 40px rgba(0,0,0,0.4)" }}>
         <div style={{ width: 40, height: 4, borderRadius: 2, background: LINE, margin: "0 auto 14px" }} />
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 3 }}>
@@ -715,7 +769,7 @@ function ExerciseLog({ lang, item, dateKey, ex, onHow, onClose, t }) {
         </div>
         <div style={{ fontSize: 12, color: MUTED, marginBottom: 12 }}>{setLabel(item) ? setLabel(item) + " · " : ""}~{item.kcal} kcal</div>
         {lastW > 0 && (
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 7, background: "rgba(225,29,72,0.10)", border: "1px solid rgba(225,29,72,0.28)", color: EMBER, borderRadius: 10, padding: "8px 12px", fontSize: 12, fontWeight: 600, marginBottom: 16 }}>↗ {t("logLast")} {fmtW(lastW)} kg</div>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 7, background: "rgba(225,29,72,0.10)", border: "1px solid rgba(225,29,72,0.28)", color: EMBER, borderRadius: 10, padding: "8px 12px", fontSize: 12, fontWeight: 600, marginBottom: 16 }}>↗ {t("logLast")} {fmtW(lastW)} {unit}</div>
         )}
 
         {/* VIDEO */}
@@ -741,16 +795,17 @@ function ExerciseLog({ lang, item, dateKey, ex, onHow, onClose, t }) {
         )}
 
         {/* SETS */}
-        <div style={{ fontSize: 10, letterSpacing: 1.1, textTransform: "uppercase", color: MUTED, fontWeight: 700, marginBottom: 9 }}>{t("logSets")}</div>
+        <div style={{ fontSize: 10, letterSpacing: 1.1, textTransform: "uppercase", color: MUTED, fontWeight: 700, marginBottom: 9 }}>{lang === "nl" ? "Sets · " : "Sets · "}{unit === "kg" ? (lang === "nl" ? "gewicht" : "weight") : unit === "m" ? (lang === "nl" ? "afstand" : "distance") : (lang === "nl" ? "tijd" : "time")}</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
           {sets.map((s, i) => (
             <div key={i} style={{ ...field, display: "flex", alignItems: "center", gap: 10, padding: "9px 11px" }}>
-              <div style={{ ...disp, fontWeight: 700, fontSize: 13, width: 44 }}>{(lang === "nl" ? "Set " : "Set ") + (i + 1)}</div>
+              <div style={{ ...disp, fontWeight: 700, fontSize: 13, width: 44 }}>{"Set " + (i + 1)}</div>
               {reps && <div style={{ fontSize: 12, color: MUTED, width: 56 }}><b style={{ color: PAPER, ...disp, fontSize: 15 }}>{reps}</b> reps</div>}
               <div style={{ display: "flex", alignItems: "center", marginLeft: "auto", border: `1px solid ${LINE}`, borderRadius: 10, overflow: "hidden", background: INK2 }}>
-                <div onClick={() => stepW(i, -2.5)} className="hf-tap" style={{ width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, color: EMBER, fontWeight: 700, cursor: "pointer" }}>−</div>
-                <div style={{ minWidth: 66, textAlign: "center", ...disp, fontWeight: 700, fontSize: 15 }}>{fmtW(s.w)} <span style={{ fontSize: 11, color: MUTED, fontWeight: 500 }}>kg</span></div>
-                <div onClick={() => stepW(i, 2.5)} className="hf-tap" style={{ width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, color: EMBER, fontWeight: 700, cursor: "pointer" }}>+</div>
+                <div onClick={() => stepW(i, -step)} className="hf-tap" style={{ width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, color: EMBER, fontWeight: 700, cursor: "pointer" }}>−</div>
+                <input value={s.w} onChange={(e) => setVal(i, e.target.value.replace(/[^0-9.,]/g, "").replace(",", "."))} inputMode="decimal" placeholder="–" style={{ width: 52, textAlign: "center", background: "transparent", border: "none", color: PAPER, ...disp, fontWeight: 700, fontSize: 15, outline: "none", padding: 0 }} />
+                <span style={{ fontSize: 11, color: MUTED, fontWeight: 500, paddingRight: 6 }}>{unit}</span>
+                <div onClick={() => stepW(i, step)} className="hf-tap" style={{ width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, color: EMBER, fontWeight: 700, cursor: "pointer" }}>+</div>
               </div>
               <div onClick={() => toggleSet(i)} className="hf-tap" style={{ cursor: "pointer", width: 26, height: 26, flexShrink: 0, borderRadius: "50%", border: `2px solid ${s.done ? GREEN : MUTED}`, background: s.done ? GREEN : "transparent", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: 13 }}>{s.done ? "✓" : ""}</div>
             </div>
@@ -769,7 +824,8 @@ function ExerciseLog({ lang, item, dateKey, ex, onHow, onClose, t }) {
 
         <div onClick={doSave} className="hf-tap" style={{ marginTop: 16, background: EMBER, color: "#fff", textAlign: "center", padding: "14px 0", borderRadius: 12, ...disp, fontWeight: 700, fontSize: 15, letterSpacing: 0.6, textTransform: "uppercase", cursor: "pointer" }}>{t("logSave")}</div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
