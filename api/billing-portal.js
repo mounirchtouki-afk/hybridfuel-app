@@ -131,6 +131,29 @@ export default async function handler(req, res) {
         return res.status(200).json({ ok: true, url: "https://dashboard.stripe.com/customers/" + cust });
       }
 
+      if (op === "admin.resetPassword") {
+        const email = String(body.email || "").trim().toLowerCase();
+        if (!email) return res.status(400).json({ error: "bad_request" });
+        const gl = await fetch(supaUrl + "/auth/v1/admin/generate_link", {
+          method: "POST", headers: { ...sv, "Content-Type": "application/json" },
+          body: JSON.stringify({ type: "recovery", email }),
+        });
+        const d = await gl.json().catch(() => ({}));
+        const link = d && (d.action_link || (d.properties && d.properties.action_link));
+        if (!gl.ok || !link) return res.status(502).json({ error: "reset_failed", detail: JSON.stringify(d).slice(0, 200) });
+        return res.status(200).json({ ok: true, url: link });
+      }
+
+      if (op === "admin.export") {
+        const tables = ["profiles", "subscriptions", "weights", "plans", "recipes", "products", "orgs", "org_config", "org_members"];
+        const out = {};
+        for (const tb of tables) {
+          try { const r = await fetch(supaUrl + "/rest/v1/" + tb + "?select=*", { headers: sv }); out[tb] = r.ok ? await r.json().catch(() => []) : { error: r.status }; }
+          catch (e) { out[tb] = { error: String(e).slice(0, 80) }; }
+        }
+        return res.status(200).json({ ok: true, exportedAt: new Date().toISOString(), data: out });
+      }
+
       return res.status(400).json({ error: "unknown_op" });
     }
 

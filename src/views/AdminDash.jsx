@@ -18,6 +18,28 @@ export default function AdminDash({ session, lang, onClose }) {
   const [rowBusy, setRowBusy] = useState("");
   const [demoBusy, setDemoBusy] = useState(false);
   const [demo, setDemo] = useState(null);
+  const [reset, setReset] = useState(null);
+  const [expBusy, setExpBusy] = useState(false);
+
+  async function resetPw(a) {
+    setRowBusy(a.id); setErr("");
+    try { const d = await call("admin.resetPassword", { email: a.email }); setReset({ email: a.email, url: d.url }); }
+    catch (e) { setErr(t("Reset-link maken mislukt: ", "Reset link failed: ") + String(e.message || e)); }
+    setRowBusy("");
+  }
+  async function exportData() {
+    setExpBusy(true); setErr("");
+    try {
+      const d = await call("admin.export");
+      const blob = new Blob([JSON.stringify(d, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url; link.download = "hybridfuel-backup-" + new Date().toISOString().slice(0, 10) + ".json";
+      document.body.appendChild(link); link.click(); link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+    } catch (e) { setErr(t("Export mislukt: ", "Export failed: ") + String(e.message || e)); }
+    setExpBusy(false);
+  }
 
   async function makeDemo() {
     const name = window.prompt(t("Naam van de nieuwe sportschool?", "Name of the new gym?"), "");
@@ -108,6 +130,7 @@ export default function AdminDash({ session, lang, onClose }) {
           </div>
           <div style={{ display: "flex", gap: 8 }}>
             <div onClick={demoBusy ? null : makeDemo} className="hf-tap" style={{ cursor: demoBusy ? "default" : "pointer", fontSize: 12.5, fontWeight: 700, ...disp, color: "#fff", background: EMBER, borderRadius: 9, padding: "9px 13px", opacity: demoBusy ? 0.6 : 1 }}>{demoBusy ? "…" : t("+ Nieuwe sportschool", "+ New gym")}</div>
+            <div onClick={expBusy ? null : exportData} className="hf-tap" style={{ cursor: expBusy ? "default" : "pointer", fontSize: 12.5, fontWeight: 700, ...disp, color: EMBER, border: `1px solid ${LINE}`, borderRadius: 9, padding: "9px 13px", opacity: expBusy ? 0.6 : 1 }}>{expBusy ? "…" : t("↓ Back-up", "↓ Backup")}</div>
             <div onClick={load} className="hf-tap" style={{ cursor: "pointer", fontSize: 12.5, fontWeight: 700, ...disp, color: EMBER, border: `1px solid ${LINE}`, borderRadius: 9, padding: "9px 13px" }}>{busy ? "…" : t("Vernieuwen", "Refresh")}</div>
             <div onClick={onClose} style={{ cursor: "pointer", color: MUTED, fontSize: 18, width: 38, height: 38, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 9, border: `1px solid ${LINE}` }}>×</div>
           </div>
@@ -173,6 +196,17 @@ export default function AdminDash({ session, lang, onClose }) {
           </div>
         </div>
 
+        {reset && (
+          <div style={{ background: "rgba(var(--hf-ember-rgb),0.08)", border: `1px solid ${EMBER}`, borderRadius: 12, padding: "14px 16px", marginBottom: 16 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <div style={{ ...disp, fontWeight: 700, fontSize: 15, color: PAPER }}>{t("Wachtwoord-herstellink", "Password reset link")} · {reset.email}</div>
+              <div onClick={() => setReset(null)} style={{ cursor: "pointer", color: MUTED, fontSize: 16 }}>×</div>
+            </div>
+            <div style={{ fontSize: 12.5, color: PAPER, wordBreak: "break-all", lineHeight: 1.5 }}>{t("Geef deze link aan de klant om een nieuw wachtwoord te zetten:", "Give this link to the customer to set a new password:")}<br /><span style={{ color: EMBER_SOFT }}>{reset.url}</span></div>
+            <div onClick={() => { try { navigator.clipboard.writeText(reset.url); } catch (e) {} }} className="hf-tap" style={{ cursor: "pointer", display: "inline-block", marginTop: 9, fontSize: 12, fontWeight: 700, ...disp, color: "#fff", background: EMBER, borderRadius: 8, padding: "7px 12px" }}>{t("Kopieer link", "Copy link")}</div>
+          </div>
+        )}
+
         {err && <div style={{ background: "rgba(var(--hf-ember-rgb),0.12)", border: `1px solid ${EMBER}`, borderRadius: 10, padding: "10px 13px", fontSize: 12.5, color: EMBER_SOFT, marginBottom: 14 }}>{err}</div>}
 
         <div style={{ background: INK2, border: `1px solid ${LINE}`, borderRadius: 14, overflow: "hidden", boxShadow: "var(--hf-shadow)" }}>
@@ -192,6 +226,7 @@ export default function AdminDash({ session, lang, onClose }) {
                   <div key={tr} onClick={() => setTier(a, tr)} style={{ cursor: "pointer", fontSize: 10, fontWeight: 700, ...disp, padding: "4px 7px", borderRadius: 6, border: `1px solid ${a.tier === tr ? EMBER : LINE}`, background: a.tier === tr ? "rgba(var(--hf-ember-rgb),0.14)" : "transparent", color: a.tier === tr ? EMBER : MUTED }}>{tr === "free" ? t("gratis", "free") : tr}</div>
                 ))}
                 {a.has_customer && <div onClick={() => openStripe(a)} title="Stripe" style={{ cursor: "pointer", fontSize: 10, fontWeight: 700, ...disp, padding: "4px 7px", borderRadius: 6, border: `1px solid ${LINE}`, color: MUTED }}>Stripe ↗</div>}
+                <div onClick={() => resetPw(a)} title={t("Wachtwoord resetten", "Reset password")} style={{ cursor: "pointer", fontSize: 10, fontWeight: 700, ...disp, padding: "4px 7px", borderRadius: 6, border: `1px solid ${LINE}`, color: MUTED }}>{t("Reset ww", "Reset pw")}</div>
               </div>
               <div style={{ fontSize: 12, color: a.gym ? PAPER : MUTED, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{a.gym || "—"}</div>
               <div style={{ fontSize: 12, color: MUTED }}>{fmtDate(a.created_at)}</div>
