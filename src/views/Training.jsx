@@ -247,6 +247,11 @@ export default function Training({ lang, session, weight }) {
       setCheckedSave([...checked, i]);
     }
   }
+  function markDonePlanned(i, it) {
+    if (checked.includes(i)) return; // al afgevinkt -> niets doen (niet uitvinken)
+    persistLog([...list, { id: "w" + Date.now() + "_" + i, name: it.name, met: it.met, min: it.min, kcal: it.kcal, dist: it.dist || null, ts: Date.now(), planKey: planKey(i) }]);
+    setCheckedSave([...checked, i]);
+  }
   function markAllPlanned(items) {
     const adds = items.map((it, i) => ({ it, i })).filter(({ i }) => !checked.includes(i))
       .map(({ it, i }) => ({ id: "w" + Date.now() + "_" + i, name: it.name, met: it.met, min: it.min, kcal: it.kcal, dist: it.dist || null, ts: Date.now(), planKey: planKey(i) }));
@@ -551,7 +556,7 @@ export default function Training({ lang, session, weight }) {
                   {plannedToday.map((x, i) => {
                     const on = checked.includes(i);
                     return (
-                      <div key={i} onClick={() => togglePlanned(i, x)} className="hf-tap" style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: 12, background: INK2, border: `1px ${on ? "solid " + GREEN : "dashed " + SAGE}`, borderRadius: 12, padding: "11px 14px" }}>
+                      <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, background: INK2, border: `1px ${on ? "solid " + GREEN : "dashed " + SAGE}`, borderRadius: 12, padding: "11px 14px" }}>
                         <div style={{ width: 24, height: 24, flexShrink: 0, borderRadius: "50%", border: `2px solid ${on ? GREEN : MUTED}`, background: on ? GREEN : "transparent", display: "flex", alignItems: "center", justifyContent: "center", color: "#0A0A0A", fontSize: 14, fontWeight: 800 }}>{on ? "✓" : ""}</div>
                         <div style={{ flex: 1 }}>
                           <div style={{ fontSize: 14, fontWeight: 600, color: on ? MUTED : PAPER, textDecoration: on ? "line-through" : "none" }}>{x.name}</div>
@@ -658,8 +663,8 @@ export default function Training({ lang, session, weight }) {
       {planEdit && <PlanEditModal di={planEdit.di} item={planEdit.item} onClose={() => setPlanEdit(null)} />}
       {move && <MoveModal scope={move.scope} di={move.di} onClose={() => setMove(null)} />}
       {howEx && <HowModal lang={lang} ex={howEx} onClose={() => setHowEx(null)} />}
-      {runner && <SessionRunner lang={lang} kg={kg} items={plannedToday} checked={checked} toggle={togglePlanned} onHow={setHowEx} exOf={exOf} onFinish={finishSession} onClose={() => setRunner(false)} onOpenLog={(x) => setLogEx({ item: x })} T={T} t={t} />}
-      {logEx && <ExerciseLog lang={lang} item={logEx.item} dateKey={d} ex={exOf(logEx.item)} onHow={setHowEx} onClose={() => setLogEx(null)} t={t} />}
+      {runner && <SessionRunner lang={lang} kg={kg} items={plannedToday} checked={checked} toggle={togglePlanned} onHow={setHowEx} exOf={exOf} onFinish={finishSession} onClose={() => setRunner(false)} onOpenLog={(x, i) => setLogEx({ item: x, idx: i })} T={T} t={t} />}
+      {logEx && <ExerciseLog lang={lang} item={logEx.item} dateKey={d} ex={exOf(logEx.item)} onHow={setHowEx} onClose={() => setLogEx(null)} onDone={() => { if (logEx.idx != null) markDonePlanned(logEx.idx, logEx.item); }} t={t} />}
       {summary && <SessionSummary lang={lang} data={summary} onClose={() => setSummary(null)} onUndo={undoLastSession} t={t} />}
     </div>
   );
@@ -691,7 +696,7 @@ function HowModal({ lang, ex, onClose }) {
 
 // Oefening-logboek: gewicht per set + afvinken, notitie (typen/spraak), eigen set-opname.
 // Slaat lokaal op per dag + oefening; de laatste waarde komt terug als "vorige keer".
-function ExerciseLog({ lang, item, dateKey, ex, onHow, onClose, t }) {
+function ExerciseLog({ lang, item, dateKey, ex, onHow, onClose, onDone, t }) {
   const GREEN = "#58C27D";
   const exId = item.exId || item.name || "ex";
   const logKey = "hf_exlog_" + dateKey + "_" + exId;
@@ -728,6 +733,24 @@ function ExerciseLog({ lang, item, dateKey, ex, onHow, onClose, t }) {
   const stepW = (i, dv) => setSets((prev) => prev.map((s, j) => j === i ? { ...s, w: Math.max(0, Math.round(((num(s.w) || 0) + dv) * 10) / 10) } : s));
   const setVal = (i, v) => setSets((prev) => prev.map((s, j) => j === i ? { ...s, w: v } : s));
   const toggleSet = (i) => setSets((prev) => prev.map((s, j) => j === i ? { ...s, done: !s.done } : s));
+
+  const allDone = sets.length > 0 && sets.every((s) => s.done);
+  const prevAll = useRef(allDone);
+  const mountedRef = useRef(false);
+  // Live opslaan: sets + notitie bij elke wijziging — niets gaat verloren als de sheet sluit.
+  useEffect(() => {
+    save(logKey, { sets: sets.map((s) => ({ w: num(s.w) || null, done: !!s.done })), note: note.trim() });
+    const top = Math.max(0, ...sets.map((s) => num(s.w) || 0));
+    if (top > 0) save(lastKey, top);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sets, note]);
+  // Laatste set afgevinkt -> oefening klaar + sheet sluit vanzelf (alleen bij verse voltooiing).
+  useEffect(() => {
+    if (!mountedRef.current) { mountedRef.current = true; prevAll.current = allDone; return; }
+    if (allDone && !prevAll.current) { prevAll.current = true; if (onDone) onDone(); onClose(); }
+    else { prevAll.current = allDone; }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allDone]);
 
   function onFilm(e) {
     const f = e.target.files && e.target.files[0];
@@ -837,7 +860,6 @@ function SessionRunner({ lang, items, checked, toggle, onHow, exOf, onFinish, on
   const pct = total ? Math.round((done / total) * 100) : 0;
   const curIdx = items.findIndex((_, i) => !checked.includes(i));
   const totMin = items.reduce((a, x) => a + num(x.min), 0);
-  function nextStep() { if (curIdx >= 0) toggle(curIdx, items[curIdx]); }
   return (
     <div style={{ position: "fixed", inset: 0, background: "linear-gradient(180deg,#2c121b 0%,#200e15 48%,#180b10 100%)", zIndex: 78, overflowY: "auto" }}>
       <div style={{ maxWidth: 480, margin: "0 auto", padding: "calc(16px + env(safe-area-inset-top)) 16px calc(20px + env(safe-area-inset-bottom))" }}>
@@ -858,18 +880,18 @@ function SessionRunner({ lang, items, checked, toggle, onHow, exOf, onFinish, on
             const ex = exOf(x);
             return (
               <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, background: INK2, borderRadius: 14, padding: 12, border: `1px ${on ? "solid " + GREEN : cur ? "solid " + EMBER : "dashed " + SAGE}`, boxShadow: cur ? "0 0 22px rgba(225,29,72,0.22)" : "none" }}>
-                <div onClick={() => toggle(i, x)} className="hf-tap" style={{ cursor: "pointer", width: 28, height: 28, flexShrink: 0, borderRadius: "50%", border: `2px solid ${on ? GREEN : cur ? EMBER : MUTED}`, background: on ? GREEN : "transparent", display: "flex", alignItems: "center", justifyContent: "center", color: on ? "#0A0A0A" : EMBER, fontSize: 14, fontWeight: 800 }}>{on ? "✓" : cur ? "▶" : ""}</div>
+                <div style={{ width: 28, height: 28, flexShrink: 0, borderRadius: "50%", border: `2px solid ${on ? GREEN : cur ? EMBER : MUTED}`, background: on ? GREEN : "transparent", display: "flex", alignItems: "center", justifyContent: "center", color: on ? "#0A0A0A" : EMBER, fontSize: 14, fontWeight: 800 }}>{on ? "✓" : cur ? "▶" : ""}</div>
                 <div onClick={() => onOpenLog(x, i)} className="hf-tap" style={{ flex: 1, minWidth: 0, cursor: "pointer", borderRadius: 10, padding: "2px 4px", margin: "-2px -4px" }}>
                   <div style={{ fontSize: 14.5, fontWeight: 600, color: on ? MUTED : PAPER, textDecoration: on ? "line-through" : "none" }}>{x.name}</div>
-                  <div style={{ fontSize: 11.5, color: MUTED, marginTop: 3 }}>{setLabel(x) ? setLabel(x) + " · " : ""}{x.min} {t("min")} · ~{x.kcal} kcal · {t("logOpen")}</div>
+                  <div style={{ fontSize: 11.5, color: MUTED, marginTop: 3 }}>{setLabel(x) ? setLabel(x) + " · " : ""}{x.min} {t("min")} · ~{x.kcal} kcal</div>
                 </div>
                 {ex && ex.how && <div onClick={() => onHow(ex)} style={{ cursor: "pointer", color: EMBER_SOFT, fontSize: 18, width: 28, textAlign: "center", flexShrink: 0 }}>ⓘ</div>}
               </div>
             );
           })}
         </div>
-        {curIdx >= 0 && <div onClick={nextStep} className="hf-tap" style={{ cursor: "pointer", textAlign: "center", background: EMBER, color: "#fff", padding: "15px 0", borderRadius: 12, ...disp, fontWeight: 700, fontSize: 16, letterSpacing: 0.8, textTransform: "uppercase" }}>{t("nextExercise")}</div>}
-        <div onClick={() => onFinish(items)} className="hf-tap" style={{ cursor: "pointer", textAlign: "center", background: "transparent", border: `1px solid ${EMBER}`, color: EMBER, padding: "14px 0", borderRadius: 12, ...disp, fontWeight: 700, fontSize: 15, letterSpacing: 0.8, textTransform: "uppercase", marginTop: 9 }}>{t("finishSession")}</div>
+        <div style={{ textAlign: "center", color: "rgba(255,255,255,0.5)", fontSize: 11.5, marginBottom: 12 }}>{lang === "nl" ? "Tik een oefening om te loggen · vink de laatste set af = klaar" : "Tap an exercise to log · check the last set = done"}</div>
+        <div onClick={() => onFinish(items)} className="hf-tap" style={{ cursor: "pointer", textAlign: "center", background: "transparent", border: `1px solid ${EMBER}`, color: EMBER, padding: "14px 0", borderRadius: 12, ...disp, fontWeight: 700, fontSize: 15, letterSpacing: 0.8, textTransform: "uppercase" }}>{t("finishSession")}</div>
       </div>
     </div>
   );
