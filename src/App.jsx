@@ -663,8 +663,19 @@ export default function App() {
     (async () => {
       if (!supabase || !session || !session.user) { if (alive) setGymCtx(null); return; }
       try {
-        const { data: meRows } = await supabase.from("org_members").select("org_id,role").eq("auth_user_id", session.user.id).limit(1);
-        const me = meRows && meRows[0];
+        let { data: meRows } = await supabase.from("org_members").select("org_id,role").eq("auth_user_id", session.user.id).limit(1);
+        let me = meRows && meRows[0];
+        // Admin zonder sportschool-koppeling? Koppel 'm automatisch (eenmalig) als coach-eigenaar,
+        // zodat de admin na login meteen in het groene coach-dashboard landt.
+        if (!me && isAdmin && session.access_token) {
+          try {
+            const r = await fetch(apiUrl("/api/billing-portal"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ authToken: session.access_token, op: "admin.makeMeCoach" }) });
+            if (r.ok) {
+              const retry = await supabase.from("org_members").select("org_id,role").eq("auth_user_id", session.user.id).limit(1);
+              meRows = retry.data; me = meRows && meRows[0];
+            }
+          } catch (e) {}
+        }
         if (!me) { if (alive) setGymCtx(null); return; }
         // Tier + lestoegang (guarded).
         let tier = "pro", classAccess = null;
