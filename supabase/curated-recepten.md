@@ -1,8 +1,8 @@
 # HybridFuel — gecureerde recepten (blok 1)
 
-52 recepten · vetarm · sporter-geschikt · macro's per portie zoals getoond.
+101 recepten · vetarm · sporter-geschikt · macro's per portie zoals getoond.
 
-## Ontbijt (14)
+## Ontbijt (26)
 
 ### Kwark-havermoutbowl met banaan & kaneel
 **417 kcal** · 33g eiwit · 63g koolhydraten · 5g vet  _(afvallen, onderhoud)_
@@ -147,7 +147,127 @@
 2. Beleg met plakjes tomaat en verkruimelde feta.
 3. Werk af met fijngesneden bosui of bieslook.
 
-## Lunch (18)
+### Griekse yoghurt met havermout, mango & pompoenpitten
+**370 kcal** · 29g eiwit · 45g koolhydraten · 9g vet  _(afvallen, onderhoud)_
+
+**Ingrediënten:** 200 g magere griekse yoghurt · 40 g havermout · 80 g mango · 10 g pompoenpitten
+
+**Bereiding:**
+1. Meng de Griekse yoghurt met de havermout.
+2. Schep in een kom en top met blokjes mango.
+3. Strooi de pompoenpitten erover.
+
+### Volkoren pap met banaan, kaneel & walnoten
+**514 kcal** · 20g eiwit · 73g koolhydraten · 15g vet  _(onderhoud)_
+
+**Ingrediënten:** 70 g havermout · 250 g halfvolle melk · 80 g banaan · 10 g walnoten
+
+**Bereiding:**
+1. Breng de havermout met de melk al roerend aan de kook en gaar 3–4 min.
+2. Roer er een snuf kaneel door.
+3. Top met schijfjes banaan en grof gehakte walnoten.
+
+### Eiwitomelet met champignons, spinazie & tomaat
+**172 kcal** · 24g eiwit · 8g koolhydraten · 6g vet  _(afvallen, onderhoud)_
+
+**Ingrediënten:** 50 g ei · 120 g eiwit · 80 g champignons · 40 g spinazie · 60 g tomaat
+
+**Bereiding:**
+1. Klop het ei met het eiwit los.
+2. Bak de champignons tot ze kleuren, voeg de spinazie en tomaat kort toe.
+3. Giet het ei erbij en laat op laag vuur stollen tot een omelet.
+
+### Volkorenboterham met pindakaas & banaan
+**362 kcal** · 12g eiwit · 51g koolhydraten · 13g vet  _(onderhoud · ook Tussendoortje)_
+
+**Ingrediënten:** 70 g volkorenbrood · 20 g pindakaas · 80 g banaan
+
+**Bereiding:**
+1. Rooster het volkorenbrood.
+2. Besmeer dun met pindakaas.
+3. Beleg met schijfjes banaan.
+
+### Kwark met framboos, kiwi & chiazaad
+**230 kcal** · 23g eiwit · 28g koolhydraten · 4g vet  _(afvallen, onderhoud · ook Tussendoortje)_
+
+**Ingrediënten:** 200 g magere kwark · 60 g frambozen · 60 g kiwi · 10 g chiazaad
+
+**Bereiding:**
+1. Schep de kwark in een kom.
+2. Top met frambozen en schijfjes kiwi.
+3. Strooi het chiazaad erover.
+
+### Shakshuka met ei, paprika & volkorenbrood
+**419 kcal** · 25g eiwit · 44g koolhydraten · 15g vet  _(onderhoud · ook Lunch)_
+
+**Ingrediënten:** 120 g ei · 150 g tomatenpassata · 100 g paprika · 40 g ui · 60 g volkorenbrood
+
+**Bereiding:**
+1. Fruit de ui en paprika zacht, voeg de passata toe met komijn en paprikapoeder.
+2. Laat 8 min pruttelen, maak kuiltjes en breek de eieren erin.
+3. Dek af en gaar tot het eiwit gestold is; serveer met het brood.
+
+### Skyr-bowl met appel, kaneel & walnoten
+**355 kcal** · 28g eiwit · 41g koolhydraten · 9g vet  _(afvallen, onderhoud)_
+
+**Ingrediënten:** 200 g skyr · 100 g appel · 30 g havermout · 10 g walnoten
+
+**Bereiding:**
+1. Meng de skyr met de havermout.
+2. Top met blokjes appel en een snuf kaneel.
+3. Strooi grof gehakte walnoten erover.
+
+### Volkoren wrap met hüttenkäse, kalkoen & komkommer
+**333 kcal** · 32g eiwit · 34g koolhydraten · 6g vet  _(afvallen, onderhoud · ook Lunch)_
+
+**Ingrediënten:** 60 g volkoren wrap · 80 g hüttenkäse · 70 g kalkoenfilet · 50 g komkommer
+
+**Bereiding:**
+1. Besmeer de wrap met de hüttenkäse.
+2. Beleg met plakjes kalkoenfilet en komkommer.
+3. Rol strak op en snijd doormidden.
+
+### Proteïne-overnight oats met banaan & pindakaas
+**451 kcal** · 30g eiwit · 56g koolhydraten · 11g vet  _(onderhoud)_
+
+**Ingrediënten:** 50 g havermout · 150 g skyr · 100 g halfvolle melk · 60 g banaan · 12 g pindakaas
+
+**Bereiding:**
+1. Meng de havermout, skyr en melk in een pot en laat een nacht opstijven.
+2. Roer de volgende ochtend los.
+3. Top met schijfjes banaan en een lepel pindakaas.
+
+### Gerookte kip op volkorenbrood met ei & tomaat
+**360 kcal** · 29g eiwit · 36g koolhydraten · 10g vet  _(afvallen, onderhoud · ook Lunch)_
+
+**Ingrediënten:** 80 g volkorenbrood · 60 g kipfilet · 55 g ei · 50 g tomaat · 20 g sla
+
+**Bereiding:**
+1. Kook het ei 7–8 min hard, pel en snijd in plakjes.
+2. Rooster het volkorenbrood.
+3. Beleg met sla, gerookte kip, plakjes tomaat en ei.
+
+### Gerookte zalm op volkorenbrood met hüttenkäse
+**371 kcal** · 28g eiwit · 38g koolhydraten · 10g vet  _(afvallen, onderhoud · ook Lunch)_
+
+**Ingrediënten:** 80 g volkorenbrood · 60 g gerookte zalm · 60 g hüttenkäse · 20 g rode ui · 40 g komkommer
+
+**Bereiding:**
+1. Rooster het volkorenbrood en besmeer met de hüttenkäse.
+2. Beleg met de gerookte zalm.
+3. Werk af met fijne rode ui, komkommer en peper.
+
+### Omelet met magere ham, champignon & paprika
+**261 kcal** · 33g eiwit · 7g koolhydraten · 11g vet  _(afvallen, onderhoud · ook Lunch)_
+
+**Ingrediënten:** 100 g ei · 60 g eiwit · 50 g magere ham · 60 g champignons · 60 g paprika
+
+**Bereiding:**
+1. Klop het ei met het eiwit los.
+2. Bak de champignons en paprika kort, voeg de ham toe.
+3. Giet het ei erbij en laat op laag vuur stollen.
+
+## Lunch (35)
 
 ### Tonijnsalade-wrap met yoghurt-mosterddressing
 **334 kcal** · 36g eiwit · 35g koolhydraten · 5g vet  _(afvallen, onderhoud)_
@@ -333,7 +453,177 @@
 2. Beleg met plakjes tomaat en verkruimelde feta.
 3. Werk af met fijngesneden bosui of bieslook.
 
-## Diner (21)
+### Shakshuka met ei, paprika & volkorenbrood
+**419 kcal** · 25g eiwit · 44g koolhydraten · 15g vet  _(onderhoud · ook Ontbijt)_
+
+**Ingrediënten:** 120 g ei · 150 g tomatenpassata · 100 g paprika · 40 g ui · 60 g volkorenbrood
+
+**Bereiding:**
+1. Fruit de ui en paprika zacht, voeg de passata toe met komijn en paprikapoeder.
+2. Laat 8 min pruttelen, maak kuiltjes en breek de eieren erin.
+3. Dek af en gaar tot het eiwit gestold is; serveer met het brood.
+
+### Volkoren wrap met hüttenkäse, kalkoen & komkommer
+**333 kcal** · 32g eiwit · 34g koolhydraten · 6g vet  _(afvallen, onderhoud · ook Ontbijt)_
+
+**Ingrediënten:** 60 g volkoren wrap · 80 g hüttenkäse · 70 g kalkoenfilet · 50 g komkommer
+
+**Bereiding:**
+1. Besmeer de wrap met de hüttenkäse.
+2. Beleg met plakjes kalkoenfilet en komkommer.
+3. Rol strak op en snijd doormidden.
+
+### Gerookte kip op volkorenbrood met ei & tomaat
+**360 kcal** · 29g eiwit · 36g koolhydraten · 10g vet  _(afvallen, onderhoud · ook Ontbijt)_
+
+**Ingrediënten:** 80 g volkorenbrood · 60 g kipfilet · 55 g ei · 50 g tomaat · 20 g sla
+
+**Bereiding:**
+1. Kook het ei 7–8 min hard, pel en snijd in plakjes.
+2. Rooster het volkorenbrood.
+3. Beleg met sla, gerookte kip, plakjes tomaat en ei.
+
+### Kip-caesarsalade light met ei & volkoren croutons
+**369 kcal** · 46g eiwit · 21g koolhydraten · 11g vet  _(afvallen, onderhoud)_
+
+**Ingrediënten:** 130 g kipfilet · 80 g sla · 55 g ei · 40 g volkorenbrood · 40 g magere griekse yoghurt
+
+**Bereiding:**
+1. Gril de kipfilet gaar en snijd in reepjes; kook het ei en halveer.
+2. Rooster blokjes volkorenbrood tot croutons.
+3. Meng de sla met een dressing van yoghurt, mosterd, citroen en peper; schik kip, ei en croutons erop.
+
+### Niçoise-salade met tonijn, ei & sperziebonen
+**357 kcal** · 36g eiwit · 37g koolhydraten · 9g vet  _(afvallen, onderhoud)_
+
+**Ingrediënten:** 100 g tonijn (uit blik) · 150 g aardappel · 100 g sperziebonen · 55 g ei · 80 g tomaat · 15 g olijven
+
+**Bereiding:**
+1. Kook de aardappels en sperziebonen beetgaar; kook het ei en halveer.
+2. Schik de aardappel, sperziebonen, tomaat en olijven op een bord.
+3. Verdeel de tonijn en het ei erover en besprenkel met citroen en peper.
+
+### Bulgursalade met kikkererwten, feta & munt
+**460 kcal** · 23g eiwit · 72g koolhydraten · 8g vet  _(onderhoud)_
+
+**Ingrediënten:** 60 g bulgur (droog) · 100 g kikkererwten (gekookt) · 40 g feta (light) · 80 g komkommer · 80 g tomaat
+
+**Bereiding:**
+1. Kook de bulgur gaar en laat afkoelen.
+2. Meng met kikkererwten, blokjes komkommer en tomaat.
+3. Verkruimel de feta erover en werk af met munt, citroen en peper.
+
+### Pita met kipshoarma, yoghurtsaus & salade
+**356 kcal** · 41g eiwit · 35g koolhydraten · 5g vet  _(afvallen, onderhoud · ook Diner)_
+
+**Ingrediënten:** 60 g volkoren pita · 140 g kipfilet · 40 g magere yoghurt · 30 g sla · 60 g tomaat
+
+**Bereiding:**
+1. Kruid de kipreepjes met shoarmakruiden en bak ze gaar.
+2. Roer een saus van yoghurt, knoflook, citroen en peper.
+3. Vul de warme pita met sla, tomaat, de kip en de yoghurtsaus.
+
+### Volkoren noedels met tofu, broccoli & soja
+**485 kcal** · 34g eiwit · 56g koolhydraten · 13g vet  _(onderhoud · ook Diner)_
+
+**Ingrediënten:** 70 g volkoren noedels (droog) · 160 g tofu · 120 g broccoli · 12 g sojasaus
+
+**Bereiding:**
+1. Kook de volkoren noedels beetgaar.
+2. Bak de tofublokjes goudbruin, voeg de broccoli toe en roerbak beetgaar.
+3. Meng de noedels en sojasaus erdoor.
+
+### Mexicaanse bowl met zwarte bonen, mais & avocado
+**561 kcal** · 22g eiwit · 105g koolhydraten · 8g vet  _(spieropbouw, onderhoud · ook Diner)_
+
+**Ingrediënten:** 150 g zwarte bonen · 60 g rijst (droog) · 80 g mais · 40 g avocado · 80 g tomaat
+
+**Bereiding:**
+1. Kook de rijst gaar.
+2. Verwarm de zwarte bonen met komijn en paprikapoeder.
+3. Schik rijst, bonen, mais, tomaat en avocado in een kom; knijp er limoen over.
+
+### Gerookte zalm op volkorenbrood met hüttenkäse
+**371 kcal** · 28g eiwit · 38g koolhydraten · 10g vet  _(afvallen, onderhoud · ook Ontbijt)_
+
+**Ingrediënten:** 80 g volkorenbrood · 60 g gerookte zalm · 60 g hüttenkäse · 20 g rode ui · 40 g komkommer
+
+**Bereiding:**
+1. Rooster het volkorenbrood en besmeer met de hüttenkäse.
+2. Beleg met de gerookte zalm.
+3. Werk af met fijne rode ui, komkommer en peper.
+
+### Thaise kipsalade met rijstnoedels & limoen
+**394 kcal** · 33g eiwit · 54g koolhydraten · 4g vet  _(afvallen, onderhoud)_
+
+**Ingrediënten:** 130 g kipfilet · 55 g rijstnoedels (droog) · 60 g wortel · 60 g komkommer · 10 g sojasaus
+
+**Bereiding:**
+1. Week de rijstnoedels gaar en spoel koud.
+2. Gril de kipfilet en snijd in reepjes.
+3. Meng de noedels met julienne van wortel en komkommer, de kip, sojasaus, limoen en verse koriander.
+
+### Linzensoep met wortel, prei & volkorenbrood
+**390 kcal** · 21g eiwit · 70g koolhydraten · 3g vet  _(onderhoud)_
+
+**Ingrediënten:** 150 g linzen (gekookt) · 80 g wortel · 60 g prei · 40 g ui · 60 g volkorenbrood
+
+**Bereiding:**
+1. Fruit de ui, wortel en prei kort aan.
+2. Voeg de linzen en bouillon toe en laat 15–18 min garen.
+3. Breng op smaak met komijn en peper; serveer met het brood.
+
+### Omelet met magere ham, champignon & paprika
+**261 kcal** · 33g eiwit · 7g koolhydraten · 11g vet  _(afvallen, onderhoud · ook Ontbijt)_
+
+**Ingrediënten:** 100 g ei · 60 g eiwit · 50 g magere ham · 60 g champignons · 60 g paprika
+
+**Bereiding:**
+1. Klop het ei met het eiwit los.
+2. Bak de champignons en paprika kort, voeg de ham toe.
+3. Giet het ei erbij en laat op laag vuur stollen.
+
+### Rosbief-bowl met zilvervliesrijst, rucola & tomaat
+**396 kcal** · 27g eiwit · 51g koolhydraten · 10g vet  _(onderhoud)_
+
+**Ingrediënten:** 90 g rosbief · 60 g zilvervliesrijst (droog) · 40 g rucola · 100 g cherrytomaat · 5 g olijfolie
+
+**Bereiding:**
+1. Kook de zilvervliesrijst gaar en laat iets afkoelen.
+2. Schik rijst, rucola en gehalveerde cherrytomaten in een kom.
+3. Verdeel de rosbief erover en besprenkel met olijfolie, citroen en peper.
+
+### Garnalensalade met mango, avocado & little gem
+**231 kcal** · 27g eiwit · 19g koolhydraten · 8g vet  _(afvallen, onderhoud)_
+
+**Ingrediënten:** 120 g garnalen · 80 g mango · 40 g avocado · 60 g sla · 50 g komkommer
+
+**Bereiding:**
+1. Bak de garnalen kort tot ze roze en gaar zijn.
+2. Schik de sla met blokjes mango, avocado en komkommer.
+3. Verdeel de garnalen erover en maak aan met limoen, peper en zout.
+
+### Caprese-boterham met mozzarella light, tomaat & basilicum
+**338 kcal** · 20g eiwit · 37g koolhydraten · 11g vet  _(onderhoud)_
+
+**Ingrediënten:** 80 g volkorenbrood · 60 g mozzarella (light) · 80 g tomaat · 8 g pesto
+
+**Bereiding:**
+1. Rooster het volkorenbrood en bestrijk dun met pesto.
+2. Beleg met plakjes mozzarella en tomaat.
+3. Werk af met verse basilicum en peper.
+
+### Couscous met geroosterde groente & kipfilet
+**479 kcal** · 39g eiwit · 56g koolhydraten · 11g vet  _(afvallen, onderhoud · ook Diner)_
+
+**Ingrediënten:** 60 g couscous (droog) · 130 g kipfilet · 80 g aubergine · 80 g paprika · 6 g olijfolie
+
+**Bereiding:**
+1. Rooster de aubergine en paprika met de olijfolie 20 min op 200°C.
+2. Wel de couscous met heet water tot gaar en roer los.
+3. Bak de kipfilet gaar, snijd aan en meng met de couscous en geroosterde groente.
+
+## Diner (42)
 
 ### Kip-teriyaki rijstbowl met edamame & broccoli
 **550 kcal** · 50g eiwit · 68g koolhydraten · 8g vet  _(afvallen, onderhoud · ook Lunch)_
@@ -559,7 +849,217 @@
 3. Doe de couscous in een kom, schep het hete stoofvocht erover tot net onder en dek af met folie.
 4. Laat 5 min wellen, roer los met een vork en schep de stoof met kip en groente erover.
 
-## Tussendoortje (9)
+### Pita met kipshoarma, yoghurtsaus & salade
+**356 kcal** · 41g eiwit · 35g koolhydraten · 5g vet  _(afvallen, onderhoud · ook Lunch)_
+
+**Ingrediënten:** 60 g volkoren pita · 140 g kipfilet · 40 g magere yoghurt · 30 g sla · 60 g tomaat
+
+**Bereiding:**
+1. Kruid de kipreepjes met shoarmakruiden en bak ze gaar.
+2. Roer een saus van yoghurt, knoflook, citroen en peper.
+3. Vul de warme pita met sla, tomaat, de kip en de yoghurtsaus.
+
+### Volkoren noedels met tofu, broccoli & soja
+**485 kcal** · 34g eiwit · 56g koolhydraten · 13g vet  _(onderhoud · ook Lunch)_
+
+**Ingrediënten:** 70 g volkoren noedels (droog) · 160 g tofu · 120 g broccoli · 12 g sojasaus
+
+**Bereiding:**
+1. Kook de volkoren noedels beetgaar.
+2. Bak de tofublokjes goudbruin, voeg de broccoli toe en roerbak beetgaar.
+3. Meng de noedels en sojasaus erdoor.
+
+### Mexicaanse bowl met zwarte bonen, mais & avocado
+**561 kcal** · 22g eiwit · 105g koolhydraten · 8g vet  _(spieropbouw, onderhoud · ook Lunch)_
+
+**Ingrediënten:** 150 g zwarte bonen · 60 g rijst (droog) · 80 g mais · 40 g avocado · 80 g tomaat
+
+**Bereiding:**
+1. Kook de rijst gaar.
+2. Verwarm de zwarte bonen met komijn en paprikapoeder.
+3. Schik rijst, bonen, mais, tomaat en avocado in een kom; knijp er limoen over.
+
+### Couscous met geroosterde groente & kipfilet
+**479 kcal** · 39g eiwit · 56g koolhydraten · 11g vet  _(afvallen, onderhoud · ook Lunch)_
+
+**Ingrediënten:** 60 g couscous (droog) · 130 g kipfilet · 80 g aubergine · 80 g paprika · 6 g olijfolie
+
+**Bereiding:**
+1. Rooster de aubergine en paprika met de olijfolie 20 min op 200°C.
+2. Wel de couscous met heet water tot gaar en roer los.
+3. Bak de kipfilet gaar, snijd aan en meng met de couscous en geroosterde groente.
+
+### Kipcurry met kokosmelk light, paprika & rijst
+**525 kcal** · 41g eiwit · 60g koolhydraten · 12g vet  _(afvallen, onderhoud)_
+
+**Ingrediënten:** 150 g kipfilet · 65 g rijst (droog) · 80 g kokosmelk (light) · 100 g paprika · 20 g currypasta
+
+**Bereiding:**
+1. Kook de rijst gaar.
+2. Bak de currypasta kort aan, voeg de kip en paprika toe en bak mee.
+3. Blus af met de kokosmelk en laat 8 min pruttelen; serveer over de rijst.
+
+### Zalm-teriyaki met zilvervliesrijst & broccoli
+**598 kcal** · 38g eiwit · 64g koolhydraten · 20g vet  _(spieropbouw, onderhoud)_
+
+**Ingrediënten:** 140 g zalm · 65 g zilvervliesrijst (droog) · 150 g broccoli · 25 g teriyakisaus
+
+**Bereiding:**
+1. Kook de zilvervliesrijst gaar.
+2. Bak de zalm kort aan beide kanten en lak met de teriyaki.
+3. Stoom de broccoli beetgaar en serveer over de rijst.
+
+### Witvis uit de oven met tomaat, courgette & aardappel
+**397 kcal** · 36g eiwit · 45g koolhydraten · 8g vet  _(afvallen, onderhoud)_
+
+**Ingrediënten:** 160 g witvis · 220 g aardappel · 120 g courgette · 100 g cherrytomaat · 6 g olijfolie
+
+**Bereiding:**
+1. Snijd de aardappel en courgette, hussel met olijfolie en rooster 20 min op 200°C.
+2. Leg de witvis met cherrytomaten de laatste 12 min erbij.
+3. Breng op smaak met citroen, peper en zout.
+
+### Kipgehakt-bolognese met volkoren pasta & courgette
+**563 kcal** · 39g eiwit · 63g koolhydraten · 15g vet  _(spieropbouw, onderhoud)_
+
+**Ingrediënten:** 150 g kipgehakt · 75 g volkoren pasta (droog) · 150 g tomatenpassata · 100 g courgette · 40 g ui
+
+**Bereiding:**
+1. Kook de volkoren pasta beetgaar.
+2. Rul het kipgehakt met de ui, voeg de passata en blokjes courgette toe.
+3. Laat 10 min pruttelen met Italiaanse kruiden en schep over de pasta.
+
+### Kip-fajita bowl met paprika, zwarte bonen & rijst
+**575 kcal** · 49g eiwit · 80g koolhydraten · 5g vet  _(afvallen, spieropbouw, onderhoud)_
+
+**Ingrediënten:** 150 g kipfilet · 60 g rijst (droog) · 100 g paprika · 100 g zwarte bonen · 40 g ui
+
+**Bereiding:**
+1. Kook de rijst gaar.
+2. Bak de kip met fajitakruiden, paprika en ui op hoog vuur.
+3. Verwarm de zwarte bonen en schik alles over de rijst; werk af met limoen.
+
+### Biefstuk met zoete-aardappelfriet & salade
+**491 kcal** · 37g eiwit · 49g koolhydraten · 17g vet  _(afvallen, onderhoud)_
+
+**Ingrediënten:** 150 g mager rundvlees · 220 g zoete aardappel · 60 g sla · 80 g tomaat · 6 g olijfolie
+
+**Bereiding:**
+1. Snijd de zoete aardappel in frieten, hussel met olijfolie en bak 25 min op 220°C.
+2. Bak de biefstuk 2–3 min per kant en laat rusten.
+3. Serveer met een frisse salade van sla en tomaat.
+
+### Zalm sous-vide 50°C met aardappel & asperges
+**529 kcal** · 35g eiwit · 42g koolhydraten · 24g vet  _(onderhoud · sous-vide 50°C)_
+
+**Ingrediënten:** 140 g zalm · 220 g aardappel · 120 g asperges · 5 g olijfolie
+
+**Bereiding:**
+1. Vacumeer de zalm met wat olijfolie en citroen en gaar sous-vide op 50°C (30–40 min).
+2. Kook de aardappels gaar en stoom de asperges beetgaar.
+3. Schroei de zalm eventueel kort op de velkant en serveer met de groente.
+
+### Kalkoen-roerbak met cashew, paprika & rijst
+**520 kcal** · 45g eiwit · 62g koolhydraten · 10g vet  _(afvallen, onderhoud)_
+
+**Ingrediënten:** 150 g kalkoenfilet · 65 g rijst (droog) · 100 g paprika · 15 g cashewnoten · 12 g sojasaus
+
+**Bereiding:**
+1. Kook de rijst gaar.
+2. Roerbak de kalkoenreepjes op hoog vuur, voeg de paprika toe.
+3. Blus af met sojasaus, roer de cashewnoten erdoor en serveer over de rijst.
+
+### Garnalencurry met kokosmelk light & rijst
+**458 kcal** · 34g eiwit · 59g koolhydraten · 9g vet  _(onderhoud)_
+
+**Ingrediënten:** 140 g garnalen · 65 g rijst (droog) · 80 g kokosmelk (light) · 80 g paprika · 20 g currypasta
+
+**Bereiding:**
+1. Kook de rijst gaar.
+2. Bak de currypasta kort, voeg de paprika en kokosmelk toe en laat pruttelen.
+3. Voeg de garnalen toe en gaar 3–4 min tot ze roze zijn; serveer over de rijst.
+
+### Tofu-teriyaki met noedels & broccoli
+**534 kcal** · 37g eiwit · 62g koolhydraten · 15g vet  _(onderhoud)_
+
+**Ingrediënten:** 180 g tofu · 70 g volkoren noedels (droog) · 150 g broccoli · 25 g teriyakisaus
+
+**Bereiding:**
+1. Kook de volkoren noedels beetgaar.
+2. Bak de tofublokjes goudbruin en knapperig.
+3. Voeg de broccoli en teriyaki toe, roerbak beetgaar en meng de noedels erdoor.
+
+### Kip-souvlaki met bulgur, tzatziki & tomaat
+**434 kcal** · 45g eiwit · 47g koolhydraten · 5g vet  _(afvallen, onderhoud)_
+
+**Ingrediënten:** 150 g kipfilet · 60 g bulgur (droog) · 60 g magere yoghurt · 60 g komkommer · 80 g tomaat
+
+**Bereiding:**
+1. Kook de bulgur gaar.
+2. Rijg de gekruide kip en gril gaar.
+3. Rasp de komkommer en meng met de yoghurt en knoflook tot tzatziki; serveer met de bulgur en tomaat.
+
+### Linzen-dal met rijst & spinazie
+**476 kcal** · 23g eiwit · 91g koolhydraten · 3g vet  _(onderhoud)_
+
+**Ingrediënten:** 180 g linzen (gekookt) · 60 g rijst (droog) · 80 g spinazie · 40 g ui · 15 g currypasta
+
+**Bereiding:**
+1. Kook de rijst gaar.
+2. Fruit de ui met de currypasta, voeg de linzen en een scheut water toe en laat 10 min pruttelen.
+3. Roer de spinazie erdoor tot geslonken en serveer over de rijst.
+
+### Gevulde paprika met kipgehakt, rijst & tomaat
+**452 kcal** · 27g eiwit · 58g koolhydraten · 11g vet  _(onderhoud)_
+
+**Ingrediënten:** 160 g paprika · 120 g kipgehakt · 50 g rijst (droog) · 100 g tomatenpassata · 40 g ui
+
+**Bereiding:**
+1. Kook de rijst gaar en rul het kipgehakt met de ui.
+2. Meng de rijst, het gehakt en de passata met kruiden.
+3. Vul de halve paprika's en bak 25 min op 200°C tot gaar.
+
+### Witvis met kerrie, bloemkool & rijst
+**468 kcal** · 37g eiwit · 61g koolhydraten · 8g vet  _(afvallen, onderhoud)_
+
+**Ingrediënten:** 160 g witvis · 65 g rijst (droog) · 150 g bloemkool · 60 g kokosmelk (light) · 15 g currypasta
+
+**Bereiding:**
+1. Kook de rijst gaar.
+2. Bak de currypasta kort, voeg de kokosmelk en bloemkoolroosjes toe en gaar 8 min.
+3. Leg de witvis erin en pocheer 5–6 min tot gaar; serveer met de rijst.
+
+### Rundergehakt-chili con carne met kidneybonen & rijst
+**664 kcal** · 49g eiwit · 94g koolhydraten · 9g vet  _(spieropbouw, onderhoud)_
+
+**Ingrediënten:** 140 g rundergehakt 5% · 120 g kidneybonen · 150 g tomatenpassata · 60 g mais · 60 g rijst (droog)
+
+**Bereiding:**
+1. Kook de rijst gaar.
+2. Rul het gehakt, voeg de passata, kidneybonen en mais toe met komijn, paprikapoeder en chili.
+3. Laat 12 min pruttelen en serveer over de rijst.
+
+### Kabeljauw met erwtenpuree & aardappel
+**466 kcal** · 41g eiwit · 58g koolhydraten · 7g vet  _(afvallen, onderhoud)_
+
+**Ingrediënten:** 160 g kabeljauw · 220 g aardappel · 150 g doperwten · 5 g olijfolie
+
+**Bereiding:**
+1. Kook de aardappels gaar.
+2. Kook de doperwten kort en pureer ze grof met wat peper en munt.
+3. Bak de kabeljauw 3–4 min per kant tot gaar en serveer met de puree en aardappel.
+
+### Kipdij sous-vide 65°C met zoete aardappel & groente
+**478 kcal** · 34g eiwit · 48g koolhydraten · 17g vet  _(onderhoud · sous-vide 65°C)_
+
+**Ingrediënten:** 150 g kipdij · 200 g zoete aardappel · 120 g sperziebonen · 5 g olijfolie
+
+**Bereiding:**
+1. Vacumeer de kipdij en gaar sous-vide op 65°C (1,5–4 u) tot mals en gaar.
+2. Rooster de zoete aardappel in de oven op 200°C in ca. 25 min.
+3. Stoom de sperziebonen beetgaar, schroei de kipdij kort aan en serveer samen.
+
+## Tussendoortje (19)
 
 ### Magere kwark met blauwe bessen & amandelschaafsel
 **178 kcal** · 18g eiwit · 17g koolhydraten · 6g vet  _(afvallen, onderhoud)_
@@ -642,4 +1142,100 @@
 1. Schep de kwark in een kom.
 2. Top met de bosbessen en een druppel honing.
 3. Hak de pure chocolade (70%) grof en strooi erover.
+
+### Volkorenboterham met pindakaas & banaan
+**362 kcal** · 12g eiwit · 51g koolhydraten · 13g vet  _(onderhoud · ook Ontbijt)_
+
+**Ingrediënten:** 70 g volkorenbrood · 20 g pindakaas · 80 g banaan
+
+**Bereiding:**
+1. Rooster het volkorenbrood.
+2. Besmeer dun met pindakaas.
+3. Beleg met schijfjes banaan.
+
+### Kwark met framboos, kiwi & chiazaad
+**230 kcal** · 23g eiwit · 28g koolhydraten · 4g vet  _(afvallen, onderhoud · ook Ontbijt)_
+
+**Ingrediënten:** 200 g magere kwark · 60 g frambozen · 60 g kiwi · 10 g chiazaad
+
+**Bereiding:**
+1. Schep de kwark in een kom.
+2. Top met frambozen en schijfjes kiwi.
+3. Strooi het chiazaad erover.
+
+### Volkoren crackers met magere kaas & komkommer
+**169 kcal** · 11g eiwit · 17g koolhydraten · 6g vet  _(onderhoud)_
+
+**Ingrediënten:** 24 g volkoren crackers · 30 g magere kaas · 40 g komkommer
+
+**Bereiding:**
+1. Beleg de crackers met plakjes magere kaas.
+2. Leg er dunne plakjes komkommer op.
+3. Maal er wat peper over.
+
+### Proteïne-energieballen van dadel, havermout & pindakaas
+**426 kcal** · 21g eiwit · 67g koolhydraten · 11g vet  _(onderhoud)_
+
+**Ingrediënten:** 60 g dadels · 30 g havermout · 15 g pindakaas · 15 g whey-eiwitpoeder
+
+**Bereiding:**
+1. Pureer de dadels met de havermout, pindakaas en whey tot een kleverige massa.
+2. Rol er balletjes van.
+3. Laat 30 min opstijven in de koelkast.
+
+### Kwark met mango & pompoenpitten
+**183 kcal** · 19g eiwit · 18g koolhydraten · 6g vet  _(afvallen, onderhoud)_
+
+**Ingrediënten:** 150 g magere kwark · 70 g mango · 10 g pompoenpitten
+
+**Bereiding:**
+1. Schep de kwark in een kom.
+2. Top met blokjes mango.
+3. Strooi de pompoenpitten erover.
+
+### Hüttenkäse met komkommer & tomaat
+**147 kcal** · 19g eiwit · 9g koolhydraten · 3g vet  _(afvallen, onderhoud)_
+
+**Ingrediënten:** 150 g hüttenkäse · 60 g komkommer · 60 g cherrytomaat
+
+**Bereiding:**
+1. Schep de hüttenkäse in een kom.
+2. Meng er blokjes komkommer en gehalveerde cherrytomaat door.
+3. Breng op smaak met peper en wat bieslook.
+
+### Rijstwafels met pindakaas & banaan
+**242 kcal** · 6g eiwit · 38g koolhydraten · 8g vet  _(onderhoud)_
+
+**Ingrediënten:** 26 g rijstwafels · 15 g pindakaas · 60 g banaan
+
+**Bereiding:**
+1. Besmeer de rijstwafels dun met pindakaas.
+2. Beleg met schijfjes banaan.
+
+### Appel met pindakaas
+**166 kcal** · 4g eiwit · 24g koolhydraten · 8g vet  _(onderhoud)_
+
+**Ingrediënten:** 150 g appel · 15 g pindakaas
+
+**Bereiding:**
+1. Snijd de appel in partjes.
+2. Dip ze in de pindakaas.
+
+### Skyr met havermout & frambozen
+**218 kcal** · 20g eiwit · 28g koolhydraten · 2g vet  _(afvallen, onderhoud)_
+
+**Ingrediënten:** 150 g skyr · 25 g havermout · 60 g frambozen
+
+**Bereiding:**
+1. Meng de skyr met de havermout.
+2. Top met de frambozen.
+
+### Peer met walnoten & kaneel
+**210 kcal** · 10g eiwit · 27g koolhydraten · 8g vet  _(onderhoud)_
+
+**Ingrediënten:** 150 g peer · 12 g walnoten · 80 g magere kwark
+
+**Bereiding:**
+1. Snijd de peer in partjes.
+2. Serveer met een lepel kwark, grof gehakte walnoten en een snuf kaneel.
 

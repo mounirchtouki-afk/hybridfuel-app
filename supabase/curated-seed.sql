@@ -21,6 +21,7 @@ insert into public.ingredients (slug,name_nl,name_en,kcal,protein,carbs,fat,cate
 ('skyr','Skyr','Skyr',63,11,4,0.2,'zuivel','core'),
 ('quark_lowfat','Magere kwark','Low-fat quark',57,10,4,0.3,'zuivel','core'),
 ('cottage','Hüttenkäse','Cottage cheese',85,12,3,2,'zuivel','core'),
+('greek_yoghurt','Magere Griekse yoghurt','Low-fat Greek yoghurt',59,10,4,0.4,'zuivel','core'),
 ('yoghurt_lowfat','Magere yoghurt','Low-fat yoghurt',42,4,6,0.1,'zuivel','core'),
 ('milk_semi','Halfvolle melk','Semi-skimmed milk',47,3.4,4.8,1.5,'zuivel','core'),
 ('feta_light','Feta (light)','Feta (light)',160,14,2,10,'zuivel','core'),
@@ -59,6 +60,7 @@ insert into public.ingredients (slug,name_nl,name_en,kcal,protein,carbs,fat,cate
 ('sugarsnap','Sugarsnaps','Sugar snaps',42,2.8,7.5,0.2,'groente','core'),
 ('peas','Doperwten','Peas',81,5,14,0.4,'groente','core'),
 ('onion','Ui','Onion',40,1.1,9,0.1,'groente','core'),
+('mushroom','Champignons','Mushrooms',22,3,3.3,0.3,'groente','core'),
 ('corn','Mais','Corn',86,3.2,19,1.2,'groente','core'),
 ('olive_oil','Olijfolie','Olive oil',884,0,0,100,'vet','core'),
 ('almonds','Amandelen','Almonds',579,21,22,49,'noten','core'),
@@ -80,7 +82,33 @@ insert into public.ingredients (slug,name_nl,name_en,kcal,protein,carbs,fat,cate
 ('spring_onion','Bosui','Spring onion',32,1.8,7,0.2,'groente','core'),
 ('olives','Olijven','Olives',115,0.8,6,11,'vet','core'),
 ('ketjap_manis','Ketjap manis','Sweet soy sauce',250,2,60,0,'overig','core'),
-('dark_choc70','Pure chocolade 70%','Dark chocolate 70%',600,8,46,42,'overig','core')
+('dark_choc70','Pure chocolade 70%','Dark chocolate 70%',600,8,46,42,'overig','core'),
+('chicken_mince','Kipgehakt','Chicken mince',143,17,0,8,'vlees','core'),
+('ham_lean','Magere ham','Lean ham',110,21,1,2,'vlees','core'),
+('brown_rice','Zilvervliesrijst (droog)','Brown rice (dry)',360,8,76,2.5,'granen','core'),
+('noodles_whole','Volkoren noedels (droog)','Whole-wheat noodles (dry)',350,13,65,2,'granen','core'),
+('rice_noodles','Rijstnoedels (droog)','Rice noodles (dry)',360,3,83,0.5,'granen','core'),
+('bulgur','Bulgur (droog)','Bulgur (dry)',342,12,63,1.3,'granen','core'),
+('pita_whole','Volkoren pita','Wholegrain pita',260,10,49,2.5,'granen','core'),
+('black_beans','Zwarte bonen','Black beans',132,9,24,0.5,'peulvrucht','core'),
+('cauliflower','Bloemkool','Cauliflower',25,1.9,5,0.3,'groente','core'),
+('eggplant','Aubergine','Eggplant',25,1,6,0.2,'groente','core'),
+('leek','Prei','Leek',31,1.5,6,0.3,'groente','core'),
+('asparagus','Asperges','Asparagus',20,2.2,4,0.1,'groente','core'),
+('rocket','Rucola','Rocket',25,2.6,3.7,0.7,'groente','core'),
+('mango','Mango','Mango',60,0.8,15,0.4,'fruit','core'),
+('raspberry','Frambozen','Raspberries',52,1.2,12,0.7,'fruit','core'),
+('pear','Peer','Pear',57,0.4,15,0.1,'fruit','core'),
+('kiwi','Kiwi','Kiwi',61,1.1,15,0.5,'fruit','core'),
+('dates','Dadels','Dates',282,2,75,0.4,'fruit','core'),
+('coconut_light','Kokosmelk (light)','Coconut milk (light)',73,0.6,2,7,'overig','core'),
+('curry_paste','Currypasta','Curry paste',110,2,10,6,'overig','core'),
+('passata','Tomatenpassata','Tomato passata',35,1.5,6,0.3,'groente','core'),
+('pesto','Pesto','Pesto',300,4,4,30,'vet','core'),
+('mozzarella_light','Mozzarella (light)','Mozzarella (light)',170,20,2,9,'zuivel','core'),
+('cashew','Cashewnoten','Cashews',553,18,30,44,'noten','core'),
+('pumpkin_seeds','Pompoenpitten','Pumpkin seeds',559,30,11,49,'noten','core'),
+('peanut_butter','Pindakaas','Peanut butter',588,25,20,50,'noten','core')
 on conflict (slug) do update set kcal=excluded.kcal,protein=excluded.protein,carbs=excluded.carbs,fat=excluded.fat,category=excluded.category,name_nl=excluded.name_nl,name_en=excluded.name_en;
 
 insert into public.dishes (slug,name_nl,name_en,moments,goals,items,tags,prefs,steps,steps_en,technique,temp,source) values
@@ -361,6 +389,243 @@ insert into public.dishes (slug,name_nl,name_en,moments,goals,items,tags,prefs,s
 2. Beleg met plakjes tomaat en verkruimelde feta.
 3. Werk af met fijngesneden bosui of bieslook.','1. Toast the sourdough and spread with the hummus.
 2. Top with tomato slices and crumbled feta.
-3. Finish with finely chopped spring onion or chives.','pan',null,'core')
+3. Finish with finely chopped spring onion or chives.','pan',null,'core'),
+('greek_yoghurt_with_oats_mango_pumpkin_seeds','Griekse yoghurt met havermout, mango & pompoenpitten','Greek yoghurt with oats, mango & pumpkin seeds',ARRAY['breakfast'],ARRAY['cut','maintain'],'[{"slug":"greek_yoghurt","g":200},{"slug":"oats","g":40},{"slug":"mango","g":80},{"slug":"pumpkin_seeds","g":10}]'::jsonb,ARRAY['sport','high_protein','vegetarian']::text[],ARRAY[]::text[],'1. Meng de Griekse yoghurt met de havermout.
+2. Schep in een kom en top met blokjes mango.
+3. Strooi de pompoenpitten erover.','1. Mix the Greek yoghurt with the oats.
+2. Spoon into a bowl and top with diced mango.
+3. Scatter the pumpkin seeds over.','pan',null,'core'),
+('wholegrain_porridge_with_banana_cinnamon_walnuts','Volkoren pap met banaan, kaneel & walnoten','Wholegrain porridge with banana, cinnamon & walnuts',ARRAY['breakfast'],ARRAY['maintain'],'[{"slug":"oats","g":70},{"slug":"milk_semi","g":250},{"slug":"banana","g":80},{"slug":"walnuts","g":10}]'::jsonb,ARRAY['sport','vegetarian']::text[],ARRAY[]::text[],'1. Breng de havermout met de melk al roerend aan de kook en gaar 3–4 min.
+2. Roer er een snuf kaneel door.
+3. Top met schijfjes banaan en grof gehakte walnoten.','1. Bring the oats and milk to a simmer, stirring, and cook 3–4 min.
+2. Stir in a pinch of cinnamon.
+3. Top with banana slices and roughly chopped walnuts.','pan',null,'core'),
+('egg_white_omelette_with_mushrooms_spinach_tomato','Eiwitomelet met champignons, spinazie & tomaat','Egg-white omelette with mushrooms, spinach & tomato',ARRAY['breakfast'],ARRAY['cut','maintain'],'[{"slug":"egg","g":50},{"slug":"egg_white","g":120},{"slug":"mushroom","g":80},{"slug":"spinach","g":40},{"slug":"tomato","g":60}]'::jsonb,ARRAY['sport','high_protein','vegetarian']::text[],ARRAY[]::text[],'1. Klop het ei met het eiwit los.
+2. Bak de champignons tot ze kleuren, voeg de spinazie en tomaat kort toe.
+3. Giet het ei erbij en laat op laag vuur stollen tot een omelet.','1. Whisk the egg with the egg whites.
+2. Fry the mushrooms until coloured, add the spinach and tomato briefly.
+3. Pour in the egg and let it set on low heat into an omelette.','pan',null,'core'),
+('wholegrain_bread_with_peanut_butter_banana','Volkorenboterham met pindakaas & banaan','Wholegrain bread with peanut butter & banana',ARRAY['breakfast','snack'],ARRAY['maintain'],'[{"slug":"bread_whole","g":70},{"slug":"peanut_butter","g":20},{"slug":"banana","g":80}]'::jsonb,ARRAY['sport','vegetarian','vegan']::text[],ARRAY[]::text[],'1. Rooster het volkorenbrood.
+2. Besmeer dun met pindakaas.
+3. Beleg met schijfjes banaan.','1. Toast the wholegrain bread.
+2. Spread thinly with peanut butter.
+3. Top with banana slices.','assembly',null,'core'),
+('quark_with_raspberry_kiwi_chia','Kwark met framboos, kiwi & chiazaad','Quark with raspberry, kiwi & chia',ARRAY['breakfast','snack'],ARRAY['cut','maintain'],'[{"slug":"quark_lowfat","g":200},{"slug":"raspberry","g":60},{"slug":"kiwi","g":60},{"slug":"chia","g":10}]'::jsonb,ARRAY['sport','high_protein','vegetarian']::text[],ARRAY[]::text[],'1. Schep de kwark in een kom.
+2. Top met frambozen en schijfjes kiwi.
+3. Strooi het chiazaad erover.','1. Spoon the quark into a bowl.
+2. Top with raspberries and kiwi slices.
+3. Scatter the chia over.','assembly',null,'core'),
+('shakshuka_with_egg_pepper_wholegrain_bread','Shakshuka met ei, paprika & volkorenbrood','Shakshuka with egg, pepper & wholegrain bread',ARRAY['breakfast','lunch'],ARRAY['maintain'],'[{"slug":"egg","g":120},{"slug":"passata","g":150},{"slug":"paprika","g":100},{"slug":"onion","g":40},{"slug":"bread_whole","g":60}]'::jsonb,ARRAY['sport','vegetarian']::text[],ARRAY[]::text[],'1. Fruit de ui en paprika zacht, voeg de passata toe met komijn en paprikapoeder.
+2. Laat 8 min pruttelen, maak kuiltjes en breek de eieren erin.
+3. Dek af en gaar tot het eiwit gestold is; serveer met het brood.','1. Soften the onion and pepper, add the passata with cumin and paprika.
+2. Simmer 8 min, make wells and crack the eggs in.
+3. Cover and cook until the whites set; serve with the bread.','pan',null,'core'),
+('skyr_bowl_with_apple_cinnamon_walnuts','Skyr-bowl met appel, kaneel & walnoten','Skyr bowl with apple, cinnamon & walnuts',ARRAY['breakfast'],ARRAY['cut','maintain'],'[{"slug":"skyr","g":200},{"slug":"apple","g":100},{"slug":"oats","g":30},{"slug":"walnuts","g":10}]'::jsonb,ARRAY['sport','high_protein','vegetarian']::text[],ARRAY[]::text[],'1. Meng de skyr met de havermout.
+2. Top met blokjes appel en een snuf kaneel.
+3. Strooi grof gehakte walnoten erover.','1. Mix the skyr with the oats.
+2. Top with diced apple and a pinch of cinnamon.
+3. Scatter roughly chopped walnuts over.','pan',null,'core'),
+('wholegrain_wrap_with_cottage_cheese_turkey_cucumber','Volkoren wrap met hüttenkäse, kalkoen & komkommer','Wholegrain wrap with cottage cheese, turkey & cucumber',ARRAY['breakfast','lunch'],ARRAY['cut','maintain'],'[{"slug":"wrap_whole","g":60},{"slug":"cottage","g":80},{"slug":"turkey_breast","g":70},{"slug":"cucumber","g":50}]'::jsonb,ARRAY['sport','high_protein']::text[],ARRAY[]::text[],'1. Besmeer de wrap met de hüttenkäse.
+2. Beleg met plakjes kalkoenfilet en komkommer.
+3. Rol strak op en snijd doormidden.','1. Spread the wrap with the cottage cheese.
+2. Top with turkey slices and cucumber.
+3. Roll up tightly and halve.','pan',null,'core'),
+('protein_overnight_oats_with_banana_peanut_butter','Proteïne-overnight oats met banaan & pindakaas','Protein overnight oats with banana & peanut butter',ARRAY['breakfast'],ARRAY['maintain'],'[{"slug":"oats","g":50},{"slug":"skyr","g":150},{"slug":"milk_semi","g":100},{"slug":"banana","g":60},{"slug":"peanut_butter","g":12}]'::jsonb,ARRAY['sport','vegetarian']::text[],ARRAY[]::text[],'1. Meng de havermout, skyr en melk in een pot en laat een nacht opstijven.
+2. Roer de volgende ochtend los.
+3. Top met schijfjes banaan en een lepel pindakaas.','1. Mix the oats, skyr and milk in a jar and let set overnight.
+2. Stir loose in the morning.
+3. Top with banana slices and a spoon of peanut butter.','assembly',null,'core'),
+('smoked_chicken_on_wholegrain_bread_with_egg_tomato','Gerookte kip op volkorenbrood met ei & tomaat','Smoked chicken on wholegrain bread with egg & tomato',ARRAY['breakfast','lunch'],ARRAY['cut','maintain'],'[{"slug":"bread_whole","g":80},{"slug":"chicken_breast","g":60},{"slug":"egg","g":55},{"slug":"tomato","g":50},{"slug":"lettuce","g":20}]'::jsonb,ARRAY['sport','high_protein']::text[],ARRAY[]::text[],'1. Kook het ei 7–8 min hard, pel en snijd in plakjes.
+2. Rooster het volkorenbrood.
+3. Beleg met sla, gerookte kip, plakjes tomaat en ei.','1. Hard-boil the egg 7–8 min, peel and slice.
+2. Toast the wholegrain bread.
+3. Top with lettuce, smoked chicken, tomato slices and egg.','pan',null,'core'),
+('light_chicken_caesar_salad_with_egg_wholegrain_croutons','Kip-caesarsalade light met ei & volkoren croutons','Light chicken caesar salad with egg & wholegrain croutons',ARRAY['lunch'],ARRAY['cut','maintain'],'[{"slug":"chicken_breast","g":130},{"slug":"lettuce","g":80},{"slug":"egg","g":55},{"slug":"bread_whole","g":40},{"slug":"greek_yoghurt","g":40}]'::jsonb,ARRAY['sport','high_protein']::text[],ARRAY[]::text[],'1. Gril de kipfilet gaar en snijd in reepjes; kook het ei en halveer.
+2. Rooster blokjes volkorenbrood tot croutons.
+3. Meng de sla met een dressing van yoghurt, mosterd, citroen en peper; schik kip, ei en croutons erop.','1. Grill the chicken and slice; boil the egg and halve.
+2. Toast diced wholegrain bread into croutons.
+3. Toss the lettuce with a dressing of yoghurt, mustard, lemon and pepper; arrange chicken, egg and croutons on top.','pan',null,'core'),
+('nicoise_salad_with_tuna_egg_green_beans','Niçoise-salade met tonijn, ei & sperziebonen','Niçoise salad with tuna, egg & green beans',ARRAY['lunch'],ARRAY['cut','maintain'],'[{"slug":"tuna_can","g":100},{"slug":"potato","g":150},{"slug":"green_beans","g":100},{"slug":"egg","g":55},{"slug":"tomato","g":80},{"slug":"olives","g":15}]'::jsonb,ARRAY['sport','high_protein']::text[],ARRAY[]::text[],'1. Kook de aardappels en sperziebonen beetgaar; kook het ei en halveer.
+2. Schik de aardappel, sperziebonen, tomaat en olijven op een bord.
+3. Verdeel de tonijn en het ei erover en besprenkel met citroen en peper.','1. Boil the potatoes and green beans; boil the egg and halve.
+2. Arrange the potato, green beans, tomato and olives on a plate.
+3. Spread the tuna and egg over and drizzle with lemon and pepper.','pan',null,'core'),
+('bulgur_salad_with_chickpeas_feta_mint','Bulgursalade met kikkererwten, feta & munt','Bulgur salad with chickpeas, feta & mint',ARRAY['lunch'],ARRAY['maintain'],'[{"slug":"bulgur","g":60},{"slug":"chickpeas","g":100},{"slug":"feta_light","g":40},{"slug":"cucumber","g":80},{"slug":"tomato","g":80}]'::jsonb,ARRAY['sport','vegetarian']::text[],ARRAY[]::text[],'1. Kook de bulgur gaar en laat afkoelen.
+2. Meng met kikkererwten, blokjes komkommer en tomaat.
+3. Verkruimel de feta erover en werk af met munt, citroen en peper.','1. Cook the bulgur and let cool.
+2. Mix with chickpeas, diced cucumber and tomato.
+3. Crumble the feta over and finish with mint, lemon and pepper.','pan',null,'core'),
+('pita_with_chicken_shawarma_yoghurt_sauce_salad','Pita met kipshoarma, yoghurtsaus & salade','Pita with chicken shawarma, yoghurt sauce & salad',ARRAY['lunch','dinner'],ARRAY['cut','maintain'],'[{"slug":"pita_whole","g":60},{"slug":"chicken_breast","g":140},{"slug":"yoghurt_lowfat","g":40},{"slug":"lettuce","g":30},{"slug":"tomato","g":60}]'::jsonb,ARRAY['sport','high_protein']::text[],ARRAY[]::text[],'1. Kruid de kipreepjes met shoarmakruiden en bak ze gaar.
+2. Roer een saus van yoghurt, knoflook, citroen en peper.
+3. Vul de warme pita met sla, tomaat, de kip en de yoghurtsaus.','1. Season the chicken strips with shawarma spice and cook through.
+2. Stir a sauce of yoghurt, garlic, lemon and pepper.
+3. Fill the warm pita with lettuce, tomato, the chicken and the yoghurt sauce.','pan',null,'core'),
+('whole_wheat_noodles_with_tofu_broccoli_soy','Volkoren noedels met tofu, broccoli & soja','Whole-wheat noodles with tofu, broccoli & soy',ARRAY['lunch','dinner'],ARRAY['maintain'],'[{"slug":"noodles_whole","g":70},{"slug":"tofu","g":160},{"slug":"broccoli","g":120},{"slug":"soy_sauce","g":12}]'::jsonb,ARRAY['sport','vegetarian','vegan']::text[],ARRAY[]::text[],'1. Kook de volkoren noedels beetgaar.
+2. Bak de tofublokjes goudbruin, voeg de broccoli toe en roerbak beetgaar.
+3. Meng de noedels en sojasaus erdoor.','1. Cook the whole-wheat noodles al dente.
+2. Fry the tofu until golden, add the broccoli and stir-fry until tender.
+3. Toss the noodles and soy sauce through.','pan',null,'core'),
+('mexican_bowl_with_black_beans_corn_avocado','Mexicaanse bowl met zwarte bonen, mais & avocado','Mexican bowl with black beans, corn & avocado',ARRAY['lunch','dinner'],ARRAY['gain','maintain'],'[{"slug":"black_beans","g":150},{"slug":"rice_dry","g":60},{"slug":"corn","g":80},{"slug":"avocado","g":40},{"slug":"tomato","g":80}]'::jsonb,ARRAY['sport','vegetarian','vegan']::text[],ARRAY[]::text[],'1. Kook de rijst gaar.
+2. Verwarm de zwarte bonen met komijn en paprikapoeder.
+3. Schik rijst, bonen, mais, tomaat en avocado in een kom; knijp er limoen over.','1. Cook the rice.
+2. Warm the black beans with cumin and paprika.
+3. Arrange rice, beans, corn, tomato and avocado in a bowl; squeeze lime over.','pan',null,'core'),
+('smoked_salmon_on_wholegrain_bread_with_cottage_cheese','Gerookte zalm op volkorenbrood met hüttenkäse','Smoked salmon on wholegrain bread with cottage cheese',ARRAY['lunch','breakfast'],ARRAY['cut','maintain'],'[{"slug":"bread_whole","g":80},{"slug":"smoked_salmon","g":60},{"slug":"cottage","g":60},{"slug":"red_onion","g":20},{"slug":"cucumber","g":40}]'::jsonb,ARRAY['sport','high_protein']::text[],ARRAY[]::text[],'1. Rooster het volkorenbrood en besmeer met de hüttenkäse.
+2. Beleg met de gerookte zalm.
+3. Werk af met fijne rode ui, komkommer en peper.','1. Toast the wholegrain bread and spread with the cottage cheese.
+2. Top with the smoked salmon.
+3. Finish with finely chopped red onion, cucumber and pepper.','pan',null,'core'),
+('thai_chicken_salad_with_rice_noodles_lime','Thaise kipsalade met rijstnoedels & limoen','Thai chicken salad with rice noodles & lime',ARRAY['lunch'],ARRAY['cut','maintain'],'[{"slug":"chicken_breast","g":130},{"slug":"rice_noodles","g":55},{"slug":"carrot","g":60},{"slug":"cucumber","g":60},{"slug":"soy_sauce","g":10}]'::jsonb,ARRAY['sport','high_protein']::text[],ARRAY[]::text[],'1. Week de rijstnoedels gaar en spoel koud.
+2. Gril de kipfilet en snijd in reepjes.
+3. Meng de noedels met julienne van wortel en komkommer, de kip, sojasaus, limoen en verse koriander.','1. Soak the rice noodles until done and rinse cold.
+2. Grill the chicken and slice.
+3. Toss the noodles with julienned carrot and cucumber, the chicken, soy sauce, lime and fresh coriander.','pan',null,'core'),
+('lentil_soup_with_carrot_leek_wholegrain_bread','Linzensoep met wortel, prei & volkorenbrood','Lentil soup with carrot, leek & wholegrain bread',ARRAY['lunch'],ARRAY['maintain'],'[{"slug":"lentils","g":150},{"slug":"carrot","g":80},{"slug":"leek","g":60},{"slug":"onion","g":40},{"slug":"bread_whole","g":60}]'::jsonb,ARRAY['sport','vegetarian','vegan']::text[],ARRAY[]::text[],'1. Fruit de ui, wortel en prei kort aan.
+2. Voeg de linzen en bouillon toe en laat 15–18 min garen.
+3. Breng op smaak met komijn en peper; serveer met het brood.','1. Sweat the onion, carrot and leek briefly.
+2. Add the lentils and stock and simmer 15–18 min.
+3. Season with cumin and pepper; serve with the bread.','soup',null,'core'),
+('omelette_with_lean_ham_mushroom_pepper','Omelet met magere ham, champignon & paprika','Omelette with lean ham, mushroom & pepper',ARRAY['lunch','breakfast'],ARRAY['cut','maintain'],'[{"slug":"egg","g":100},{"slug":"egg_white","g":60},{"slug":"ham_lean","g":50},{"slug":"mushroom","g":60},{"slug":"paprika","g":60}]'::jsonb,ARRAY['sport','high_protein']::text[],ARRAY[]::text[],'1. Klop het ei met het eiwit los.
+2. Bak de champignons en paprika kort, voeg de ham toe.
+3. Giet het ei erbij en laat op laag vuur stollen.','1. Whisk the egg with the egg white.
+2. Fry the mushrooms and pepper briefly, add the ham.
+3. Pour in the egg and set on low heat.','pan',null,'core'),
+('roast_beef_bowl_with_brown_rice_rocket_tomato','Rosbief-bowl met zilvervliesrijst, rucola & tomaat','Roast beef bowl with brown rice, rocket & tomato',ARRAY['lunch'],ARRAY['maintain'],'[{"slug":"rosbief","g":90},{"slug":"brown_rice","g":60},{"slug":"rocket","g":40},{"slug":"cherry_tomato","g":100},{"slug":"olive_oil","g":5}]'::jsonb,ARRAY['sport']::text[],ARRAY[]::text[],'1. Kook de zilvervliesrijst gaar en laat iets afkoelen.
+2. Schik rijst, rucola en gehalveerde cherrytomaten in een kom.
+3. Verdeel de rosbief erover en besprenkel met olijfolie, citroen en peper.','1. Cook the brown rice and let cool slightly.
+2. Arrange rice, rocket and halved cherry tomatoes in a bowl.
+3. Spread the roast beef over and drizzle with olive oil, lemon and pepper.','pan',null,'core'),
+('shrimp_salad_with_mango_avocado_little_gem','Garnalensalade met mango, avocado & little gem','Shrimp salad with mango, avocado & little gem',ARRAY['lunch'],ARRAY['cut','maintain'],'[{"slug":"shrimp","g":120},{"slug":"mango","g":80},{"slug":"avocado","g":40},{"slug":"lettuce","g":60},{"slug":"cucumber","g":50}]'::jsonb,ARRAY['sport','high_protein']::text[],ARRAY[]::text[],'1. Bak de garnalen kort tot ze roze en gaar zijn.
+2. Schik de sla met blokjes mango, avocado en komkommer.
+3. Verdeel de garnalen erover en maak aan met limoen, peper en zout.','1. Sear the shrimp until pink and done.
+2. Arrange the lettuce with diced mango, avocado and cucumber.
+3. Spread the shrimp over and dress with lime, salt and pepper.','pan',null,'core'),
+('caprese_sandwich_with_light_mozzarella_tomato_basil','Caprese-boterham met mozzarella light, tomaat & basilicum','Caprese sandwich with light mozzarella, tomato & basil',ARRAY['lunch'],ARRAY['maintain'],'[{"slug":"bread_whole","g":80},{"slug":"mozzarella_light","g":60},{"slug":"tomato","g":80},{"slug":"pesto","g":8}]'::jsonb,ARRAY['sport','vegetarian']::text[],ARRAY[]::text[],'1. Rooster het volkorenbrood en bestrijk dun met pesto.
+2. Beleg met plakjes mozzarella en tomaat.
+3. Werk af met verse basilicum en peper.','1. Toast the wholegrain bread and spread thinly with pesto.
+2. Top with mozzarella and tomato slices.
+3. Finish with fresh basil and pepper.','pan',null,'core'),
+('couscous_with_roasted_vegetables_chicken','Couscous met geroosterde groente & kipfilet','Couscous with roasted vegetables & chicken',ARRAY['lunch','dinner'],ARRAY['cut','maintain'],'[{"slug":"couscous","g":60},{"slug":"chicken_breast","g":130},{"slug":"eggplant","g":80},{"slug":"paprika","g":80},{"slug":"olive_oil","g":6}]'::jsonb,ARRAY['sport','high_protein']::text[],ARRAY[]::text[],'1. Rooster de aubergine en paprika met de olijfolie 20 min op 200°C.
+2. Wel de couscous met heet water tot gaar en roer los.
+3. Bak de kipfilet gaar, snijd aan en meng met de couscous en geroosterde groente.','1. Roast the eggplant and pepper with the olive oil 20 min at 200°C.
+2. Soak the couscous in hot water until done and fluff.
+3. Cook the chicken, slice and mix with the couscous and roasted vegetables.','oven',null,'core'),
+('chicken_curry_with_light_coconut_milk_pepper_rice','Kipcurry met kokosmelk light, paprika & rijst','Chicken curry with light coconut milk, pepper & rice',ARRAY['dinner'],ARRAY['cut','maintain'],'[{"slug":"chicken_breast","g":150},{"slug":"rice_dry","g":65},{"slug":"coconut_light","g":80},{"slug":"paprika","g":100},{"slug":"curry_paste","g":20}]'::jsonb,ARRAY['sport','high_protein']::text[],ARRAY[]::text[],'1. Kook de rijst gaar.
+2. Bak de currypasta kort aan, voeg de kip en paprika toe en bak mee.
+3. Blus af met de kokosmelk en laat 8 min pruttelen; serveer over de rijst.','1. Cook the rice.
+2. Fry the curry paste briefly, add the chicken and pepper and cook.
+3. Deglaze with the coconut milk and simmer 8 min; serve over the rice.','pan',null,'core'),
+('salmon_teriyaki_with_brown_rice_broccoli','Zalm-teriyaki met zilvervliesrijst & broccoli','Salmon teriyaki with brown rice & broccoli',ARRAY['dinner'],ARRAY['gain','maintain'],'[{"slug":"salmon","g":140},{"slug":"brown_rice","g":65},{"slug":"broccoli","g":150},{"slug":"teriyaki","g":25}]'::jsonb,ARRAY['sport']::text[],ARRAY[]::text[],'1. Kook de zilvervliesrijst gaar.
+2. Bak de zalm kort aan beide kanten en lak met de teriyaki.
+3. Stoom de broccoli beetgaar en serveer over de rijst.','1. Cook the brown rice.
+2. Sear the salmon on both sides and glaze with the teriyaki.
+3. Steam the broccoli until tender and serve over the rice.','pan',null,'core'),
+('oven_white_fish_with_tomato_zucchini_potato','Witvis uit de oven met tomaat, courgette & aardappel','Oven white fish with tomato, zucchini & potato',ARRAY['dinner'],ARRAY['cut','maintain'],'[{"slug":"white_fish","g":160},{"slug":"potato","g":220},{"slug":"zucchini","g":120},{"slug":"cherry_tomato","g":100},{"slug":"olive_oil","g":6}]'::jsonb,ARRAY['sport','high_protein']::text[],ARRAY[]::text[],'1. Snijd de aardappel en courgette, hussel met olijfolie en rooster 20 min op 200°C.
+2. Leg de witvis met cherrytomaten de laatste 12 min erbij.
+3. Breng op smaak met citroen, peper en zout.','1. Slice the potato and zucchini, toss with olive oil and roast 20 min at 200°C.
+2. Add the white fish with cherry tomatoes for the final 12 min.
+3. Season with lemon, salt and pepper.','oven',null,'core'),
+('chicken_mince_bolognese_with_wholegrain_pasta_zucchini','Kipgehakt-bolognese met volkoren pasta & courgette','Chicken mince bolognese with wholegrain pasta & zucchini',ARRAY['dinner'],ARRAY['gain','maintain'],'[{"slug":"chicken_mince","g":150},{"slug":"pasta_whole","g":75},{"slug":"passata","g":150},{"slug":"zucchini","g":100},{"slug":"onion","g":40}]'::jsonb,ARRAY['sport']::text[],ARRAY[]::text[],'1. Kook de volkoren pasta beetgaar.
+2. Rul het kipgehakt met de ui, voeg de passata en blokjes courgette toe.
+3. Laat 10 min pruttelen met Italiaanse kruiden en schep over de pasta.','1. Cook the wholegrain pasta al dente.
+2. Brown the chicken mince with the onion, add the passata and diced zucchini.
+3. Simmer 10 min with Italian herbs and spoon over the pasta.','pan',null,'core'),
+('chicken_fajita_bowl_with_pepper_black_beans_rice','Kip-fajita bowl met paprika, zwarte bonen & rijst','Chicken fajita bowl with pepper, black beans & rice',ARRAY['dinner'],ARRAY['cut','gain','maintain'],'[{"slug":"chicken_breast","g":150},{"slug":"rice_dry","g":60},{"slug":"paprika","g":100},{"slug":"black_beans","g":100},{"slug":"onion","g":40}]'::jsonb,ARRAY['sport','high_protein']::text[],ARRAY[]::text[],'1. Kook de rijst gaar.
+2. Bak de kip met fajitakruiden, paprika en ui op hoog vuur.
+3. Verwarm de zwarte bonen en schik alles over de rijst; werk af met limoen.','1. Cook the rice.
+2. Fry the chicken with fajita spice, pepper and onion on high heat.
+3. Warm the black beans and arrange everything over the rice; finish with lime.','pan',null,'core'),
+('steak_with_sweet_potato_fries_salad','Biefstuk met zoete-aardappelfriet & salade','Steak with sweet potato fries & salad',ARRAY['dinner'],ARRAY['cut','maintain'],'[{"slug":"beef_lean","g":150},{"slug":"sweet_potato","g":220},{"slug":"lettuce","g":60},{"slug":"tomato","g":80},{"slug":"olive_oil","g":6}]'::jsonb,ARRAY['sport','high_protein']::text[],ARRAY[]::text[],'1. Snijd de zoete aardappel in frieten, hussel met olijfolie en bak 25 min op 220°C.
+2. Bak de biefstuk 2–3 min per kant en laat rusten.
+3. Serveer met een frisse salade van sla en tomaat.','1. Cut the sweet potato into fries, toss with olive oil and bake 25 min at 220°C.
+2. Sear the steak 2–3 min per side and rest.
+3. Serve with a fresh salad of lettuce and tomato.','oven',null,'core'),
+('sous_vide_salmon_50_c_with_potato_asparagus','Zalm sous-vide 50°C met aardappel & asperges','Sous-vide salmon 50°C with potato & asparagus',ARRAY['dinner'],ARRAY['maintain'],'[{"slug":"salmon","g":140},{"slug":"potato","g":220},{"slug":"asparagus","g":120},{"slug":"olive_oil","g":5}]'::jsonb,ARRAY['sport','sousvide']::text[],ARRAY[]::text[],'1. Vacumeer de zalm met wat olijfolie en citroen en gaar sous-vide op 50°C (30–40 min).
+2. Kook de aardappels gaar en stoom de asperges beetgaar.
+3. Schroei de zalm eventueel kort op de velkant en serveer met de groente.','1. Vacuum-seal the salmon with a little olive oil and lemon and cook sous-vide at 50°C (30–40 min).
+2. Boil the potatoes and steam the asparagus until tender.
+3. Optionally sear the salmon briefly skin-side and serve with the vegetables.','sousvide','50°C','core'),
+('turkey_stir_fry_with_cashew_pepper_rice','Kalkoen-roerbak met cashew, paprika & rijst','Turkey stir-fry with cashew, pepper & rice',ARRAY['dinner'],ARRAY['cut','maintain'],'[{"slug":"turkey_breast","g":150},{"slug":"rice_dry","g":65},{"slug":"paprika","g":100},{"slug":"cashew","g":15},{"slug":"soy_sauce","g":12}]'::jsonb,ARRAY['sport','high_protein']::text[],ARRAY[]::text[],'1. Kook de rijst gaar.
+2. Roerbak de kalkoenreepjes op hoog vuur, voeg de paprika toe.
+3. Blus af met sojasaus, roer de cashewnoten erdoor en serveer over de rijst.','1. Cook the rice.
+2. Stir-fry the turkey strips on high heat, add the pepper.
+3. Deglaze with soy sauce, stir in the cashews and serve over the rice.','pan',null,'core'),
+('shrimp_curry_with_light_coconut_milk_rice','Garnalencurry met kokosmelk light & rijst','Shrimp curry with light coconut milk & rice',ARRAY['dinner'],ARRAY['maintain'],'[{"slug":"shrimp","g":140},{"slug":"rice_dry","g":65},{"slug":"coconut_light","g":80},{"slug":"paprika","g":80},{"slug":"curry_paste","g":20}]'::jsonb,ARRAY['sport']::text[],ARRAY[]::text[],'1. Kook de rijst gaar.
+2. Bak de currypasta kort, voeg de paprika en kokosmelk toe en laat pruttelen.
+3. Voeg de garnalen toe en gaar 3–4 min tot ze roze zijn; serveer over de rijst.','1. Cook the rice.
+2. Fry the curry paste briefly, add the pepper and coconut milk and simmer.
+3. Add the shrimp and cook 3–4 min until pink; serve over the rice.','pan',null,'core'),
+('tofu_teriyaki_with_noodles_broccoli','Tofu-teriyaki met noedels & broccoli','Tofu teriyaki with noodles & broccoli',ARRAY['dinner'],ARRAY['maintain'],'[{"slug":"tofu","g":180},{"slug":"noodles_whole","g":70},{"slug":"broccoli","g":150},{"slug":"teriyaki","g":25}]'::jsonb,ARRAY['sport','vegetarian','vegan']::text[],ARRAY[]::text[],'1. Kook de volkoren noedels beetgaar.
+2. Bak de tofublokjes goudbruin en knapperig.
+3. Voeg de broccoli en teriyaki toe, roerbak beetgaar en meng de noedels erdoor.','1. Cook the whole-wheat noodles al dente.
+2. Fry the tofu until golden and crisp.
+3. Add the broccoli and teriyaki, stir-fry until tender and toss the noodles through.','pan',null,'core'),
+('chicken_souvlaki_with_bulgur_tzatziki_tomato','Kip-souvlaki met bulgur, tzatziki & tomaat','Chicken souvlaki with bulgur, tzatziki & tomato',ARRAY['dinner'],ARRAY['cut','maintain'],'[{"slug":"chicken_breast","g":150},{"slug":"bulgur","g":60},{"slug":"yoghurt_lowfat","g":60},{"slug":"cucumber","g":60},{"slug":"tomato","g":80}]'::jsonb,ARRAY['sport','high_protein']::text[],ARRAY[]::text[],'1. Kook de bulgur gaar.
+2. Rijg de gekruide kip en gril gaar.
+3. Rasp de komkommer en meng met de yoghurt en knoflook tot tzatziki; serveer met de bulgur en tomaat.','1. Cook the bulgur.
+2. Skewer the seasoned chicken and grill.
+3. Grate the cucumber and mix with the yoghurt and garlic into tzatziki; serve with the bulgur and tomato.','pan',null,'core'),
+('lentil_dal_with_rice_spinach','Linzen-dal met rijst & spinazie','Lentil dal with rice & spinach',ARRAY['dinner'],ARRAY['maintain'],'[{"slug":"lentils","g":180},{"slug":"rice_dry","g":60},{"slug":"spinach","g":80},{"slug":"onion","g":40},{"slug":"curry_paste","g":15}]'::jsonb,ARRAY['sport','vegetarian','vegan']::text[],ARRAY[]::text[],'1. Kook de rijst gaar.
+2. Fruit de ui met de currypasta, voeg de linzen en een scheut water toe en laat 10 min pruttelen.
+3. Roer de spinazie erdoor tot geslonken en serveer over de rijst.','1. Cook the rice.
+2. Fry the onion with the curry paste, add the lentils and a splash of water and simmer 10 min.
+3. Stir the spinach through until wilted and serve over the rice.','pan',null,'core'),
+('stuffed_pepper_with_chicken_mince_rice_tomato','Gevulde paprika met kipgehakt, rijst & tomaat','Stuffed pepper with chicken mince, rice & tomato',ARRAY['dinner'],ARRAY['maintain'],'[{"slug":"paprika","g":160},{"slug":"chicken_mince","g":120},{"slug":"rice_dry","g":50},{"slug":"passata","g":100},{"slug":"onion","g":40}]'::jsonb,ARRAY['sport']::text[],ARRAY[]::text[],'1. Kook de rijst gaar en rul het kipgehakt met de ui.
+2. Meng de rijst, het gehakt en de passata met kruiden.
+3. Vul de halve paprika''s en bak 25 min op 200°C tot gaar.','1. Cook the rice and brown the chicken mince with the onion.
+2. Mix the rice, mince and passata with herbs.
+3. Fill the pepper halves and bake 25 min at 200°C until done.','oven',null,'core'),
+('white_fish_with_curry_cauliflower_rice','Witvis met kerrie, bloemkool & rijst','White fish with curry, cauliflower & rice',ARRAY['dinner'],ARRAY['cut','maintain'],'[{"slug":"white_fish","g":160},{"slug":"rice_dry","g":65},{"slug":"cauliflower","g":150},{"slug":"coconut_light","g":60},{"slug":"curry_paste","g":15}]'::jsonb,ARRAY['sport','high_protein']::text[],ARRAY[]::text[],'1. Kook de rijst gaar.
+2. Bak de currypasta kort, voeg de kokosmelk en bloemkoolroosjes toe en gaar 8 min.
+3. Leg de witvis erin en pocheer 5–6 min tot gaar; serveer met de rijst.','1. Cook the rice.
+2. Fry the curry paste briefly, add the coconut milk and cauliflower florets and cook 8 min.
+3. Lay the white fish in and poach 5–6 min until done; serve with the rice.','pan',null,'core'),
+('beef_chili_con_carne_with_kidney_beans_rice','Rundergehakt-chili con carne met kidneybonen & rijst','Beef chili con carne with kidney beans & rice',ARRAY['dinner'],ARRAY['gain','maintain'],'[{"slug":"beef_mince5","g":140},{"slug":"kidney_beans","g":120},{"slug":"passata","g":150},{"slug":"corn","g":60},{"slug":"rice_dry","g":60}]'::jsonb,ARRAY['sport']::text[],ARRAY[]::text[],'1. Kook de rijst gaar.
+2. Rul het gehakt, voeg de passata, kidneybonen en mais toe met komijn, paprikapoeder en chili.
+3. Laat 12 min pruttelen en serveer over de rijst.','1. Cook the rice.
+2. Brown the mince, add the passata, kidney beans and corn with cumin, paprika and chili.
+3. Simmer 12 min and serve over the rice.','pan',null,'core'),
+('cod_with_pea_mash_potato','Kabeljauw met erwtenpuree & aardappel','Cod with pea mash & potato',ARRAY['dinner'],ARRAY['cut','maintain'],'[{"slug":"cod","g":160},{"slug":"potato","g":220},{"slug":"peas","g":150},{"slug":"olive_oil","g":5}]'::jsonb,ARRAY['sport','high_protein']::text[],ARRAY[]::text[],'1. Kook de aardappels gaar.
+2. Kook de doperwten kort en pureer ze grof met wat peper en munt.
+3. Bak de kabeljauw 3–4 min per kant tot gaar en serveer met de puree en aardappel.','1. Boil the potatoes.
+2. Cook the peas briefly and mash coarsely with pepper and mint.
+3. Pan-fry the cod 3–4 min per side until done and serve with the mash and potato.','pan',null,'core'),
+('sous_vide_chicken_thigh_65_c_with_sweet_potato_vegetables','Kipdij sous-vide 65°C met zoete aardappel & groente','Sous-vide chicken thigh 65°C with sweet potato & vegetables',ARRAY['dinner'],ARRAY['maintain'],'[{"slug":"chicken_thigh","g":150},{"slug":"sweet_potato","g":200},{"slug":"green_beans","g":120},{"slug":"olive_oil","g":5}]'::jsonb,ARRAY['sport','sousvide']::text[],ARRAY[]::text[],'1. Vacumeer de kipdij en gaar sous-vide op 65°C (1,5–4 u) tot mals en gaar.
+2. Rooster de zoete aardappel in de oven op 200°C in ca. 25 min.
+3. Stoom de sperziebonen beetgaar, schroei de kipdij kort aan en serveer samen.','1. Vacuum-seal the chicken thigh and cook sous-vide at 65°C (1.5–4 h) until tender and done.
+2. Roast the sweet potato in the oven at 200°C for about 25 min.
+3. Steam the green beans, sear the thigh briefly and serve together.','sousvide','65°C','core'),
+('wholegrain_crackers_with_low_fat_cheese_cucumber','Volkoren crackers met magere kaas & komkommer','Wholegrain crackers with low-fat cheese & cucumber',ARRAY['snack'],ARRAY['maintain'],'[{"slug":"crackers_whole","g":24},{"slug":"low_fat_cheese","g":30},{"slug":"cucumber","g":40}]'::jsonb,ARRAY['sport','vegetarian']::text[],ARRAY[]::text[],'1. Beleg de crackers met plakjes magere kaas.
+2. Leg er dunne plakjes komkommer op.
+3. Maal er wat peper over.','1. Top the crackers with slices of low-fat cheese.
+2. Add thin cucumber slices.
+3. Grind some pepper over.','assembly',null,'core'),
+('protein_energy_balls_of_date_oats_peanut_butter','Proteïne-energieballen van dadel, havermout & pindakaas','Protein energy balls of date, oats & peanut butter',ARRAY['snack'],ARRAY['maintain'],'[{"slug":"dates","g":60},{"slug":"oats","g":30},{"slug":"peanut_butter","g":15},{"slug":"whey","g":15}]'::jsonb,ARRAY['sport','vegetarian']::text[],ARRAY[]::text[],'1. Pureer de dadels met de havermout, pindakaas en whey tot een kleverige massa.
+2. Rol er balletjes van.
+3. Laat 30 min opstijven in de koelkast.','1. Blend the dates with the oats, peanut butter and whey into a sticky mass.
+2. Roll into balls.
+3. Chill 30 min to firm up.','blender',null,'core'),
+('quark_with_mango_pumpkin_seeds','Kwark met mango & pompoenpitten','Quark with mango & pumpkin seeds',ARRAY['snack'],ARRAY['cut','maintain'],'[{"slug":"quark_lowfat","g":150},{"slug":"mango","g":70},{"slug":"pumpkin_seeds","g":10}]'::jsonb,ARRAY['sport','high_protein','vegetarian']::text[],ARRAY[]::text[],'1. Schep de kwark in een kom.
+2. Top met blokjes mango.
+3. Strooi de pompoenpitten erover.','1. Spoon the quark into a bowl.
+2. Top with diced mango.
+3. Scatter the pumpkin seeds over.','assembly',null,'core'),
+('cottage_cheese_with_cucumber_tomato','Hüttenkäse met komkommer & tomaat','Cottage cheese with cucumber & tomato',ARRAY['snack'],ARRAY['cut','maintain'],'[{"slug":"cottage","g":150},{"slug":"cucumber","g":60},{"slug":"cherry_tomato","g":60}]'::jsonb,ARRAY['sport','high_protein','vegetarian']::text[],ARRAY[]::text[],'1. Schep de hüttenkäse in een kom.
+2. Meng er blokjes komkommer en gehalveerde cherrytomaat door.
+3. Breng op smaak met peper en wat bieslook.','1. Spoon the cottage cheese into a bowl.
+2. Mix in diced cucumber and halved cherry tomato.
+3. Season with pepper and some chives.','assembly',null,'core'),
+('rice_cakes_with_peanut_butter_banana','Rijstwafels met pindakaas & banaan','Rice cakes with peanut butter & banana',ARRAY['snack'],ARRAY['maintain'],'[{"slug":"rice_cakes","g":26},{"slug":"peanut_butter","g":15},{"slug":"banana","g":60}]'::jsonb,ARRAY['sport','vegetarian','vegan']::text[],ARRAY[]::text[],'1. Besmeer de rijstwafels dun met pindakaas.
+2. Beleg met schijfjes banaan.','1. Spread the rice cakes thinly with peanut butter.
+2. Top with banana slices.','assembly',null,'core'),
+('apple_with_peanut_butter','Appel met pindakaas','Apple with peanut butter',ARRAY['snack'],ARRAY['maintain'],'[{"slug":"apple","g":150},{"slug":"peanut_butter","g":15}]'::jsonb,ARRAY['sport','vegetarian','vegan']::text[],ARRAY[]::text[],'1. Snijd de appel in partjes.
+2. Dip ze in de pindakaas.','1. Slice the apple into wedges.
+2. Dip them in the peanut butter.','assembly',null,'core'),
+('skyr_with_oats_raspberries','Skyr met havermout & frambozen','Skyr with oats & raspberries',ARRAY['snack'],ARRAY['cut','maintain'],'[{"slug":"skyr","g":150},{"slug":"oats","g":25},{"slug":"raspberry","g":60}]'::jsonb,ARRAY['sport','high_protein','vegetarian']::text[],ARRAY[]::text[],'1. Meng de skyr met de havermout.
+2. Top met de frambozen.','1. Mix the skyr with the oats.
+2. Top with the raspberries.','assembly',null,'core'),
+('pear_with_walnuts_cinnamon','Peer met walnoten & kaneel','Pear with walnuts & cinnamon',ARRAY['snack'],ARRAY['maintain'],'[{"slug":"pear","g":150},{"slug":"walnuts","g":12},{"slug":"quark_lowfat","g":80}]'::jsonb,ARRAY['sport','vegetarian']::text[],ARRAY[]::text[],'1. Snijd de peer in partjes.
+2. Serveer met een lepel kwark, grof gehakte walnoten en een snuf kaneel.','1. Slice the pear into wedges.
+2. Serve with a spoon of quark, roughly chopped walnuts and a pinch of cinnamon.','assembly',null,'core')
 on conflict (slug) do update set name_nl=excluded.name_nl,name_en=excluded.name_en,moments=excluded.moments,goals=excluded.goals,items=excluded.items,tags=excluded.tags,prefs=excluded.prefs,steps=excluded.steps,steps_en=excluded.steps_en,technique=excluded.technique,temp=excluded.temp;
 commit;
