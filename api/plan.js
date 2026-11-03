@@ -351,15 +351,20 @@ function buildPrompt(b, cyc) {
         : `MAALTIJDKEUZES PER MOMENT (HARDE EIS — de persoon koos deze expliciet per eetmoment). Bouw elke maaltijd ALLEEN uit de bijbehorende lijst en verplaats NOOIT een keuze naar een ander eetmoment (een Diner-keuze mag niet bij Lunch staan, een Lunch-keuze niet bij Ontbijt). Gebruik de genoemde opties (wissel er over de week tussen, tenzij hierboven een vast dagpatroon is gevraagd); schaal porties naar de dagdoelen. Verzin voor een genoemd moment geen gerechten buiten deze lijst:\n${mealPrefRows.join("\n")}\nVoor een eetmoment dat hier NIET genoemd is, kies iets dat bij de algemene voorkeuren past.`)
     : "";
 
+  // De receptenlijst is inspiratie, maar mag NOOIT de keuzes hierboven overrulen.
+  // Bij keuzes per moment: recepten alleen voor momenten ZONDER keuze.
+  const recipeIntro = mealPrefRows.length
+    ? `Recipe ideas below are ONLY inspiration for meal moments that have NO chosen option in the MEAL CHOICES block above. For any moment WITH a chosen option, build the meal from that option and IGNORE this list entirely — do not rename or swap it to a recipe from here. Whatever you use must still fit the day's targets, the diet and the avoid-list, and no novelty/"superfood" ingredients unless preferences mention them:`
+    : `Optional recipe ideas that suit this person's taste — use any that fit the day's targets, the diet and the avoid-list, scaling portions to hit the numbers. Otherwise build your own simple, realistic meals around their stated preferences. Do NOT introduce novelty or "superfood" ingredients (matcha, ashwagandha, etc.) unless their preferences above mention them:`;
+
   return `You are a sports nutrition coach. Build these meal-days, each hitting ITS OWN targets:
 ${dayLines}
 
-Diet: ${diet}. Avoid: ${avoid}.
+${mealPrefBlock ? mealPrefBlock + "\n\n" : ""}Diet: ${diet}. Avoid: ${avoid}.
 Preferences: ${prefText}
-${mealPrefBlock ? "\n" + mealPrefBlock + "\n" : ""}
 ${varietyRule}
 
-Optional recipe ideas that suit this person's taste — use any that fit the day's targets, the diet and the avoid-list, scaling portions to hit the numbers. Otherwise build your own simple, realistic meals around their stated preferences. Do NOT introduce novelty or "superfood" ingredients (matcha, ashwagandha, etc.) unless their preferences above mention them:
+${recipeIntro}
 ${recipeLines}
 
 Keep protein high and roughly equal on every day; put the calorie difference between training and rest days mainly into carbohydrates (rice, oats, potato, fruit). ${cookLine}
@@ -370,7 +375,7 @@ ${L.rule2}${L.snackGuide ? "\n" + L.snackGuide : ""}
 - For EACH meal list 2-4 main ingredients with weights in grams.
 - Each meal's kcal and p/c/f MUST match the listed ingredient weights.
 - Each day's meals should sum close to THAT day's targets above.
-${L.ruleN}
+${L.ruleN}${mealPrefRows.length ? "\n- CRITICAL: the dish for each meal moment that has chosen options (see MEAL CHOICES at the top) MUST be one of those chosen options — name it accordingly and build its ingredients. Do NOT replace it with a recipe-idea dish. Only invent freely for moments without chosen options." : ""}
 
 Return ONLY valid JSON, no markdown, exactly this shape (keep the JSON keys in English, set "d" to each day's label above):
 ${L.example}`;
@@ -559,3 +564,4 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "Serverfout", detail: String(e).slice(0, 200) });
   }
 }
+
