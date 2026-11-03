@@ -1734,6 +1734,7 @@ export default function App() {
   }
 
   function DayCard({ day, sample }) {
+    const [stepsOpen, setStepsOpen] = useState(null);
     const tot = day.m.reduce((a, m) => ({ kcal: a.kcal + num(m.kcal), p: a.p + num(m.p), c: a.c + num(m.c), f: a.f + num(m.f) }), { kcal: 0, p: 0, c: 0, f: 0 });
     return (
       <div style={{ background: INK2, border: `1px solid ${LINE}`, borderRadius: 12, overflow: "hidden" }}>
@@ -1755,6 +1756,18 @@ export default function App() {
                   {m.ing && m.ing.length > 0 && (
                     <div style={{ fontSize: 11.5, color: MUTED, marginTop: 3, lineHeight: 1.5 }}>
                       {m.ing.map((ing, ii) => <span key={ii}><span style={{ color: PAPER }}>{gShow(ing.g, units)}{wUnit(units)}</span> {ing.n}{ii < m.ing.length - 1 ? " · " : ""}</span>)}
+                    </div>
+                  )}
+                  {m.steps && String(m.steps).trim() && (
+                    <div style={{ marginTop: 7 }}>
+                      <div onClick={() => setStepsOpen(stepsOpen === mi ? null : mi)} style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11, color: EMBER, fontWeight: 700, ...disp, letterSpacing: 0.3 }}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 5a2 2 0 012-2h13v16H6a2 2 0 00-2 2V5z" /><path d="M9 7h6M9 10h6M9 13h4" /></svg>
+                        {lang === "nl" ? "Bereidingswijze" : "How to make it"}
+                        <span style={{ fontSize: 9, transform: stepsOpen === mi ? "rotate(180deg)" : "none", display: "inline-block" }}>▾</span>
+                      </div>
+                      {stepsOpen === mi && (
+                        <div style={{ marginTop: 6, background: INK, border: `1px solid ${LINE}`, borderRadius: 9, padding: "9px 11px", fontSize: 12, color: PAPER, lineHeight: 1.6, whiteSpace: "pre-line" }}>{String(m.steps).trim()}</div>
+                      )}
                     </div>
                   )}
                 </div>

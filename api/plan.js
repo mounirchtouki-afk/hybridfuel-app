@@ -412,7 +412,7 @@ function dishMac(items, ing) {
 }
 async function fetchDishes(moment, chipIds) {
   const { url, headers } = supaBase();
-  let q = url + "/rest/v1/dishes?select=slug,name_nl,name_en,moments,goals,items,tags,prefs&active=eq.true&source=eq.core&moments=ov.%7B" + encodeURIComponent(moment) + "%7D&limit=400";
+  let q = url + "/rest/v1/dishes?select=slug,name_nl,name_en,moments,goals,items,tags,prefs,steps&active=eq.true&source=eq.core&moments=ov.%7B" + encodeURIComponent(moment) + "%7D&limit=400";
   if (chipIds && chipIds.length) q += "&prefs=ov.%7B" + chipIds.map(encodeURIComponent).join(",") + "%7D";
   try {
     const r = await fetch(q, { headers });
@@ -455,7 +455,7 @@ async function buildFromLibrary(body, cyc) {
     factor = Math.max(0.45, Math.min(2.6, factor));
     const items = (dish.items || []).map((it) => ({ n: name(ing[it.slug]) || it.slug, g: Math.round(it.g * factor) }));
     const mac = dishMac((dish.items || []).map((it) => ({ slug: it.slug, g: it.g * factor })), ing);
-    return { t: null, n: name(dish), kcal: Math.round(mac.kcal), p: Math.round(mac.p), c: Math.round(mac.c), f: Math.round(mac.f), ing: items };
+    return { t: null, n: name(dish), kcal: Math.round(mac.kcal), p: Math.round(mac.p), c: Math.round(mac.c), f: Math.round(mac.f), ing: items, steps: dish.steps || "" };
   }
   function scaleProduct(prod, targetKcal) {
     const per = prod.per_100 || {}; const k100 = Number(per.kcal) || 0; if (!(k100 > 0)) return null;
