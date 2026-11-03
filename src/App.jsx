@@ -2125,13 +2125,6 @@ export default function App() {
                 <Dropdown value={snacks} onChange={setSnacks} options={[0, 1, 2, 3].map((n) => ({ id: n, label: String(n) }))} />
                 <div style={{ fontSize: 11, color: MUTED, lineHeight: 1.5, marginTop: 8 }}>{T("snacksHint")}</div>
               </div>
-              {snacks > 0 && (
-                <div style={{ marginBottom: 18 }}>
-                  <label style={label}>{T("snackLikesLbl")}</label>
-                  <MultiDropdown values={snackLikes} onChange={setSnackLikes} options={SNACKS.map((s) => ({ id: s.id, label: s[lang] }))} placeholder={T("pickMulti")} />
-                </div>
-              )}
-
               <div style={{ marginBottom: 12 }}>
                 <label style={label}>{T("planSourceLbl")}</label>
                 <div style={{ display: "flex", border: `1px solid ${LINE}`, borderRadius: 10, overflow: "hidden", marginTop: 4 }}>
