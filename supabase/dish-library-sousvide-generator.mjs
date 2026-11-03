@@ -33,7 +33,7 @@ const dishes=[]; const used=new Set();
 function add(nl,en,moments,items,prefs=[],st=null){const key=slug(en);if(used.has(key))return;used.add(key);const mac=macros(items);const goals=[];if((mac.p*4)/Math.max(1,mac.kcal)>=0.30&&mac.kcal<=700)goals.push("cut");if(mac.kcal>=600)goals.push("gain");goals.push("maintain");dishes.push({slug:key,nl,en,moments,goals:[...new Set(goals)],items,tags:["sousvide","high_protein"],prefs,steps:(st&&st.nl)||"",steps_en:(st&&st.en)||"",technique:"sousvide",temp:(st&&st.temp)||null});}
 // Kern-temp + tijd per eiwit (gevalideerd: Anova + Serious Eats/ChefSteps).
 const svInfo={
-  chicken_breast:{temp:"63°C",time:"1,5–4 u"}, chicken_thigh:{temp:"74°C",time:"1–4 u"},
+  chicken_breast:{temp:"63°C",time:"1,5–4 u"}, chicken_thigh:{temp:"65°C",time:"1,5–4 u"},
   beef_steak:{temp:"54°C",time:"1,5–4 u"}, flat_iron:{temp:"54°C",time:"1,5–4 u"},
   lamb_fillet:{temp:"54°C",time:"1,5–3 u"}, pork_tenderloin:{temp:"58°C",time:"1–4 u"},
   duck_breast:{temp:"56°C",time:"1,5–3 u"}, salmon:{temp:"50°C",time:"30–45 min",fish:true},
@@ -47,7 +47,7 @@ function svSteps(ps,cnl,cen,vnl,ven){const i=svInfo[ps]||{temp:"",time:""};const
 // Sous-vide eiwitten met kern-temp (naam encodeert techniek + temp)
 const SV=[
   ["chicken_breast","Kip sous-vide 63°C","Sous-vide chicken 63°C",160,["chickenrice","ricechicken"]],
-  ["chicken_thigh","Kipdij sous-vide 74°C","Sous-vide chicken thigh 74°C",150,[]],
+  ["chicken_thigh","Kipdij sous-vide 65°C","Sous-vide chicken thigh 65°C",150,[]],
   ["beef_steak","Biefstuk sous-vide 54°C (medium-rare)","Sous-vide steak 54°C (medium-rare)",150,["steakpotato"]],
   ["flat_iron","Flat iron steak sous-vide 54°C","Sous-vide flat iron steak 54°C",150,["steakpotato"]],
   ["lamb_fillet","Lamsfilet sous-vide 54°C","Sous-vide lamb fillet 54°C",150,[]],
@@ -71,10 +71,10 @@ for(const [ps,pnl,pen,pg,pprefs] of SV){
     }
   }
 }
-// Onsen-ei (sous-vide 63°C) extra
-add("Onsen-ei 63°C met spinazie","Onsen egg 63°C with spinach",["breakfast","lunch"],[{slug:"egg",g:120},{slug:"spinach",g:60},{slug:"olive_oil",g:3}],[],{temp:"63°C",
-  nl:["Gaar de eieren sous-vide op 63°C (45–60 min) voor een romige dooier.","Wok of slink de spinazie kort in de olijfolie.","Pel de onsen-eieren voorzichtig en leg ze op de spinazie.","Breng op smaak met peper en zout."].map((s,n)=>(n+1)+". "+s).join("\n"),
-  en:["Cook the eggs sous-vide at 63°C (45–60 min) for a creamy yolk.","Wilt the spinach briefly in the olive oil.","Peel the onsen eggs carefully and set them on the spinach.","Season with salt and pepper."].map((s,n)=>(n+1)+". "+s).join("\n")});
+// Zachtgekookt ei (sous-vide 63°C) — gewone taal i.p.v. "onsen-ei"
+add("Zachtgekookt ei (63°C) met spinazie","Soft-cooked egg (63°C) with spinach",["breakfast","lunch"],[{slug:"egg",g:120},{slug:"spinach",g:60},{slug:"olive_oil",g:3}],[],{temp:"63°C",
+  nl:["Gaar de eieren sous-vide op 63°C (45–60 min) voor een romige dooier.","Wok of slink de spinazie kort in de olijfolie.","Pel de eieren voorzichtig en leg ze op de spinazie.","Breng op smaak met peper en zout."].map((s,n)=>(n+1)+". "+s).join("\n"),
+  en:["Cook the eggs sous-vide at 63°C (45–60 min) for a creamy yolk.","Wilt the spinach briefly in the olive oil.","Peel the eggs carefully and set them on the spinach.","Season with salt and pepper."].map((s,n)=>(n+1)+". "+s).join("\n")});
 
 // ---- SQL ----
 const esc=(s)=>s.replace(/'/g,"''");
@@ -89,6 +89,8 @@ const CHUNK=150;const nParts=Math.ceil(dishes.length/CHUNK);
 for(let p=0;p<nParts;p++){
   const slice=dishes.slice(p*CHUNK,(p+1)*CHUNK);const num=String(p+1).padStart(2,"0");
   let out=`-- SOUS-VIDE seed deel ${p+1}/${nParts} (${slice.length} gerechten). Draai NA dish-library.sql.\nbegin;\n`;
+  // Oude, hernoemde gerechten opruimen (74°C kip -> 65°C; onsen-ei -> zachtgekookt ei).
+  if(p===0)out+="delete from public.dishes where source='core' and (slug like '%74_c%' or slug like 'onsen%');\n";
   if(p===0)out+=ingBlock;
   out+=dishHead+slice.map(dishRow).join(",\n")+dishTail;
   writeFileSync(new URL(`./sousvide-seed-part-${num}.sql`,import.meta.url),out);

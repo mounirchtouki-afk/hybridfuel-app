@@ -1,5 +1,6 @@
 -- SOUS-VIDE seed deel 1/2 (150 gerechten). Draai NA dish-library.sql.
 begin;
+delete from public.dishes where source='core' and (slug like '%74_c%' or slug like 'onsen%');
 insert into public.ingredients (slug,name_nl,name_en,kcal,protein,carbs,fat,category,source) values
 ('chicken_breast','Kipfilet (gegrild)','Chicken breast',165,31,0,3.6,'vlees','core'),
 ('sweet_potato','Zoete aardappel','Sweet potato',86,1.6,20,0.1,'granen','core'),
@@ -246,226 +247,226 @@ insert into public.dishes (slug,name_nl,name_en,moments,goals,items,tags,prefs,s
 4. Cook the quinoa per the package.
 5. Steam or stir-fry the zucchini until tender-crisp.
 6. Slice, season and serve.','sousvide','63°C','core'),
-('sous_vide_chicken_thigh_74_c_with_sweet_potato_broccoli','Kipdij sous-vide 74°C met zoete aardappel & broccoli','Sous-vide chicken thigh 74°C with sweet potato & broccoli',ARRAY['dinner','lunch'],ARRAY['cut','maintain'],'[{"slug":"chicken_thigh","g":150},{"slug":"sweet_potato","g":200},{"slug":"broccoli","g":120},{"slug":"butter","g":8}]'::jsonb,ARRAY['sousvide','high_protein']::text[],ARRAY[]::text[],'1. Vacumeer de kipdij (eventueel met een takje kruiden en wat olie).
-2. Gaar sous-vide op 74°C (1–4 u).
+('sous_vide_chicken_thigh_65_c_with_sweet_potato_broccoli','Kipdij sous-vide 65°C met zoete aardappel & broccoli','Sous-vide chicken thigh 65°C with sweet potato & broccoli',ARRAY['dinner','lunch'],ARRAY['cut','maintain'],'[{"slug":"chicken_thigh","g":150},{"slug":"sweet_potato","g":200},{"slug":"broccoli","g":120},{"slug":"butter","g":8}]'::jsonb,ARRAY['sousvide','high_protein']::text[],ARRAY[]::text[],'1. Vacumeer de kipdij (eventueel met een takje kruiden en wat olie).
+2. Gaar sous-vide op 65°C (1,5–4 u).
 3. Dep droog en schroei rondom kort dicht in een gloeiend hete pan of met de brander, voor een korst.
 4. Kook de zoete aardappel volgens de verpakking.
 5. Stoom of wok de broccoli beetgaar.
 6. Snijd aan, breng op smaak en serveer.','1. Vacuum-seal the chicken thigh (add herbs and a little oil if you like).
-2. Cook sous-vide at 74°C (1–4 u).
+2. Cook sous-vide at 65°C (1,5–4 u).
 3. Pat dry and sear all over in a screaming-hot pan or with a torch, for a crust.
 4. Cook the sweet potato per the package.
 5. Steam or stir-fry the broccoli until tender-crisp.
-6. Slice, season and serve.','sousvide','74°C','core'),
-('sous_vide_chicken_thigh_74_c_with_sweet_potato_green_beans','Kipdij sous-vide 74°C met zoete aardappel & sperziebonen','Sous-vide chicken thigh 74°C with sweet potato & green beans',ARRAY['dinner','lunch'],ARRAY['cut','maintain'],'[{"slug":"chicken_thigh","g":150},{"slug":"sweet_potato","g":200},{"slug":"green_beans","g":120},{"slug":"butter","g":8}]'::jsonb,ARRAY['sousvide','high_protein']::text[],ARRAY[]::text[],'1. Vacumeer de kipdij (eventueel met een takje kruiden en wat olie).
-2. Gaar sous-vide op 74°C (1–4 u).
+6. Slice, season and serve.','sousvide','65°C','core'),
+('sous_vide_chicken_thigh_65_c_with_sweet_potato_green_beans','Kipdij sous-vide 65°C met zoete aardappel & sperziebonen','Sous-vide chicken thigh 65°C with sweet potato & green beans',ARRAY['dinner','lunch'],ARRAY['cut','maintain'],'[{"slug":"chicken_thigh","g":150},{"slug":"sweet_potato","g":200},{"slug":"green_beans","g":120},{"slug":"butter","g":8}]'::jsonb,ARRAY['sousvide','high_protein']::text[],ARRAY[]::text[],'1. Vacumeer de kipdij (eventueel met een takje kruiden en wat olie).
+2. Gaar sous-vide op 65°C (1,5–4 u).
 3. Dep droog en schroei rondom kort dicht in een gloeiend hete pan of met de brander, voor een korst.
 4. Kook de zoete aardappel volgens de verpakking.
 5. Stoom of wok de sperziebonen beetgaar.
 6. Snijd aan, breng op smaak en serveer.','1. Vacuum-seal the chicken thigh (add herbs and a little oil if you like).
-2. Cook sous-vide at 74°C (1–4 u).
+2. Cook sous-vide at 65°C (1,5–4 u).
 3. Pat dry and sear all over in a screaming-hot pan or with a torch, for a crust.
 4. Cook the sweet potato per the package.
 5. Steam or stir-fry the green beans until tender-crisp.
-6. Slice, season and serve.','sousvide','74°C','core'),
-('sous_vide_chicken_thigh_74_c_with_sweet_potato_green_asparagus','Kipdij sous-vide 74°C met zoete aardappel & groene asperges','Sous-vide chicken thigh 74°C with sweet potato & green asparagus',ARRAY['dinner','lunch'],ARRAY['cut','maintain'],'[{"slug":"chicken_thigh","g":150},{"slug":"sweet_potato","g":200},{"slug":"asparagus","g":120},{"slug":"butter","g":8}]'::jsonb,ARRAY['sousvide','high_protein']::text[],ARRAY[]::text[],'1. Vacumeer de kipdij (eventueel met een takje kruiden en wat olie).
-2. Gaar sous-vide op 74°C (1–4 u).
+6. Slice, season and serve.','sousvide','65°C','core'),
+('sous_vide_chicken_thigh_65_c_with_sweet_potato_green_asparagus','Kipdij sous-vide 65°C met zoete aardappel & groene asperges','Sous-vide chicken thigh 65°C with sweet potato & green asparagus',ARRAY['dinner','lunch'],ARRAY['cut','maintain'],'[{"slug":"chicken_thigh","g":150},{"slug":"sweet_potato","g":200},{"slug":"asparagus","g":120},{"slug":"butter","g":8}]'::jsonb,ARRAY['sousvide','high_protein']::text[],ARRAY[]::text[],'1. Vacumeer de kipdij (eventueel met een takje kruiden en wat olie).
+2. Gaar sous-vide op 65°C (1,5–4 u).
 3. Dep droog en schroei rondom kort dicht in een gloeiend hete pan of met de brander, voor een korst.
 4. Kook de zoete aardappel volgens de verpakking.
 5. Stoom of wok de groene asperges beetgaar.
 6. Snijd aan, breng op smaak en serveer.','1. Vacuum-seal the chicken thigh (add herbs and a little oil if you like).
-2. Cook sous-vide at 74°C (1–4 u).
+2. Cook sous-vide at 65°C (1,5–4 u).
 3. Pat dry and sear all over in a screaming-hot pan or with a torch, for a crust.
 4. Cook the sweet potato per the package.
 5. Steam or stir-fry the green asparagus until tender-crisp.
-6. Slice, season and serve.','sousvide','74°C','core'),
-('sous_vide_chicken_thigh_74_c_with_sweet_potato_spinach','Kipdij sous-vide 74°C met zoete aardappel & spinazie','Sous-vide chicken thigh 74°C with sweet potato & spinach',ARRAY['dinner','lunch'],ARRAY['cut','maintain'],'[{"slug":"chicken_thigh","g":150},{"slug":"sweet_potato","g":200},{"slug":"spinach","g":100},{"slug":"butter","g":8}]'::jsonb,ARRAY['sousvide','high_protein']::text[],ARRAY[]::text[],'1. Vacumeer de kipdij (eventueel met een takje kruiden en wat olie).
-2. Gaar sous-vide op 74°C (1–4 u).
+6. Slice, season and serve.','sousvide','65°C','core'),
+('sous_vide_chicken_thigh_65_c_with_sweet_potato_spinach','Kipdij sous-vide 65°C met zoete aardappel & spinazie','Sous-vide chicken thigh 65°C with sweet potato & spinach',ARRAY['dinner','lunch'],ARRAY['cut','maintain'],'[{"slug":"chicken_thigh","g":150},{"slug":"sweet_potato","g":200},{"slug":"spinach","g":100},{"slug":"butter","g":8}]'::jsonb,ARRAY['sousvide','high_protein']::text[],ARRAY[]::text[],'1. Vacumeer de kipdij (eventueel met een takje kruiden en wat olie).
+2. Gaar sous-vide op 65°C (1,5–4 u).
 3. Dep droog en schroei rondom kort dicht in een gloeiend hete pan of met de brander, voor een korst.
 4. Kook de zoete aardappel volgens de verpakking.
 5. Stoom of wok de spinazie beetgaar.
 6. Snijd aan, breng op smaak en serveer.','1. Vacuum-seal the chicken thigh (add herbs and a little oil if you like).
-2. Cook sous-vide at 74°C (1–4 u).
+2. Cook sous-vide at 65°C (1,5–4 u).
 3. Pat dry and sear all over in a screaming-hot pan or with a torch, for a crust.
 4. Cook the sweet potato per the package.
 5. Steam or stir-fry the spinach until tender-crisp.
-6. Slice, season and serve.','sousvide','74°C','core'),
-('sous_vide_chicken_thigh_74_c_with_sweet_potato_zucchini','Kipdij sous-vide 74°C met zoete aardappel & courgette','Sous-vide chicken thigh 74°C with sweet potato & zucchini',ARRAY['dinner','lunch'],ARRAY['cut','maintain'],'[{"slug":"chicken_thigh","g":150},{"slug":"sweet_potato","g":200},{"slug":"zucchini","g":120},{"slug":"butter","g":8}]'::jsonb,ARRAY['sousvide','high_protein']::text[],ARRAY[]::text[],'1. Vacumeer de kipdij (eventueel met een takje kruiden en wat olie).
-2. Gaar sous-vide op 74°C (1–4 u).
+6. Slice, season and serve.','sousvide','65°C','core'),
+('sous_vide_chicken_thigh_65_c_with_sweet_potato_zucchini','Kipdij sous-vide 65°C met zoete aardappel & courgette','Sous-vide chicken thigh 65°C with sweet potato & zucchini',ARRAY['dinner','lunch'],ARRAY['cut','maintain'],'[{"slug":"chicken_thigh","g":150},{"slug":"sweet_potato","g":200},{"slug":"zucchini","g":120},{"slug":"butter","g":8}]'::jsonb,ARRAY['sousvide','high_protein']::text[],ARRAY[]::text[],'1. Vacumeer de kipdij (eventueel met een takje kruiden en wat olie).
+2. Gaar sous-vide op 65°C (1,5–4 u).
 3. Dep droog en schroei rondom kort dicht in een gloeiend hete pan of met de brander, voor een korst.
 4. Kook de zoete aardappel volgens de verpakking.
 5. Stoom of wok de courgette beetgaar.
 6. Snijd aan, breng op smaak en serveer.','1. Vacuum-seal the chicken thigh (add herbs and a little oil if you like).
-2. Cook sous-vide at 74°C (1–4 u).
+2. Cook sous-vide at 65°C (1,5–4 u).
 3. Pat dry and sear all over in a screaming-hot pan or with a torch, for a crust.
 4. Cook the sweet potato per the package.
 5. Steam or stir-fry the zucchini until tender-crisp.
-6. Slice, season and serve.','sousvide','74°C','core'),
-('sous_vide_chicken_thigh_74_c_with_potato_broccoli','Kipdij sous-vide 74°C met aardappel & broccoli','Sous-vide chicken thigh 74°C with potato & broccoli',ARRAY['dinner','lunch'],ARRAY['cut','maintain'],'[{"slug":"chicken_thigh","g":150},{"slug":"potato","g":250},{"slug":"broccoli","g":120},{"slug":"butter","g":8}]'::jsonb,ARRAY['sousvide','high_protein']::text[],ARRAY[]::text[],'1. Vacumeer de kipdij (eventueel met een takje kruiden en wat olie).
-2. Gaar sous-vide op 74°C (1–4 u).
+6. Slice, season and serve.','sousvide','65°C','core'),
+('sous_vide_chicken_thigh_65_c_with_potato_broccoli','Kipdij sous-vide 65°C met aardappel & broccoli','Sous-vide chicken thigh 65°C with potato & broccoli',ARRAY['dinner','lunch'],ARRAY['cut','maintain'],'[{"slug":"chicken_thigh","g":150},{"slug":"potato","g":250},{"slug":"broccoli","g":120},{"slug":"butter","g":8}]'::jsonb,ARRAY['sousvide','high_protein']::text[],ARRAY[]::text[],'1. Vacumeer de kipdij (eventueel met een takje kruiden en wat olie).
+2. Gaar sous-vide op 65°C (1,5–4 u).
 3. Dep droog en schroei rondom kort dicht in een gloeiend hete pan of met de brander, voor een korst.
 4. Kook de aardappel volgens de verpakking.
 5. Stoom of wok de broccoli beetgaar.
 6. Snijd aan, breng op smaak en serveer.','1. Vacuum-seal the chicken thigh (add herbs and a little oil if you like).
-2. Cook sous-vide at 74°C (1–4 u).
+2. Cook sous-vide at 65°C (1,5–4 u).
 3. Pat dry and sear all over in a screaming-hot pan or with a torch, for a crust.
 4. Cook the potato per the package.
 5. Steam or stir-fry the broccoli until tender-crisp.
-6. Slice, season and serve.','sousvide','74°C','core'),
-('sous_vide_chicken_thigh_74_c_with_potato_green_beans','Kipdij sous-vide 74°C met aardappel & sperziebonen','Sous-vide chicken thigh 74°C with potato & green beans',ARRAY['dinner','lunch'],ARRAY['cut','maintain'],'[{"slug":"chicken_thigh","g":150},{"slug":"potato","g":250},{"slug":"green_beans","g":120},{"slug":"butter","g":8}]'::jsonb,ARRAY['sousvide','high_protein']::text[],ARRAY[]::text[],'1. Vacumeer de kipdij (eventueel met een takje kruiden en wat olie).
-2. Gaar sous-vide op 74°C (1–4 u).
+6. Slice, season and serve.','sousvide','65°C','core'),
+('sous_vide_chicken_thigh_65_c_with_potato_green_beans','Kipdij sous-vide 65°C met aardappel & sperziebonen','Sous-vide chicken thigh 65°C with potato & green beans',ARRAY['dinner','lunch'],ARRAY['cut','maintain'],'[{"slug":"chicken_thigh","g":150},{"slug":"potato","g":250},{"slug":"green_beans","g":120},{"slug":"butter","g":8}]'::jsonb,ARRAY['sousvide','high_protein']::text[],ARRAY[]::text[],'1. Vacumeer de kipdij (eventueel met een takje kruiden en wat olie).
+2. Gaar sous-vide op 65°C (1,5–4 u).
 3. Dep droog en schroei rondom kort dicht in een gloeiend hete pan of met de brander, voor een korst.
 4. Kook de aardappel volgens de verpakking.
 5. Stoom of wok de sperziebonen beetgaar.
 6. Snijd aan, breng op smaak en serveer.','1. Vacuum-seal the chicken thigh (add herbs and a little oil if you like).
-2. Cook sous-vide at 74°C (1–4 u).
+2. Cook sous-vide at 65°C (1,5–4 u).
 3. Pat dry and sear all over in a screaming-hot pan or with a torch, for a crust.
 4. Cook the potato per the package.
 5. Steam or stir-fry the green beans until tender-crisp.
-6. Slice, season and serve.','sousvide','74°C','core'),
-('sous_vide_chicken_thigh_74_c_with_potato_green_asparagus','Kipdij sous-vide 74°C met aardappel & groene asperges','Sous-vide chicken thigh 74°C with potato & green asparagus',ARRAY['dinner','lunch'],ARRAY['cut','maintain'],'[{"slug":"chicken_thigh","g":150},{"slug":"potato","g":250},{"slug":"asparagus","g":120},{"slug":"butter","g":8}]'::jsonb,ARRAY['sousvide','high_protein']::text[],ARRAY[]::text[],'1. Vacumeer de kipdij (eventueel met een takje kruiden en wat olie).
-2. Gaar sous-vide op 74°C (1–4 u).
+6. Slice, season and serve.','sousvide','65°C','core'),
+('sous_vide_chicken_thigh_65_c_with_potato_green_asparagus','Kipdij sous-vide 65°C met aardappel & groene asperges','Sous-vide chicken thigh 65°C with potato & green asparagus',ARRAY['dinner','lunch'],ARRAY['cut','maintain'],'[{"slug":"chicken_thigh","g":150},{"slug":"potato","g":250},{"slug":"asparagus","g":120},{"slug":"butter","g":8}]'::jsonb,ARRAY['sousvide','high_protein']::text[],ARRAY[]::text[],'1. Vacumeer de kipdij (eventueel met een takje kruiden en wat olie).
+2. Gaar sous-vide op 65°C (1,5–4 u).
 3. Dep droog en schroei rondom kort dicht in een gloeiend hete pan of met de brander, voor een korst.
 4. Kook de aardappel volgens de verpakking.
 5. Stoom of wok de groene asperges beetgaar.
 6. Snijd aan, breng op smaak en serveer.','1. Vacuum-seal the chicken thigh (add herbs and a little oil if you like).
-2. Cook sous-vide at 74°C (1–4 u).
+2. Cook sous-vide at 65°C (1,5–4 u).
 3. Pat dry and sear all over in a screaming-hot pan or with a torch, for a crust.
 4. Cook the potato per the package.
 5. Steam or stir-fry the green asparagus until tender-crisp.
-6. Slice, season and serve.','sousvide','74°C','core'),
-('sous_vide_chicken_thigh_74_c_with_potato_spinach','Kipdij sous-vide 74°C met aardappel & spinazie','Sous-vide chicken thigh 74°C with potato & spinach',ARRAY['dinner','lunch'],ARRAY['cut','maintain'],'[{"slug":"chicken_thigh","g":150},{"slug":"potato","g":250},{"slug":"spinach","g":100},{"slug":"butter","g":8}]'::jsonb,ARRAY['sousvide','high_protein']::text[],ARRAY[]::text[],'1. Vacumeer de kipdij (eventueel met een takje kruiden en wat olie).
-2. Gaar sous-vide op 74°C (1–4 u).
+6. Slice, season and serve.','sousvide','65°C','core'),
+('sous_vide_chicken_thigh_65_c_with_potato_spinach','Kipdij sous-vide 65°C met aardappel & spinazie','Sous-vide chicken thigh 65°C with potato & spinach',ARRAY['dinner','lunch'],ARRAY['cut','maintain'],'[{"slug":"chicken_thigh","g":150},{"slug":"potato","g":250},{"slug":"spinach","g":100},{"slug":"butter","g":8}]'::jsonb,ARRAY['sousvide','high_protein']::text[],ARRAY[]::text[],'1. Vacumeer de kipdij (eventueel met een takje kruiden en wat olie).
+2. Gaar sous-vide op 65°C (1,5–4 u).
 3. Dep droog en schroei rondom kort dicht in een gloeiend hete pan of met de brander, voor een korst.
 4. Kook de aardappel volgens de verpakking.
 5. Stoom of wok de spinazie beetgaar.
 6. Snijd aan, breng op smaak en serveer.','1. Vacuum-seal the chicken thigh (add herbs and a little oil if you like).
-2. Cook sous-vide at 74°C (1–4 u).
+2. Cook sous-vide at 65°C (1,5–4 u).
 3. Pat dry and sear all over in a screaming-hot pan or with a torch, for a crust.
 4. Cook the potato per the package.
 5. Steam or stir-fry the spinach until tender-crisp.
-6. Slice, season and serve.','sousvide','74°C','core'),
-('sous_vide_chicken_thigh_74_c_with_potato_zucchini','Kipdij sous-vide 74°C met aardappel & courgette','Sous-vide chicken thigh 74°C with potato & zucchini',ARRAY['dinner','lunch'],ARRAY['cut','maintain'],'[{"slug":"chicken_thigh","g":150},{"slug":"potato","g":250},{"slug":"zucchini","g":120},{"slug":"butter","g":8}]'::jsonb,ARRAY['sousvide','high_protein']::text[],ARRAY[]::text[],'1. Vacumeer de kipdij (eventueel met een takje kruiden en wat olie).
-2. Gaar sous-vide op 74°C (1–4 u).
+6. Slice, season and serve.','sousvide','65°C','core'),
+('sous_vide_chicken_thigh_65_c_with_potato_zucchini','Kipdij sous-vide 65°C met aardappel & courgette','Sous-vide chicken thigh 65°C with potato & zucchini',ARRAY['dinner','lunch'],ARRAY['cut','maintain'],'[{"slug":"chicken_thigh","g":150},{"slug":"potato","g":250},{"slug":"zucchini","g":120},{"slug":"butter","g":8}]'::jsonb,ARRAY['sousvide','high_protein']::text[],ARRAY[]::text[],'1. Vacumeer de kipdij (eventueel met een takje kruiden en wat olie).
+2. Gaar sous-vide op 65°C (1,5–4 u).
 3. Dep droog en schroei rondom kort dicht in een gloeiend hete pan of met de brander, voor een korst.
 4. Kook de aardappel volgens de verpakking.
 5. Stoom of wok de courgette beetgaar.
 6. Snijd aan, breng op smaak en serveer.','1. Vacuum-seal the chicken thigh (add herbs and a little oil if you like).
-2. Cook sous-vide at 74°C (1–4 u).
+2. Cook sous-vide at 65°C (1,5–4 u).
 3. Pat dry and sear all over in a screaming-hot pan or with a torch, for a crust.
 4. Cook the potato per the package.
 5. Steam or stir-fry the zucchini until tender-crisp.
-6. Slice, season and serve.','sousvide','74°C','core'),
-('sous_vide_chicken_thigh_74_c_with_rice_broccoli','Kipdij sous-vide 74°C met rijst & broccoli','Sous-vide chicken thigh 74°C with rice & broccoli',ARRAY['dinner','lunch'],ARRAY['gain','maintain'],'[{"slug":"chicken_thigh","g":150},{"slug":"rice_dry","g":70},{"slug":"broccoli","g":120},{"slug":"butter","g":8}]'::jsonb,ARRAY['sousvide','high_protein']::text[],ARRAY[]::text[],'1. Vacumeer de kipdij (eventueel met een takje kruiden en wat olie).
-2. Gaar sous-vide op 74°C (1–4 u).
+6. Slice, season and serve.','sousvide','65°C','core'),
+('sous_vide_chicken_thigh_65_c_with_rice_broccoli','Kipdij sous-vide 65°C met rijst & broccoli','Sous-vide chicken thigh 65°C with rice & broccoli',ARRAY['dinner','lunch'],ARRAY['gain','maintain'],'[{"slug":"chicken_thigh","g":150},{"slug":"rice_dry","g":70},{"slug":"broccoli","g":120},{"slug":"butter","g":8}]'::jsonb,ARRAY['sousvide','high_protein']::text[],ARRAY[]::text[],'1. Vacumeer de kipdij (eventueel met een takje kruiden en wat olie).
+2. Gaar sous-vide op 65°C (1,5–4 u).
 3. Dep droog en schroei rondom kort dicht in een gloeiend hete pan of met de brander, voor een korst.
 4. Kook de rijst volgens de verpakking.
 5. Stoom of wok de broccoli beetgaar.
 6. Snijd aan, breng op smaak en serveer.','1. Vacuum-seal the chicken thigh (add herbs and a little oil if you like).
-2. Cook sous-vide at 74°C (1–4 u).
+2. Cook sous-vide at 65°C (1,5–4 u).
 3. Pat dry and sear all over in a screaming-hot pan or with a torch, for a crust.
 4. Cook the rice per the package.
 5. Steam or stir-fry the broccoli until tender-crisp.
-6. Slice, season and serve.','sousvide','74°C','core'),
-('sous_vide_chicken_thigh_74_c_with_rice_green_beans','Kipdij sous-vide 74°C met rijst & sperziebonen','Sous-vide chicken thigh 74°C with rice & green beans',ARRAY['dinner','lunch'],ARRAY['gain','maintain'],'[{"slug":"chicken_thigh","g":150},{"slug":"rice_dry","g":70},{"slug":"green_beans","g":120},{"slug":"butter","g":8}]'::jsonb,ARRAY['sousvide','high_protein']::text[],ARRAY[]::text[],'1. Vacumeer de kipdij (eventueel met een takje kruiden en wat olie).
-2. Gaar sous-vide op 74°C (1–4 u).
+6. Slice, season and serve.','sousvide','65°C','core'),
+('sous_vide_chicken_thigh_65_c_with_rice_green_beans','Kipdij sous-vide 65°C met rijst & sperziebonen','Sous-vide chicken thigh 65°C with rice & green beans',ARRAY['dinner','lunch'],ARRAY['gain','maintain'],'[{"slug":"chicken_thigh","g":150},{"slug":"rice_dry","g":70},{"slug":"green_beans","g":120},{"slug":"butter","g":8}]'::jsonb,ARRAY['sousvide','high_protein']::text[],ARRAY[]::text[],'1. Vacumeer de kipdij (eventueel met een takje kruiden en wat olie).
+2. Gaar sous-vide op 65°C (1,5–4 u).
 3. Dep droog en schroei rondom kort dicht in een gloeiend hete pan of met de brander, voor een korst.
 4. Kook de rijst volgens de verpakking.
 5. Stoom of wok de sperziebonen beetgaar.
 6. Snijd aan, breng op smaak en serveer.','1. Vacuum-seal the chicken thigh (add herbs and a little oil if you like).
-2. Cook sous-vide at 74°C (1–4 u).
+2. Cook sous-vide at 65°C (1,5–4 u).
 3. Pat dry and sear all over in a screaming-hot pan or with a torch, for a crust.
 4. Cook the rice per the package.
 5. Steam or stir-fry the green beans until tender-crisp.
-6. Slice, season and serve.','sousvide','74°C','core'),
-('sous_vide_chicken_thigh_74_c_with_rice_green_asparagus','Kipdij sous-vide 74°C met rijst & groene asperges','Sous-vide chicken thigh 74°C with rice & green asparagus',ARRAY['dinner','lunch'],ARRAY['maintain'],'[{"slug":"chicken_thigh","g":150},{"slug":"rice_dry","g":70},{"slug":"asparagus","g":120},{"slug":"butter","g":8}]'::jsonb,ARRAY['sousvide','high_protein']::text[],ARRAY[]::text[],'1. Vacumeer de kipdij (eventueel met een takje kruiden en wat olie).
-2. Gaar sous-vide op 74°C (1–4 u).
+6. Slice, season and serve.','sousvide','65°C','core'),
+('sous_vide_chicken_thigh_65_c_with_rice_green_asparagus','Kipdij sous-vide 65°C met rijst & groene asperges','Sous-vide chicken thigh 65°C with rice & green asparagus',ARRAY['dinner','lunch'],ARRAY['maintain'],'[{"slug":"chicken_thigh","g":150},{"slug":"rice_dry","g":70},{"slug":"asparagus","g":120},{"slug":"butter","g":8}]'::jsonb,ARRAY['sousvide','high_protein']::text[],ARRAY[]::text[],'1. Vacumeer de kipdij (eventueel met een takje kruiden en wat olie).
+2. Gaar sous-vide op 65°C (1,5–4 u).
 3. Dep droog en schroei rondom kort dicht in een gloeiend hete pan of met de brander, voor een korst.
 4. Kook de rijst volgens de verpakking.
 5. Stoom of wok de groene asperges beetgaar.
 6. Snijd aan, breng op smaak en serveer.','1. Vacuum-seal the chicken thigh (add herbs and a little oil if you like).
-2. Cook sous-vide at 74°C (1–4 u).
+2. Cook sous-vide at 65°C (1,5–4 u).
 3. Pat dry and sear all over in a screaming-hot pan or with a torch, for a crust.
 4. Cook the rice per the package.
 5. Steam or stir-fry the green asparagus until tender-crisp.
-6. Slice, season and serve.','sousvide','74°C','core'),
-('sous_vide_chicken_thigh_74_c_with_rice_spinach','Kipdij sous-vide 74°C met rijst & spinazie','Sous-vide chicken thigh 74°C with rice & spinach',ARRAY['dinner','lunch'],ARRAY['maintain'],'[{"slug":"chicken_thigh","g":150},{"slug":"rice_dry","g":70},{"slug":"spinach","g":100},{"slug":"butter","g":8}]'::jsonb,ARRAY['sousvide','high_protein']::text[],ARRAY[]::text[],'1. Vacumeer de kipdij (eventueel met een takje kruiden en wat olie).
-2. Gaar sous-vide op 74°C (1–4 u).
+6. Slice, season and serve.','sousvide','65°C','core'),
+('sous_vide_chicken_thigh_65_c_with_rice_spinach','Kipdij sous-vide 65°C met rijst & spinazie','Sous-vide chicken thigh 65°C with rice & spinach',ARRAY['dinner','lunch'],ARRAY['maintain'],'[{"slug":"chicken_thigh","g":150},{"slug":"rice_dry","g":70},{"slug":"spinach","g":100},{"slug":"butter","g":8}]'::jsonb,ARRAY['sousvide','high_protein']::text[],ARRAY[]::text[],'1. Vacumeer de kipdij (eventueel met een takje kruiden en wat olie).
+2. Gaar sous-vide op 65°C (1,5–4 u).
 3. Dep droog en schroei rondom kort dicht in een gloeiend hete pan of met de brander, voor een korst.
 4. Kook de rijst volgens de verpakking.
 5. Stoom of wok de spinazie beetgaar.
 6. Snijd aan, breng op smaak en serveer.','1. Vacuum-seal the chicken thigh (add herbs and a little oil if you like).
-2. Cook sous-vide at 74°C (1–4 u).
+2. Cook sous-vide at 65°C (1,5–4 u).
 3. Pat dry and sear all over in a screaming-hot pan or with a torch, for a crust.
 4. Cook the rice per the package.
 5. Steam or stir-fry the spinach until tender-crisp.
-6. Slice, season and serve.','sousvide','74°C','core'),
-('sous_vide_chicken_thigh_74_c_with_rice_zucchini','Kipdij sous-vide 74°C met rijst & courgette','Sous-vide chicken thigh 74°C with rice & zucchini',ARRAY['dinner','lunch'],ARRAY['maintain'],'[{"slug":"chicken_thigh","g":150},{"slug":"rice_dry","g":70},{"slug":"zucchini","g":120},{"slug":"butter","g":8}]'::jsonb,ARRAY['sousvide','high_protein']::text[],ARRAY[]::text[],'1. Vacumeer de kipdij (eventueel met een takje kruiden en wat olie).
-2. Gaar sous-vide op 74°C (1–4 u).
+6. Slice, season and serve.','sousvide','65°C','core'),
+('sous_vide_chicken_thigh_65_c_with_rice_zucchini','Kipdij sous-vide 65°C met rijst & courgette','Sous-vide chicken thigh 65°C with rice & zucchini',ARRAY['dinner','lunch'],ARRAY['maintain'],'[{"slug":"chicken_thigh","g":150},{"slug":"rice_dry","g":70},{"slug":"zucchini","g":120},{"slug":"butter","g":8}]'::jsonb,ARRAY['sousvide','high_protein']::text[],ARRAY[]::text[],'1. Vacumeer de kipdij (eventueel met een takje kruiden en wat olie).
+2. Gaar sous-vide op 65°C (1,5–4 u).
 3. Dep droog en schroei rondom kort dicht in een gloeiend hete pan of met de brander, voor een korst.
 4. Kook de rijst volgens de verpakking.
 5. Stoom of wok de courgette beetgaar.
 6. Snijd aan, breng op smaak en serveer.','1. Vacuum-seal the chicken thigh (add herbs and a little oil if you like).
-2. Cook sous-vide at 74°C (1–4 u).
+2. Cook sous-vide at 65°C (1,5–4 u).
 3. Pat dry and sear all over in a screaming-hot pan or with a torch, for a crust.
 4. Cook the rice per the package.
 5. Steam or stir-fry the zucchini until tender-crisp.
-6. Slice, season and serve.','sousvide','74°C','core'),
-('sous_vide_chicken_thigh_74_c_with_quinoa_broccoli','Kipdij sous-vide 74°C met quinoa & broccoli','Sous-vide chicken thigh 74°C with quinoa & broccoli',ARRAY['dinner','lunch'],ARRAY['cut','gain','maintain'],'[{"slug":"chicken_thigh","g":150},{"slug":"quinoa_dry","g":70},{"slug":"broccoli","g":120},{"slug":"butter","g":8}]'::jsonb,ARRAY['sousvide','high_protein']::text[],ARRAY[]::text[],'1. Vacumeer de kipdij (eventueel met een takje kruiden en wat olie).
-2. Gaar sous-vide op 74°C (1–4 u).
+6. Slice, season and serve.','sousvide','65°C','core'),
+('sous_vide_chicken_thigh_65_c_with_quinoa_broccoli','Kipdij sous-vide 65°C met quinoa & broccoli','Sous-vide chicken thigh 65°C with quinoa & broccoli',ARRAY['dinner','lunch'],ARRAY['cut','gain','maintain'],'[{"slug":"chicken_thigh","g":150},{"slug":"quinoa_dry","g":70},{"slug":"broccoli","g":120},{"slug":"butter","g":8}]'::jsonb,ARRAY['sousvide','high_protein']::text[],ARRAY[]::text[],'1. Vacumeer de kipdij (eventueel met een takje kruiden en wat olie).
+2. Gaar sous-vide op 65°C (1,5–4 u).
 3. Dep droog en schroei rondom kort dicht in een gloeiend hete pan of met de brander, voor een korst.
 4. Kook de quinoa volgens de verpakking.
 5. Stoom of wok de broccoli beetgaar.
 6. Snijd aan, breng op smaak en serveer.','1. Vacuum-seal the chicken thigh (add herbs and a little oil if you like).
-2. Cook sous-vide at 74°C (1–4 u).
+2. Cook sous-vide at 65°C (1,5–4 u).
 3. Pat dry and sear all over in a screaming-hot pan or with a torch, for a crust.
 4. Cook the quinoa per the package.
 5. Steam or stir-fry the broccoli until tender-crisp.
-6. Slice, season and serve.','sousvide','74°C','core'),
-('sous_vide_chicken_thigh_74_c_with_quinoa_green_beans','Kipdij sous-vide 74°C met quinoa & sperziebonen','Sous-vide chicken thigh 74°C with quinoa & green beans',ARRAY['dinner','lunch'],ARRAY['cut','gain','maintain'],'[{"slug":"chicken_thigh","g":150},{"slug":"quinoa_dry","g":70},{"slug":"green_beans","g":120},{"slug":"butter","g":8}]'::jsonb,ARRAY['sousvide','high_protein']::text[],ARRAY[]::text[],'1. Vacumeer de kipdij (eventueel met een takje kruiden en wat olie).
-2. Gaar sous-vide op 74°C (1–4 u).
+6. Slice, season and serve.','sousvide','65°C','core'),
+('sous_vide_chicken_thigh_65_c_with_quinoa_green_beans','Kipdij sous-vide 65°C met quinoa & sperziebonen','Sous-vide chicken thigh 65°C with quinoa & green beans',ARRAY['dinner','lunch'],ARRAY['cut','gain','maintain'],'[{"slug":"chicken_thigh","g":150},{"slug":"quinoa_dry","g":70},{"slug":"green_beans","g":120},{"slug":"butter","g":8}]'::jsonb,ARRAY['sousvide','high_protein']::text[],ARRAY[]::text[],'1. Vacumeer de kipdij (eventueel met een takje kruiden en wat olie).
+2. Gaar sous-vide op 65°C (1,5–4 u).
 3. Dep droog en schroei rondom kort dicht in een gloeiend hete pan of met de brander, voor een korst.
 4. Kook de quinoa volgens de verpakking.
 5. Stoom of wok de sperziebonen beetgaar.
 6. Snijd aan, breng op smaak en serveer.','1. Vacuum-seal the chicken thigh (add herbs and a little oil if you like).
-2. Cook sous-vide at 74°C (1–4 u).
+2. Cook sous-vide at 65°C (1,5–4 u).
 3. Pat dry and sear all over in a screaming-hot pan or with a torch, for a crust.
 4. Cook the quinoa per the package.
 5. Steam or stir-fry the green beans until tender-crisp.
-6. Slice, season and serve.','sousvide','74°C','core'),
-('sous_vide_chicken_thigh_74_c_with_quinoa_green_asparagus','Kipdij sous-vide 74°C met quinoa & groene asperges','Sous-vide chicken thigh 74°C with quinoa & green asparagus',ARRAY['dinner','lunch'],ARRAY['cut','gain','maintain'],'[{"slug":"chicken_thigh","g":150},{"slug":"quinoa_dry","g":70},{"slug":"asparagus","g":120},{"slug":"butter","g":8}]'::jsonb,ARRAY['sousvide','high_protein']::text[],ARRAY[]::text[],'1. Vacumeer de kipdij (eventueel met een takje kruiden en wat olie).
-2. Gaar sous-vide op 74°C (1–4 u).
+6. Slice, season and serve.','sousvide','65°C','core'),
+('sous_vide_chicken_thigh_65_c_with_quinoa_green_asparagus','Kipdij sous-vide 65°C met quinoa & groene asperges','Sous-vide chicken thigh 65°C with quinoa & green asparagus',ARRAY['dinner','lunch'],ARRAY['cut','gain','maintain'],'[{"slug":"chicken_thigh","g":150},{"slug":"quinoa_dry","g":70},{"slug":"asparagus","g":120},{"slug":"butter","g":8}]'::jsonb,ARRAY['sousvide','high_protein']::text[],ARRAY[]::text[],'1. Vacumeer de kipdij (eventueel met een takje kruiden en wat olie).
+2. Gaar sous-vide op 65°C (1,5–4 u).
 3. Dep droog en schroei rondom kort dicht in een gloeiend hete pan of met de brander, voor een korst.
 4. Kook de quinoa volgens de verpakking.
 5. Stoom of wok de groene asperges beetgaar.
 6. Snijd aan, breng op smaak en serveer.','1. Vacuum-seal the chicken thigh (add herbs and a little oil if you like).
-2. Cook sous-vide at 74°C (1–4 u).
+2. Cook sous-vide at 65°C (1,5–4 u).
 3. Pat dry and sear all over in a screaming-hot pan or with a torch, for a crust.
 4. Cook the quinoa per the package.
 5. Steam or stir-fry the green asparagus until tender-crisp.
-6. Slice, season and serve.','sousvide','74°C','core'),
-('sous_vide_chicken_thigh_74_c_with_quinoa_spinach','Kipdij sous-vide 74°C met quinoa & spinazie','Sous-vide chicken thigh 74°C with quinoa & spinach',ARRAY['dinner','lunch'],ARRAY['cut','gain','maintain'],'[{"slug":"chicken_thigh","g":150},{"slug":"quinoa_dry","g":70},{"slug":"spinach","g":100},{"slug":"butter","g":8}]'::jsonb,ARRAY['sousvide','high_protein']::text[],ARRAY[]::text[],'1. Vacumeer de kipdij (eventueel met een takje kruiden en wat olie).
-2. Gaar sous-vide op 74°C (1–4 u).
+6. Slice, season and serve.','sousvide','65°C','core'),
+('sous_vide_chicken_thigh_65_c_with_quinoa_spinach','Kipdij sous-vide 65°C met quinoa & spinazie','Sous-vide chicken thigh 65°C with quinoa & spinach',ARRAY['dinner','lunch'],ARRAY['cut','gain','maintain'],'[{"slug":"chicken_thigh","g":150},{"slug":"quinoa_dry","g":70},{"slug":"spinach","g":100},{"slug":"butter","g":8}]'::jsonb,ARRAY['sousvide','high_protein']::text[],ARRAY[]::text[],'1. Vacumeer de kipdij (eventueel met een takje kruiden en wat olie).
+2. Gaar sous-vide op 65°C (1,5–4 u).
 3. Dep droog en schroei rondom kort dicht in een gloeiend hete pan of met de brander, voor een korst.
 4. Kook de quinoa volgens de verpakking.
 5. Stoom of wok de spinazie beetgaar.
 6. Snijd aan, breng op smaak en serveer.','1. Vacuum-seal the chicken thigh (add herbs and a little oil if you like).
-2. Cook sous-vide at 74°C (1–4 u).
+2. Cook sous-vide at 65°C (1,5–4 u).
 3. Pat dry and sear all over in a screaming-hot pan or with a torch, for a crust.
 4. Cook the quinoa per the package.
 5. Steam or stir-fry the spinach until tender-crisp.
-6. Slice, season and serve.','sousvide','74°C','core'),
-('sous_vide_chicken_thigh_74_c_with_quinoa_zucchini','Kipdij sous-vide 74°C met quinoa & courgette','Sous-vide chicken thigh 74°C with quinoa & zucchini',ARRAY['dinner','lunch'],ARRAY['cut','gain','maintain'],'[{"slug":"chicken_thigh","g":150},{"slug":"quinoa_dry","g":70},{"slug":"zucchini","g":120},{"slug":"butter","g":8}]'::jsonb,ARRAY['sousvide','high_protein']::text[],ARRAY[]::text[],'1. Vacumeer de kipdij (eventueel met een takje kruiden en wat olie).
-2. Gaar sous-vide op 74°C (1–4 u).
+6. Slice, season and serve.','sousvide','65°C','core'),
+('sous_vide_chicken_thigh_65_c_with_quinoa_zucchini','Kipdij sous-vide 65°C met quinoa & courgette','Sous-vide chicken thigh 65°C with quinoa & zucchini',ARRAY['dinner','lunch'],ARRAY['cut','gain','maintain'],'[{"slug":"chicken_thigh","g":150},{"slug":"quinoa_dry","g":70},{"slug":"zucchini","g":120},{"slug":"butter","g":8}]'::jsonb,ARRAY['sousvide','high_protein']::text[],ARRAY[]::text[],'1. Vacumeer de kipdij (eventueel met een takje kruiden en wat olie).
+2. Gaar sous-vide op 65°C (1,5–4 u).
 3. Dep droog en schroei rondom kort dicht in een gloeiend hete pan of met de brander, voor een korst.
 4. Kook de quinoa volgens de verpakking.
 5. Stoom of wok de courgette beetgaar.
 6. Snijd aan, breng op smaak en serveer.','1. Vacuum-seal the chicken thigh (add herbs and a little oil if you like).
-2. Cook sous-vide at 74°C (1–4 u).
+2. Cook sous-vide at 65°C (1,5–4 u).
 3. Pat dry and sear all over in a screaming-hot pan or with a torch, for a crust.
 4. Cook the quinoa per the package.
 5. Steam or stir-fry the zucchini until tender-crisp.
-6. Slice, season and serve.','sousvide','74°C','core'),
+6. Slice, season and serve.','sousvide','65°C','core'),
 ('sous_vide_steak_54_c_medium_rare_with_sweet_potato_broccoli','Biefstuk sous-vide 54°C (medium-rare) met zoete aardappel & broccoli','Sous-vide steak 54°C (medium-rare) with sweet potato & broccoli',ARRAY['dinner','lunch'],ARRAY['cut','maintain'],'[{"slug":"beef_steak","g":150},{"slug":"sweet_potato","g":200},{"slug":"broccoli","g":120},{"slug":"butter","g":8}]'::jsonb,ARRAY['sousvide','high_protein']::text[],ARRAY['steakpotato']::text[],'1. Vacumeer de biefstuk (eventueel met een takje kruiden en wat olie).
 2. Gaar sous-vide op 54°C (1,5–4 u).
 3. Dep droog en schroei rondom kort dicht in een gloeiend hete pan of met de brander, voor een korst.

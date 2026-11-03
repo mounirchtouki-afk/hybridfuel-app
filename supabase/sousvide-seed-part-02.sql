@@ -551,12 +551,12 @@ insert into public.dishes (slug,name_nl,name_en,moments,goals,items,tags,prefs,s
 4. Cook the quinoa per the package.
 5. Steam or stir-fry the zucchini until tender-crisp.
 6. Slice, season and serve.','sousvide','57°C','core'),
-('onsen_egg_63_c_with_spinach','Onsen-ei 63°C met spinazie','Onsen egg 63°C with spinach',ARRAY['breakfast','lunch'],ARRAY['cut','maintain'],'[{"slug":"egg","g":120},{"slug":"spinach","g":60},{"slug":"olive_oil","g":3}]'::jsonb,ARRAY['sousvide','high_protein']::text[],ARRAY[]::text[],'1. Gaar de eieren sous-vide op 63°C (45–60 min) voor een romige dooier.
+('soft_cooked_egg_63_c_with_spinach','Zachtgekookt ei (63°C) met spinazie','Soft-cooked egg (63°C) with spinach',ARRAY['breakfast','lunch'],ARRAY['cut','maintain'],'[{"slug":"egg","g":120},{"slug":"spinach","g":60},{"slug":"olive_oil","g":3}]'::jsonb,ARRAY['sousvide','high_protein']::text[],ARRAY[]::text[],'1. Gaar de eieren sous-vide op 63°C (45–60 min) voor een romige dooier.
 2. Wok of slink de spinazie kort in de olijfolie.
-3. Pel de onsen-eieren voorzichtig en leg ze op de spinazie.
+3. Pel de eieren voorzichtig en leg ze op de spinazie.
 4. Breng op smaak met peper en zout.','1. Cook the eggs sous-vide at 63°C (45–60 min) for a creamy yolk.
 2. Wilt the spinach briefly in the olive oil.
-3. Peel the onsen eggs carefully and set them on the spinach.
+3. Peel the eggs carefully and set them on the spinach.
 4. Season with salt and pepper.','sousvide','63°C','core')
 on conflict (slug) do update set name_nl=excluded.name_nl,name_en=excluded.name_en,moments=excluded.moments,goals=excluded.goals,items=excluded.items,tags=excluded.tags,prefs=excluded.prefs,steps=excluded.steps,steps_en=excluded.steps_en,technique=excluded.technique,temp=excluded.temp;
 commit;

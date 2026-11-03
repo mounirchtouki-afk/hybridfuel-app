@@ -451,15 +451,26 @@ async function buildFromLibrary(body, cyc) {
   // Hulp: categorie + het eiwit-ingrediënt van een gerecht (voor rotatie).
   const catOf = (slug) => (ing[slug] || {}).category || "";
   const isCarbSlug = (slug) => catOf(slug) === "granen" || slug === "potato" || slug === "sweet_potato";
+  const hasCarb = (dish) => (dish.items || []).some((it) => isCarbSlug(it.slug));
   const protSlug = (dish) => { const it = (dish.items || []).find((x) => ["vlees", "vis", "vega", "peulvrucht"].includes(catOf(x.slug)) || x.slug === "egg" || catOf(x.slug) === "zuivel"); return it ? it.slug : (dish.items && dish.items[0] && dish.items[0].slug) || dish.slug; };
+  // Rotatie op FAMILIE, niet op exacte sleutel: kipdij en kipfilet = allebei "kip",
+  // zoete aardappel en aardappel = allebei "aardappel", alle noten = "noten".
+  const protFamily = (s0) => { const s = s0 || ""; if (/chicken|kip|turkey|kalkoen|poultry/.test(s)) return "kip"; if (/beef|steak|biefstuk|flat_iron|rund|gehakt|mince/.test(s)) return "rund"; if (/salmon|zalm/.test(s)) return "zalm"; if (/tuna|tonijn/.test(s)) return "tonijn"; if (/shrimp|garnaal|prawn/.test(s)) return "garnaal"; if (/cod|tilapia|haddock|white_fish|vis\b/.test(s)) return "witvis"; if (/pork|varken|ham|bacon|spek/.test(s)) return "varken"; if (/lamb|lams/.test(s)) return "lam"; if (/duck|eend/.test(s)) return "eend"; if (/egg|\bei\b/.test(s)) return "ei"; if (/whey|casein|eiwitpoeder|protein_powder/.test(s)) return "shake"; if (/tofu|tempeh|soy|soja/.test(s)) return "soja"; if (/lentil|chickpea|bean|linz|kikkererwt|boon|peul/.test(s)) return "peulvrucht"; if (/almond|walnut|pecan|cashew|pistach|hazel|noot|noten|pinda|seed|pit/.test(s)) return "noten"; if (/quark|skyr|yoghurt|yogurt|kwark|cottage|hutten|cheese|kaas|milk|melk|dairy/.test(s)) return "zuivel"; return s; };
+  const carbFamily = (s0) => { const s = s0 || ""; if (/potato|aardappel/.test(s)) return "aardappel"; if (/rice|rijst/.test(s)) return "rijst"; if (/oat|havermout|muesli|granola/.test(s)) return "havermout"; if (/pasta|noodle|spaghetti|penne/.test(s)) return "pasta"; if (/quinoa/.test(s)) return "quinoa"; if (/bread|brood|wrap|tortilla|toast/.test(s)) return "brood"; if (/couscous|bulgur/.test(s)) return "couscous"; return s; };
+  const protFamOf = (dish) => protFamily(protSlug(dish));
+  const carbFamOf = (dish) => { const it = (dish.items || []).find((x) => isCarbSlug(x.slug)); return it ? carbFamily(it.slug) : null; };
   const stepsOf = (dish) => lang === "en" ? (dish.steps_en || dish.steps || "") : (dish.steps || "");
   // BORDMETHODE / eiwit-eerst: schaal het gerecht op het eiwit-doel van de maaltijd
   // (niet op kcal) -> realistische porties + gelijkmatige eiwitverdeling. Daarna
   // schaalt ALLEEN het zetmeel mee met de trainingsbelasting (carb-periodisering).
-  function scaleDish(dish, pTarget, maxFactor, carbMult) {
+  function scaleDish(dish, pTarget, maxFactor, carbMult, fatCap) {
     const base = dishMac(dish.items, ing);
     let factor = base.p > 4 ? pTarget / base.p : (base.kcal > 0 ? (pTarget * 9) / base.kcal : 1);
     factor = Math.max(0.5, Math.min(maxFactor || 2.2, factor));
+    // Vet-plafond: bij vette eiwitbronnen (ei, zalm, noten) blaast eiwit-eerst het
+    // vet op. Knijp de portie terug zodat vet onder de grens blijft (eiwit mag dan
+    // iets lager uitvallen — liever gebalanceerd dan 34 g vet in één maaltijd).
+    if (fatCap && base.f > 0 && base.f * factor > fatCap) factor = Math.max(0.5, fatCap / base.f);
     const cm = carbMult || 1;
     const scaled = (dish.items || []).map((it) => ({ slug: it.slug, g: it.g * factor * (isCarbSlug(it.slug) ? cm : 1) }));
     const items = scaled.map((it) => ({ n: name(ing[it.slug]) || it.slug, g: Math.round(it.g) }));
@@ -473,10 +484,10 @@ async function buildFromLibrary(body, cyc) {
     const f2 = g / 100;
     return { t: null, n: prod.name, kcal: Math.round(k100 * f2), p: Math.round((Number(per.p) || 0) * f2), c: Math.round((Number(per.c) || 0) * f2), f: Math.round((Number(per.f) || 0) * f2), ing: [{ n: prod.name, g }], steps: "", technique: null, temp: null };
   }
-  // Kies een gerecht dat nog niet gebruikt is (sleutel = eiwit), vanaf een rotatie-offset.
-  function pickDistinct(cands, offset, avoid) {
+  // Kies, vanaf een rotatie-offset, het eerste gerecht dat aan okFn voldoet.
+  function pick(cands, offset, okFn) {
     if (!cands.length) return null;
-    for (let i = 0; i < cands.length; i++) { const d = cands[(offset + i) % cands.length]; if (!avoid.has(protSlug(d))) return d; }
+    for (let i = 0; i < cands.length; i++) { const d = cands[(offset + i) % cands.length]; if (okFn(d)) return d; }
     return cands[offset % cands.length];
   }
   const moments = [
@@ -496,7 +507,8 @@ async function buildFromLibrary(body, cyc) {
     const dayP = dayT.protein || 150;
     const pMain = Math.max(28, Math.min(42, Math.round(dayP * 0.26)));
     const pSnack = Math.max(12, Math.min(26, Math.round(dayP * 0.09)));
-    const usedToday = new Set();
+    const usedProt = new Set();  // eiwit-families die vandaag al gebruikt zijn
+    const usedCarb = new Set();  // koolhydraat-families die vandaag al gebruikt zijn
     const meals = [];
     let miss = false;
     for (const md of moments) {
@@ -505,10 +517,18 @@ async function buildFromLibrary(body, cyc) {
       if (!meal) {
         const cands = await candidatesFor(md.id);
         if (cands.length) {
-          const avoid = new Set(usedToday); if (lastProt[md.id]) avoid.add(lastProt[md.id]);
-          const dish = pickDistinct(cands, ti * 3 + md.rot, avoid);
-          meal = scaleDish(dish, pMain, 2.2, carbMult);
-          usedToday.add(protSlug(dish)); lastProt[md.id] = protSlug(dish);
+          // 1e keus: koolhydraat-houdend, nieuwe eiwit-familie (niet vandaag, niet gisteren
+          // op dit moment) én nieuwe koolhydraat-familie. Daarna lossere pogingen.
+          const freshP = (d) => !usedProt.has(protFamOf(d)) && lastProt[md.id] !== protFamOf(d);
+          const freshC = (d) => { const cf = carbFamOf(d); return !cf || !usedCarb.has(cf); };
+          const off = ti * 3 + md.rot;
+          let dish = pick(cands, off, (d) => hasCarb(d) && freshP(d) && freshC(d));
+          if (!dish) dish = pick(cands, off, (d) => hasCarb(d) && freshP(d));
+          if (!dish) dish = pick(cands, off, (d) => freshP(d));
+          if (!dish) dish = cands[off % cands.length];
+          meal = scaleDish(dish, pMain, 2.2, carbMult, 26);
+          usedProt.add(protFamOf(dish)); lastProt[md.id] = protFamOf(dish);
+          const cf = carbFamOf(dish); if (cf) usedCarb.add(cf);
         }
       }
       if (!meal) { miss = true; break; }
@@ -520,7 +540,13 @@ async function buildFromLibrary(body, cyc) {
       let meal = prods.length ? scaleProduct(prods[(ti + s) % prods.length], Math.round(dayT.kcal * 0.10)) : null;
       if (!meal) {
         const cands = await candidatesFor("snack");
-        if (cands.length) { const dish = pickDistinct(cands, ti * 2 + s, usedToday); meal = scaleDish(dish, pSnack, 1.6, 1); usedToday.add(protSlug(dish)); }
+        if (cands.length) {
+          const off = ti * 2 + s;
+          let dish = pick(cands, off, (d) => !usedProt.has(protFamOf(d)));
+          if (!dish) dish = cands[off % cands.length];
+          meal = scaleDish(dish, pSnack, 1.6, 1, 20);
+          usedProt.add(protFamOf(dish));
+        }
       }
       if (!meal) { miss = true; break; }
       meal.t = snackLabel; meals.push(meal);
