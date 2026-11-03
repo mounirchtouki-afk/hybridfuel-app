@@ -1,6 +1,6 @@
 {
   "name": "hybridfuel-app",
-  "version": "0.0.38",
+  "version": "0.0.39",
   "private": true,
   "scripts": {
     "dev": "vite",
@@ -11,6 +11,7 @@
     "cap:ios": "cross-env VITE_API_BASE=https://app.hybridfuelco.com vite build && cap sync ios && cap open ios"
   },
   "dependencies": {
+    "@aparajita/capacitor-biometric-auth": "^10.0.0",
     "@capacitor-community/speech-recognition": "^7.0.1",
     "@capacitor/android": "^8.6.0",
     "@capacitor/app": "^8.1.2",

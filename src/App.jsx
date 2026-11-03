@@ -22,6 +22,7 @@ import { buildDaysFromProducts, productPlanReadiness } from "./ownplan.js";
 import Reminders, { checkReminders } from "./views/Reminders.jsx";
 import Auth from "./views/Auth.jsx";
 import Join from "./views/Join.jsx";
+import { bioNative, bioAvailable, bioVerify } from "./biometric.js";
 import CoachDash from "./views/CoachDash.jsx";
 import GymAgendaMember from "./views/GymAgendaMember.jsx";
 import GymClasses from "./views/GymClasses.jsx";
@@ -631,6 +632,26 @@ export default function App() {
   const [showAuth, setShowAuth] = useState(false);
   const [authRecovery, setAuthRecovery] = useState(false);
   const [showLogout, setShowLogout] = useState(false);
+  // Vingerafdruk-slot (alleen native app).
+  const [bioCan, setBioCan] = useState(false);          // toestel ondersteunt biometrie
+  const [bioOn, setBioOn] = useState(() => { try { return localStorage.getItem("hf_biolock") === "1"; } catch (e) { return false; } });
+  const [bioLocked, setBioLocked] = useState(false);    // app staat nu op slot
+  const bioCheckedRef = useRef(false);
+  useEffect(() => { bioAvailable().then(setBioCan).catch(() => setBioCan(false)); }, []);
+  // Bij opstarten vergrendelen als het aanstaat en er een sessie is.
+  useEffect(() => {
+    if (bioCheckedRef.current) return;
+    if (!bioNative() || !bioOn || !session || !session.user) return;
+    bioCheckedRef.current = true;
+    setBioLocked(true);
+    bioVerify("Ontgrendel HybridFuelCo").then((ok) => { if (ok) setBioLocked(false); });
+  }, [session, bioOn]);
+  async function tryUnlock() { const ok = await bioVerify("Ontgrendel HybridFuelCo"); if (ok) setBioLocked(false); }
+  async function toggleBio() {
+    if (bioOn) { setBioOn(false); try { localStorage.setItem("hf_biolock", "0"); } catch (e) {} return; }
+    const ok = await bioVerify("Bevestig om het vingerafdruk-slot aan te zetten");
+    if (ok) { setBioOn(true); try { localStorage.setItem("hf_biolock", "1"); } catch (e) {} }
+  }
   const [showCodeChange, setShowCodeChange] = useState(false);
   const [codeNew, setCodeNew] = useState("");
   const [codeBusy, setCodeBusy] = useState(false);
@@ -2155,6 +2176,21 @@ export default function App() {
               </div>
               <div style={{ fontSize: 10.5, color: MUTED, marginTop: 7, lineHeight: 1.5 }}>{lang === "nl" ? "Geldt voor gewichten in de hele app, altijd aanpasbaar." : "Applies to weights across the app, change it anytime."}</div>
             </div>
+            {bioNative() && bioCan && (
+              <div style={{ marginTop: 14, borderTop: `1px solid ${LINE}`, paddingTop: 14 }}>
+                <div style={{ fontSize: 10.5, letterSpacing: 1, textTransform: "uppercase", color: MUTED, fontWeight: 700, marginBottom: 8 }}>{lang === "nl" ? "Beveiliging" : "Security"}</div>
+                <div onClick={toggleBio} style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: 12, background: INK2, border: `1px solid ${LINE}`, borderRadius: 10, padding: "12px 13px" }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={bioOn ? EMBER : MUTED} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M12 11c0 3-.5 5-1.5 7M7 9a5 5 0 0 1 9-1M5 13c0 4-1 5-1 5M12 10v3c0 4 .5 6 1 7M15 13c0 2 .3 4 1 5" /></svg>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ ...disp, fontWeight: 700, fontSize: 13.5, color: PAPER }}>{lang === "nl" ? "Vingerafdruk-slot" : "Fingerprint lock"}</div>
+                    <div style={{ fontSize: 11, color: MUTED }}>{lang === "nl" ? "Vraag om vingerafdruk bij openen" : "Ask for fingerprint on open"}</div>
+                  </div>
+                  <div style={{ width: 42, height: 24, borderRadius: 12, background: bioOn ? EMBER : LINE, position: "relative", flexShrink: 0, transition: "background .15s" }}>
+                    <div style={{ position: "absolute", top: 2, left: bioOn ? 20 : 2, width: 20, height: 20, borderRadius: "50%", background: "#fff", transition: "left .15s" }} />
+                  </div>
+                </div>
+              </div>
+            )}
             {!isGymMember && (
               <div style={{ marginTop: 14, borderTop: `1px solid ${LINE}`, paddingTop: 14 }}>
                 <div style={{ fontSize: 10.5, letterSpacing: 1, textTransform: "uppercase", color: MUTED, fontWeight: 700, marginBottom: 8 }}>{lang === "nl" ? "Weergave" : "Appearance"}</div>
@@ -2204,6 +2240,18 @@ export default function App() {
       )}
 
       {/* Uitlog-bevestiging (vanaf dashboard met de terug-knop) */}
+      {bioLocked && (
+        <div style={{ position: "fixed", inset: 0, background: INK, zIndex: 999999, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 28, textAlign: "center" }}>
+          <div style={{ width: 72, height: 72, borderRadius: 20, background: "rgba(var(--hf-ember-rgb),0.14)", display: "grid", placeItems: "center", marginBottom: 18 }}>
+            <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M12 11c0 3-.5 5-1.5 7M7 9a5 5 0 0 1 9-1M5 13c0 4-1 5-1 5M9 12v1c0 3-.5 5-1 6M12 10v3c0 4 .5 6 1 7M15 13c0 2 .3 4 1 5M17.5 10.5A6 6 0 0 0 7 7" /></svg>
+          </div>
+          <div style={{ ...disp, fontWeight: 800, fontSize: 20, color: PAPER, marginBottom: 6 }}>{lang === "nl" ? "App vergrendeld" : "App locked"}</div>
+          <div style={{ fontSize: 13, color: MUTED, marginBottom: 22, maxWidth: 280, lineHeight: 1.5 }}>{lang === "nl" ? "Ontgrendel met je vingerafdruk of gezicht om verder te gaan." : "Unlock with your fingerprint or face to continue."}</div>
+          <div onClick={tryUnlock} style={{ cursor: "pointer", background: EMBER, color: "#fff", padding: "14px 30px", borderRadius: 12, ...disp, fontWeight: 800, fontSize: 15 }}>{lang === "nl" ? "Ontgrendelen" : "Unlock"}</div>
+          <div onClick={() => { setBioLocked(false); confirmLogout(); }} style={{ cursor: "pointer", color: MUTED, fontSize: 12.5, marginTop: 18, textDecoration: "underline" }}>{lang === "nl" ? "Uitloggen" : "Log out"}</div>
+        </div>
+      )}
+
       {showCodeChange && (
         <div onClick={() => setShowCodeChange(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 92, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
           <div onClick={(e) => e.stopPropagation()} style={{ background: INK2, border: `1px solid ${LINE}`, borderRadius: 16, width: "100%", maxWidth: 360, padding: 22 }}>
