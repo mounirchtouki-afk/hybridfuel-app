@@ -30,7 +30,7 @@ const IMAP = {
 const macros=(items)=>{let k=0,p=0,c=0,f=0;for(const it of items){const m=IMAP[it.slug];const g=it.g/100;k+=m.kcal*g;p+=m.p*g;c+=m.c*g;f+=m.f*g;}return{kcal:Math.round(k),p:Math.round(p),c:Math.round(c),f:Math.round(f)};};
 const slug=(s)=>s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,"");
 const dishes=[]; const used=new Set();
-function add(nl,en,moments,items,prefs=[],steps=""){const key=slug(en);if(used.has(key))return;used.add(key);const mac=macros(items);const goals=[];if((mac.p*4)/Math.max(1,mac.kcal)>=0.30&&mac.kcal<=700)goals.push("cut");if(mac.kcal>=600)goals.push("gain");goals.push("maintain");dishes.push({slug:key,nl,en,moments,goals:[...new Set(goals)],items,tags:["sousvide","high_protein"],prefs,steps});}
+function add(nl,en,moments,items,prefs=[],st=null){const key=slug(en);if(used.has(key))return;used.add(key);const mac=macros(items);const goals=[];if((mac.p*4)/Math.max(1,mac.kcal)>=0.30&&mac.kcal<=700)goals.push("cut");if(mac.kcal>=600)goals.push("gain");goals.push("maintain");dishes.push({slug:key,nl,en,moments,goals:[...new Set(goals)],items,tags:["sousvide","high_protein"],prefs,steps:(st&&st.nl)||"",steps_en:(st&&st.en)||"",technique:"sousvide",temp:(st&&st.temp)||null});}
 // Kern-temp + tijd per eiwit (gevalideerd: Anova + Serious Eats/ChefSteps).
 const svInfo={
   chicken_breast:{temp:"63°C",time:"1,5–4 u"}, chicken_thigh:{temp:"74°C",time:"1–4 u"},
@@ -39,7 +39,10 @@ const svInfo={
   duck_breast:{temp:"56°C",time:"1,5–3 u"}, salmon:{temp:"50°C",time:"30–45 min",fish:true},
   white_fish:{temp:"52°C",time:"30–45 min",fish:true}, shrimp:{temp:"57°C",time:"30 min",fish:true},
 };
-function svSteps(ps,cnl,vnl){const i=svInfo[ps]||{temp:"",time:""};const prot=(IMAP[ps]?IMAP[ps].nl:"het eiwit").toLowerCase();const sear=i.fish?"Dep droog en bak de velzijde heel kort aan — vis valt snel uit elkaar.":"Dep droog en schroei rondom kort dicht in een gloeiend hete pan of met de brander, voor een korst.";return ["Vacumeer de "+prot+" (eventueel met een takje kruiden en wat olie).","Gaar sous-vide op "+i.temp+" ("+i.time+").",sear,"Kook de "+cnl+" volgens de verpakking.","Stoom of wok de "+vnl+" beetgaar.","Snijd aan, breng op smaak en serveer."].map((s,n)=>(n+1)+". "+s).join("\n");}
+function svSteps(ps,cnl,cen,vnl,ven){const i=svInfo[ps]||{temp:"",time:""};const prot=(IMAP[ps]?IMAP[ps].nl:"het eiwit").toLowerCase();const proten=(IMAP[ps]?IMAP[ps].en:"the protein").toLowerCase();
+  const nl=[`Vacumeer de ${prot} (eventueel met een takje kruiden en wat olie).`,`Gaar sous-vide op ${i.temp} (${i.time}).`,i.fish?"Dep droog en bak de velzijde heel kort aan — vis valt snel uit elkaar.":"Dep droog en schroei rondom kort dicht in een gloeiend hete pan of met de brander, voor een korst.",`Kook de ${cnl} volgens de verpakking.`,`Stoom of wok de ${vnl} beetgaar.`,"Snijd aan, breng op smaak en serveer."];
+  const en=[`Vacuum-seal the ${proten} (add herbs and a little oil if you like).`,`Cook sous-vide at ${i.temp} (${i.time}).`,i.fish?"Pat dry and sear the skin side very briefly — fish falls apart easily.":"Pat dry and sear all over in a screaming-hot pan or with a torch, for a crust.",`Cook the ${cen} per the package.`,`Steam or stir-fry the ${ven} until tender-crisp.`,"Slice, season and serve."];
+  return {nl:nl.map((s,n)=>(n+1)+". "+s).join("\n"),en:en.map((s,n)=>(n+1)+". "+s).join("\n"),temp:i.temp};}
 
 // Sous-vide eiwitten met kern-temp (naam encodeert techniek + temp)
 const SV=[
@@ -64,13 +67,14 @@ for(const [ps,pnl,pen,pg,pprefs] of SV){
       const fat = fishProt.has(ps) ? {slug:"olive_oil",g:7} : {slug:"butter",g:8};
       const items=[{slug:ps,g:pg},{slug:cs,g:cg},{slug:vs,g:vg},fat];
       // naam: "<Eiwit sous-vide temp> met <carb> & <veg>"
-      add(`${pnl} met ${cnl} & ${vnl}`,`${pen} with ${cen} & ${ven}`,["dinner","lunch"],items,pprefs,svSteps(ps,cnl,vnl));
+      add(`${pnl} met ${cnl} & ${vnl}`,`${pen} with ${cen} & ${ven}`,["dinner","lunch"],items,pprefs,svSteps(ps,cnl,cen,vnl,ven));
     }
   }
 }
 // Onsen-ei (sous-vide 63°C) extra
-add("Onsen-ei 63°C met spinazie","Onsen egg 63°C with spinach",["breakfast","lunch"],[{slug:"egg",g:120},{slug:"spinach",g:60},{slug:"olive_oil",g:3}],[],
-  ["Gaar de eieren sous-vide op 63°C (45–60 min) voor een romige dooier.","Wok of slink de spinazie kort in de olijfolie.","Pel de onsen-eieren voorzichtig en leg ze op de spinazie.","Breng op smaak met peper en zout."].map((s,n)=>(n+1)+". "+s).join("\n"));
+add("Onsen-ei 63°C met spinazie","Onsen egg 63°C with spinach",["breakfast","lunch"],[{slug:"egg",g:120},{slug:"spinach",g:60},{slug:"olive_oil",g:3}],[],{temp:"63°C",
+  nl:["Gaar de eieren sous-vide op 63°C (45–60 min) voor een romige dooier.","Wok of slink de spinazie kort in de olijfolie.","Pel de onsen-eieren voorzichtig en leg ze op de spinazie.","Breng op smaak met peper en zout."].map((s,n)=>(n+1)+". "+s).join("\n"),
+  en:["Cook the eggs sous-vide at 63°C (45–60 min) for a creamy yolk.","Wilt the spinach briefly in the olive oil.","Peel the onsen eggs carefully and set them on the spinach.","Season with salt and pepper."].map((s,n)=>(n+1)+". "+s).join("\n")});
 
 // ---- SQL ----
 const esc=(s)=>s.replace(/'/g,"''");
@@ -79,9 +83,9 @@ let sql="-- SOUS-VIDE batch (core). Draai NA dish-library.sql (en mag na de hoof
 sql+="insert into public.ingredients (slug,name_nl,name_en,kcal,protein,carbs,fat,category,source) values\n";
 sql+=[...usedSlugs].map(s=>{const m=IMAP[s];const cat=/steak|iron|lamb|duck|chicken|pork|beef/.test(s)?"vlees":/salmon|fish|shrimp/.test(s)?"vis":/oil|butter/.test(s)?"vet":/potato|rice|quinoa/.test(s)?"granen":/broccoli|bean|aspar|spin|zucch/.test(s)?"groente":"overig";return `('${s}','${esc(m.nl)}','${esc(m.en)}',${m.kcal},${m.p},${m.c},${m.f},'${cat}','core')`;}).join(",\n");
 sql+="\non conflict (slug) do nothing;\n\n";
-sql+="insert into public.dishes (slug,name_nl,name_en,moments,goals,items,tags,prefs,steps,source) values\n";
-sql+=dishes.map(d=>`('${d.slug}','${esc(d.nl)}','${esc(d.en)}',ARRAY[${d.moments.map(m=>`'${m}'`).join(",")}],ARRAY[${d.goals.map(g=>`'${g}'`).join(",")}],'${JSON.stringify(d.items.map(it=>({slug:it.slug,g:it.g})))}'::jsonb,ARRAY[${d.tags.map(t=>`'${t}'`).join(",")}]::text[],ARRAY[${d.prefs.map(p=>`'${p}'`).join(",")}]::text[],'${esc(d.steps||"")}','core')`).join(",\n");
-sql+="\non conflict (slug) do update set name_nl=excluded.name_nl,name_en=excluded.name_en,moments=excluded.moments,goals=excluded.goals,items=excluded.items,tags=excluded.tags,prefs=excluded.prefs,steps=excluded.steps;\ncommit;\n";
+sql+="insert into public.dishes (slug,name_nl,name_en,moments,goals,items,tags,prefs,steps,steps_en,technique,temp,source) values\n";
+sql+=dishes.map(d=>`('${d.slug}','${esc(d.nl)}','${esc(d.en)}',ARRAY[${d.moments.map(m=>`'${m}'`).join(",")}],ARRAY[${d.goals.map(g=>`'${g}'`).join(",")}],'${JSON.stringify(d.items.map(it=>({slug:it.slug,g:it.g})))}'::jsonb,ARRAY[${d.tags.map(t=>`'${t}'`).join(",")}]::text[],ARRAY[${d.prefs.map(p=>`'${p}'`).join(",")}]::text[],'${esc(d.steps||"")}','${esc(d.steps_en||"")}','${esc(d.technique||"sousvide")}',${d.temp?`'${esc(d.temp)}'`:"null"},'core')`).join(",\n");
+sql+="\non conflict (slug) do update set name_nl=excluded.name_nl,name_en=excluded.name_en,moments=excluded.moments,goals=excluded.goals,items=excluded.items,tags=excluded.tags,prefs=excluded.prefs,steps=excluded.steps,steps_en=excluded.steps_en,technique=excluded.technique,temp=excluded.temp;\ncommit;\n";
 writeFileSync(new URL("./sousvide-seed.sql",import.meta.url),sql);
 console.log("sous-vide gerechten:",dishes.length);
 dishes.slice(0,5).forEach(d=>{const m=macros(d.items);console.log("  •",d.nl,"→",m.kcal+"kcal",m.p+"p/"+m.c+"c/"+m.f+"f");});

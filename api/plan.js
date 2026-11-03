@@ -397,7 +397,7 @@ async function getIngredients() {
   if (_ingCache && (Date.now() - _ingAt) < 600000) return _ingCache;
   const { url, headers } = supaBase();
   try {
-    const r = await fetch(url + "/rest/v1/ingredients?select=slug,name_nl,name_en,kcal,protein,carbs,fat", { headers });
+    const r = await fetch(url + "/rest/v1/ingredients?select=slug,name_nl,name_en,kcal,protein,carbs,fat,category", { headers });
     if (!r.ok) return _ingCache || {};
     const rows = await r.json().catch(() => []);
     const map = {}; (rows || []).forEach((x) => { map[x.slug] = x; });
@@ -412,7 +412,7 @@ function dishMac(items, ing) {
 }
 async function fetchDishes(moment, chipIds) {
   const { url, headers } = supaBase();
-  let q = url + "/rest/v1/dishes?select=slug,name_nl,name_en,moments,goals,items,tags,prefs,steps&active=eq.true&source=eq.core&moments=ov.%7B" + encodeURIComponent(moment) + "%7D&limit=400";
+  let q = url + "/rest/v1/dishes?select=slug,name_nl,name_en,moments,goals,items,tags,prefs,steps,steps_en,technique,temp&active=eq.true&source=eq.core&moments=ov.%7B" + encodeURIComponent(moment) + "%7D&limit=400";
   if (chipIds && chipIds.length) q += "&prefs=ov.%7B" + chipIds.map(encodeURIComponent).join(",") + "%7D";
   try {
     const r = await fetch(q, { headers });
@@ -448,55 +448,91 @@ async function buildFromLibrary(body, cyc) {
     cache[momId] = rows;
     return rows;
   }
-  function scaleDish(dish, targetKcal) {
+  // Hulp: categorie + het eiwit-ingrediënt van een gerecht (voor rotatie).
+  const catOf = (slug) => (ing[slug] || {}).category || "";
+  const isCarbSlug = (slug) => catOf(slug) === "granen" || slug === "potato" || slug === "sweet_potato";
+  const protSlug = (dish) => { const it = (dish.items || []).find((x) => ["vlees", "vis", "vega", "peulvrucht"].includes(catOf(x.slug)) || x.slug === "egg" || catOf(x.slug) === "zuivel"); return it ? it.slug : (dish.items && dish.items[0] && dish.items[0].slug) || dish.slug; };
+  const stepsOf = (dish) => lang === "en" ? (dish.steps_en || dish.steps || "") : (dish.steps || "");
+  // Bord-structuur in gewone taal (voor de pills): welk zetmeel, groente ja/nee, welk vet.
+  const isFatSlug = (slug) => ["vet", "noten"].includes(catOf(slug)) || ["olive_oil", "butter", "peanut_butter", "avocado"].includes(slug);
+  function compOf(items) {
+    let carb = null, veg = false, fat = null;
+    for (const it of items || []) {
+      if (!carb && isCarbSlug(it.slug)) carb = name(ing[it.slug]) || it.slug;
+      if (catOf(it.slug) === "groente" || catOf(it.slug) === "fruit") veg = true;
+      if (!fat && isFatSlug(it.slug)) fat = name(ing[it.slug]) || it.slug;
+    }
+    return { carb, veg, fat };
+  }
+  // BORDMETHODE / eiwit-eerst: schaal het gerecht op het eiwit-doel van de maaltijd
+  // (niet op kcal) -> realistische porties + gelijkmatige eiwitverdeling. Daarna
+  // schaalt ALLEEN het zetmeel mee met de trainingsbelasting (carb-periodisering).
+  function scaleDish(dish, pTarget, maxFactor, carbMult) {
     const base = dishMac(dish.items, ing);
-    if (!(base.kcal > 0)) return null;
-    let factor = targetKcal / base.kcal;
-    factor = Math.max(0.5, Math.min(2.0, factor));
-    const items = (dish.items || []).map((it) => ({ n: name(ing[it.slug]) || it.slug, g: Math.round(it.g * factor) }));
-    const mac = dishMac((dish.items || []).map((it) => ({ slug: it.slug, g: it.g * factor })), ing);
-    return { t: null, n: name(dish), kcal: Math.round(mac.kcal), p: Math.round(mac.p), c: Math.round(mac.c), f: Math.round(mac.f), ing: items, steps: dish.steps || "" };
+    let factor = base.p > 4 ? pTarget / base.p : (base.kcal > 0 ? (pTarget * 9) / base.kcal : 1);
+    factor = Math.max(0.5, Math.min(maxFactor || 2.2, factor));
+    const cm = carbMult || 1;
+    const scaled = (dish.items || []).map((it) => ({ slug: it.slug, g: it.g * factor * (isCarbSlug(it.slug) ? cm : 1) }));
+    const items = scaled.map((it) => ({ n: name(ing[it.slug]) || it.slug, g: Math.round(it.g) }));
+    const mac = dishMac(scaled, ing);
+    return { t: null, n: name(dish), kcal: Math.round(mac.kcal), p: Math.round(mac.p), c: Math.round(mac.c), f: Math.round(mac.f), ing: items, steps: stepsOf(dish), technique: dish.technique || null, temp: dish.temp || null, comp: compOf(dish.items) };
   }
   function scaleProduct(prod, targetKcal) {
     const per = prod.per_100 || {}; const k100 = Number(per.kcal) || 0; if (!(k100 > 0)) return null;
-    // Een los product als hele maaltijd mag niet absurd groot worden. Cap op dichtheid:
-    // energiedicht (whey/olie/reep >300 kcal/100g) -> max 90g, matig -> 280g, licht -> 450g.
     const maxG = k100 > 300 ? 90 : k100 > 140 ? 280 : 450;
     let g = Math.round(targetKcal / (k100 / 100)); g = Math.max(25, Math.min(maxG, g));
     const f2 = g / 100;
-    return { t: null, n: prod.name, kcal: Math.round(k100 * f2), p: Math.round((Number(per.p) || 0) * f2), c: Math.round((Number(per.c) || 0) * f2), f: Math.round((Number(per.f) || 0) * f2), ing: [{ n: prod.name, g }] };
+    return { t: null, n: prod.name, kcal: Math.round(k100 * f2), p: Math.round((Number(per.p) || 0) * f2), c: Math.round((Number(per.c) || 0) * f2), f: Math.round((Number(per.f) || 0) * f2), ing: [{ n: prod.name, g }], steps: "", technique: null, temp: null };
+  }
+  // Kies een gerecht dat nog niet gebruikt is (sleutel = eiwit), vanaf een rotatie-offset.
+  function pickDistinct(cands, offset, avoid) {
+    if (!cands.length) return null;
+    for (let i = 0; i < cands.length; i++) { const d = cands[(offset + i) % cands.length]; if (!avoid.has(protSlug(d))) return d; }
+    return cands[offset % cands.length];
   }
   const moments = [
-    { id: "breakfast", label: lang === "en" ? "Breakfast" : "Ontbijt", share: 0.30, rot: 0 },
-    { id: "lunch", label: lang === "en" ? "Lunch" : "Lunch", share: 0.35, rot: 1 },
-    { id: "dinner", label: lang === "en" ? "Dinner" : "Diner", share: 0.35, rot: 2 },
+    { id: "breakfast", label: lang === "en" ? "Breakfast" : "Ontbijt", rot: 0 },
+    { id: "lunch", label: lang === "en" ? "Lunch" : "Lunch", rot: 1 },
+    { id: "dinner", label: lang === "en" ? "Dinner" : "Diner", rot: 2 },
   ];
   const snackLabel = lang === "en" ? "Snack" : "Tussendoortje";
-  // Per-dag plan: body.week = 7 dagen (voor variatie, elk een ander gerecht via rotatie).
-  // Valt terug op body.request (2 templates) als week ontbreekt.
   const reqs = (Array.isArray(body.week) && body.week.length) ? body.week.slice(0, 7)
     : ((Array.isArray(body.request) && body.request.length) ? body.request.slice(0, 3) : [{ label: "D1", level: "base" }]);
+  const lastProt = {}; // per moment: eiwit van gisteren (niet twee dagen achter elkaar hetzelfde)
   const days = [];
   for (let ti = 0; ti < reqs.length; ti++) {
     const r = reqs[ti];
     const dayT = r.level === "train" ? cyc.train : r.level === "rest" ? cyc.rest : cyc.base;
-    const snackKcal = nSnack > 0 ? Math.max(120, Math.round(dayT.kcal * 0.10)) : 0;
-    const mainKcal = dayT.kcal - snackKcal * nSnack;
+    const carbMult = r.level === "train" ? 1.2 : r.level === "rest" ? 0.8 : 1.0; // alleen zetmeel
+    const dayP = dayT.protein || 150;
+    const pMain = Math.max(28, Math.min(42, Math.round(dayP * 0.26)));
+    const pSnack = Math.max(12, Math.min(26, Math.round(dayP * 0.09)));
+    const usedToday = new Set();
     const meals = [];
     let miss = false;
     for (const md of moments) {
-      const tgt = Math.round(mainKcal * md.share);
       const prods = chosenProducts.filter((p) => p.moment === md.id);
-      let meal = prods.length ? scaleProduct(prods[ti % prods.length], tgt) : null;
-      if (!meal) { const cands = await candidatesFor(md.id); if (cands.length) meal = scaleDish(cands[(ti * 3 + md.rot) % cands.length], tgt); }
+      let meal = prods.length ? scaleProduct(prods[ti % prods.length], Math.round(dayT.kcal * 0.32)) : null;
+      if (!meal) {
+        const cands = await candidatesFor(md.id);
+        if (cands.length) {
+          const avoid = new Set(usedToday); if (lastProt[md.id]) avoid.add(lastProt[md.id]);
+          const dish = pickDistinct(cands, ti * 3 + md.rot, avoid);
+          meal = scaleDish(dish, pMain, 2.2, carbMult);
+          usedToday.add(protSlug(dish)); lastProt[md.id] = protSlug(dish);
+        }
+      }
       if (!meal) { miss = true; break; }
       meal.t = md.label; meals.push(meal);
     }
     if (miss) return { complete: false };
     for (let s = 0; s < nSnack; s++) {
       const prods = chosenProducts.filter((p) => p.moment === "snack");
-      let meal = prods.length ? scaleProduct(prods[(ti + s) % prods.length], snackKcal) : null;
-      if (!meal) { const cands = await candidatesFor("snack"); if (cands.length) meal = scaleDish(cands[(ti * 2 + s) % cands.length], snackKcal); }
+      let meal = prods.length ? scaleProduct(prods[(ti + s) % prods.length], Math.round(dayT.kcal * 0.10)) : null;
+      if (!meal) {
+        const cands = await candidatesFor("snack");
+        if (cands.length) { const dish = pickDistinct(cands, ti * 2 + s, usedToday); meal = scaleDish(dish, pSnack, 1.6, 1); usedToday.add(protSlug(dish)); }
+      }
       if (!meal) { miss = true; break; }
       meal.t = snackLabel; meals.push(meal);
     }

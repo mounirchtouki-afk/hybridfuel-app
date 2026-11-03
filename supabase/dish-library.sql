@@ -32,15 +32,21 @@ create table if not exists public.dishes (
   items       jsonb not null default '[]',        -- [{ "slug":"chicken_breast", "g":150 }, ...]
   tags        text[] not null default '{}',       -- high_protein | vegetarian | vegan | quick | lactosefree | ...
   prefs       text[] not null default '{}',       -- koppeling met onboarding-chips, bv. {'chickenwrap'}
-  steps       text,                               -- bereidingswijze (genummerde stappen, \n gescheiden)
+  steps       text,                               -- bereidingswijze NL (genummerde stappen, \n gescheiden)
+  steps_en    text,                               -- bereidingswijze EN
+  technique   text,                               -- pan | oven | sousvide | blender | soup | assembly
+  temp        text,                               -- kerntemp bij sous-vide, bv. '54°C'
   source      text not null default 'core',       -- core | user | gym
   org_id      uuid,                               -- gevuld als een gym 'm deelt (gym-bibliotheek)
   created_by  uuid references auth.users(id) on delete set null,
   active      boolean not null default true,
   created_at  timestamptz not null default now()
 );
--- Voor bestaande databases (tabel bestond al zonder steps):
+-- Voor bestaande databases (kolommen toevoegen als ze nog niet bestaan):
 alter table public.dishes add column if not exists steps text;
+alter table public.dishes add column if not exists steps_en text;
+alter table public.dishes add column if not exists technique text;
+alter table public.dishes add column if not exists temp text;
 create index if not exists dishes_moments_idx on public.dishes using gin (moments);
 create index if not exists dishes_prefs_idx   on public.dishes using gin (prefs);
 create index if not exists dishes_source_idx  on public.dishes (source);

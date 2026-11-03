@@ -105,10 +105,11 @@ const ING = [
 ];
 const IMAP = Object.fromEntries(ING.map((r) => [r[0], { kcal: r[3], p: r[4], c: r[5], f: r[6], nl: r[1], en: r[2], cat: r[7] }]));
 
-// Bereidingswijze op basis van de naam (herkenbare familie) + ingrediënt-categorieën.
+// Tweetalige bereidingswijze + techniek, op basis van de naam (familie) + ingrediënt-categorieën.
 function stepsFor(nameNl, items) {
   const R = items.map((it) => ({ ...IMAP[it.slug], slug: it.slug, g: it.g })).filter((x) => x.nl);
-  const low = (x) => (x ? x.nl.toLowerCase() : "");
+  const nlw = (x) => (x ? x.nl.toLowerCase() : "");
+  const enw = (x) => (x ? x.en.toLowerCase() : "");
   const prot = R.find((x) => ["vlees", "vis", "vega", "peulvrucht"].includes(x.cat) || x.slug === "egg");
   const dairy = R.find((x) => x.cat === "zuivel" && !["egg", "egg_white", "feta", "parmesan", "mozzarella_light", "whey"].includes(x.slug));
   const carb = R.find((x) => x.cat === "granen" || ["potato", "sweet_potato"].includes(x.slug));
@@ -117,38 +118,45 @@ function stepsFor(nameNl, items) {
   const sauce = R.find((x) => x.cat === "saus");
   const fat = R.find((x) => ["olive_oil", "butter"].includes(x.slug));
   const feta = R.find((x) => x.slug === "feta");
-  const vegTxt = veg.map(low).join(" en ") || "wat groente";
+  const vegNl = veg.map(nlw).join(" en ") || "wat groente";
+  const vegEn = veg.map(enw).join(" and ") || "some veg";
   const n = nameNl.toLowerCase();
-  const S = [];
-  if (/smoothie|shake/.test(n)) { S.push("Doe alle ingrediënten in de blender.", "Mix glad en schenk in een glas."); }
-  else if (/pannenkoek/.test(n)) { S.push("Blend de havermout, het ei en de whey tot een glad beslag.", "Bak er kleine pannenkoeken van in een licht ingevette pan.", fruit ? `Top met ${low(fruit)}.` : "Serveer direct."); }
-  else if (/omelet/.test(n)) { S.push("Klop de eieren los met peper en zout.", `Bak ${vegTxt} kort in de pan, giet de eieren erover en laat stollen.`, feta ? "Verkruimel de feta erover." : "Vouw dubbel en serveer."); }
-  else if (/roerei/.test(n)) { S.push("Klop de eieren los.", `Roerbak ze met ${vegTxt} tot ze net gestold zijn.`, carb ? `Serveer met ${low(carb)}.` : "Serveer direct."); }
-  else if (/overnight oats/.test(n)) { S.push("Meng de havermout, melk en chia in een pot.", "Laat minimaal een nacht in de koelkast opstijven.", fruit ? `Top de volgende ochtend met ${low(fruit)}.` : "Roer los en serveer."); }
-  else if (/muesli|granola/.test(n)) { S.push(`Doe de ${dairy ? low(dairy) : "yoghurt"} in een kom.`, `Schep de ${carb ? low(carb) : "muesli"} erover.`, fruit ? `Top met ${low(fruit)}.` : "Serveer direct."); }
-  else if (/toast|brood|sandwich/.test(n)) { S.push("Rooster of snijd het brood.", `Beleg met ${prot ? low(prot) : "je topping"}${veg.length ? " en " + vegTxt : ""}.`, "Breng op smaak met peper en zout."); }
-  else if (/wrap/.test(n)) { S.push("Warm de wrap kort op.", `Beleg met ${prot ? low(prot) : "vulling"}, ${vegTxt}${dairy ? " en " + low(dairy) : ""}.`, "Rol strak op en snijd doormidden."); }
-  else if (/salade|caesar/.test(n)) { S.push(`Meng de sla met ${vegTxt}.`, `Voeg ${prot ? low(prot) : "eiwit"} toe.`, fat ? `Besprenkel met ${low(fat)} en breng op smaak.` : "Breng op smaak met peper en zout."); }
-  else if (/soep/.test(n)) { S.push("Fruit de groente kort aan.", "Voeg bouillon (en eventueel eiwit) toe en laat garen.", "Pureer naar wens en serveer met het brood."); }
-  else if (/poké|poke|buddha|burrito|bowl/.test(n)) { S.push(carb ? `Kook de ${low(carb)} en laat afkoelen.` : "Maak de basis klaar.", `Verdeel alles in een kom: ${prot ? low(prot) : "eiwit"}, ${vegTxt}.`, sauce ? `Werk af met ${low(sauce)}.` : "Werk af naar smaak."); }
-  else if (/kwark|skyr|hüttenkäse|yoghurt/.test(n) && !carb && (fruit || veg.length)) { const top = fruit || veg[0]; S.push(`Doe de ${dairy ? low(dairy) : "kwark"} in een kom.`, fruit ? `Meng of top met ${low(top)}.` : `Serveer met ${low(top)}.`); }
-  else if (/kwark|skyr|yoghurt/.test(n) && carb) { S.push(`Doe de ${dairy ? low(dairy) : "kwark"} in een kom.`, `Roer de ${low(carb)} erdoor.`, fruit ? `Top met ${low(fruit)}.` : "Serveer direct."); }
-  else if (/rijstwafels/.test(n)) { const top = R.find((x) => x.slug !== "rice_cakes"); S.push(top ? `Beleg de rijstwafels met ${low(top)}.` : "Serveer de rijstwafels."); }
-  else if (/appel met|peer met|banaan met/.test(n)) { const top = R.find((x) => x.cat !== "fruit"); S.push(`Snijd ${fruit ? low(fruit) : "het fruit"} in partjes.`, top ? `Serveer met ${low(top)} om in te dippen.` : "Serveer direct."); }
-  else if (/noten|amandelen|walnoten|pompoenpitten/.test(n)) { S.push("Weeg de portie af.", "Serveer als snack tussendoor."); }
-  else if (/reep/.test(n)) { S.push("Pak de proteïnereep als snack onderweg."); }
-  else if (/edamame/.test(n)) { S.push("Kook of stoom de edamame 4–5 min.", "Bestrooi met een snuf zeezout."); }
-  else if (/gekookte eieren/.test(n)) { S.push("Kook de eieren 8–9 min.", "Pel en bestrooi met peper en zout."); }
-  else if (/chocolade/.test(n)) { S.push("Combineer de pure chocolade met de noten als snack."); }
+  const S = []; // {nl, en}
+  const P = (nl, en) => S.push({ nl, en });
+  let technique = "pan";
+  if (/smoothie|shake/.test(n)) { technique = "blender"; P("Doe alle ingrediënten in de blender.", "Add everything to the blender."); P("Mix glad en schenk in een glas.", "Blend smooth and pour into a glass."); }
+  else if (/pannenkoek/.test(n)) { P("Blend de havermout, het ei en de whey tot een glad beslag.", "Blend the oats, egg and whey into a smooth batter."); P("Bak er kleine pannenkoeken van in een licht ingevette pan.", "Cook small pancakes in a lightly greased pan."); P(fruit ? `Top met ${nlw(fruit)}.` : "Serveer direct.", fruit ? `Top with ${enw(fruit)}.` : "Serve right away."); }
+  else if (/omelet/.test(n)) { P("Klop de eieren los met peper en zout.", "Whisk the eggs with salt and pepper."); P(`Bak ${vegNl} kort in de pan, giet de eieren erover en laat stollen.`, `Sauté the ${vegEn} briefly, pour in the eggs and let set.`); P(feta ? "Verkruimel de feta erover." : "Vouw dubbel en serveer.", feta ? "Crumble the feta on top." : "Fold over and serve."); }
+  else if (/roerei/.test(n)) { P("Klop de eieren los.", "Whisk the eggs."); P(`Roerbak ze met ${vegNl} tot ze net gestold zijn.`, `Scramble with the ${vegEn} until just set.`); P(carb ? `Serveer met ${nlw(carb)}.` : "Serveer direct.", carb ? `Serve with the ${enw(carb)}.` : "Serve right away."); }
+  else if (/overnight oats/.test(n)) { technique = "assembly"; P("Meng de havermout, melk en chia in een pot.", "Mix the oats, milk and chia in a jar."); P("Laat minimaal een nacht in de koelkast opstijven.", "Chill overnight to set."); P(fruit ? `Top de volgende ochtend met ${nlw(fruit)}.` : "Roer los en serveer.", fruit ? `Top with ${enw(fruit)} in the morning.` : "Stir and serve."); }
+  else if (/muesli|granola/.test(n)) { technique = "assembly"; P(`Doe de ${dairy ? nlw(dairy) : "yoghurt"} in een kom.`, `Spoon the ${dairy ? enw(dairy) : "yoghurt"} into a bowl.`); P(`Schep de ${carb ? nlw(carb) : "muesli"} erover.`, `Add the ${carb ? enw(carb) : "muesli"} on top.`); P(fruit ? `Top met ${nlw(fruit)}.` : "Serveer direct.", fruit ? `Top with ${enw(fruit)}.` : "Serve."); }
+  else if (/toast|brood|sandwich/.test(n)) { technique = "assembly"; P("Rooster of snijd het brood.", "Toast or slice the bread."); P(`Beleg met ${prot ? nlw(prot) : "je topping"}${veg.length ? " en " + vegNl : ""}.`, `Top with ${prot ? enw(prot) : "your topping"}${veg.length ? " and " + vegEn : ""}.`); P("Breng op smaak met peper en zout.", "Season with salt and pepper."); }
+  else if (/wrap/.test(n)) { technique = "assembly"; P("Warm de wrap kort op.", "Warm the wrap briefly."); P(`Beleg met ${prot ? nlw(prot) : "vulling"}, ${vegNl}${dairy ? " en " + nlw(dairy) : ""}.`, `Fill with ${prot ? enw(prot) : "filling"}, ${vegEn}${dairy ? " and " + enw(dairy) : ""}.`); P("Rol strak op en snijd doormidden.", "Roll up tightly and halve."); }
+  else if (/salade|caesar/.test(n)) { technique = "assembly"; P(`Meng de sla met ${vegNl}.`, `Toss the lettuce with the ${vegEn}.`); P(`Voeg ${prot ? nlw(prot) : "eiwit"} toe.`, `Add the ${prot ? enw(prot) : "protein"}.`); P(fat ? `Besprenkel met ${nlw(fat)} en breng op smaak.` : "Breng op smaak met peper en zout.", fat ? `Drizzle with ${enw(fat)} and season.` : "Season with salt and pepper."); }
+  else if (/soep/.test(n)) { technique = "soup"; P("Fruit de groente kort aan.", "Sweat the vegetables briefly."); P("Voeg bouillon (en eventueel eiwit) toe en laat garen.", "Add stock (and protein if using) and simmer."); P("Pureer naar wens en serveer met het brood.", "Blend if you like and serve with the bread."); }
+  else if (/poké|poke|buddha|burrito|bowl/.test(n)) { technique = "assembly"; P(carb ? `Kook de ${nlw(carb)} en laat afkoelen.` : "Maak de basis klaar.", carb ? `Cook the ${enw(carb)} and let it cool.` : "Prepare the base."); P(`Verdeel alles in een kom: ${prot ? nlw(prot) : "eiwit"}, ${vegNl}.`, `Arrange in a bowl: ${prot ? enw(prot) : "protein"}, ${vegEn}.`); P(sauce ? `Werk af met ${nlw(sauce)}.` : "Werk af naar smaak.", sauce ? `Finish with ${enw(sauce)}.` : "Finish to taste."); }
+  else if (/kwark|skyr|hüttenkäse|yoghurt/.test(n) && !carb && (fruit || veg.length)) { technique = "assembly"; const top = fruit || veg[0]; P(`Doe de ${dairy ? nlw(dairy) : "kwark"} in een kom.`, `Spoon the ${dairy ? enw(dairy) : "quark"} into a bowl.`); P(fruit ? `Meng of top met ${nlw(top)}.` : `Serveer met ${nlw(top)}.`, fruit ? `Mix or top with ${enw(top)}.` : `Serve with ${enw(top)}.`); }
+  else if (/kwark|skyr|yoghurt/.test(n) && carb) { technique = "assembly"; P(`Doe de ${dairy ? nlw(dairy) : "kwark"} in een kom.`, `Spoon the ${dairy ? enw(dairy) : "quark"} into a bowl.`); P(`Roer de ${nlw(carb)} erdoor.`, `Stir in the ${enw(carb)}.`); P(fruit ? `Top met ${nlw(fruit)}.` : "Serveer direct.", fruit ? `Top with ${enw(fruit)}.` : "Serve."); }
+  else if (/rijstwafels/.test(n)) { technique = "assembly"; const top = R.find((x) => x.slug !== "rice_cakes"); P(top ? `Beleg de rijstwafels met ${nlw(top)}.` : "Serveer de rijstwafels.", top ? `Top the rice cakes with ${enw(top)}.` : "Serve the rice cakes."); }
+  else if (/appel met|peer met|banaan met/.test(n)) { technique = "assembly"; const top = R.find((x) => x.cat !== "fruit"); P(`Snijd ${fruit ? nlw(fruit) : "het fruit"} in partjes.`, `Slice the ${fruit ? enw(fruit) : "fruit"}.`); P(top ? `Serveer met ${nlw(top)} om in te dippen.` : "Serveer direct.", top ? `Serve with ${enw(top)} to dip.` : "Serve."); }
+  else if (/noten|amandelen|walnoten|pompoenpitten/.test(n)) { technique = "assembly"; P("Weeg de portie af.", "Weigh out the portion."); P("Serveer als snack tussendoor.", "Enjoy as a snack."); }
+  else if (/reep/.test(n)) { technique = "assembly"; P("Pak de proteïnereep als snack onderweg.", "Grab the protein bar as an on-the-go snack."); }
+  else if (/edamame/.test(n)) { P("Kook of stoom de edamame 4–5 min.", "Boil or steam the edamame 4–5 min."); P("Bestrooi met een snuf zeezout.", "Sprinkle with a pinch of sea salt."); }
+  else if (/gekookte eieren/.test(n)) { P("Kook de eieren 8–9 min.", "Boil the eggs 8–9 min."); P("Pel en bestrooi met peper en zout.", "Peel and season with salt and pepper."); }
+  else if (/chocolade/.test(n)) { technique = "assembly"; P("Combineer de pure chocolade met de noten als snack.", "Pair the dark chocolate with the nuts as a snack."); }
   else {
     // standaard warme maaltijd: eiwit + koolhydraat + groente
-    if (carb) S.push(`Kook de ${low(carb)} volgens de verpakking.`);
-    if (prot) { const isFish = prot.cat === "vis"; S.push(isFish ? `Bak of pocheer de ${low(prot)} kort tot net gaar; kruid met peper en zout.` : `Bak de ${low(prot)} in een pan${fat ? " met " + low(fat) : ""} rondom gaar; kruid met peper en zout.`); }
-    if (veg.length) S.push(`Stoom of wok ${vegTxt} beetgaar.`);
-    if (sauce) S.push(`Roer de ${low(sauce)} erdoor of serveer ernaast.`);
-    S.push("Verdeel over het bord en werk af.");
+    if (carb) P(`Kook de ${nlw(carb)} volgens de verpakking.`, `Cook the ${enw(carb)} per the package.`);
+    if (prot) { const isFish = prot.cat === "vis"; P(isFish ? `Bak of pocheer de ${nlw(prot)} kort tot net gaar; kruid met peper en zout.` : `Bak de ${nlw(prot)} in een pan${fat ? " met " + nlw(fat) : ""} rondom gaar; kruid met peper en zout.`, isFish ? `Sear or poach the ${enw(prot)} until just done; season with salt and pepper.` : `Pan-fry the ${enw(prot)}${fat ? " in " + enw(fat) : ""} until done; season with salt and pepper.`); }
+    if (veg.length) P(`Stoom of wok ${vegNl} beetgaar.`, `Steam or stir-fry the ${vegEn} until tender-crisp.`);
+    if (sauce) P(`Roer de ${nlw(sauce)} erdoor of serveer ernaast.`, `Stir in the ${enw(sauce)} or serve on the side.`);
+    P("Verdeel over het bord en werk af.", "Plate up and finish.");
   }
-  return S.map((s, i) => `${i + 1}. ${s}`).join("\n");
+  return {
+    nl: S.map((s, i) => `${i + 1}. ${s.nl}`).join("\n"),
+    en: S.map((s, i) => `${i + 1}. ${s.en}`).join("\n"),
+    technique,
+  };
 }
 
 function macros(items) {
@@ -178,7 +186,8 @@ function add(name_nl, name_en, moments, items, { tags=[], prefs=[], veggie=false
   if (used.has(key)) return; used.add(key);
   const mac = macros(items);
   const et = [...tags]; if (veggie) et.push("vegetarian"); if (vegan) et.push("vegan");
-  dishes.push({ slug:key, name_nl, name_en, moments, goals: goalsFor(mac), items, tags: tagsFor(mac, et), prefs, steps: stepsFor(name_nl, items), mac });
+  const st = stepsFor(name_nl, items);
+  dishes.push({ slug:key, name_nl, name_en, moments, goals: goalsFor(mac), items, tags: tagsFor(mac, et), prefs, steps: st.nl, steps_en: st.en, technique: st.technique, temp: null, mac });
 }
 
 // ---------- DINER & LUNCH warm: eiwit + koolhydraat + groente (+ saus/vet) ----------
@@ -356,9 +365,9 @@ let sql = "-- AUTO-GEGENEREERD: ingrediënten + gerechten (core). Draai NA dish-
 sql += "insert into public.ingredients (slug,name_nl,name_en,kcal,protein,carbs,fat,category,source) values\n";
 sql += ING.filter(r=>usedSlugs.has(r[0])).map(r=>`('${r[0]}','${esc(r[1])}','${esc(r[2])}',${r[3]},${r[4]},${r[5]},${r[6]},'${r[7]}','core')`).join(",\n");
 sql += "\non conflict (slug) do nothing;\n\n";
-sql += "insert into public.dishes (slug,name_nl,name_en,moments,goals,items,tags,prefs,steps,source) values\n";
-sql += dishes.map(d=>`('${d.slug}','${esc(d.name_nl)}','${esc(d.name_en)}',ARRAY[${d.moments.map(m=>`'${m}'`).join(",")}],ARRAY[${d.goals.map(g=>`'${g}'`).join(",")}],'${JSON.stringify(d.items.map(it=>({slug:it.slug,g:it.g})))}'::jsonb,ARRAY[${d.tags.map(t=>`'${t}'`).join(",")}]::text[],ARRAY[${d.prefs.map(p=>`'${p}'`).join(",")}]::text[],'${esc(d.steps)}','core')`).join(",\n");
-sql += "\non conflict (slug) do update set name_nl=excluded.name_nl,name_en=excluded.name_en,moments=excluded.moments,goals=excluded.goals,items=excluded.items,tags=excluded.tags,prefs=excluded.prefs,steps=excluded.steps;\ncommit;\n";
+sql += "insert into public.dishes (slug,name_nl,name_en,moments,goals,items,tags,prefs,steps,steps_en,technique,temp,source) values\n";
+sql += dishes.map(d=>`('${d.slug}','${esc(d.name_nl)}','${esc(d.name_en)}',ARRAY[${d.moments.map(m=>`'${m}'`).join(",")}],ARRAY[${d.goals.map(g=>`'${g}'`).join(",")}],'${JSON.stringify(d.items.map(it=>({slug:it.slug,g:it.g})))}'::jsonb,ARRAY[${d.tags.map(t=>`'${t}'`).join(",")}]::text[],ARRAY[${d.prefs.map(p=>`'${p}'`).join(",")}]::text[],'${esc(d.steps)}','${esc(d.steps_en||"")}','${esc(d.technique||"")}',${d.temp?`'${esc(d.temp)}'`:"null"},'core')`).join(",\n");
+sql += "\non conflict (slug) do update set name_nl=excluded.name_nl,name_en=excluded.name_en,moments=excluded.moments,goals=excluded.goals,items=excluded.items,tags=excluded.tags,prefs=excluded.prefs,steps=excluded.steps,steps_en=excluded.steps_en,technique=excluded.technique,temp=excluded.temp;\ncommit;\n";
 
 writeFileSync(new URL("./seed.sql", import.meta.url), sql);
 

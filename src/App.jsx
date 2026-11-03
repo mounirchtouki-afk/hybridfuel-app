@@ -1752,7 +1752,22 @@ export default function App() {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                 <div style={{ flex: 1, paddingRight: 10 }}>
                   <div style={{ fontSize: 9.5, color: EMBER, letterSpacing: 1, textTransform: "uppercase", fontWeight: 600, marginBottom: 2 }}>{m.t}</div>
-                  <div style={{ fontSize: 13.5, fontWeight: 500 }}>{m.n}</div>
+                  <div style={{ fontSize: 13.5, fontWeight: 500, display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
+                    {m.n}
+                    {m.technique === "sousvide" && (
+                      <span style={{ fontSize: 8.5, fontWeight: 800, letterSpacing: 0.4, textTransform: "uppercase", background: PAPER, color: INK, borderRadius: 5, padding: "2px 7px", display: "inline-flex", alignItems: "center", gap: 4 }}>
+                        <span style={{ width: 5, height: 5, borderRadius: "50%", background: EMBER }} />sous-vide{m.temp ? " · " + m.temp : ""}
+                      </span>
+                    )}
+                  </div>
+                  {m.comp && (
+                    <div style={{ display: "flex", gap: 6, marginTop: 6, flexWrap: "wrap" }}>
+                      {num(m.p) > 0 && <span style={{ fontSize: 10, borderRadius: 20, padding: "3px 9px", fontWeight: 600, background: "rgba(var(--hf-ember-rgb),0.14)", color: EMBER }}>{m.p}{ML.p} {lang === "nl" ? "eiwit" : "protein"}</span>}
+                      {m.comp.carb && <span style={{ fontSize: 10, borderRadius: 20, padding: "3px 9px", fontWeight: 600, background: "rgba(234,160,0,0.16)", color: "#eab308" }}>{lang === "nl" ? "koolhydraten" : "carbs"}: {m.comp.carb}</span>}
+                      {m.comp.veg && <span style={{ fontSize: 10, borderRadius: 20, padding: "3px 9px", fontWeight: 600, background: "rgba(34,197,94,0.15)", color: "#22c55e" }}>{lang === "nl" ? "groente" : "veg"}</span>}
+                      {m.comp.fat && <span style={{ fontSize: 10, borderRadius: 20, padding: "3px 9px", fontWeight: 600, background: "rgba(148,163,184,0.16)", color: "#94a3b8" }}>{m.comp.fat}</span>}
+                    </div>
+                  )}
                   {m.ing && m.ing.length > 0 && (
                     <div style={{ fontSize: 11.5, color: MUTED, marginTop: 3, lineHeight: 1.5 }}>
                       {m.ing.map((ing, ii) => <span key={ii}><span style={{ color: PAPER }}>{gShow(ing.g, units)}{wUnit(units)}</span> {ing.n}{ii < m.ing.length - 1 ? " · " : ""}</span>)}
@@ -1776,6 +1791,41 @@ export default function App() {
             </div>
           ))}
         </div>
+      </div>
+    );
+  }
+
+  function PlanExplain() {
+    const [open, setOpen] = useState(false);
+    const nl = lang === "nl";
+    const rows = nl ? [
+      ["#ef4444", "Eiwit", "elke maaltijd ~30 g, goed verdeeld over de dag. Dat bouwt spier op en herstelt."],
+      ["#eab308", "Koolhydraten", "(rijst, aardappel, havermout) je energie. Op trainingsdagen meer, op rustdagen minder."],
+      ["#22c55e", "Groente", "vezels en vitamines. Op rustdagen een groter deel van je bord."],
+      ["#94a3b8", "Gezonde vetten", "(olie, noten) in maat, voor hormonen en verzadiging."],
+    ] : [
+      ["#ef4444", "Protein", "every meal ~30 g, spread across the day. That builds and repairs muscle."],
+      ["#eab308", "Carbs", "(rice, potato, oats) your energy. More on training days, less on rest days."],
+      ["#22c55e", "Veg", "fibre and vitamins. A bigger part of your plate on rest days."],
+      ["#94a3b8", "Healthy fats", "(oil, nuts) in moderation, for hormones and satiety."],
+    ];
+    return (
+      <div style={{ background: INK2, border: `1px solid ${LINE}`, borderRadius: 12, overflow: "hidden", marginBottom: 12 }}>
+        <div onClick={() => setOpen(!open)} style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: 9, padding: "12px 14px" }}>
+          <div style={{ width: 22, height: 22, borderRadius: 7, background: "rgba(var(--hf-ember-rgb),0.14)", display: "flex", alignItems: "center", justifyContent: "center", color: EMBER, fontWeight: 800, fontSize: 12, flexShrink: 0 }}>i</div>
+          <div style={{ ...disp, fontWeight: 700, fontSize: 13.5, flex: 1 }}>{nl ? "Zo is je plan opgebouwd" : "How your plan is built"}</div>
+          <span style={{ fontSize: 10, color: MUTED, transform: open ? "rotate(180deg)" : "none", display: "inline-block" }}>▾</span>
+        </div>
+        {open && (
+          <div style={{ padding: "0 14px 13px" }}>
+            {rows.map((r, i) => (
+              <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", marginTop: 9 }}>
+                <span style={{ width: 7, height: 7, borderRadius: "50%", background: r[0], marginTop: 5, flexShrink: 0 }} />
+                <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.5 }}><span style={{ color: PAPER, fontWeight: 600 }}>{r[1]}</span> — {r[2]}</div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     );
   }
@@ -2197,6 +2247,7 @@ export default function App() {
                       </div>
 
                       {view === "plan" && planEdit && <div style={{ fontSize: 11.5, color: MUTED, marginBottom: 12, lineHeight: 1.5 }}>{T("editHint")}</div>}
+                      {view === "plan" && !planEdit && <PlanExplain />}
                       {view === "plan" && (<div style={{ display: "grid", gap: 12 }}>{week.days.map((day, di) => planEdit ? <EditDayCard key={di} day={day} di={di} api={{ T, ML, sIn, R, disp, mutDay, patchMeal, scaleMeal, patchIng, addIngr, removeIngr, removeMeal, addMealTo, saveMealAsRecipe, applyIngVals, saveIngProduct, setCopyPick, setMovePlan, setPickTarget, setShowProducts, setRecipePick, savedMsg, units, pro: hasPro || isGymMember }} /> : <DayCard key={di} day={day} />)}</div>)}
                       {view === "shop" && (
                         <div style={{ display: "grid", gap: 12 }}>
