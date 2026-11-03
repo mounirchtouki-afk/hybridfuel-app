@@ -871,7 +871,10 @@ export default function App() {
     if (!supabase) return;
     supabase.auth.getSession().then(({ data }) => setSession((data && data.session) || null)).catch(() => {});
     let sub;
-    try { sub = supabase.auth.onAuthStateChange((e, s) => { setSession(s || null); if (e === "PASSWORD_RECOVERY") { setAuthRecovery(true); setShowAuth(true); } }); } catch (e) {}
+    try { sub = supabase.auth.onAuthStateChange((e, s) => { setSession(s || null); if (e === "PASSWORD_RECOVERY") { setAuthRecovery(true); setShowAuth(true); setShowLogout(false); setShowMore(false); } }); } catch (e) {}
+    // Recovery-/uitnodigingslink geopend: toon direct het wachtwoord-scherm (niet de uitlog-vraag),
+    // ook als Supabase de hash al verwerkt heeft.
+    try { const h = (typeof window !== "undefined" && window.location.hash) || ""; if (h.indexOf("type=recovery") >= 0) { setAuthRecovery(true); setShowAuth(true); setShowLogout(false); } } catch (e) {}
     return () => { try { sub.data.subscription.unsubscribe(); } catch (e) {} };
   }, []);
 
