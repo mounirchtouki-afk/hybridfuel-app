@@ -2294,7 +2294,7 @@ export default function App() {
       )}
 
       {showReminders && <Reminders lang={lang} onClose={() => setShowReminders(false)} />}
-      {showAuth && <Auth lang={lang} session={session} tier={subTier} recovery={authRecovery} gym={isGymMember ? gymCtx.org : null} onClose={() => { setShowAuth(false); setAuthRecovery(false); }} />}
+      {showAuth && <Auth lang={lang} session={session} tier={subTier} recovery={authRecovery} gym={isGymMember ? gymCtx.org : null} onClose={() => { setShowAuth(false); setAuthRecovery(false); }} onCodeLogin={() => { setShowCodeLogin(true); setLoginMsg(""); setLoginCode(""); }} />}
       {showAdmin && isAdmin && <AdminDash session={session} lang={lang} onClose={() => setShowAdmin(false)} />}
       {showProducts && <Products lang={lang} session={session} autoScan={fabScan} onClose={() => { setShowProducts(false); setPickTarget(null); setFabScan(false); }} onPick={pickTarget ? (prod) => { if (pickTarget.mi == null) addProductAsMeal(pickTarget.di, prod); else addProductIng(pickTarget.di, pickTarget.mi, prod); setShowProducts(false); setPickTarget(null); } : fabScan ? (prod) => { addTodayProduct(prod); setShowProducts(false); setFabScan(false); } : null} />}
       {showBuilder && <RecipeBuilder lang={lang} session={session} units={units} onClose={() => setShowBuilder(false)} onSaved={() => flashSaved()} />}

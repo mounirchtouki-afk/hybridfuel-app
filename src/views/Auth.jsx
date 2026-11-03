@@ -18,6 +18,8 @@ async function openCheckout(url) {
 const T = {
   account: { nl: "Account", en: "Account" },
   login: { nl: "Inloggen", en: "Log in" },
+  orCode: { nl: "of", en: "or" },
+  codeLoginBtn: { nl: "Log in met lidcode", en: "Log in with member code" },
   signup: { nl: "Account maken", en: "Sign up" },
   email: { nl: "E-mail", en: "Email" },
   pw: { nl: "Wachtwoord", en: "Password" },
@@ -84,7 +86,7 @@ const PRICE = {
   pro: { month: "€14,95", year: "€149,50" },
 };
 
-export default function Auth({ lang, session, tier, recovery, onClose, gym }) {
+export default function Auth({ lang, session, tier, recovery, onClose, gym, onCodeLogin }) {
   const t = (k) => (T[k] ? T[k][lang] : k);
   const isGymMember = !!gym; // lid van een sportschool: toegang via de gym, geen koop/accountbeheer
   const gymColor = (gym && gym.brand_color) || EMBER;
@@ -383,6 +385,19 @@ export default function Auth({ lang, session, tier, recovery, onClose, gym }) {
         </div>
       )}
       <button onClick={submit} disabled={busy} style={{ ...primaryBtn, opacity: busy ? 0.7 : 1 }}>{busy ? t("busy") : mode === "signup" ? t("signupBtn") : t("loginBtn")}</button>
+      {mode === "login" && onCodeLogin && (
+        <>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "14px 0" }}>
+            <div style={{ flex: 1, height: 1, background: LINE }} />
+            <span style={{ fontSize: 11, color: MUTED, ...disp, letterSpacing: 1, textTransform: "uppercase" }}>{t("orCode")}</span>
+            <div style={{ flex: 1, height: 1, background: LINE }} />
+          </div>
+          <button onClick={() => { onClose(); onCodeLogin(); }} style={{ ...ghostBtn, width: "100%", padding: "13px 0", fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center", gap: 9 }}>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="10" rx="2" /><path d="M7 11V7a5 5 0 0110 0v4" /></svg>
+            {t("codeLoginBtn")}
+          </button>
+        </>
+      )}
       {err && <div style={{ fontSize: 12, color: EMBER_SOFT, marginTop: 10, lineHeight: 1.4 }}>{err}</div>}
       {msg && <div style={{ fontSize: 12.5, color: "#4ADE80", marginTop: 10, lineHeight: 1.5 }}>{msg}</div>}
       <div onClick={() => { setMode(mode === "login" ? "signup" : "login"); setErr(""); setMsg(""); }} style={{ fontSize: 12, color: MUTED, marginTop: 14, textAlign: "center", cursor: "pointer" }}>
