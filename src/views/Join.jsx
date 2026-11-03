@@ -37,6 +37,8 @@ export default function Join({ slug, lang }) {
       // Sessie zetten; de app-listener pakt 'm op en laadt de app.
       if (supabase) { await supabase.auth.setSession({ access_token: d.access_token, refresh_token: d.refresh_token }); }
       try { sessionStorage.removeItem("hf_demo"); } catch (e) {}
+      // Onthoud de sportschool, zodat het lid na uitloggen terugkeert naar dit code-scherm.
+      try { localStorage.setItem("hf_gymslug", slug); } catch (e) {}
       // kleine delay zodat de auth-state doorkomt
       setTimeout(() => { try { window.location.href = "/"; } catch (e) {} }, 300);
     } catch (e) { setErr(t("Er ging iets mis. Probeer opnieuw.", "Something went wrong. Try again.")); setBusy(false); }
@@ -74,7 +76,8 @@ export default function Join({ slug, lang }) {
           {busy ? t("Bezig…", "Loading…") : t("Inloggen", "Log in")}
         </div>
         {err && <div style={{ fontSize: 12.5, color: "var(--hf-ember-soft)", marginTop: 12, lineHeight: 1.4 }}>{err}</div>}
-        <div style={{ fontSize: 10.5, color: MUTED, marginTop: 20, letterSpacing: 0.3 }}>Powered by HybridFuel</div>
+        <div onClick={() => { try { localStorage.removeItem("hf_gymslug"); } catch (e) {} try { window.location.href = "/"; } catch (e) {} }} style={{ cursor: "pointer", fontSize: 11.5, color: MUTED, marginTop: 16, textDecoration: "underline" }}>{t("Inloggen met e-mail i.p.v. code", "Log in with email instead")}</div>
+        <div style={{ fontSize: 10.5, color: MUTED, marginTop: 16, letterSpacing: 0.3 }}>Powered by HybridFuel</div>
       </div>
     </div>
   );

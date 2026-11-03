@@ -1680,7 +1680,10 @@ export default function App() {
   const mIcon = (name) => <Icon name={name} on={true} />;
 
   // Sportschool-routes: join-scherm (code-login) en coach-dashboard gaan vóór de gewone app.
-  const joinSlug = (() => { try { const m = location.pathname.match(/^\/join\/([a-z0-9-]+)/i); return m ? m[1].toLowerCase() : null; } catch (e) { return null; } })();
+  const joinSlug = (() => {
+    try { const m = location.pathname.match(/^\/join\/([a-z0-9-]+)/i); if (m) return m[1].toLowerCase(); } catch (e) {}
+    try { return localStorage.getItem("hf_gymslug") || null; } catch (e) { return null; } // onthouden gym → terug naar code-login na uitloggen
+  })();
   if (joinSlug && !session) return <Join slug={joinSlug} lang={lang} />;
   if (session && gymCtx && gymCtx.role === "coach") return <CoachDash session={session} org={gymCtx.org} isOwner={gymCtx.isOwner} perms={gymCtx.perms} lang={lang} isAdmin={isAdmin} onLogout={confirmLogout} />;
 
