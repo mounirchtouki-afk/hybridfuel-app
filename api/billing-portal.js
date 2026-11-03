@@ -12,6 +12,19 @@
 import { kv } from "./_kv.js";
 
 const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || "hybridfuelco@gmail.com").toLowerCase();
+const MAIL_WEBHOOK = process.env.RENEWAL_WEBHOOK || "https://hook.eu1.make.com/1o3ll8fvbtyewn9wyfrax5sd9ywofnln";
+
+// Uitnodigingsmail voor een nieuwe sportschool-coach, in HybridFuel-huisstijl.
+function inviteEmailHtml(gymName, email, inviteUrl) {
+  const btn = "<a href='" + inviteUrl + "' style='display:inline-block;background:#E11D48;color:#ffffff;text-decoration:none;font-weight:bold;padding:14px 26px;border-radius:10px;font-size:15px'>Stel je wachtwoord in</a>";
+  return "<div style='font-family:Arial,Helvetica,sans-serif;color:#141215;max-width:560px;line-height:1.6;margin:0 auto'>" +
+    "<div style='font-weight:800;font-size:22px;color:#E11D48;margin-bottom:4px'>HybridFuelCo</div>" +
+    "<p style='font-size:17px;font-weight:bold;margin:14px 0 6px'>Welkom, " + gymName + " 💪</p>" +
+    "<p>Je coach-dashboard staat klaar. Stel hieronder je wachtwoord in en log daarna in — dan zie je meteen je eigen dashboard met je leden.</p>" +
+    "<p style='margin:22px 0'>" + btn + "</p>" +
+    "<p style='font-size:14px;color:#67646E'>Je logt in met: <b>" + email + "</b><br>De knop werkt eenmalig; werkt 'ie niet meer, vraag dan een nieuwe link op.</p>" +
+    "<p>Fuel the work.<br>HybridFuelCo</p></div>";
+}
 
 function appBase(req) {
   if (process.env.PUBLIC_APP_URL) return process.env.PUBLIC_APP_URL.replace(/\/$/, "");
@@ -312,12 +325,16 @@ export default async function handler(req, res) {
         const orgId = Array.isArray(oRows) && oRows[0] && oRows[0].id;
         if (!oIns.ok || !orgId) return res.status(502).json({ error: "org_failed", detail: JSON.stringify(oRows).slice(0, 200) });
         await fetch(supaUrl + "/rest/v1/org_config", { method: "POST", headers: { ...jsonHdr, Prefer: "return=minimal,resolution=merge-duplicates" }, body: JSON.stringify({ org_id: orgId }) });
-        // 3) coach koppelen als eigenaar
-        await fetch(supaUrl + "/rest/v1/org_members", { method: "POST", headers: { ...jsonHdr, Prefer: "return=minimal" }, body: JSON.stringify({ org_id: orgId, auth_user_id: coachId, role: "coach", is_owner: true, active: true }) });
+        // 3) coach koppelen als eigenaar (hard checken — anders ziet de coach de app i.p.v. dashboard)
+        const mIns = await fetch(supaUrl + "/rest/v1/org_members", { method: "POST", headers: { ...jsonHdr, Prefer: "return=minimal" }, body: JSON.stringify({ org_id: orgId, auth_user_id: coachId, role: "coach", is_owner: true, active: true }) });
+        if (!mIns.ok) { const txt = await mIns.text().catch(() => ""); return res.status(502).json({ error: "member_link_failed", detail: txt.slice(0, 200) }); }
         // 4) uitnodigings-/wachtwoordlink zodat de sportschool zelf een wachtwoord zet
         let inviteUrl = "";
         try { const gl = await fetch(supaUrl + "/auth/v1/admin/generate_link", { method: "POST", headers: jsonHdr, body: JSON.stringify({ type: "recovery", email }) }); const gd = await gl.json().catch(() => ({})); inviteUrl = (gd && (gd.action_link || (gd.properties && gd.properties.action_link))) || ""; } catch (e) {}
-        return res.status(200).json({ ok: true, orgId, slug, coachEmail: email, inviteUrl, joinUrl: appBase(req) + "/join/" + slug });
+        // 5) uitnodigingsmail automatisch versturen (via Make-webhook → Gmail), in huisstijl
+        let emailSent = false;
+        if (inviteUrl) { try { const mr = await fetch(MAIL_WEBHOOK, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ to: email, subject: "Welkom bij HybridFuelCo — stel je wachtwoord in", html: inviteEmailHtml(name, email, inviteUrl) }) }); emailSent = mr.ok; } catch (e) {} }
+        return res.status(200).json({ ok: true, orgId, slug, coachEmail: email, inviteUrl, emailSent, joinUrl: appBase(req) + "/join/" + slug });
       }
 
       if (op === "admin.updateMember") {

@@ -239,8 +239,11 @@ function GymEditor({ token, lang, gym, accent, onBack }) {
     <div style={{ display: "grid", gap: 10, maxWidth: 560 }}>
       <div style={{ ...disp, fontWeight: 800, fontSize: 20, color: PAPER }}>{t("Sportschool aangemaakt", "Gym created")} · {f.name}</div>
       <div style={{ ...card, borderColor: GREEN }}>
+        {created.emailSent
+          ? <div style={{ fontSize: 13, color: GREEN, fontWeight: 700, marginBottom: 8 }}>✓ {t("Uitnodiging gemaild naar ", "Invite emailed to ")}{created.coachEmail}</div>
+          : <div style={{ fontSize: 12.5, color: EMBER, fontWeight: 700, marginBottom: 8 }}>{t("Mail kon niet automatisch verstuurd worden — stuur de link hieronder zelf.", "Email couldn't be sent automatically — send the link below yourself.")}</div>}
         <div style={{ fontSize: 12.5, color: PAPER, lineHeight: 1.7 }}>
-          {t("Coach-login (stuur dit naar de sportschool):", "Coach login (send this to the gym):")}<br />
+          {t("Coach-login:", "Coach login:")}<br />
           <b>E-mail:</b> <span style={{ color: GREEN }}>{created.coachEmail}</span><br />
           <b>{t("Wachtwoord instellen", "Set password")}:</b>
           {created.inviteUrl ? <div style={{ wordBreak: "break-all", color: GREEN, marginTop: 4 }}>{created.inviteUrl}</div> : <span style={{ color: MUTED }}> {t("(link maken mislukt — gebruik Reset ww bij Members)", "(link failed — use Reset pw under Members)")}</span>}
