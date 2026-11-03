@@ -611,6 +611,7 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [started, setStarted] = useState(false);
+  const [introSeen, setIntroSeen] = useState(() => { try { return localStorage.getItem("hf_intro_seen") === "1"; } catch (e) { return false; } });
   const [subMsg, setSubMsg] = useState("");
   const [unlocked, setUnlocked] = useState(false);
   const [tier, setTier] = useState("week");
@@ -1842,7 +1843,34 @@ export default function App() {
         {tab === "dashboard" && <Dashboard lang={lang} session={session} week={week} targets={targets} units={units} onGo={(x) => { setTab(x); try { window.scrollTo(0, 0); } catch (e) {} }} />}
 
         {/* ====== PLAN TAB ====== */}
-        {tab === "plan" && (
+        {tab === "plan" && !started && !introSeen && (() => {
+          const bc = (gymCtx && gymCtx.org && gymCtx.org.brand_color) || EMBER;
+          const gname = (gymCtx && gymCtx.org && gymCtx.org.name) || "HybridFuelCo";
+          const introStep = (n, titleNl, titleEn, subNl, subEn) => (
+            <div style={{ display: "flex", gap: 12, alignItems: "flex-start", background: INK2, border: `1px solid ${LINE}`, borderRadius: 12, padding: "12px 13px" }}>
+              <div style={{ flexShrink: 0, width: 26, height: 26, borderRadius: 8, background: bc, color: "#fff", fontWeight: 800, fontSize: 13, display: "grid", placeItems: "center", ...disp }}>{n}</div>
+              <div><div style={{ color: PAPER, fontWeight: 700, fontSize: 14 }}>{lang === "nl" ? titleNl : titleEn}</div><div style={{ color: MUTED, fontSize: 12, marginTop: 2, lineHeight: 1.45 }}>{lang === "nl" ? subNl : subEn}</div></div>
+            </div>
+          );
+          return (
+            <div style={{ display: "grid", gap: 18 }}>
+              <div style={{ background: INK2, border: `1px solid ${LINE}`, borderRadius: 16, padding: 22 }}>
+                <div style={{ fontSize: 12.5, color: bc, fontWeight: 800, letterSpacing: 0.4 }}>{lang === "nl" ? "WELKOM" : "WELCOME"}</div>
+                <div style={{ ...disp, color: PAPER, fontWeight: 800, fontSize: 23, margin: "4px 0 8px", lineHeight: 1.2 }}>{lang === "nl" ? "We maken jouw persoonlijke weekplan" : "Let's build your personal week plan"}</div>
+                <div style={{ color: "#aeb6c2", fontSize: 13.5, lineHeight: 1.6, marginBottom: 18 }}>{lang === "nl" ? "Een paar korte vragen en we bouwen een voedings- en trainingsplan dat past bij jouw doel, jouw week én wat jij lekker vindt. Je kunt het later altijd aanpassen." : "A few quick questions and we build a nutrition and training plan that fits your goal, your week and what you like. You can adjust it anytime."}</div>
+                <div style={{ display: "grid", gap: 10, marginBottom: 18 }}>
+                  {introStep(1, "Jouw doel & gegevens", "Your goal & stats", "Afvallen, onderhoud of aankomen + een paar basisgegevens.", "Lose, maintain or gain + a few basics.")}
+                  {introStep(2, "Wat je graag eet", "What you like to eat", "Kies per eetmoment je favorieten — zo wordt het plan echt van jou.", "Pick favourites per meal — so the plan is truly yours.")}
+                  {introStep(3, lang === "nl" ? "Je plan is klaar" : "Your plan is ready", "Your plan is ready", "Direct je weekplan met porties die op je doelen uitkomen.", "Your week plan right away, with portions that hit your targets.")}
+                </div>
+                <div style={{ color: MUTED, fontSize: 12, marginBottom: 16 }}>⏱️ {lang === "nl" ? "Duurt ongeveer 1 minuut" : "Takes about 1 minute"}</div>
+                <div onClick={() => { setIntroSeen(true); try { localStorage.setItem("hf_intro_seen", "1"); } catch (e) {} }} style={{ cursor: "pointer", background: bc, color: "#fff", textAlign: "center", ...disp, fontWeight: 800, fontSize: 16, padding: "15px", borderRadius: 12, letterSpacing: 0.5 }}>{lang === "nl" ? "Laten we beginnen" : "Let's go"}</div>
+                <div style={{ fontSize: 10.5, color: "#5e6775", marginTop: 12, lineHeight: 1.5, textAlign: "center" }}>{lang === "nl" ? "Allergieën vragen we vooraf en houden we zoveel mogelijk aan — controleer altijd zelf het etiket. Voedingsadvies, geen medisch advies." : "We ask allergies up front and avoid them where we can — always check the label yourself. Nutrition advice, not medical advice."}</div>
+              </div>
+            </div>
+          );
+        })()}
+        {tab === "plan" && (started || introSeen) && (
           <div style={{ display: "grid", gap: 18 }}>
             <div style={{ background: INK2, border: `1px solid ${LINE}`, borderRadius: 14, padding: 18 }}>
               <div style={{ ...disp, fontSize: 15, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 6, color: EMBER }}>{T("yourStats")}</div>
