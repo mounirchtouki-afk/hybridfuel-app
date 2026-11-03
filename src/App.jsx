@@ -590,6 +590,10 @@ export default function App() {
   const [proteins, setProteins] = useState([]);
   const [mealPrefs, setMealPrefs] = useState({ breakfast: [], lunch: [], dinner: [], snack: [] });
   const toggleMeal = (moment, id) => setMealPrefs((p) => { const cur = p[moment] || []; return { ...p, [moment]: cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id] }; });
+  // Eigen producten voor de eetmoment-kiezer (uitklap + aanvinken + bron).
+  const [userProducts, setUserProducts] = useState([]);
+  const [openMoment, setOpenMoment] = useState("breakfast"); // welke sectie uitgeklapt is
+  const [momentAdd, setMomentAdd] = useState(null); // eetmoment waarvoor we een product toevoegen/scannen
   const [trainingDays, setTrainingDays] = useState([0, 2, 4]);
   const [snacks, setSnacks] = useState(2);
   const [snackLikes, setSnackLikes] = useState(["fruit"]);
@@ -1093,7 +1097,7 @@ export default function App() {
 
   function common() {
     const dietObj = DIETS.find((d) => d.id === diet);
-    const mealPrefLabels = MEAL_MOMENTS.reduce((acc, mo) => { acc[mo.id] = (mealPrefs[mo.id] || []).map((id) => { const o = MEAL_OPTIONS[mo.id].find((x) => x.id === id); return o ? o[lang] : id; }); return acc; }, {});
+    const mealPrefLabels = MEAL_MOMENTS.reduce((acc, mo) => { acc[mo.id] = (mealPrefs[mo.id] || []).map((id) => { if (typeof id === "string" && id.indexOf("prod:") === 0) { const p = userProducts.find((x) => ("prod:" + x.id) === id); return p ? p.name : null; } const o = MEAL_OPTIONS[mo.id].find((x) => x.id === id); return o ? o[lang] : id; }).filter(Boolean); return acc; }, {});
     return { sex, age, height, weight, activity, goal, diet: dietObj ? dietObj[lang] : diet, avoid, likes, cuisines: labelsOf(cuisines, CUISINES), proteins: labelsOf(proteins, PROTEINS), snacks, snackLikes, snackLikeLabels: labelsOf(snackLikes, SNACKS), mealPrefs: mealPrefLabels, variety, lang };
   }
   function currentIntake() { return { ...common(), trainingDays: [...trainingDays] }; }
@@ -1203,15 +1207,36 @@ export default function App() {
     if (supabase && session) {
       try {
         let { data, error } = await supabase.from("products")
-          .select("id,name,brand,per_100,category,meal_types").eq("user_id", session.user.id);
+          .select("id,name,brand,barcode,per_100,category,meal_types").eq("user_id", session.user.id);
         if (error) { // kolom meal_types bestaat mogelijk nog niet (vóór migratie)
-          const r2 = await supabase.from("products").select("id,name,brand,per_100,category").eq("user_id", session.user.id);
+          const r2 = await supabase.from("products").select("id,name,brand,barcode,per_100,category").eq("user_id", session.user.id);
           data = r2.data || [];
         }
         return data || [];
       } catch (e) { return []; }
     }
     try { return JSON.parse(localStorage.getItem("hf_products") || "[]") || []; } catch (e) { return []; }
+  }
+
+  const refreshUserProducts = async () => { try { const prods = await loadUserProducts(); setUserProducts(prods || []); } catch (e) {} };
+  useEffect(() => { let alive = true; (async () => { const prods = await loadUserProducts(); if (alive) setUserProducts(prods || []); })(); return () => { alive = false; }; }, [session]);
+
+  // Tag een product aan een eetmoment (en vink het meteen aan) — vanuit "+ toevoegen / scan".
+  async function tagProductToMoment(prod, moment) {
+    if (!prod || !prod.id || !moment) return;
+    const types = Array.from(new Set([...(Array.isArray(prod.meal_types) ? prod.meal_types : []), moment]));
+    try {
+      if (supabase && session) { await supabase.from("products").update({ meal_types: types }).eq("id", prod.id); }
+      else {
+        let list = []; try { list = JSON.parse(localStorage.getItem("hf_products") || "[]") || []; } catch (e) {}
+        let found = false; list = list.map((x) => x.id === prod.id ? (found = true, { ...x, meal_types: types }) : x);
+        if (!found) list.push({ ...prod, meal_types: types });
+        localStorage.setItem("hf_products", JSON.stringify(list));
+      }
+    } catch (e) {}
+    setUserProducts((xs) => { const i = xs.findIndex((x) => x.id === prod.id); const item = { ...prod, meal_types: types }; if (i >= 0) { const c = xs.slice(); c[i] = item; return c; } return [...xs, item]; });
+    const chipId = "prod:" + prod.id;
+    setMealPrefs((p) => { const cur = p[moment] || []; return cur.includes(chipId) ? p : { ...p, [moment]: [...cur, chipId] }; });
   }
 
   // Laadt de eigen opgeslagen maaltijden (recepten) van de klant → als hele maaltijd
@@ -1958,20 +1983,41 @@ export default function App() {
               <div style={{ fontSize: 11.5, color: MUTED, lineHeight: 1.5, marginBottom: 14 }}>{lang === "nl" ? "Kies per moment wat je lekker vindt — hieruit bouwen we je plan. Aanvullen/scannen kan altijd bij Producten." : "Pick what you like per moment — we build your plan from this. Add/scan anytime under Products."}</div>
               {MEAL_MOMENTS.map((mo) => {
                 const sel = mealPrefs[mo.id] || [];
+                const open = openMoment === mo.id;
+                const myProds = userProducts.filter((p) => Array.isArray(p.meal_types) && p.meal_types.includes(mo.id));
+                const srcTag = (kind) => {
+                  const m = kind === "eigen" ? { t: lang === "nl" ? "Eigen" : "Own", c: EMBER, bg: "rgba(var(--hf-ember-rgb),0.12)" }
+                    : kind === "scan" ? { t: lang === "nl" ? "Gescand" : "Scanned", c: "#4C8DFF", bg: "rgba(76,141,255,0.14)" }
+                    : { t: lang === "nl" ? "Standaard" : "Standard", c: MUTED, bg: "rgba(130,130,130,0.12)" };
+                  return <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: 0.4, textTransform: "uppercase", padding: "3px 8px", borderRadius: 20, color: m.c, background: m.bg, whiteSpace: "nowrap", flexShrink: 0 }}>{m.t}</span>;
+                };
+                const rowEl = (id, name, brand, kind) => {
+                  const on = sel.includes(id);
+                  return (
+                    <div key={id} onClick={() => toggleMeal(mo.id, id)} style={{ display: "flex", alignItems: "center", gap: 11, padding: "10px 2px", borderTop: `1px solid ${LINE}`, cursor: "pointer" }}>
+                      <span style={{ width: 21, height: 21, borderRadius: 6, border: `2px solid ${on ? EMBER : MUTED}`, background: on ? EMBER : "transparent", display: "grid", placeItems: "center", color: "#fff", fontSize: 12, fontWeight: 800, flexShrink: 0 }}>{on ? "✓" : ""}</span>
+                      <span style={{ flex: 1, minWidth: 0, fontSize: 13.5, color: PAPER, fontWeight: 600 }}>{name}{brand ? <span style={{ color: MUTED, fontWeight: 400, fontSize: 11.5 }}> · {brand}</span> : null}</span>
+                      {srcTag(kind)}
+                    </div>
+                  );
+                };
                 return (
-                  <div key={mo.id} style={{ background: INK2, border: `1px solid ${LINE}`, borderRadius: 12, padding: "12px 13px", marginBottom: 10 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 9 }}>
+                  <div key={mo.id} style={{ background: INK2, border: `1px solid ${LINE}`, borderRadius: 12, marginBottom: 10, overflow: "hidden" }}>
+                    <div onClick={() => setOpenMoment(open ? null : mo.id)} style={{ display: "flex", alignItems: "center", gap: 9, padding: "12px 13px", cursor: "pointer" }}>
                       <span style={{ width: 24, height: 24, borderRadius: 7, background: "rgba(var(--hf-ember-rgb),0.14)", display: "grid", placeItems: "center" }}>{mealIcon(mo.id, EMBER)}</span>
                       <span style={{ ...disp, fontWeight: 800, fontSize: 14, color: PAPER }}>{mo[lang]}</span>
-                      {sel.length > 0 && <span style={{ marginLeft: "auto", fontSize: 11, color: MUTED }}>{sel.length} {lang === "nl" ? "gekozen" : "picked"}</span>}
+                      <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10 }}>
+                        <span style={{ fontSize: 11, color: sel.length ? EMBER : MUTED, fontWeight: 700 }}>{sel.length} {lang === "nl" ? "gekozen" : "picked"}</span>
+                        <span style={{ color: MUTED, fontSize: 10, display: "inline-block", transform: open ? "rotate(180deg)" : "none", transition: "transform .15s" }}>▼</span>
+                      </span>
                     </div>
-                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                      {MEAL_OPTIONS[mo.id].map((o) => {
-                        const on = sel.includes(o.id);
-                        return <div key={o.id} onClick={() => toggleMeal(mo.id, o.id)} style={{ cursor: "pointer", border: `1px solid ${on ? EMBER : LINE}`, background: on ? EMBER : "transparent", color: on ? "#fff" : PAPER, borderRadius: 20, padding: "7px 12px", fontSize: 12, fontWeight: 600, ...disp }}>{o[lang]}</div>;
-                      })}
-                      <div onClick={() => { setPickTarget(null); setFabScan(false); setShowProducts(true); }} style={{ cursor: "pointer", border: `1px dashed ${SAGE}`, color: SAGE, borderRadius: 20, padding: "7px 12px", fontSize: 12, fontWeight: 700, ...disp }}>{lang === "nl" ? "+ toevoegen / scan" : "+ add / scan"}</div>
-                    </div>
+                    {open && (
+                      <div style={{ padding: "0 13px 10px" }}>
+                        {MEAL_OPTIONS[mo.id].map((o) => rowEl(o.id, o[lang], null, "std"))}
+                        {myProds.map((p) => rowEl("prod:" + p.id, p.name, p.brand, p.barcode ? "scan" : "eigen"))}
+                        <div onClick={() => { setMomentAdd(mo.id); setPickTarget(null); setFabScan(false); setShowProducts(true); }} style={{ cursor: "pointer", marginTop: 9, border: `1px dashed ${SAGE}`, color: SAGE, borderRadius: 10, padding: "9px 0", textAlign: "center", fontSize: 12.5, fontWeight: 700, ...disp }}>{lang === "nl" ? "+ toevoegen / scan" : "+ add / scan"}</div>
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -2296,7 +2342,7 @@ export default function App() {
       {showReminders && <Reminders lang={lang} onClose={() => setShowReminders(false)} />}
       {showAuth && <Auth lang={lang} session={session} tier={subTier} recovery={authRecovery} gym={isGymMember ? gymCtx.org : null} onClose={() => { setShowAuth(false); setAuthRecovery(false); }} onCodeLogin={() => { setShowCodeLogin(true); setLoginMsg(""); setLoginCode(""); }} />}
       {showAdmin && isAdmin && <AdminDash session={session} lang={lang} onClose={() => setShowAdmin(false)} />}
-      {showProducts && <Products lang={lang} session={session} autoScan={fabScan} onClose={() => { setShowProducts(false); setPickTarget(null); setFabScan(false); }} onPick={pickTarget ? (prod) => { if (pickTarget.mi == null) addProductAsMeal(pickTarget.di, prod); else addProductIng(pickTarget.di, pickTarget.mi, prod); setShowProducts(false); setPickTarget(null); } : fabScan ? (prod) => { addTodayProduct(prod); setShowProducts(false); setFabScan(false); } : null} />}
+      {showProducts && <Products lang={lang} session={session} autoScan={fabScan} momentLabel={momentAdd ? (MEAL_MOMENTS.find((m) => m.id === momentAdd) || {})[lang] : null} onClose={() => { setShowProducts(false); setPickTarget(null); setFabScan(false); setMomentAdd(null); }} onPick={momentAdd ? (prod) => { tagProductToMoment(prod, momentAdd); setShowProducts(false); setMomentAdd(null); } : pickTarget ? (prod) => { if (pickTarget.mi == null) addProductAsMeal(pickTarget.di, prod); else addProductIng(pickTarget.di, pickTarget.mi, prod); setShowProducts(false); setPickTarget(null); } : fabScan ? (prod) => { addTodayProduct(prod); setShowProducts(false); setFabScan(false); } : null} />}
       {showBuilder && <RecipeBuilder lang={lang} session={session} units={units} onClose={() => setShowBuilder(false)} onSaved={() => flashSaved()} />}
 
       {copyPick && (

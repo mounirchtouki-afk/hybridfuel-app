@@ -97,7 +97,7 @@ const PlusIcon = ({ c }) => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2.2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
 );
 
-export default function Products({ lang, session, onClose, onPick, embedded, autoScan, onProductChange }) {
+export default function Products({ lang, session, onClose, onPick, embedded, autoScan, onProductChange, momentLabel }) {
   const t = (k) => (T[k] ? T[k][lang] : k);
   const ml = macroLetters(lang);
   const cloud = !!(session && supabase);
@@ -333,7 +333,7 @@ export default function Products({ lang, session, onClose, onPick, embedded, aut
               {!onPick && <select value={catFor(it)} onChange={(e) => setCategory(it.id, e.target.value)} title={t("catLabel")} style={{ background: INK, border: `1px solid ${LINE}`, color: MUTED, borderRadius: 7, fontSize: 10.5, padding: "4px 5px", outline: "none", maxWidth: 104, appearance: "auto", WebkitAppearance: "auto", flexShrink: 0 }}>
                 {CAT_ORDER.map((c) => <option key={c} value={c}>{CATS[c][lang]}</option>)}
               </select>}
-              {onPick && <div onClick={() => onPick(it)} style={{ cursor: "pointer", fontSize: 12, fontWeight: 700, color: EMBER, border: `1px solid ${EMBER}`, borderRadius: 7, padding: "5px 11px", ...disp, letterSpacing: 0.3 }}>{t("pick")}</div>}
+              {onPick && <div onClick={() => onPick(it)} style={{ cursor: "pointer", fontSize: 12, fontWeight: 700, color: EMBER, border: `1px solid ${EMBER}`, borderRadius: 7, padding: "5px 11px", ...disp, letterSpacing: 0.3, whiteSpace: "nowrap" }}>{momentLabel ? "+ " + momentLabel : t("pick")}</div>}
               {!onPick && <div onClick={() => startEdit(it)} title={t("editTitle")} style={{ cursor: "pointer", color: MUTED, display: "flex", padding: "0 3px" }}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z" /></svg></div>}
               <div onClick={() => del(it.id)} style={{ cursor: "pointer", color: MUTED, fontSize: 16, padding: "0 4px" }}>×</div>
             </div>
@@ -356,8 +356,8 @@ export default function Products({ lang, session, onClose, onPick, embedded, aut
     <div onClick={() => { stopScan(); onClose(); }} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 65, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
       <div onClick={(e) => e.stopPropagation()} style={{ position: "relative", background: INK, border: `1px solid ${LINE}`, borderRadius: 20, width: "100%", maxWidth: 440, maxHeight: "90vh", overflowY: "auto", padding: 22, boxShadow: "0 24px 70px rgba(0,0,0,.65)", backgroundImage: "radial-gradient(130% 70% at 92% -10%, rgba(var(--hf-ember-rgb),0.13), transparent 58%)" }}>
       <div style={{ position: "sticky", top: -22, background: INK, zIndex: 3, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, margin: "-22px -22px 14px", padding: "16px 22px", borderBottom: `1px solid ${LINE}` }}>
-        <div style={sectionTitle}>{t("title")}</div>
-        <div onClick={() => { stopScan(); onClose(); }} style={{ cursor: "pointer", color: PAPER, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.3, display: "inline-flex", alignItems: "center", gap: 7, padding: "7px 13px", borderRadius: 9, border: `1px solid ${LINE}`, background: INK2, whiteSpace: "nowrap" }}>{onPick ? <>&larr; {t("backToPlan")}</> : "×"}</div>
+        <div style={sectionTitle}>{momentLabel ? (lang === "nl" ? "Toevoegen aan " + momentLabel : "Add to " + momentLabel) : t("title")}</div>
+        <div onClick={() => { stopScan(); onClose(); }} style={{ cursor: "pointer", color: PAPER, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.3, display: "inline-flex", alignItems: "center", gap: 7, padding: "7px 13px", borderRadius: 9, border: `1px solid ${LINE}`, background: INK2, whiteSpace: "nowrap" }}>{momentLabel ? <>&larr; {lang === "nl" ? "Terug" : "Back"}</> : onPick ? <>&larr; {t("backToPlan")}</> : "×"}</div>
       </div>
       {body}
       </div>
