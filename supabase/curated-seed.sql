@@ -5,6 +5,7 @@ delete from public.dishes where source='core';
 
 insert into public.ingredients (slug,name_nl,name_en,kcal,protein,carbs,fat,category,source) values
 ('chicken_breast','Kipfilet','Chicken breast',120,23,0,2.6,'vlees','core'),
+('chicken_thigh','Kipdij','Chicken thigh',150,19,0,8,'vlees','core'),
 ('turkey_breast','Kalkoenfilet','Turkey breast',110,24,0,1.5,'vlees','core'),
 ('beef_lean','Mager rundvlees','Lean beef',150,21,0,7,'vlees','core'),
 ('beef_mince5','Rundergehakt 5%','Beef mince 5%',137,21,0,5,'vlees','core'),
@@ -68,7 +69,18 @@ insert into public.ingredients (slug,name_nl,name_en,kcal,protein,carbs,fat,cate
 ('soy_sauce','Sojasaus','Soy sauce',60,6,6,0,'overig','core'),
 ('hummus_light','Hummus (light)','Hummus (light)',170,8,15,8,'overig','core'),
 ('mustard','Mosterd','Mustard',66,4,5,3,'overig','core'),
-('satay_light','Satésaus (light)','Satay sauce (light)',150,7,10,9,'overig','core')
+('satay_light','Satésaus (light)','Satay sauce (light)',150,7,10,9,'overig','core'),
+('flat_iron','Flat iron steak','Flat iron steak',160,22,0,8,'vlees','core'),
+('avocado','Avocado','Avocado',160,2,9,15,'vet','core'),
+('rice_yellow','Gele rijst (droog)','Yellow rice (dry)',360,7,78,1,'granen','core'),
+('sourdough','Desembrood','Sourdough bread',250,9,48,1.5,'granen','core'),
+('low_fat_cheese','Magere kaas','Low-fat cheese',240,27,0,14,'zuivel','core'),
+('red_onion','Rode ui','Red onion',40,1.1,9,0.1,'groente','core'),
+('celery','Selderij','Celery',16,0.7,3,0.2,'groente','core'),
+('spring_onion','Bosui','Spring onion',32,1.8,7,0.2,'groente','core'),
+('olives','Olijven','Olives',115,0.8,6,11,'vet','core'),
+('ketjap_manis','Ketjap manis','Sweet soy sauce',250,2,60,0,'overig','core'),
+('dark_choc70','Pure chocolade 70%','Dark chocolate 70%',600,8,46,42,'overig','core')
 on conflict (slug) do update set kcal=excluded.kcal,protein=excluded.protein,carbs=excluded.carbs,fat=excluded.fat,category=excluded.category,name_nl=excluded.name_nl,name_en=excluded.name_en;
 
 insert into public.dishes (slug,name_nl,name_en,moments,goals,items,tags,prefs,steps,steps_en,technique,temp,source) values
@@ -289,6 +301,66 @@ insert into public.dishes (slug,name_nl,name_en,moments,goals,items,tags,prefs,s
 2. Sprinkle with sea salt and squeeze the beans from the pods.','pan',null,'core'),
 ('quark_with_cinnamon_banana','Kwark met kaneel & banaan','Quark with cinnamon & banana',ARRAY['snack'],ARRAY['cut','maintain'],'[{"slug":"quark_lowfat","g":150},{"slug":"banana","g":70}]'::jsonb,ARRAY['sport','high_protein','vegetarian']::text[],ARRAY[]::text[],'1. Schep de kwark in een kom.
 2. Roer er een snuf kaneel door en top met schijfjes banaan.','1. Spoon the quark into a bowl.
-2. Stir in a pinch of cinnamon and top with banana slices.','assembly',null,'core')
+2. Stir in a pinch of cinnamon and top with banana slices.','assembly',null,'core'),
+('sweet_potato_mash_with_flat_iron_poached_egg_avocado','Zoete-aardappelpuree met flat iron, gepocheerd ei & avocado','Sweet potato mash with flat iron, poached egg & avocado',ARRAY['dinner'],ARRAY['gain','maintain'],'[{"slug":"sweet_potato","g":220},{"slug":"flat_iron","g":150},{"slug":"egg","g":55},{"slug":"avocado","g":40},{"slug":"olive_oil","g":3}]'::jsonb,ARRAY['sport']::text[],ARRAY[]::text[],'1. Kook de zoete aardappel gaar en stamp tot een gladde puree met peper en zout.
+2. Bak de flat iron 2–3 min per kant tot medium-rare en laat even rusten.
+3. Pocheer het ei 3 min in zacht kokend water met een scheut azijn.
+4. Serveer de puree met de aangesneden flat iron, het gepocheerde ei en waaiertjes avocado.','1. Boil the sweet potato and mash smooth with salt and pepper.
+2. Sear the flat iron 2–3 min per side to medium-rare and rest briefly.
+3. Poach the egg 3 min in gently simmering water with a splash of vinegar.
+4. Serve the mash with the sliced flat iron, the poached egg and fanned avocado.','pan',null,'core'),
+('salmon_with_yellow_rice_vegetables_sweet_soy','Zalmfilet met gele rijst, groente & ketjap manis','Salmon with yellow rice, vegetables & sweet soy',ARRAY['dinner'],ARRAY['gain','maintain'],'[{"slug":"salmon","g":140},{"slug":"rice_yellow","g":65},{"slug":"broccoli","g":100},{"slug":"paprika","g":100},{"slug":"ketjap_manis","g":15}]'::jsonb,ARRAY['sport']::text[],ARRAY[]::text[],'1. Kook de rijst met een snuf kurkuma tot gele rijst.
+2. Bak of stoom de zalm gaar, met peper en citroen.
+3. Roerbak de broccoli en paprika beetgaar.
+4. Serveer samen en lepel de ketjap manis over de zalm.','1. Cook the rice with a pinch of turmeric for yellow rice.
+2. Pan-fry or steam the salmon, with pepper and lemon.
+3. Stir-fry the broccoli and pepper until tender.
+4. Serve together and spoon the sweet soy over the salmon.','pan',null,'core'),
+('quark_with_blueberries_honey_dark_chocolate','Kwark met bosbessen, honing & pure chocolade','Quark with blueberries, honey & dark chocolate',ARRAY['snack'],ARRAY['maintain'],'[{"slug":"quark_lowfat","g":150},{"slug":"blueberries","g":60},{"slug":"honey","g":8},{"slug":"dark_choc70","g":12}]'::jsonb,ARRAY['sport','vegetarian']::text[],ARRAY[]::text[],'1. Schep de kwark in een kom.
+2. Top met de bosbessen en een druppel honing.
+3. Hak de pure chocolade (70%) grof en strooi erover.','1. Spoon the quark into a bowl.
+2. Top with the blueberries and a drizzle of honey.
+3. Roughly chop the 70% dark chocolate and scatter over.','assembly',null,'core'),
+('corn_chicken_with_yellow_rice_vegetables_teriyaki','Mais-kipfilet met gele rijst, groente & teriyaki','Corn chicken with yellow rice, vegetables & teriyaki',ARRAY['dinner','lunch'],ARRAY['cut','maintain'],'[{"slug":"chicken_breast","g":150},{"slug":"rice_yellow","g":65},{"slug":"corn","g":80},{"slug":"broccoli","g":120},{"slug":"teriyaki","g":25}]'::jsonb,ARRAY['sport','high_protein']::text[],ARRAY[]::text[],'1. Kook de rijst met een snuf kurkuma tot gele rijst.
+2. Bak de kipfilet gaar, voeg de teriyaki toe en laat glaceren.
+3. Warm de mais en stoom de broccoli beetgaar.
+4. Schik alles over de rijst.','1. Cook the rice with a pinch of turmeric for yellow rice.
+2. Sear the chicken, add the teriyaki and let it glaze.
+3. Warm the corn and steam the broccoli until tender.
+4. Arrange everything over the rice.','pan',null,'core'),
+('couscous_stew_with_chicken_thigh_cinnamon_vegetables','Couscous-stoofpotje met kipdij, kaneel & groente','Couscous stew with chicken thigh, cinnamon & vegetables',ARRAY['dinner'],ARRAY['maintain'],'[{"slug":"chicken_thigh","g":150},{"slug":"couscous","g":60},{"slug":"carrot","g":80},{"slug":"zucchini","g":80},{"slug":"onion","g":40}]'::jsonb,ARRAY['sport']::text[],ARRAY[]::text[],'1. Stoof de kipdij met de ui, wortel en courgette aan; voeg een snuf kaneel en kippenbouillon toe.
+2. Laat 20–25 min zachtjes stoven tot kip en groente gaar zijn in een geurig vocht.
+3. Doe de couscous in een kom, schep het hete stoofvocht erover tot net onder en dek af met folie.
+4. Laat 5 min wellen, roer los met een vork en schep de stoof met kip en groente erover.','1. Sweat the chicken thigh with the onion, carrot and zucchini; add a pinch of cinnamon and chicken stock.
+2. Simmer gently 20–25 min until the chicken and vegetables are tender in a fragrant broth.
+3. Put the couscous in a bowl, ladle the hot broth over to just below the surface and cover with foil.
+4. Let it swell 5 min, fluff with a fork and spoon the stew with chicken and vegetables over.','soup',null,'core'),
+('couscous_salad_with_red_onion_feta_hummus_celery','Couscoussalade met rode ui, feta, hummus & selderij','Couscous salad with red onion, feta, hummus & celery',ARRAY['lunch'],ARRAY['maintain'],'[{"slug":"couscous","g":60},{"slug":"red_onion","g":30},{"slug":"feta_light","g":40},{"slug":"hummus_light","g":30},{"slug":"celery","g":40},{"slug":"tomato","g":80},{"slug":"spring_onion","g":15}]'::jsonb,ARRAY['sport','vegetarian']::text[],ARRAY[]::text[],'1. Wel de couscous met heet water tot gaar, roer los met een vork en laat afkoelen.
+2. Meng met fijngesneden rode ui, selderij en tomaat.
+3. Roer de hummus erdoor, verkruimel de feta erover en werk af met bosui of bieslook.','1. Soak the couscous in hot water until done, fluff with a fork and let cool.
+2. Mix with finely chopped red onion, celery and tomato.
+3. Stir the hummus through, crumble the feta over and finish with spring onion or chives.','pan',null,'core'),
+('cold_pasta_salad_with_tuna_lemon_olives','Koude pastasalade met tonijn, citroen & olijven','Cold pasta salad with tuna, lemon & olives',ARRAY['lunch'],ARRAY['cut','maintain'],'[{"slug":"pasta_whole","g":70},{"slug":"tuna_can","g":100},{"slug":"red_onion","g":30},{"slug":"olives","g":20},{"slug":"tomato","g":100},{"slug":"olive_oil","g":4}]'::jsonb,ARRAY['sport','high_protein']::text[],ARRAY[]::text[],'1. Kook de volkoren pasta beetgaar, spoel koud en laat uitlekken.
+2. Meng met de tonijn, fijne rode ui, olijven en tomaat.
+3. Maak aan met citroensap, een scheutje olijfolie, peper en zout.','1. Cook the wholegrain pasta al dente, rinse cold and drain.
+2. Mix with the tuna, finely chopped red onion, olives and tomato.
+3. Dress with lemon juice, a drizzle of olive oil, salt and pepper.','pan',null,'core'),
+('sourdough_with_avocado_poached_egg_tomato_salsa','Desembrood met avocado, gepocheerd ei & tomatensalsa','Sourdough with avocado, poached egg & tomato salsa',ARRAY['breakfast','lunch'],ARRAY['maintain'],'[{"slug":"sourdough","g":80},{"slug":"avocado","g":50},{"slug":"egg","g":55},{"slug":"tomato","g":60},{"slug":"red_onion","g":20}]'::jsonb,ARRAY['sport','vegetarian']::text[],ARRAY[]::text[],'1. Rooster het desembrood.
+2. Maak een snelle salsa van fijngesneden tomaat en rode ui met peper en zout.
+3. Pocheer het ei 3 min in zacht kokend water met een scheut azijn.
+4. Besmeer het brood met geprakte avocado, leg het ei erop en schep de salsa erover.','1. Toast the sourdough.
+2. Make a quick salsa of finely chopped tomato and red onion with salt and pepper.
+3. Poach the egg 3 min in gently simmering water with a splash of vinegar.
+4. Spread the bread with mashed avocado, place the egg on top and spoon the salsa over.','pan',null,'core'),
+('sourdough_with_tomato_low_fat_cheese_boiled_egg','Desembrood met tomaat, magere kaas & gekookt ei','Sourdough with tomato, low-fat cheese & boiled egg',ARRAY['breakfast','lunch'],ARRAY['maintain'],'[{"slug":"sourdough","g":80},{"slug":"tomato","g":60},{"slug":"low_fat_cheese","g":30},{"slug":"egg","g":55},{"slug":"lettuce","g":20}]'::jsonb,ARRAY['sport','vegetarian']::text[],ARRAY[]::text[],'1. Kook het ei 7–8 min hard, pel en snijd in plakjes.
+2. Rooster het desembrood.
+3. Beleg met sla, plakjes tomaat, magere kaas en het gesneden ei.','1. Hard-boil the egg 7–8 min, peel and slice.
+2. Toast the sourdough.
+3. Top with lettuce, tomato slices, low-fat cheese and the sliced egg.','pan',null,'core'),
+('sourdough_with_hummus_feta_spring_onion','Desembrood met hummus, feta & bosui','Sourdough with hummus, feta & spring onion',ARRAY['breakfast','lunch'],ARRAY['maintain'],'[{"slug":"sourdough","g":80},{"slug":"hummus_light","g":30},{"slug":"feta_light","g":30},{"slug":"tomato","g":60},{"slug":"spring_onion","g":15}]'::jsonb,ARRAY['sport','vegetarian']::text[],ARRAY[]::text[],'1. Rooster het desembrood en besmeer met de hummus.
+2. Beleg met plakjes tomaat en verkruimelde feta.
+3. Werk af met fijngesneden bosui of bieslook.','1. Toast the sourdough and spread with the hummus.
+2. Top with tomato slices and crumbled feta.
+3. Finish with finely chopped spring onion or chives.','pan',null,'core')
 on conflict (slug) do update set name_nl=excluded.name_nl,name_en=excluded.name_en,moments=excluded.moments,goals=excluded.goals,items=excluded.items,tags=excluded.tags,prefs=excluded.prefs,steps=excluded.steps,steps_en=excluded.steps_en,technique=excluded.technique,temp=excluded.temp;
 commit;

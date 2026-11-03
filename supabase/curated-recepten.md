@@ -1,8 +1,8 @@
 # HybridFuel — gecureerde recepten (blok 1)
 
-42 recepten · vetarm · sporter-geschikt · macro's per portie zoals getoond.
+52 recepten · vetarm · sporter-geschikt · macro's per portie zoals getoond.
 
-## Ontbijt (11)
+## Ontbijt (14)
 
 ### Kwark-havermoutbowl met banaan & kaneel
 **417 kcal** · 33g eiwit · 63g koolhydraten · 5g vet  _(afvallen, onderhoud)_
@@ -116,7 +116,38 @@
 2. Beleg met de hüttenkäse, paprika en spinazie.
 3. Rol de omelet op als een wrap en snijd doormidden.
 
-## Lunch (12)
+### Desembrood met avocado, gepocheerd ei & tomatensalsa
+**377 kcal** · 16g eiwit · 48g koolhydraten · 14g vet  _(onderhoud · ook Lunch)_
+
+**Ingrediënten:** 80 g desembrood · 50 g avocado · 55 g ei · 60 g tomaat · 20 g rode ui
+
+**Bereiding:**
+1. Rooster het desembrood.
+2. Maak een snelle salsa van fijngesneden tomaat en rode ui met peper en zout.
+3. Pocheer het ei 3 min in zacht kokend water met een scheut azijn.
+4. Besmeer het brood met geprakte avocado, leg het ei erop en schep de salsa erover.
+
+### Desembrood met tomaat, magere kaas & gekookt ei
+**364 kcal** · 23g eiwit · 42g koolhydraten · 11g vet  _(onderhoud · ook Lunch)_
+
+**Ingrediënten:** 80 g desembrood · 60 g tomaat · 30 g magere kaas · 55 g ei · 20 g sla
+
+**Bereiding:**
+1. Kook het ei 7–8 min hard, pel en snijd in plakjes.
+2. Rooster het desembrood.
+3. Beleg met sla, plakjes tomaat, magere kaas en het gesneden ei.
+
+### Desembrood met hummus, feta & bosui
+**315 kcal** · 15g eiwit · 47g koolhydraten · 7g vet  _(onderhoud · ook Lunch)_
+
+**Ingrediënten:** 80 g desembrood · 30 g hummus (light) · 30 g feta (light) · 60 g tomaat · 15 g bosui
+
+**Bereiding:**
+1. Rooster het desembrood en besmeer met de hummus.
+2. Beleg met plakjes tomaat en verkruimelde feta.
+3. Werk af met fijngesneden bosui of bieslook.
+
+## Lunch (18)
 
 ### Tonijnsalade-wrap met yoghurt-mosterddressing
 **334 kcal** · 36g eiwit · 35g koolhydraten · 5g vet  _(afvallen, onderhoud)_
@@ -240,7 +271,69 @@
 2. Beleg met de hüttenkäse, paprika en spinazie.
 3. Rol de omelet op als een wrap en snijd doormidden.
 
-## Diner (17)
+### Mais-kipfilet met gele rijst, groente & teriyaki
+**546 kcal** · 46g eiwit · 78g koolhydraten · 6g vet  _(afvallen, onderhoud · ook Diner)_
+
+**Ingrediënten:** 150 g kipfilet · 65 g gele rijst (droog) · 80 g mais · 120 g broccoli · 25 g teriyakisaus
+
+**Bereiding:**
+1. Kook de rijst met een snuf kurkuma tot gele rijst.
+2. Bak de kipfilet gaar, voeg de teriyaki toe en laat glaceren.
+3. Warm de mais en stoom de broccoli beetgaar.
+4. Schik alles over de rijst.
+
+### Couscoussalade met rode ui, feta, hummus & selderij
+**378 kcal** · 17g eiwit · 60g koolhydraten · 8g vet  _(onderhoud)_
+
+**Ingrediënten:** 60 g couscous (droog) · 30 g rode ui · 40 g feta (light) · 30 g hummus (light) · 40 g selderij · 80 g tomaat · 15 g bosui
+
+**Bereiding:**
+1. Wel de couscous met heet water tot gaar, roer los met een vork en laat afkoelen.
+2. Meng met fijngesneden rode ui, selderij en tomaat.
+3. Roer de hummus erdoor, verkruimel de feta erover en werk af met bosui of bieslook.
+
+### Koude pastasalade met tonijn, citroen & olijven
+**433 kcal** · 33g eiwit · 52g koolhydraten · 9g vet  _(afvallen, onderhoud)_
+
+**Ingrediënten:** 70 g volkoren pasta (droog) · 100 g tonijn (uit blik) · 30 g rode ui · 20 g olijven · 100 g tomaat · 4 g olijfolie
+
+**Bereiding:**
+1. Kook de volkoren pasta beetgaar, spoel koud en laat uitlekken.
+2. Meng met de tonijn, fijne rode ui, olijven en tomaat.
+3. Maak aan met citroensap, een scheutje olijfolie, peper en zout.
+
+### Desembrood met avocado, gepocheerd ei & tomatensalsa
+**377 kcal** · 16g eiwit · 48g koolhydraten · 14g vet  _(onderhoud · ook Ontbijt)_
+
+**Ingrediënten:** 80 g desembrood · 50 g avocado · 55 g ei · 60 g tomaat · 20 g rode ui
+
+**Bereiding:**
+1. Rooster het desembrood.
+2. Maak een snelle salsa van fijngesneden tomaat en rode ui met peper en zout.
+3. Pocheer het ei 3 min in zacht kokend water met een scheut azijn.
+4. Besmeer het brood met geprakte avocado, leg het ei erop en schep de salsa erover.
+
+### Desembrood met tomaat, magere kaas & gekookt ei
+**364 kcal** · 23g eiwit · 42g koolhydraten · 11g vet  _(onderhoud · ook Ontbijt)_
+
+**Ingrediënten:** 80 g desembrood · 60 g tomaat · 30 g magere kaas · 55 g ei · 20 g sla
+
+**Bereiding:**
+1. Kook het ei 7–8 min hard, pel en snijd in plakjes.
+2. Rooster het desembrood.
+3. Beleg met sla, plakjes tomaat, magere kaas en het gesneden ei.
+
+### Desembrood met hummus, feta & bosui
+**315 kcal** · 15g eiwit · 47g koolhydraten · 7g vet  _(onderhoud · ook Ontbijt)_
+
+**Ingrediënten:** 80 g desembrood · 30 g hummus (light) · 30 g feta (light) · 60 g tomaat · 15 g bosui
+
+**Bereiding:**
+1. Rooster het desembrood en besmeer met de hummus.
+2. Beleg met plakjes tomaat en verkruimelde feta.
+3. Werk af met fijngesneden bosui of bieslook.
+
+## Diner (21)
 
 ### Kip-teriyaki rijstbowl met edamame & broccoli
 **550 kcal** · 50g eiwit · 68g koolhydraten · 8g vet  _(afvallen, onderhoud · ook Lunch)_
@@ -422,7 +515,51 @@
 3. Voeg de tomaat toe met Italiaanse kruiden en laat 10 min pruttelen.
 4. Schep over de spaghetti.
 
-## Tussendoortje (8)
+### Zoete-aardappelpuree met flat iron, gepocheerd ei & avocado
+**598 kcal** · 44g eiwit · 48g koolhydraten · 27g vet  _(spieropbouw, onderhoud)_
+
+**Ingrediënten:** 220 g zoete aardappel · 150 g flat iron steak · 55 g ei · 40 g avocado · 3 g olijfolie
+
+**Bereiding:**
+1. Kook de zoete aardappel gaar en stamp tot een gladde puree met peper en zout.
+2. Bak de flat iron 2–3 min per kant tot medium-rare en laat even rusten.
+3. Pocheer het ei 3 min in zacht kokend water met een scheut azijn.
+4. Serveer de puree met de aangesneden flat iron, het gepocheerde ei en waaiertjes avocado.
+
+### Zalmfilet met gele rijst, groente & ketjap manis
+**628 kcal** · 37g eiwit · 73g koolhydraten · 20g vet  _(spieropbouw, onderhoud)_
+
+**Ingrediënten:** 140 g zalm · 65 g gele rijst (droog) · 100 g broccoli · 100 g paprika · 15 g ketjap manis
+
+**Bereiding:**
+1. Kook de rijst met een snuf kurkuma tot gele rijst.
+2. Bak of stoom de zalm gaar, met peper en citroen.
+3. Roerbak de broccoli en paprika beetgaar.
+4. Serveer samen en lepel de ketjap manis over de zalm.
+
+### Mais-kipfilet met gele rijst, groente & teriyaki
+**546 kcal** · 46g eiwit · 78g koolhydraten · 6g vet  _(afvallen, onderhoud · ook Lunch)_
+
+**Ingrediënten:** 150 g kipfilet · 65 g gele rijst (droog) · 80 g mais · 120 g broccoli · 25 g teriyakisaus
+
+**Bereiding:**
+1. Kook de rijst met een snuf kurkuma tot gele rijst.
+2. Bak de kipfilet gaar, voeg de teriyaki toe en laat glaceren.
+3. Warm de mais en stoom de broccoli beetgaar.
+4. Schik alles over de rijst.
+
+### Couscous-stoofpotje met kipdij, kaneel & groente
+**513 kcal** · 38g eiwit · 60g koolhydraten · 13g vet  _(onderhoud)_
+
+**Ingrediënten:** 150 g kipdij · 60 g couscous (droog) · 80 g wortel · 80 g courgette · 40 g ui
+
+**Bereiding:**
+1. Stoof de kipdij met de ui, wortel en courgette aan; voeg een snuf kaneel en kippenbouillon toe.
+2. Laat 20–25 min zachtjes stoven tot kip en groente gaar zijn in een geurig vocht.
+3. Doe de couscous in een kom, schep het hete stoofvocht erover tot net onder en dek af met folie.
+4. Laat 5 min wellen, roer los met een vork en schep de stoof met kip en groente erover.
+
+## Tussendoortje (9)
 
 ### Magere kwark met blauwe bessen & amandelschaafsel
 **178 kcal** · 18g eiwit · 17g koolhydraten · 6g vet  _(afvallen, onderhoud)_
@@ -495,4 +632,14 @@
 **Bereiding:**
 1. Schep de kwark in een kom.
 2. Roer er een snuf kaneel door en top met schijfjes banaan.
+
+### Kwark met bosbessen, honing & pure chocolade
+**216 kcal** · 16g eiwit · 26g koolhydraten · 6g vet  _(onderhoud)_
+
+**Ingrediënten:** 150 g magere kwark · 60 g blauwe bessen · 8 g honing · 12 g pure chocolade 70%
+
+**Bereiding:**
+1. Schep de kwark in een kom.
+2. Top met de bosbessen en een druppel honing.
+3. Hak de pure chocolade (70%) grof en strooi erover.
 

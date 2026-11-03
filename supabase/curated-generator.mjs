@@ -83,6 +83,18 @@ const ING = [
   ["hummus_light","Hummus (light)","Hummus (light)",170,8,15,8,"overig"],
   ["mustard","Mosterd","Mustard",66,4,5,3,"overig"],
   ["satay_light","Satésaus (light)","Satay sauce (light)",150,7,10,9,"overig"],
+  // blok 2
+  ["flat_iron","Flat iron steak","Flat iron steak",160,22,0,8,"vlees"],
+  ["avocado","Avocado","Avocado",160,2,9,15,"vet"],
+  ["rice_yellow","Gele rijst (droog)","Yellow rice (dry)",360,7,78,1,"granen"],
+  ["sourdough","Desembrood","Sourdough bread",250,9,48,1.5,"granen"],
+  ["low_fat_cheese","Magere kaas","Low-fat cheese",240,27,0,14,"zuivel"],
+  ["red_onion","Rode ui","Red onion",40,1.1,9,0.1,"groente"],
+  ["celery","Selderij","Celery",16,0.7,3,0.2,"groente"],
+  ["spring_onion","Bosui","Spring onion",32,1.8,7,0.2,"groente"],
+  ["olives","Olijven","Olives",115,0.8,6,11,"vet"],
+  ["ketjap_manis","Ketjap manis","Sweet soy sauce",250,2,60,0,"overig"],
+  ["dark_choc70","Pure chocolade 70%","Dark chocolate 70%",600,8,46,42,"overig"],
 ];
 const IMAP = {}; ING.forEach((r) => { IMAP[r[0]] = { nl: r[1], en: r[2], kcal: r[3], p: r[4], c: r[5], f: r[6], cat: r[7] }; });
 
@@ -282,6 +294,47 @@ add("Edamame met zeezout","Edamame with sea salt",["snack"],
 add("Kwark met kaneel & banaan","Quark with cinnamon & banana",["snack"],
   [{slug:"quark_lowfat",g:150},{slug:"banana",g:70}],
   {veg:true,tech:"assembly",steps:{nl:["Schep de kwark in een kom.","Roer er een snuf kaneel door en top met schijfjes banaan."],en:["Spoon the quark into a bowl.","Stir in a pinch of cinnamon and top with banana slices."]}});
+
+// ========================= BLOK 2 (recepten van Mounir) =========================
+add("Zoete-aardappelpuree met flat iron, gepocheerd ei & avocado","Sweet potato mash with flat iron, poached egg & avocado",["dinner"],
+  [{slug:"sweet_potato",g:220},{slug:"flat_iron",g:150},{slug:"egg",g:55},{slug:"avocado",g:40},{slug:"olive_oil",g:3}],
+  {steps:{nl:["Kook de zoete aardappel gaar en stamp tot een gladde puree met peper en zout.","Bak de flat iron 2–3 min per kant tot medium-rare en laat even rusten.","Pocheer het ei 3 min in zacht kokend water met een scheut azijn.","Serveer de puree met de aangesneden flat iron, het gepocheerde ei en waaiertjes avocado."],en:["Boil the sweet potato and mash smooth with salt and pepper.","Sear the flat iron 2–3 min per side to medium-rare and rest briefly.","Poach the egg 3 min in gently simmering water with a splash of vinegar.","Serve the mash with the sliced flat iron, the poached egg and fanned avocado."]}});
+
+add("Zalmfilet met gele rijst, groente & ketjap manis","Salmon with yellow rice, vegetables & sweet soy",["dinner"],
+  [{slug:"salmon",g:140},{slug:"rice_yellow",g:65},{slug:"broccoli",g:100},{slug:"paprika",g:100},{slug:"ketjap_manis",g:15}],
+  {steps:{nl:["Kook de rijst met een snuf kurkuma tot gele rijst.","Bak of stoom de zalm gaar, met peper en citroen.","Roerbak de broccoli en paprika beetgaar.","Serveer samen en lepel de ketjap manis over de zalm."],en:["Cook the rice with a pinch of turmeric for yellow rice.","Pan-fry or steam the salmon, with pepper and lemon.","Stir-fry the broccoli and pepper until tender.","Serve together and spoon the sweet soy over the salmon."]}});
+
+add("Kwark met bosbessen, honing & pure chocolade","Quark with blueberries, honey & dark chocolate",["snack"],
+  [{slug:"quark_lowfat",g:150},{slug:"blueberries",g:60},{slug:"honey",g:8},{slug:"dark_choc70",g:12}],
+  {veg:true,tech:"assembly",steps:{nl:["Schep de kwark in een kom.","Top met de bosbessen en een druppel honing.","Hak de pure chocolade (70%) grof en strooi erover."],en:["Spoon the quark into a bowl.","Top with the blueberries and a drizzle of honey.","Roughly chop the 70% dark chocolate and scatter over."]}});
+
+add("Mais-kipfilet met gele rijst, groente & teriyaki","Corn chicken with yellow rice, vegetables & teriyaki",["dinner","lunch"],
+  [{slug:"chicken_breast",g:150},{slug:"rice_yellow",g:65},{slug:"corn",g:80},{slug:"broccoli",g:120},{slug:"teriyaki",g:25}],
+  {steps:{nl:["Kook de rijst met een snuf kurkuma tot gele rijst.","Bak de kipfilet gaar, voeg de teriyaki toe en laat glaceren.","Warm de mais en stoom de broccoli beetgaar.","Schik alles over de rijst."],en:["Cook the rice with a pinch of turmeric for yellow rice.","Sear the chicken, add the teriyaki and let it glaze.","Warm the corn and steam the broccoli until tender.","Arrange everything over the rice."]}});
+
+add("Couscous-stoofpotje met kipdij, kaneel & groente","Couscous stew with chicken thigh, cinnamon & vegetables",["dinner"],
+  [{slug:"chicken_thigh",g:150},{slug:"couscous",g:60},{slug:"carrot",g:80},{slug:"zucchini",g:80},{slug:"onion",g:40}],
+  {tech:"soup",steps:{nl:["Stoof de kipdij met de ui, wortel en courgette aan; voeg een snuf kaneel en kippenbouillon toe.","Laat 20–25 min zachtjes stoven tot kip en groente gaar zijn in een geurig vocht.","Doe de couscous in een kom, schep het hete stoofvocht erover tot net onder en dek af met folie.","Laat 5 min wellen, roer los met een vork en schep de stoof met kip en groente erover."],en:["Sweat the chicken thigh with the onion, carrot and zucchini; add a pinch of cinnamon and chicken stock.","Simmer gently 20–25 min until the chicken and vegetables are tender in a fragrant broth.","Put the couscous in a bowl, ladle the hot broth over to just below the surface and cover with foil.","Let it swell 5 min, fluff with a fork and spoon the stew with chicken and vegetables over."]}});
+
+add("Couscoussalade met rode ui, feta, hummus & selderij","Couscous salad with red onion, feta, hummus & celery",["lunch"],
+  [{slug:"couscous",g:60},{slug:"red_onion",g:30},{slug:"feta_light",g:40},{slug:"hummus_light",g:30},{slug:"celery",g:40},{slug:"tomato",g:80},{slug:"spring_onion",g:15}],
+  {veg:true,steps:{nl:["Wel de couscous met heet water tot gaar, roer los met een vork en laat afkoelen.","Meng met fijngesneden rode ui, selderij en tomaat.","Roer de hummus erdoor, verkruimel de feta erover en werk af met bosui of bieslook."],en:["Soak the couscous in hot water until done, fluff with a fork and let cool.","Mix with finely chopped red onion, celery and tomato.","Stir the hummus through, crumble the feta over and finish with spring onion or chives."]}});
+
+add("Koude pastasalade met tonijn, citroen & olijven","Cold pasta salad with tuna, lemon & olives",["lunch"],
+  [{slug:"pasta_whole",g:70},{slug:"tuna_can",g:100},{slug:"red_onion",g:30},{slug:"olives",g:20},{slug:"tomato",g:100},{slug:"olive_oil",g:4}],
+  {steps:{nl:["Kook de volkoren pasta beetgaar, spoel koud en laat uitlekken.","Meng met de tonijn, fijne rode ui, olijven en tomaat.","Maak aan met citroensap, een scheutje olijfolie, peper en zout."],en:["Cook the wholegrain pasta al dente, rinse cold and drain.","Mix with the tuna, finely chopped red onion, olives and tomato.","Dress with lemon juice, a drizzle of olive oil, salt and pepper."]}});
+
+add("Desembrood met avocado, gepocheerd ei & tomatensalsa","Sourdough with avocado, poached egg & tomato salsa",["breakfast","lunch"],
+  [{slug:"sourdough",g:80},{slug:"avocado",g:50},{slug:"egg",g:55},{slug:"tomato",g:60},{slug:"red_onion",g:20}],
+  {veg:true,steps:{nl:["Rooster het desembrood.","Maak een snelle salsa van fijngesneden tomaat en rode ui met peper en zout.","Pocheer het ei 3 min in zacht kokend water met een scheut azijn.","Besmeer het brood met geprakte avocado, leg het ei erop en schep de salsa erover."],en:["Toast the sourdough.","Make a quick salsa of finely chopped tomato and red onion with salt and pepper.","Poach the egg 3 min in gently simmering water with a splash of vinegar.","Spread the bread with mashed avocado, place the egg on top and spoon the salsa over."]}});
+
+add("Desembrood met tomaat, magere kaas & gekookt ei","Sourdough with tomato, low-fat cheese & boiled egg",["breakfast","lunch"],
+  [{slug:"sourdough",g:80},{slug:"tomato",g:60},{slug:"low_fat_cheese",g:30},{slug:"egg",g:55},{slug:"lettuce",g:20}],
+  {veg:true,steps:{nl:["Kook het ei 7–8 min hard, pel en snijd in plakjes.","Rooster het desembrood.","Beleg met sla, plakjes tomaat, magere kaas en het gesneden ei."],en:["Hard-boil the egg 7–8 min, peel and slice.","Toast the sourdough.","Top with lettuce, tomato slices, low-fat cheese and the sliced egg."]}});
+
+add("Desembrood met hummus, feta & bosui","Sourdough with hummus, feta & spring onion",["breakfast","lunch"],
+  [{slug:"sourdough",g:80},{slug:"hummus_light",g:30},{slug:"feta_light",g:30},{slug:"tomato",g:60},{slug:"spring_onion",g:15}],
+  {veg:true,steps:{nl:["Rooster het desembrood en besmeer met de hummus.","Beleg met plakjes tomaat en verkruimelde feta.","Werk af met fijngesneden bosui of bieslook."],en:["Toast the sourdough and spread with the hummus.","Top with tomato slices and crumbled feta.","Finish with finely chopped spring onion or chives."]}});
 
 // ---------- SQL ----------
 const usedSlugs = new Set(); dishes.forEach((d) => d.items.forEach((it) => usedSlugs.add(it.slug)));
