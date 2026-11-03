@@ -653,6 +653,27 @@ export default function App() {
     const ok = await bioVerify("Bevestig om het vingerafdruk-slot aan te zetten");
     if (ok) { setBioOn(true); try { localStorage.setItem("hf_biolock", "1"); } catch (e) {} }
   }
+  // Inloggen met alleen een code (gym-lid in de native app, zonder /join-link).
+  const [showCodeLogin, setShowCodeLogin] = useState(false);
+  const [loginCode, setLoginCode] = useState("");
+  const [loginBusy, setLoginBusy] = useState(false);
+  const [loginMsg, setLoginMsg] = useState("");
+  async function codeLoginSubmit() {
+    const c = loginCode.trim().toUpperCase();
+    if (c.length < 3) { setLoginMsg(lang === "nl" ? "Vul je code in." : "Enter your code."); return; }
+    setLoginBusy(true); setLoginMsg("");
+    try {
+      const r = await fetch(apiUrl("/api/gym"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "login", code: c }) });
+      const d = await r.json().catch(() => ({}));
+      if (r.status === 409) { setLoginMsg(lang === "nl" ? "Deze code wordt door meerdere sportscholen gebruikt — log in via de link van je sportschool." : "This code is used by several gyms — log in via your gym link."); setLoginBusy(false); return; }
+      if (r.status === 429) { setLoginMsg(lang === "nl" ? "Te veel pogingen. Wacht even." : "Too many attempts. Please wait."); setLoginBusy(false); return; }
+      if (!r.ok || !d.access_token) { setLoginMsg(lang === "nl" ? "Onjuiste code. Vraag je coach om een nieuwe." : "Invalid code. Ask your coach for a new one."); setLoginBusy(false); return; }
+      if (d.slug) { try { localStorage.setItem("hf_gymslug", d.slug); } catch (e) {} }
+      try { sessionStorage.removeItem("hf_demo"); } catch (e) {} setDemoMode(false);
+      if (supabase) { await supabase.auth.setSession({ access_token: d.access_token, refresh_token: d.refresh_token }); }
+      setShowCodeLogin(false); setLoginCode(""); setLoginBusy(false);
+    } catch (e) { setLoginMsg(lang === "nl" ? "Er ging iets mis." : "Something went wrong."); setLoginBusy(false); }
+  }
   const [showCodeChange, setShowCodeChange] = useState(false);
   const [codeNew, setCodeNew] = useState("");
   const [codeBusy, setCodeBusy] = useState(false);
@@ -1773,8 +1794,9 @@ export default function App() {
       {inDemo && (
         <div style={{ background: EMBER, color: "#fff", padding: "9px 14px", display: "flex", alignItems: "center", gap: 10, position: "relative", zIndex: 1, flexWrap: "wrap" }}>
           <span style={{ fontSize: 11, fontWeight: 700, ...disp, letterSpacing: 1, color: "#fff", background: "rgba(255,255,255,0.18)", borderRadius: 4, padding: "2px 7px" }}>{lang === "nl" ? "VOORBEELD" : "PREVIEW"}</span>
-          <span style={{ flex: 1, minWidth: 110, fontSize: 12.5, lineHeight: 1.4, color: "#fff" }}>{lang === "nl" ? "Je bekijkt een voorbeeld. Ontgrendel de app voor je eigen plan." : "You're viewing a sample. Unlock the app for your own plan."}</span>
-          <a href={SITE_URL} style={{ color: "#fff", fontSize: 12.5, fontWeight: 700, ...disp, letterSpacing: 0.3, textDecoration: "none", whiteSpace: "nowrap", opacity: 0.92 }}>{lang === "nl" ? "← Website" : "← Website"}</a>
+          <span style={{ flex: 1, minWidth: 110, fontSize: 12.5, lineHeight: 1.4, color: "#fff" }}>{lang === "nl" ? "Je bekijkt een voorbeeld. Log in met je code of ontgrendel." : "You're viewing a sample. Log in with your code or unlock."}</span>
+          {!IS_NATIVE && <a href={SITE_URL} style={{ color: "#fff", fontSize: 12.5, fontWeight: 700, ...disp, letterSpacing: 0.3, textDecoration: "none", whiteSpace: "nowrap", opacity: 0.92 }}>{lang === "nl" ? "← Website" : "← Website"}</a>}
+          <div onClick={() => { setShowCodeLogin(true); setLoginMsg(""); setLoginCode(""); }} style={{ cursor: "pointer", border: "1px solid #fff", color: "#fff", padding: "7px 13px", borderRadius: 8, fontSize: 12.5, fontWeight: 700, ...disp, letterSpacing: 0.3, whiteSpace: "nowrap" }}>{lang === "nl" ? "Log in met code" : "Log in with code"}</div>
           <div onClick={() => setShowAuth(true)} style={{ cursor: "pointer", background: "#fff", color: EMBER, padding: "7px 15px", borderRadius: 8, fontSize: 12.5, fontWeight: 700, ...disp, letterSpacing: 0.3, whiteSpace: "nowrap" }}>{lang === "nl" ? "Ontgrendel" : "Unlock"}</div>
         </div>
       )}
@@ -2250,6 +2272,21 @@ export default function App() {
           <div style={{ fontSize: 13, color: MUTED, marginBottom: 22, maxWidth: 280, lineHeight: 1.5 }}>{lang === "nl" ? "Ontgrendel met je vingerafdruk of gezicht om verder te gaan." : "Unlock with your fingerprint or face to continue."}</div>
           <div onClick={tryUnlock} style={{ cursor: "pointer", background: EMBER, color: "#fff", padding: "14px 30px", borderRadius: 12, ...disp, fontWeight: 800, fontSize: 15 }}>{lang === "nl" ? "Ontgrendelen" : "Unlock"}</div>
           <div onClick={() => { setBioLocked(false); confirmLogout(); }} style={{ cursor: "pointer", color: MUTED, fontSize: 12.5, marginTop: 18, textDecoration: "underline" }}>{lang === "nl" ? "Uitloggen" : "Log out"}</div>
+        </div>
+      )}
+
+      {showCodeLogin && (
+        <div onClick={() => setShowCodeLogin(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 93, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ background: INK2, border: `1px solid ${LINE}`, borderRadius: 16, width: "100%", maxWidth: 360, padding: 22 }}>
+            <div style={{ ...disp, fontWeight: 800, fontSize: 18, color: PAPER, marginBottom: 4 }}>{lang === "nl" ? "Log in met je code" : "Log in with your code"}</div>
+            <div style={{ fontSize: 12.5, color: MUTED, marginBottom: 14, lineHeight: 1.5 }}>{lang === "nl" ? "Voer de code in die je van je sportschool kreeg." : "Enter the code you got from your gym."}</div>
+            <input value={loginCode} onChange={(e) => setLoginCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))} onKeyDown={(e) => { if (e.key === "Enter") codeLoginSubmit(); }} placeholder={lang === "nl" ? "JOUW CODE" : "YOUR CODE"} autoCapitalize="characters" style={{ width: "100%", background: INK, border: `1px solid ${LINE}`, color: PAPER, padding: "13px", fontSize: 19, letterSpacing: 4, textAlign: "center", borderRadius: 10, outline: "none", ...disp, fontWeight: 700, boxSizing: "border-box" }} />
+            {loginMsg && <div style={{ fontSize: 12.5, color: EMBER_SOFT, marginTop: 10, lineHeight: 1.4 }}>{loginMsg}</div>}
+            <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+              <div onClick={() => setShowCodeLogin(false)} style={{ flex: 1, textAlign: "center", cursor: "pointer", border: `1px solid ${LINE}`, color: PAPER, padding: "12px 0", borderRadius: 10, ...disp, fontWeight: 700, fontSize: 14 }}>{lang === "nl" ? "Sluiten" : "Close"}</div>
+              <div onClick={() => { if (!loginBusy) codeLoginSubmit(); }} style={{ flex: 1, textAlign: "center", cursor: "pointer", background: EMBER, color: "#fff", padding: "12px 0", borderRadius: 10, ...disp, fontWeight: 800, fontSize: 14, opacity: loginBusy ? 0.6 : 1 }}>{loginBusy ? "…" : (lang === "nl" ? "Inloggen" : "Log in")}</div>
+            </div>
+          </div>
         </div>
       )}
 

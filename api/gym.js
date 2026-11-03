@@ -89,19 +89,31 @@ async function login(req, res, body) {
   if (await ipLimited(req, "mlogin", 10, 300)) return res.status(429).json({ error: "too_many_attempts" });
   const slug = String(body.orgSlug || "").trim().toLowerCase();
   const code = String(body.code || "").trim().toUpperCase();
-  if (!slug || !code) return res.status(400).json({ error: "bad_request" });
+  if (!code) return res.status(400).json({ error: "bad_request" });
   const fail = () => res.status(401).json({ error: "invalid_code" });
-
-  const or = await rest("orgs?select=id&slug=eq." + encodeURIComponent(slug) + "&limit=1");
-  const orgs = or.ok ? await or.json().catch(() => []) : [];
-  const orgId = orgs && orgs[0] && orgs[0].id;
-  if (!orgId) return fail();
-
   const ch = hashCode(code);
-  const mr = await rest("org_members?select=auth_user_id&org_id=eq." + encodeURIComponent(orgId) +
-    "&code_hash=eq." + encodeURIComponent(ch) + "&role=eq.member&active=eq.true&limit=1");
-  const mem = mr.ok ? await mr.json().catch(() => []) : [];
-  const uid = mem && mem[0] && mem[0].auth_user_id;
+
+  let uid = null, orgSlug = slug;
+  if (slug) {
+    // Branded code-login via /join/<slug>: binnen die sportschool.
+    const or = await rest("orgs?select=id,slug&slug=eq." + encodeURIComponent(slug) + "&limit=1");
+    const orgs = or.ok ? await or.json().catch(() => []) : [];
+    const org = orgs && orgs[0];
+    if (!org) return fail();
+    orgSlug = org.slug;
+    const mr = await rest("org_members?select=auth_user_id&org_id=eq." + encodeURIComponent(org.id) +
+      "&code_hash=eq." + encodeURIComponent(ch) + "&role=eq.member&active=eq.true&limit=1");
+    const mem = mr.ok ? await mr.json().catch(() => []) : [];
+    uid = mem && mem[0] && mem[0].auth_user_id;
+  } else {
+    // Alleen-code (native app): zoek het lid over alle sportscholen.
+    const mr = await rest("org_members?select=auth_user_id,org_id&code_hash=eq." + encodeURIComponent(ch) +
+      "&role=eq.member&active=eq.true&limit=2");
+    const mem = mr.ok ? await mr.json().catch(() => []) : [];
+    if (mem.length > 1) return res.status(409).json({ error: "ambiguous_code" }); // zelfde code in 2 gyms → via gym-link inloggen
+    uid = mem && mem[0] && mem[0].auth_user_id;
+    if (mem && mem[0]) { try { const o = await rest("orgs?select=slug&id=eq." + encodeURIComponent(mem[0].org_id) + "&limit=1"); const os = o.ok ? (await o.json().catch(() => []))[0] : null; orgSlug = os && os.slug; } catch (e) {} }
+  }
   if (!uid) return fail();
 
   const user = await adminGetUser(uid);
@@ -113,7 +125,7 @@ async function login(req, res, body) {
   const sess = await gr.json().catch(() => null);
   if (!sess || !sess.access_token) return fail();
 
-  return res.status(200).json({ ok: true, access_token: sess.access_token, refresh_token: sess.refresh_token, expires_in: sess.expires_in });
+  return res.status(200).json({ ok: true, slug: orgSlug || null, access_token: sess.access_token, refresh_token: sess.refresh_token, expires_in: sess.expires_in });
 }
 
 // --- create: coach maakt lid + code ---
