@@ -498,7 +498,7 @@ const { T, ML, sIn, R, disp, mutDay, patchMeal, scaleMeal, patchIng, addIngr, re
         </div>
       </div>
       {dayMenu && (
-        <div style={{ background: "#121212", borderBottom: `1px solid ${LINE}` }}>
+        <div style={{ background: INK2, borderBottom: `1px solid ${LINE}` }}>
           {miniAct(icCopy, T("copyDay"), () => { setDayMenu(false); setCopyPick({ kind: "day", di }); })}
           {miniAct(icDate, T("toDate"), () => { setDayMenu(false); setMovePlan({ scope: "day", di }); })}
         </div>
@@ -529,7 +529,7 @@ const { T, ML, sIn, R, disp, mutDay, patchMeal, scaleMeal, patchIng, addIngr, re
                     <div onClick={() => removeIngr(di, mi, ii)} style={{ cursor: "pointer", color: MUTED, fontSize: 15, padding: "0 2px" }}>×</div>
                   </div>
                   {isOpen && (
-                    <div style={{ background: "#121212", border: `1px solid ${LINE}`, borderRadius: 10, padding: 10, marginTop: 6 }}>
+                    <div style={{ background: INK2, border: `1px solid ${LINE}`, borderRadius: 10, padding: 10, marginTop: 6 }}>
                       <div style={{ fontSize: 10.5, color: MUTED, lineHeight: 1.5, marginBottom: 8 }}>{T("ingValsHint")}</div>
                       <input value={ingForm.name} onChange={(e) => setIngForm({ ...ingForm, name: e.target.value })} placeholder={T("ingName")} style={{ ...miniIn, textAlign: "left", marginBottom: 8 }} />
                       {valEditor(mi, ingForm, (k, v) => setIngForm({ ...ingForm, [k]: v }))}
@@ -546,7 +546,7 @@ const { T, ML, sIn, R, disp, mutDay, patchMeal, scaleMeal, patchIng, addIngr, re
               <div style={{ fontSize: 10.5, color: MUTED, marginTop: 6, textAlign: "right" }}>{m.kcal} kcal · {m.p}{ML.p}/{m.c}{ML.c}/{m.f}{ML.f}</div>
             </div>
             {openMeal === mi && (
-              <div style={{ background: "#121212", borderTop: `1px solid ${LINE}` }}>
+              <div style={{ background: INK2, borderTop: `1px solid ${LINE}` }}>
                 {miniAct(icPlus, T("addIngr").replace("+ ", ""), () => addIngr(di, mi))}
                 {miniAct(icEdit, T("editVals"), () => { setValMeal(valMeal === mi ? null : mi); setOpenMeal(null); })}
                 {pro && miniAct(icBar, T("addProd").replace("+ ", ""), () => { setOpenMeal(null); setPickTarget({ di, mi }); setShowProducts(true); })}
@@ -560,7 +560,7 @@ const { T, ML, sIn, R, disp, mutDay, patchMeal, scaleMeal, patchIng, addIngr, re
         {!addOpen ? (
           <div onClick={() => { setAddOpen(true); setOpenMeal(null); setDayMenu(false); }} style={{ cursor: "pointer", textAlign: "center", padding: "11px 0", color: EMBER, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.5 }}>+ {T("addTitle")}</div>
         ) : (
-          <div style={{ background: "#121212" }}>
+          <div style={{ background: INK2 }}>
             {addOpt(icRecipe, T("addFromDb"), T("addFromDbSub"), () => { setAddOpen(false); setRecipePick(di); })}
             {addOpt(icPlus, T("addEmpty"), T("addEmptySub"), () => { setAddOpen(false); addMealTo(di); })}
             {pro && addOpt(icBar, T("addFromProd"), T("addFromProdSub"), () => { setAddOpen(false); setPickTarget({ di, mi: null }); setShowProducts(true); })}
