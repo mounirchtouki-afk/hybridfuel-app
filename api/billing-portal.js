@@ -118,7 +118,7 @@ export default async function handler(req, res) {
         const orgId = Array.isArray(oRows) && oRows[0] && oRows[0].id;
         if (!oIns.ok || !orgId) return res.status(502).json({ error: "org_failed", detail: JSON.stringify(oRows).slice(0, 200) });
         // 2) huisstijl (groen)
-        await fetch(supaUrl + "/rest/v1/org_config", { method: "POST", headers: { ...jsonHdr, Prefer: "return=minimal,resolution=merge-duplicates" }, body: JSON.stringify({ org_id: orgId, brand_color: "#16A34A", theme: { template: "dark", accent: "#16A34A" } }) });
+        await fetch(supaUrl + "/rest/v1/org_config", { method: "POST", headers: { ...jsonHdr, Prefer: "return=minimal,resolution=merge-duplicates" }, body: JSON.stringify({ org_id: orgId }) });
         // 3) coach-account
         const cu = await fetch(supaUrl + "/auth/v1/admin/users", { method: "POST", headers: jsonHdr, body: JSON.stringify({ email: coachEmail, password: coachPass, email_confirm: true }) });
         const cuRow = await cu.json().catch(() => ({}));
@@ -152,7 +152,7 @@ export default async function handler(req, res) {
           const oRows = await oIns.json().catch(() => []);
           orgId = Array.isArray(oRows) && oRows[0] && oRows[0].id; orgName = "HybridFuelCo HQ";
           if (!orgId) return res.status(502).json({ error: "org_failed", detail: JSON.stringify(oRows).slice(0, 200) });
-          await fetch(supaUrl + "/rest/v1/org_config", { method: "POST", headers: { ...jsonHdr, Prefer: "return=minimal,resolution=merge-duplicates" }, body: JSON.stringify({ org_id: orgId, brand_color: "#16A34A", theme: { template: "dark", accent: "#16A34A" } }) });
+          await fetch(supaUrl + "/rest/v1/org_config", { method: "POST", headers: { ...jsonHdr, Prefer: "return=minimal,resolution=merge-duplicates" }, body: JSON.stringify({ org_id: orgId }) });
         }
         // Bestaat er al een lidmaatschap voor mij? Dan ombouwen naar coach-eigenaar; anders aanmaken.
         const exR = await fetch(supaUrl + "/rest/v1/org_members?select=org_id&auth_user_id=eq." + encodeURIComponent(userId), { headers: sv });
@@ -232,7 +232,7 @@ export default async function handler(req, res) {
         const oRows = await oIns.json().catch(() => []);
         const orgId = Array.isArray(oRows) && oRows[0] && oRows[0].id;
         if (!oIns.ok || !orgId) return res.status(502).json({ error: "org_failed", detail: JSON.stringify(oRows).slice(0, 200) });
-        await fetch(supaUrl + "/rest/v1/org_config", { method: "POST", headers: { ...jsonHdr, Prefer: "return=minimal,resolution=merge-duplicates" }, body: JSON.stringify({ org_id: orgId, brand_color: "#16A34A", theme: { template: "dark", accent: "#16A34A" } }) });
+        await fetch(supaUrl + "/rest/v1/org_config", { method: "POST", headers: { ...jsonHdr, Prefer: "return=minimal,resolution=merge-duplicates" }, body: JSON.stringify({ org_id: orgId }) });
         // 3) coach koppelen als eigenaar
         await fetch(supaUrl + "/rest/v1/org_members", { method: "POST", headers: { ...jsonHdr, Prefer: "return=minimal" }, body: JSON.stringify({ org_id: orgId, auth_user_id: coachId, role: "coach", is_owner: true, active: true }) });
         // 4) uitnodigings-/wachtwoordlink zodat de sportschool zelf een wachtwoord zet
