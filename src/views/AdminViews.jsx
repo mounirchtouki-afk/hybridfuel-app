@@ -219,6 +219,7 @@ function GymEditor({ token, lang, gym, accent, onBack }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [created, setCreated] = useState(null);
+  const [confirmDel, setConfirmDel] = useState(false);
   const set = (k, v) => setF((p) => ({ ...p, [k]: v }));
   const F = (label, k, ph) => (<div><div style={lblS}>{label}</div><input value={f[k] || ""} onChange={(e) => set(k, e.target.value)} placeholder={ph || ""} style={fieldS} /></div>);
   async function save() {
@@ -258,7 +259,6 @@ function GymEditor({ token, lang, gym, accent, onBack }) {
   const active = (f.license_status || "active") !== "stopped";
   // standaard licentie-einddatum = 1 jaar na start
   const setYear = () => { const s = f.license_start ? new Date(f.license_start) : new Date(); const e = new Date(s); e.setFullYear(e.getFullYear() + 1); set("license_start", s.toISOString().slice(0, 10)); set("license_end", e.toISOString().slice(0, 10)); };
-  const [confirmDel, setConfirmDel] = useState(false);
   async function doDelete() {
     setBusy(true); setErr("");
     try { await call(token, "admin.deleteGym", { orgId: f.id }); onBack(); }
