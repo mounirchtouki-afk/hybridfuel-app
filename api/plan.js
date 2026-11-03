@@ -373,9 +373,10 @@ Rules:
 ${L.rule1}
 ${L.rule2}${L.snackGuide ? "\n" + L.snackGuide : ""}
 - For EACH meal list 2-4 main ingredients with weights in grams.
+- COHERENCE — every meal must be realistic and appetizing: use ONLY ingredients that genuinely belong together in that specific dish. A "bread with topping" = bread + a fitting topping (chicken, cheese, egg, tuna) and maybe some veg; it does NOT contain quark or banana. Do not stuff unrelated foods into one meal to force the numbers. Hit the targets by adjusting PORTION SIZES and by adding a side that fits the dish; if you cannot hit the target exactly without breaking coherence, get CLOSE with sensible ingredients rather than adding things that do not belong. Fruit, quark/yoghurt and other snack-type foods belong in the Snack slots, not mixed into a bread, rice or pasta main meal.
 - Each meal's kcal and p/c/f MUST match the listed ingredient weights.
-- Each day's meals should sum close to THAT day's targets above.
-${L.ruleN}${mealPrefRows.length ? "\n- CRITICAL: the dish for each meal moment that has chosen options (see MEAL CHOICES at the top) MUST be one of those chosen options — name it accordingly and build its ingredients. Do NOT replace it with a recipe-idea dish. Only invent freely for moments without chosen options." : ""}
+- Each day's meals should sum close to THAT day's targets above (slightly off is fine if it keeps meals realistic).
+${L.ruleN}${mealPrefRows.length ? "\n- CRITICAL: the dish for each meal moment that has chosen options (see MEAL CHOICES at the top) MUST be one of those chosen options — name it accordingly and build its ingredients with items that fit THAT dish. Do NOT replace it with a recipe-idea dish, and do NOT pad it with ingredients that don't belong. Only invent freely for moments without chosen options." : ""}
 
 Return ONLY valid JSON, no markdown, exactly this shape (keep the JSON keys in English, set "d" to each day's label above):
 ${L.example}`;
