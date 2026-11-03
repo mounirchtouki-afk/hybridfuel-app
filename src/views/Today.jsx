@@ -316,7 +316,7 @@ export default function Today({ lang, week, onGoPlan, session, plus, units, onRe
                   <div style={{ fontSize: 11, color: MUTED, lineHeight: 1.5, marginBottom: 12 }}>{canRebalance ? t("hpNote") : t("spreadNote")}</div>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                     {canRebalance && <button onClick={doRebalance} style={{ background: EMBER, color: "#fff", border: "none", borderRadius: 9, padding: "11px 18px", ...disp, fontWeight: 700, fontSize: 13, letterSpacing: 0.5, cursor: "pointer" }}>{t("hpBtn")}</button>}
-                    {canSpread && <button onClick={doSpread} style={{ background: canRebalance ? "transparent" : EMBER, color: canRebalance ? EMBER : PAPER, border: canRebalance ? `1px solid ${EMBER}` : "none", borderRadius: 9, padding: "11px 18px", ...disp, fontWeight: 700, fontSize: 13, letterSpacing: 0.5, cursor: "pointer" }}>{t("spreadBtn")}</button>}
+                    {canSpread && <button onClick={doSpread} style={{ background: canRebalance ? "transparent" : EMBER, color: canRebalance ? EMBER : "#fff", border: canRebalance ? `1px solid ${EMBER}` : "none", borderRadius: 9, padding: "11px 18px", ...disp, fontWeight: 700, fontSize: 13, letterSpacing: 0.5, cursor: "pointer" }}>{t("spreadBtn")}</button>}
                   </div>
                 </>
               )}
@@ -330,7 +330,7 @@ export default function Today({ lang, week, onGoPlan, session, plus, units, onRe
                 const on = !!eaten[i];
                 return (
                   <div key={i} onClick={() => toggle(i)} style={{ background: INK2, border: `1px solid ${on ? EMBER : LINE}`, borderRadius: 12, padding: "12px 14px", cursor: "pointer", display: "flex", gap: 12, alignItems: "flex-start", opacity: on ? 0.72 : 1 }}>
-                    <div style={{ width: 22, height: 22, borderRadius: 7, border: `2px solid ${on ? EMBER : MUTED}`, background: on ? EMBER : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: PAPER, fontSize: 13, fontWeight: 800, marginTop: 1 }}>{on ? "✓" : ""}</div>
+                    <div style={{ width: 22, height: 22, borderRadius: 7, border: `2px solid ${on ? EMBER : MUTED}`, background: on ? EMBER : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: "#fff", fontSize: 13, fontWeight: 800, marginTop: 1 }}>{on ? "✓" : ""}</div>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: 9.5, color: EMBER, letterSpacing: 1, textTransform: "uppercase", fontWeight: 600, marginBottom: 2 }}>{m.t}</div>
                       <div style={{ fontSize: 14, fontWeight: 500, textDecoration: on ? "line-through" : "none" }}>{m.n}</div>
@@ -536,7 +536,7 @@ function AddExtra({ lang, session, onClose, onPickProduct, onPickRecipe }) {
         </div>
         <div style={{ display: "flex", gap: 6, background: INK2, border: `1px solid ${LINE}`, borderRadius: 10, padding: 4, marginBottom: 16 }}>
           {[["recipe", L.tabRec], ["product", L.tabProd]].map(([k, lbl]) => (
-            <div key={k} onClick={() => setTab(k)} style={{ flex: 1, textAlign: "center", cursor: "pointer", ...disp, fontWeight: 700, fontSize: 13, letterSpacing: 0.3, padding: "9px 0", borderRadius: 7, background: tab === k ? EMBER : "transparent", color: tab === k ? PAPER : MUTED }}>{lbl}</div>
+            <div key={k} onClick={() => setTab(k)} style={{ flex: 1, textAlign: "center", cursor: "pointer", ...disp, fontWeight: 700, fontSize: 13, letterSpacing: 0.3, padding: "9px 0", borderRadius: 7, background: tab === k ? EMBER : "transparent", color: tab === k ? "#fff" : MUTED }}>{lbl}</div>
           ))}
         </div>
         {tab === "recipe" ? recipeTab : <Products lang={lang} session={session} embedded onPick={onPickProduct} />}

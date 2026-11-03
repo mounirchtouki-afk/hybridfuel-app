@@ -281,7 +281,7 @@ export default function Products({ lang, session, onClose, onPick, embedded, aut
           {MEAL_ORDER.map((m) => {
             const on = mt.includes(m);
             return (
-              <div key={m} onClick={() => setMt((xs) => on ? xs.filter((x) => x !== m) : [...xs, m])} style={{ cursor: "pointer", fontSize: 12.5, fontWeight: 700, padding: "7px 13px", borderRadius: 8, border: `1px solid ${on ? EMBER : LINE}`, background: on ? EMBER : "transparent", color: on ? PAPER : MUTED }}>{MEALS[m][lang]}</div>
+              <div key={m} onClick={() => setMt((xs) => on ? xs.filter((x) => x !== m) : [...xs, m])} style={{ cursor: "pointer", fontSize: 12.5, fontWeight: 700, padding: "7px 13px", borderRadius: 8, border: `1px solid ${on ? EMBER : LINE}`, background: on ? EMBER : "transparent", color: on ? "#fff" : MUTED }}>{MEALS[m][lang]}</div>
             );
           })}
         </div>
@@ -309,7 +309,7 @@ export default function Products({ lang, session, onClose, onPick, embedded, aut
       {/* Compacte acties */}
       {!adding && (
         <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-          <button onClick={startScan} style={{ ...primaryBtn, flex: 1, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 9, padding: "11px 0" }}><BarcodeIcon c={PAPER} />{t("scanBtn")}</button>
+          <button onClick={startScan} style={{ ...primaryBtn, flex: 1, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 9, padding: "11px 0" }}><BarcodeIcon c="#fff" />{t("scanBtn")}</button>
           <button onClick={openManual} style={{ ...ghostBtn, flex: 1, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "11px 0" }}><PlusIcon c={EMBER} />{t("manualBtn")}</button>
         </div>
       )}

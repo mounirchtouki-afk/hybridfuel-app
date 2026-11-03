@@ -280,7 +280,7 @@ export default function Auth({ lang, session, tier, recovery, onClose, gym }) {
             <div style={sectionTitle}>{t("upgradeTitle")}</div>
             <div style={{ display: "inline-flex", gap: 4, background: INK2, border: `1px solid ${LINE}`, borderRadius: 10, padding: 4, margin: "8px 0 10px" }}>
               {[["month", t("month")], ["year", t("year")]].map(([id, lbl]) => (
-                <div key={id} onClick={() => setBillInterval(id)} style={{ padding: "7px 16px", borderRadius: 7, background: billInterval === id ? EMBER : "transparent", color: PAPER, fontSize: 12.5, fontWeight: 700, ...disp, letterSpacing: 0.5, cursor: "pointer" }}>{lbl}</div>
+                <div key={id} onClick={() => setBillInterval(id)} style={{ padding: "7px 16px", borderRadius: 7, background: billInterval === id ? EMBER : "transparent", color: billInterval === id ? "#fff" : PAPER, fontSize: 12.5, fontWeight: 700, ...disp, letterSpacing: 0.5, cursor: "pointer" }}>{lbl}</div>
               ))}
               {billInterval === "year" && <div style={{ alignSelf: "center", fontSize: 10.5, color: EMBER_SOFT, fontWeight: 700, padding: "0 8px", ...disp, letterSpacing: 0.3 }}>{t("freeMonths")}</div>}
             </div>
@@ -362,7 +362,7 @@ export default function Auth({ lang, session, tier, recovery, onClose, gym }) {
       <div style={{ fontSize: 12.5, color: MUTED, lineHeight: 1.5, marginBottom: 14 }}>{t("intro")}</div>
       <div style={{ display: "inline-flex", gap: 4, background: INK2, border: `1px solid ${LINE}`, borderRadius: 10, padding: 4, marginBottom: 14 }}>
         {[["login", t("login")], ["signup", t("signup")]].map(([id, lbl]) => (
-          <div key={id} onClick={() => { setMode(id); setErr(""); setMsg(""); }} style={{ padding: "8px 18px", borderRadius: 7, background: mode === id ? EMBER : "transparent", color: PAPER, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.5, cursor: "pointer" }}>{lbl}</div>
+          <div key={id} onClick={() => { setMode(id); setErr(""); setMsg(""); }} style={{ padding: "8px 18px", borderRadius: 7, background: mode === id ? EMBER : "transparent", color: mode === id ? "#fff" : PAPER, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.5, cursor: "pointer" }}>{lbl}</div>
         ))}
       </div>
       <div style={{ marginBottom: 10 }}>
@@ -378,7 +378,7 @@ export default function Auth({ lang, session, tier, recovery, onClose, gym }) {
       )}
       {mode === "signup" && (
         <div onClick={() => setNews(!news)} style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", marginBottom: 14 }}>
-          <div style={{ width: 20, height: 20, borderRadius: 6, border: `2px solid ${news ? EMBER : MUTED}`, background: news ? EMBER : "transparent", display: "flex", alignItems: "center", justifyContent: "center", color: PAPER, fontSize: 12, fontWeight: 800, flexShrink: 0 }}>{news ? "✓" : ""}</div>
+          <div style={{ width: 20, height: 20, borderRadius: 6, border: `2px solid ${news ? EMBER : MUTED}`, background: news ? EMBER : "transparent", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 12, fontWeight: 800, flexShrink: 0 }}>{news ? "✓" : ""}</div>
           <span style={{ fontSize: 12.5, color: MUTED, lineHeight: 1.4 }}>{t("newsletter")}</span>
         </div>
       )}
