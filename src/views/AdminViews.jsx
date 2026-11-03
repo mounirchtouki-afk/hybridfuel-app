@@ -27,6 +27,27 @@ const fieldS = { flex: 1, background: INK, border: `1px solid ${LINE}`, color: P
 const btnS = (bg) => ({ cursor: "pointer", background: bg, color: "#fff", fontWeight: 800, fontSize: 12.5, padding: "10px 14px", borderRadius: 9, whiteSpace: "nowrap", ...disp, textAlign: "center" });
 const ghostS = { cursor: "pointer", background: INK, border: `1px solid ${LINE}`, color: PAPER, fontWeight: 800, fontSize: 12.5, padding: "10px 14px", borderRadius: 9, whiteSpace: "nowrap", ...disp, textAlign: "center" };
 
+// Nette bevestig-popup in de huisstijl (vervangt window.confirm).
+function ConfirmModal({ open, title, message, confirmLabel, cancelLabel, onConfirm, onCancel, busy, accent }) {
+  if (!open) return null;
+  const red = accent || EMBER;
+  return (
+    <div onClick={busy ? null : onCancel} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "grid", placeItems: "center", zIndex: 1000, padding: 16 }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ background: INK2, border: `1px solid ${LINE}`, borderRadius: 16, padding: 22, maxWidth: 380, width: "100%", boxShadow: "0 24px 70px rgba(0,0,0,0.55)" }}>
+        <div style={{ width: 46, height: 46, borderRadius: 12, background: "rgba(225,29,72,0.14)", display: "grid", placeItems: "center", marginBottom: 14 }}>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={red} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6M10 11v6M14 11v6" /></svg>
+        </div>
+        <div style={{ ...disp, fontWeight: 800, fontSize: 19, color: PAPER, marginBottom: 6 }}>{title}</div>
+        <div style={{ fontSize: 13.5, color: MUTED, lineHeight: 1.55, marginBottom: 18 }}>{message}</div>
+        <div style={{ display: "flex", gap: 10 }}>
+          <div onClick={busy ? null : onCancel} style={{ ...ghostS, flex: 1, opacity: busy ? 0.6 : 1 }}>{cancelLabel}</div>
+          <div onClick={busy ? null : onConfirm} style={{ ...btnS(red), flex: 1, opacity: busy ? 0.6 : 1 }}>{busy ? "…" : confirmLabel}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ===== OVERVIEW (platform) =====
 export function AdminOverview({ session, lang }) {
   const t = (nl, en) => (lang === "nl" ? nl : en);
@@ -195,11 +216,11 @@ function GymEditor({ token, lang, gym, onBack }) {
   const active = (f.license_status || "active") !== "stopped";
   // standaard licentie-einddatum = 1 jaar na start
   const setYear = () => { const s = f.license_start ? new Date(f.license_start) : new Date(); const e = new Date(s); e.setFullYear(e.getFullYear() + 1); set("license_start", s.toISOString().slice(0, 10)); set("license_end", e.toISOString().slice(0, 10)); };
-  async function del() {
-    if (!window.confirm(t("Weet je zeker dat je '" + (f.name || "") + "' verwijdert? Dit kan niet ongedaan worden gemaakt.", "Delete '" + (f.name || "") + "'? This cannot be undone."))) return;
+  const [confirmDel, setConfirmDel] = useState(false);
+  async function doDelete() {
     setBusy(true); setErr("");
     try { await call(token, "admin.deleteGym", { orgId: f.id }); onBack(); }
-    catch (e) { setErr(t("Verwijderen mislukt: ", "Delete failed: ") + String(e.message || e)); setBusy(false); }
+    catch (e) { setErr(t("Verwijderen mislukt: ", "Delete failed: ") + String(e.message || e)); setBusy(false); setConfirmDel(false); }
   }
   return (
     <div style={{ display: "grid", gap: 2, maxWidth: 620 }}>
@@ -232,10 +253,15 @@ function GymEditor({ token, lang, gym, onBack }) {
       </div>
       {!f._new && (
         <div style={{ marginTop: 18, borderTop: `1px solid ${LINE}`, paddingTop: 14 }}>
-          <div onClick={busy ? null : del} style={{ ...btnS(EMBER), width: "fit-content", opacity: busy ? 0.6 : 1 }}>{t("Sportschool verwijderen", "Delete gym")}</div>
+          <div onClick={() => setConfirmDel(true)} style={{ ...btnS(EMBER), width: "fit-content" }}>{t("Sportschool verwijderen", "Delete gym")}</div>
           <div style={{ fontSize: 11, color: MUTED, marginTop: 6 }}>{t("Verwijdert de sportschool, alle leden-koppelingen en de coach-login. Kan niet ongedaan worden gemaakt.", "Deletes the gym, all member links and the coach login. Cannot be undone.")}</div>
         </div>
       )}
+      <ConfirmModal open={confirmDel} busy={busy}
+        title={t("Sportschool verwijderen?", "Delete gym?")}
+        message={t("'" + (f.name || "") + "' wordt verwijderd, met alle leden-koppelingen en de coach-login. Dit kan niet ongedaan worden gemaakt.", "'" + (f.name || "") + "' will be deleted, with all member links and the coach login. This cannot be undone.")}
+        confirmLabel={t("Verwijderen", "Delete")} cancelLabel={t("Annuleren", "Cancel")}
+        onConfirm={doDelete} onCancel={() => setConfirmDel(false)} />
     </div>
   );
 }
@@ -252,11 +278,11 @@ function MemberEditor({ token, lang, acc, onBack }) {
   async function saveEmail() { setBusy(true); setErr(""); try { await call(token, "admin.updateAccount", { targetUserId: acc.id, email }); } catch (e) { setErr(String(e.message || e)); } setBusy(false); }
   async function savePw() { if (pw.length < 6) { setErr(t("Wachtwoord min. 6 tekens.", "Password min 6 chars.")); return; } setBusy(true); setErr(""); try { await call(token, "admin.updateAccount", { targetUserId: acc.id, password: pw }); setPw(""); } catch (e) { setErr(String(e.message || e)); } setBusy(false); }
   async function resetLink() { setBusy(true); setErr(""); try { const d = await call(token, "admin.resetPassword", { email }); setResetUrl(d.url); } catch (e) { setErr(String(e.message || e)); } setBusy(false); }
-  async function delMember() {
-    if (!window.confirm(t("Member '" + (acc.email || "") + "' verwijderen? Account + data worden gewist. Kan niet ongedaan worden gemaakt.", "Delete member '" + (acc.email || "") + "'? Account + data removed. Cannot be undone."))) return;
+  const [confirmDel, setConfirmDel] = useState(false);
+  async function doDelMember() {
     setBusy(true); setErr("");
     try { await call(token, "admin.deleteMember", { targetUserId: acc.id }); onBack(); }
-    catch (e) { setErr(t("Verwijderen mislukt: ", "Delete failed: ") + String(e.message || e)); setBusy(false); }
+    catch (e) { setErr(t("Verwijderen mislukt: ", "Delete failed: ") + String(e.message || e)); setBusy(false); setConfirmDel(false); }
   }
   async function changeTier(v) {
     setErr("");
@@ -283,9 +309,14 @@ function MemberEditor({ token, lang, acc, onBack }) {
       <div style={lblS}>{t("Licentie / pakket", "License / plan")}</div>
       <div style={{ display: "flex", gap: 7 }}>{segTier("pro", "Pro")}{segTier("basis", "Basis")}{segTier("free", t("Gratis / stop", "Free / stop"))}</div>
       <div style={{ marginTop: 18, borderTop: `1px solid ${LINE}`, paddingTop: 14 }}>
-        <div onClick={busy ? null : delMember} style={{ ...btnS(EMBER), width: "fit-content", opacity: busy ? 0.6 : 1 }}>{t("Member verwijderen", "Delete member")}</div>
+        <div onClick={() => setConfirmDel(true)} style={{ ...btnS(EMBER), width: "fit-content" }}>{t("Member verwijderen", "Delete member")}</div>
         <div style={{ fontSize: 11, color: MUTED, marginTop: 6 }}>{t("Verwijdert het account en alle data. Kan niet ongedaan worden gemaakt.", "Deletes the account and all data. Cannot be undone.")}</div>
       </div>
+      <ConfirmModal open={confirmDel} busy={busy}
+        title={t("Member verwijderen?", "Delete member?")}
+        message={t("'" + (acc.email || "") + "' wordt verwijderd, inclusief account en alle data. Dit kan niet ongedaan worden gemaakt.", "'" + (acc.email || "") + "' will be deleted, including account and all data. This cannot be undone.")}
+        confirmLabel={t("Verwijderen", "Delete")} cancelLabel={t("Annuleren", "Cancel")}
+        onConfirm={doDelMember} onCancel={() => setConfirmDel(false)} />
     </div>
   );
 }
