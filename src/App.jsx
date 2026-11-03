@@ -2203,16 +2203,24 @@ export default function App() {
                           <div key={i} style={{ display: "flex", gap: 9, alignItems: "flex-start", fontSize: 13.5 }}><span style={{ color: EMBER, fontWeight: 800 }}>✓</span><span>{t}</span></div>
                         ))}
                       </div>
-                      <div onClick={() => setShowAuth(true)} style={{ cursor: "pointer", textAlign: "center", background: EMBER, color: "#fff", padding: "16px 0", borderRadius: 11, ...disp, fontWeight: 700, fontSize: 17, letterSpacing: 0.6, textTransform: "uppercase", boxShadow: "0 6px 22px rgba(var(--hf-ember-rgb),0.38)" }}>{T("subscribeCta")}</div>
-                      <div onClick={() => setShowAuth(true)} style={{ cursor: "pointer", textAlign: "center", color: EMBER_SOFT, marginTop: 11, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.3 }}>{T("subYearUpsell")}</div>
-                      <div style={{ fontSize: 11, color: MUTED, marginTop: 11, textAlign: "center" }}>{T("lockFoot")}</div>
+                      {/* Store-app (native): NOOIT een prijs of koopknop tonen (Apple/Google
+                          anti-steering). Alleen een neutrale inlog-knop; abonneren gaat via web. */}
+                      {IS_NATIVE ? (
+                        <div onClick={() => setShowAuth(true)} style={{ cursor: "pointer", textAlign: "center", background: EMBER, color: "#fff", padding: "16px 0", borderRadius: 11, ...disp, fontWeight: 700, fontSize: 17, letterSpacing: 0.6, textTransform: "uppercase", boxShadow: "0 6px 22px rgba(var(--hf-ember-rgb),0.38)" }}>{lang === "nl" ? "Inloggen" : "Log in"}</div>
+                      ) : (
+                        <>
+                          <div onClick={() => setShowAuth(true)} style={{ cursor: "pointer", textAlign: "center", background: EMBER, color: "#fff", padding: "16px 0", borderRadius: 11, ...disp, fontWeight: 700, fontSize: 17, letterSpacing: 0.6, textTransform: "uppercase", boxShadow: "0 6px 22px rgba(var(--hf-ember-rgb),0.38)" }}>{T("subscribeCta")}</div>
+                          <div onClick={() => setShowAuth(true)} style={{ cursor: "pointer", textAlign: "center", color: EMBER_SOFT, marginTop: 11, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.3 }}>{T("subYearUpsell")}</div>
+                          <div style={{ fontSize: 11, color: MUTED, marginTop: 11, textAlign: "center" }}>{T("lockFoot")}</div>
+                        </>
+                      )}
                       {!inDemo && (
                         <div onClick={enterDemo} style={{ cursor: "pointer", textAlign: "center", color: MUTED, marginTop: 13, fontSize: 12.5, fontWeight: 600, textDecoration: "underline" }}>{lang === "nl" ? "Of bekijk eerst de app" : "Or take a look inside first"}</div>
                       )}
                     </div>
                   )}
 
-                  {targets && !loading && !error && !hasBasis && (
+                  {targets && !loading && !error && !hasBasis && !IS_NATIVE && (
                     <div style={{ marginTop: 16, border: `1px solid ${EMBER}`, borderRadius: 14, padding: 18, background: "linear-gradient(180deg, rgba(var(--hf-ember-rgb),0.06), transparent 72%)" }}>
                       {leadStatus === "ok" ? (
                         <div>
