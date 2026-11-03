@@ -336,6 +336,8 @@ const TXT = {
   unlockBtn: { nl: "Bekijk toegang", en: "See access options" },
   creditsOutTitle: { nl: "Je plannen zijn op", en: "You've used your plans" },
   creditsOutSub: { nl: "Je hebt je gegenereerde plannen gebruikt. Ontgrendel een nieuwe week om verder te gaan.", en: "You've used your generated plans. Unlock another week to continue." },
+  softNoteTitle: { nl: "Je verse AI-plannen voor deze maand zijn op", en: "You've used this month's fresh AI plans" },
+  softNoteSub: { nl: "Geen zorgen — je dagdoelen blijven kloppen en je plan werkt gewoon door. Volgende maand staat je AI-tegoed weer vers klaar.", en: "No worries — your daily targets still apply and your plan keeps working. Your AI credits refresh next month." },
   leadTitle: { nl: "Nog niet klaar om te kopen?", en: "Not ready to buy yet?" },
   leadSub: { nl: "Pak de gratis starter: 5 Hyrox-voedingsregels die 90% van de fouten oplossen. Direct in je inbox.", en: "Grab the free starter: 5 Hyrox fueling rules that fix 90% of mistakes. Straight to your inbox." },
   leadPh: { nl: "jouw@email.com", en: "your@email.com" },
@@ -619,6 +621,7 @@ export default function App() {
   const [leadStatus, setLeadStatus] = useState("idle");
   const [trackerBusy, setTrackerBusy] = useState(false);
   const [lockReason, setLockReason] = useState("");
+  const [softwareNote, setSoftwareNote] = useState(false);
   const [planEmail, setPlanEmail] = useState("");
   const [planSource, setPlanSource] = useState("ai"); // 'ai' = AI stelt samen · 'products' = uit eigen producten
 
@@ -1097,7 +1100,7 @@ export default function App() {
 
   async function handleBuild() {
     if (inDemo) { setShowAuth(true); return; } // demo: 'jouw' plan is het betaalde moment
-    setError(""); setStarted(true); setView("plan"); setChecked({}); setWeek(null); setLockReason(""); setPlanEmail("");
+    setError(""); setStarted(true); setView("plan"); setChecked({}); setWeek(null); setLockReason(""); setSoftwareNote(false); setPlanEmail("");
     const intake = currentIntake();
     try { localStorage.setItem("hf_intake", JSON.stringify(intake)); } catch (e) {}
     if (planSource === "products") { await buildFromProducts(intake); return; }
@@ -1116,7 +1119,7 @@ export default function App() {
   // Zelf een plan samenstellen: leeg weekschema dat de klant zelf vult via de +.
   async function buildOwnPlan() {
     if (inDemo) { setShowAuth(true); return; } // demo: zelf samenstellen is betaald
-    setError(""); setStarted(true); setView("plan"); setChecked({}); setWeek(null); setLockReason(""); setPlanEmail("");
+    setError(""); setStarted(true); setView("plan"); setChecked({}); setWeek(null); setLockReason(""); setSoftwareNote(false); setPlanEmail("");
     const intake = currentIntake();
     try { localStorage.setItem("hf_intake", JSON.stringify(intake)); } catch (e) {}
     await computeFree(intake); // altijd de targets berekenen zodat je weet waar je naartoe werkt
@@ -1158,6 +1161,14 @@ export default function App() {
       const authToken = (session && session.access_token) || "";
       const data = await fetchChunk({ ...intake, trainingCount: nTrain, request, paid: true, token, authToken });
       setTargets(data.targets);
+      if (data.softwareFallback) {
+        // AI-tegoed voor deze maand op → GEEN muur: val terug op de software-kant
+        // (targets blijven, plan uit eigen/gym-producten waar mogelijk).
+        setSoftwareNote(true);
+        await softwareFallbackWeek(intake, data.targets);
+        return;
+      }
+      setSoftwareNote(false);
       if (data.locked || !data.plan) {
         setUnlocked(false); setWeek(null); setLockReason(data.reason || "");
         try { localStorage.removeItem("hf_unlocked"); } catch (e) {}
@@ -1217,6 +1228,23 @@ export default function App() {
       macros: r.macros || {},
       ing: (r.ingredients || []).map((i) => ({ n: i.name || i.n || i.nl || i.en || "", g: i.grams != null ? i.grams : (i.g != null ? i.g : 0) })),
     })).filter((m) => m.macros && (m.macros.kcal || 0) > 0 && m.ing.length);
+  }
+
+  // AI-tegoed op → bouw de week softwarematig uit eigen/gym-producten (geen AI, geen kosten).
+  // Lukt dat niet (te weinig producten), dan blijven alleen de targets staan — nooit een muur.
+  async function softwareFallbackWeek(intake, tgs) {
+    try {
+      const products = await loadUserProducts();
+      const meals = await loadUserMeals();
+      const ready = productPlanReadiness(products, meals);
+      if (!ready.mainsCovered) { setWeek(null); return; }
+      const { days } = buildDaysFromProducts({ products, meals, targets: tgs, intake, WD });
+      setWeek({ days });
+      try { localStorage.setItem("hf_lastplan", JSON.stringify({ targets: tgs, week: { days } })); } catch (e) {}
+      if (supabase && session) {
+        supabase.from("plans").insert({ user_id: session.user.id, targets: tgs, week: { days }, is_active: true }).then(() => {}, () => {});
+      }
+    } catch (e) { setWeek(null); }
   }
 
   // #3-keuze: plan samenstellen uit de EIGEN producten (geen AI).
@@ -2055,6 +2083,13 @@ export default function App() {
                     <div style={{ background: "rgba(var(--hf-ember-rgb),0.1)", border: `1px solid ${EMBER}`, borderRadius: 12, padding: 16, textAlign: "center" }}>
                       <div style={{ marginBottom: 12, color: PAPER, fontSize: 13, wordBreak: "break-word" }}>{error}</div>
                       <button onClick={handleBuild} style={{ background: EMBER, color: "#fff", border: "none", padding: "9px 22px", borderRadius: 8, fontWeight: 700, cursor: "pointer", ...disp, letterSpacing: 1 }}>{T("retry")}</button>
+                    </div>
+                  )}
+
+                  {softwareNote && !loading && (
+                    <div style={{ background: "rgba(var(--hf-ember-rgb),0.10)", border: "1px solid rgba(var(--hf-ember-rgb),0.35)", borderRadius: 12, padding: "13px 15px", marginBottom: 14 }}>
+                      <div style={{ ...disp, fontSize: 14.5, fontWeight: 700, color: PAPER, marginBottom: 4 }}>{T("softNoteTitle")}</div>
+                      <div style={{ fontSize: 12.5, color: MUTED, lineHeight: 1.5 }}>{T("softNoteSub")}</div>
                     </div>
                   )}
 

@@ -143,16 +143,30 @@ function computeBase(b, p) {
   return { kcal, protein, carbs, fat, maintenance, kg, bmi: Math.round(bmi * 10) / 10, lowBmi, floored };
 }
 
-// Is de ingelogde gebruiker een gym-lid/coach? (toegang via de sportschool, niet via abonnement)
-async function gymAccess(authToken) {
-  if (!authToken || typeof authToken !== "string") return false;
+// Is de ingelogde gebruiker een gym-lid/coach, en zo ja: welke tier (basis/pro)?
+// Toegang loopt via de sportschool, niet via een abonnement. De tier bepaalt het
+// maandbudget aan AI-generaties en welk model draait. LEIDEND is de gym-licentie
+// (orgs.license_tier) — dat is waarop we factureren; org_members.member_tier staat
+// standaard op 'pro' en is dus géén betrouwbare budget-indicator. Default basis.
+// RLS geeft het lid alleen de eigen org (policy "org read own") terug.
+async function gymProfile(authToken) {
+  if (!authToken || typeof authToken !== "string") return { access: false, tier: "basis" };
   const url = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "https://tkmyjpsmdijaalwgzqdy.supabase.co").replace(/\/$/, "");
   const anon = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || "sb_publishable_5CJ_waXIVhhzkkqD96iqMA_63yJJnaH";
+  const headers = { apikey: anon, Authorization: "Bearer " + authToken };
+  let access = false, orgTier = null;
   try {
-    const r = await fetch(url + "/rest/v1/org_members?select=role&active=eq.true&limit=1", { headers: { apikey: anon, Authorization: "Bearer " + authToken } });
-    if (r.ok) { const rows = await r.json().catch(() => []); return Array.isArray(rows) && rows.length > 0; }
+    const r = await fetch(url + "/rest/v1/org_members?select=role&active=eq.true&limit=1", { headers });
+    if (r.ok) { const rows = await r.json().catch(() => []); if (Array.isArray(rows) && rows.length) access = true; }
   } catch (e) {}
-  return false;
+  if (access) {
+    try {
+      const o = await fetch(url + "/rest/v1/orgs?select=license_tier&limit=1", { headers });
+      if (o.ok) { const rows = await o.json().catch(() => []); if (Array.isArray(rows) && rows.length) orgTier = rows[0].license_tier || null; }
+    } catch (e) {}
+  }
+  const t = String(orgTier || "basis").toLowerCase();
+  return { access, tier: t === "pro" ? "pro" : "basis" };
 }
 
 // Haalt het org-rekenprofiel op voor een ingelogd gym-lid (RLS geeft alleen de eigen org).
@@ -369,8 +383,9 @@ export default async function handler(req, res) {
     // slot actief is via UNLOCK_SECRET). Zonder die env var volstaat de paid-vlag.
     const isPaid = body.paid === true;
     const subVerified = await subActive(body.authToken);
-    const gymOk = await gymAccess(body.authToken); // gym-lid/coach = toegang via de sportschool
-    const access = subVerified || gymOk; // echte toegang zonder credit-muur
+    const gym = await gymProfile(body.authToken); // { access, tier } — toegang via de sportschool
+    const gymOk = gym.access;
+    const access = subVerified || gymOk; // echte toegang zonder betaalmuur
     const paidVerified = isPaid && (trusted || access || validToken(body.token));
     if (!trusted && !paidVerified) {
       return res.status(200).json({ targets, plan: null, locked: true });
@@ -398,25 +413,37 @@ export default async function handler(req, res) {
       }
     }
 
-    // Per-account eerlijk-gebruik-limiet voor abonnees (maandelijks). Voorkomt dat
-    // iemand eindeloos AI-plannen genereert op onze kosten. Ruim gezet (standaard 100/mnd),
-    // onzichtbaar voor normaal gebruik, alleen een backstop tegen misbruik.
-    // Alleen actief als er een credit-opslag (Upstash) gekoppeld is; faalt OPEN zodat
-    // echte klanten nooit vastlopen bij een opslagstoring. Env PLAN_LIMIT_PER_MONTH (0 = uit).
-    const MONTH_CAP = parseInt(process.env.PLAN_LIMIT_PER_MONTH || "100", 10);
-    if (!trusted && access && kvConfigured() && MONTH_CAP > 0) {
+    // Credit-budget per member (maandelijks). 1 credit = 1 verse AI-generatie.
+    // Gym-lid: budget per tier — Basis en Pro, instelbaar via env (CREDITS_BASIS/CREDITS_PRO).
+    // Abonnee zonder gym-tier: ruime fair-use-backstop (PLAN_LIMIT_PER_MONTH).
+    // Op = GEEN MUUR: val terug op de software-kant (macro-targets + dagindeling,
+    // en waar mogelijk een plan uit de eigen/gym-producten) — geen AI, geen kosten.
+    // Reset maandelijks (key bevat de maand). Faalt OPEN bij opslagstoring.
+    const CREDITS = {
+      basis: parseInt(process.env.CREDITS_BASIS || "15", 10),
+      pro: parseInt(process.env.CREDITS_PRO || "40", 10),
+    };
+    let softwareFallback = false;
+    if (!trusted && access && kvConfigured()) {
       const uid = jwtSub(body.authToken);
-      if (uid) {
+      const budget = gymOk ? CREDITS[gym.tier] : parseInt(process.env.PLAN_LIMIT_PER_MONTH || "100", 10);
+      if (uid && budget > 0) {
         try {
           const mk = "gen:" + uid + ":" + new Date().toISOString().slice(0, 7);
           const inc = await kv(["INCR", mk]);
           const n = typeof inc.result === "number" ? inc.result : parseInt(inc.result, 10);
           if (n === 1) { try { await kv(["EXPIRE", mk, "3456000"]); } catch (e) {} } // ~40 dagen
-          if (n > MONTH_CAP) {
-            return res.status(429).json({ error: "Je hebt deze maand het maximum aantal plannen gegenereerd — volgende maand kun je weer. / You've reached this month's plan limit; it resets next month." });
+          if (n > budget) {
+            softwareFallback = true;
+            // Boven budget rekenen we geen AI-generatie → teller terugzetten op het budget.
+            try { await kv(["DECR", mk]); } catch (e) {}
           }
         } catch (e) { /* opslag onbereikbaar → niet blokkeren */ }
       }
+    }
+    if (softwareFallback) {
+      // Geen betaalmuur: de app bouwt zelf verder op deze targets (software).
+      return res.status(200).json({ targets, plan: null, softwareFallback: true, tier: gym.tier });
     }
 
     // AI-provider-schakelaar. Standaard Anthropic-direct; zet AI_PROVIDER=openrouter
@@ -432,13 +459,23 @@ export default async function handler(req, res) {
 
     const prompt = buildPrompt(body, cyc);
 
+    // Model per tier: Basis draait op Haiku (snel + goedkoop), Pro op Sonnet (betere plannen).
+    // Gym-tier bepaalt het model; abonnees/overig blijven op Sonnet. Alles via env te zetten.
+    const useHaiku = gymOk && gym.tier === "basis";
+    const modelAnthropic = useHaiku
+      ? (process.env.AI_MODEL_HAIKU || "claude-3-5-haiku-latest")
+      : (process.env.AI_MODEL_ANTHROPIC || "claude-sonnet-4-6");
+    const modelOpenRouter = useHaiku
+      ? (process.env.AI_MODEL_HAIKU_OR || "anthropic/claude-3.5-haiku")
+      : (process.env.AI_MODEL || "anthropic/claude-sonnet-4");
+
     async function callAnthropic() {
       if (!anKey) return { err: "ANTHROPIC_API_KEY ontbreekt" };
       const r = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-api-key": anKey, "anthropic-version": "2023-06-01" },
         body: JSON.stringify({
-          model: process.env.AI_MODEL_ANTHROPIC || "claude-sonnet-4-6",
+          model: modelAnthropic,
           max_tokens: 8000,
           messages: [{ role: "user", content: prompt }],
         }),
@@ -459,7 +496,7 @@ export default async function handler(req, res) {
           "X-Title": "HybridFuelCo",
         },
         body: JSON.stringify({
-          model: process.env.AI_MODEL || "anthropic/claude-sonnet-4",
+          model: modelOpenRouter,
           max_tokens: 8000,
           messages: [{ role: "user", content: prompt }],
         }),
