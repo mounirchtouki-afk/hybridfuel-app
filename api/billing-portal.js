@@ -330,7 +330,10 @@ export default async function handler(req, res) {
         if (!mIns.ok) { const txt = await mIns.text().catch(() => ""); return res.status(502).json({ error: "member_link_failed", detail: txt.slice(0, 200) }); }
         // 4) uitnodigings-/wachtwoordlink zodat de sportschool zelf een wachtwoord zet
         let inviteUrl = "";
-        try { const gl = await fetch(supaUrl + "/auth/v1/admin/generate_link", { method: "POST", headers: jsonHdr, body: JSON.stringify({ type: "recovery", email }) }); const gd = await gl.json().catch(() => ({})); inviteUrl = (gd && (gd.action_link || (gd.properties && gd.properties.action_link))) || ""; } catch (e) {}
+        // redirect_to = de app waar de admin dit nu aanmaakt, zodat de link terugkeert naar
+        // dezelfde (preview-)app i.p.v. de default Site-URL.
+        const redirectTo = String(body.redirectTo || "").trim();
+        try { const gl = await fetch(supaUrl + "/auth/v1/admin/generate_link", { method: "POST", headers: jsonHdr, body: JSON.stringify(Object.assign({ type: "recovery", email }, redirectTo ? { redirect_to: redirectTo } : {})) }); const gd = await gl.json().catch(() => ({})); inviteUrl = (gd && (gd.action_link || (gd.properties && gd.properties.action_link))) || ""; } catch (e) {}
         // 5) uitnodigingsmail automatisch versturen (via Make-webhook → Gmail), in huisstijl
         let emailSent = false;
         if (inviteUrl) { try { const mr = await fetch(MAIL_WEBHOOK, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ to: email, subject: "Welkom bij HybridFuelCo — stel je wachtwoord in", html: inviteEmailHtml(name, email, inviteUrl) }) }); emailSent = mr.ok; } catch (e) {} }

@@ -228,7 +228,7 @@ function GymEditor({ token, lang, gym, accent, onBack }) {
     setBusy(true); setErr("");
     try {
       if (f._new) {
-        const d = await call(token, "admin.createGym", f);
+        const d = await call(token, "admin.createGym", { ...f, redirectTo: (typeof window !== "undefined" ? window.location.origin : "") });
         if (f.license_start || f.license_end || f.license_status || f.license_tier) await call(token, "admin.updateGym", { orgId: d.orgId, license_tier: f.license_tier, license_status: f.license_status, license_start: f.license_start, license_end: f.license_end });
         setCreated(d); setBusy(false); return;
       }
