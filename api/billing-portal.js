@@ -68,7 +68,7 @@ export default async function handler(req, res) {
         const orgs = await orgR.json().catch(() => []);
         const orgName = {}; (Array.isArray(orgs) ? orgs : []).forEach((o) => { orgName[o.id] = o.name; });
         const gymBy = {}; (Array.isArray(mem) ? mem : []).forEach((m) => { if (!gymBy[m.auth_user_id]) gymBy[m.auth_user_id] = orgName[m.org_id] || null; });
-        const accounts = users.map((u) => {
+        const accounts = users.filter((u) => !(u.banned_until && new Date(u.banned_until) > new Date())).map((u) => {
           const s = subBy[u.id] || {};
           return { id: u.id, email: u.email || s.email || "—", created_at: u.created_at || null, last_sign_in_at: u.last_sign_in_at || null, tier: s.tier || "free", status: s.status || null, period_end: s.current_period_end || null, has_customer: !!s.stripe_customer_id, gym: gymBy[u.id] || null };
         });
@@ -170,7 +170,7 @@ export default async function handler(req, res) {
 
       if (op === "admin.overview") {
         const jsonHdr = { ...sv, "Content-Type": "application/json" };
-        const oR = await fetch(supaUrl + "/rest/v1/orgs?select=id,name,created_at,license_tier,license_status,license_end", { headers: sv });
+        const oR = await fetch(supaUrl + "/rest/v1/orgs?select=id,name,created_at,license_tier,license_status,license_end&deleted_at=is.null", { headers: sv });
         const orgs = oR.ok ? await oR.json().catch(() => []) : [];
         const mR = await fetch(supaUrl + "/rest/v1/org_members?select=org_id,role,active", { headers: sv });
         const mem = mR.ok ? await mR.json().catch(() => []) : [];
@@ -192,7 +192,7 @@ export default async function handler(req, res) {
       }
 
       if (op === "admin.listGyms") {
-        const oR = await fetch(supaUrl + "/rest/v1/orgs?select=id,name,slug,address,postal_code,city,country,contact_name,contact_email,contact_phone,kvk,vat,admin_note,license_tier,license_status,license_start,license_end,owner_user_id,created_at&order=created_at.desc", { headers: sv });
+        const oR = await fetch(supaUrl + "/rest/v1/orgs?select=id,name,slug,address,postal_code,city,country,contact_name,contact_email,contact_phone,kvk,vat,admin_note,license_tier,license_status,license_start,license_end,owner_user_id,created_at&deleted_at=is.null&order=created_at.desc", { headers: sv });
         const orgs = oR.ok ? await oR.json().catch(() => []) : [];
         const mR = await fetch(supaUrl + "/rest/v1/org_members?select=org_id,role,active", { headers: sv });
         const mem = mR.ok ? await mR.json().catch(() => []) : [];
@@ -211,33 +211,83 @@ export default async function handler(req, res) {
         return res.status(200).json({ ok: true });
       }
 
+      // Helpers voor soft-delete van logins (ban = login geblokkeerd, data blijft).
+      async function banUser(uid, on) {
+        if (!uid || uid === userId) return; // admin zelf nooit
+        try { await fetch(supaUrl + "/auth/v1/admin/users/" + encodeURIComponent(uid), { method: "PUT", headers: { ...sv, "Content-Type": "application/json" }, body: JSON.stringify({ ban_duration: on ? "876000h" : "none" }) }); } catch (e) {}
+      }
+      async function coachesOf(orgId) {
+        try { const cr = await fetch(supaUrl + "/rest/v1/org_members?select=auth_user_id&org_id=eq." + encodeURIComponent(orgId) + "&role=eq.coach", { headers: sv }); if (cr.ok) return (await cr.json().catch(() => [])).map((r) => r.auth_user_id).filter(Boolean); } catch (e) {}
+        return [];
+      }
+
       if (op === "admin.deleteGym") {
+        // SOFT delete: markeer verwijderd + blokkeer coach-login. Herstelbaar via prullenbak.
         const orgId = String(body.orgId || "").trim();
         if (!orgId) return res.status(400).json({ error: "no_org" });
-        // Eigenaar(s)/coaches van deze org ophalen zodat we hun login-accounts kunnen opruimen.
-        let coachIds = [];
-        try {
-          const cr = await fetch(supaUrl + "/rest/v1/org_members?select=auth_user_id&org_id=eq." + encodeURIComponent(orgId) + "&role=eq.coach", { headers: sv });
-          if (cr.ok) coachIds = (await cr.json().catch(() => [])).map((r) => r.auth_user_id).filter(Boolean);
-        } catch (e) {}
-        // orgs heeft on delete cascade naar org_config / org_members / member_progress.
+        const up = await fetch(supaUrl + "/rest/v1/orgs?id=eq." + encodeURIComponent(orgId), { method: "PATCH", headers: { ...sv, "Content-Type": "application/json", Prefer: "return=minimal" }, body: JSON.stringify({ deleted_at: new Date().toISOString() }) });
+        if (!up.ok) { const txt = await up.text().catch(() => ""); return res.status(502).json({ error: "delete_failed", detail: txt.slice(0, 200) }); }
+        for (const cid of await coachesOf(orgId)) await banUser(cid, true);
+        return res.status(200).json({ ok: true });
+      }
+      if (op === "admin.restoreGym") {
+        const orgId = String(body.orgId || "").trim();
+        if (!orgId) return res.status(400).json({ error: "no_org" });
+        await fetch(supaUrl + "/rest/v1/orgs?id=eq." + encodeURIComponent(orgId), { method: "PATCH", headers: { ...sv, "Content-Type": "application/json", Prefer: "return=minimal" }, body: JSON.stringify({ deleted_at: null }) });
+        for (const cid of await coachesOf(orgId)) await banUser(cid, false);
+        return res.status(200).json({ ok: true });
+      }
+      if (op === "admin.purgeGym") {
+        // Definitief: org (cascade) + coach-logins weg.
+        const orgId = String(body.orgId || "").trim();
+        if (!orgId) return res.status(400).json({ error: "no_org" });
+        const coachIds = await coachesOf(orgId);
         const del = await fetch(supaUrl + "/rest/v1/orgs?id=eq." + encodeURIComponent(orgId), { method: "DELETE", headers: { ...sv, Prefer: "return=minimal" } });
-        if (!del.ok) { const txt = await del.text().catch(() => ""); return res.status(502).json({ error: "delete_failed", detail: txt.slice(0, 200) }); }
-        // Coach-login(s) van deze sportschool opruimen (geen weesaccounts). Admin zelf nooit.
-        const adminSelf = userId;
-        for (const cid of coachIds) {
-          if (cid && cid !== adminSelf) { try { await fetch(supaUrl + "/auth/v1/admin/users/" + encodeURIComponent(cid), { method: "DELETE", headers: sv }); } catch (e) {} }
-        }
-        return res.status(200).json({ ok: true, removedCoaches: coachIds.length });
+        if (!del.ok) { const txt = await del.text().catch(() => ""); return res.status(502).json({ error: "purge_failed", detail: txt.slice(0, 200) }); }
+        for (const cid of coachIds) { if (cid && cid !== userId) { try { await fetch(supaUrl + "/auth/v1/admin/users/" + encodeURIComponent(cid), { method: "DELETE", headers: sv }); } catch (e) {} } }
+        return res.status(200).json({ ok: true });
       }
 
       if (op === "admin.deleteMember") {
+        // SOFT delete: blokkeer login, data blijft. Herstelbaar via prullenbak.
         const target = String(body.targetUserId || "").trim();
         if (!target) return res.status(400).json({ error: "no_user" });
-        // Verwijdert het auth-account; cascade ruimt subscriptions/weights/plans/org_members op.
-        const del = await fetch(supaUrl + "/auth/v1/admin/users/" + encodeURIComponent(target), { method: "DELETE", headers: sv });
-        if (!del.ok) { const txt = await del.text().catch(() => ""); return res.status(502).json({ error: "delete_failed", detail: txt.slice(0, 200) }); }
+        if (target === userId) return res.status(400).json({ error: "cannot_delete_self" });
+        await banUser(target, true);
         return res.status(200).json({ ok: true });
+      }
+      if (op === "admin.restoreMember") {
+        const target = String(body.targetUserId || "").trim();
+        if (!target) return res.status(400).json({ error: "no_user" });
+        await banUser(target, false);
+        return res.status(200).json({ ok: true });
+      }
+      if (op === "admin.purgeMember") {
+        const target = String(body.targetUserId || "").trim();
+        if (!target) return res.status(400).json({ error: "no_user" });
+        if (target === userId) return res.status(400).json({ error: "cannot_delete_self" });
+        const del = await fetch(supaUrl + "/auth/v1/admin/users/" + encodeURIComponent(target), { method: "DELETE", headers: sv });
+        if (!del.ok) { const txt = await del.text().catch(() => ""); return res.status(502).json({ error: "purge_failed", detail: txt.slice(0, 200) }); }
+        return res.status(200).json({ ok: true });
+      }
+      if (op === "admin.listTrash") {
+        const jsonHdr2 = sv;
+        // Verwijderde sportscholen
+        let gyms = [];
+        try { const gr = await fetch(supaUrl + "/rest/v1/orgs?select=id,name,city,deleted_at&deleted_at=not.is.null&order=deleted_at.desc", { headers: jsonHdr2 }); if (gr.ok) gyms = await gr.json().catch(() => []); } catch (e) {}
+        // Geblokkeerde (soft-deleted) members
+        const members = [];
+        try {
+          for (let page = 1; page <= 50; page++) {
+            const ur2 = await fetch(supaUrl + "/auth/v1/admin/users?per_page=200&page=" + page, { headers: sv });
+            if (!ur2.ok) break;
+            const j = await ur2.json().catch(() => ({}));
+            const list = (j && j.users) || [];
+            list.forEach((u) => { if (u.banned_until && new Date(u.banned_until) > new Date()) members.push({ id: u.id, email: u.email, banned_until: u.banned_until }); });
+            if (list.length < 200) break;
+          }
+        } catch (e) {}
+        return res.status(200).json({ ok: true, gyms, members });
       }
 
       if (op === "admin.createGym") {

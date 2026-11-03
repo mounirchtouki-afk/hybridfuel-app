@@ -936,7 +936,7 @@ export default function CoachDash({ session, org, isOwner, perms, lang, isAdmin,
         )}
       <div style={{ maxWidth: (current === "overview" || current === "adm_overview") ? 1320 : 1060, margin: "0 auto", padding: isWide ? "22px 26px" : "18px 14px", display: "grid", gap: 16 }}>
         {current === "adm_overview" && isAdmin && <AdminOverview session={session} lang={lang} />}
-        {current === "adm_account" && isAdmin && <AdminAccount session={session} lang={lang} />}
+        {current === "adm_account" && isAdmin && <AdminAccount session={session} lang={lang} color={color} />}
         {current === "overview" && (() => {
           const h = new Date().getHours();
           const greet = h < 12 ? t("Goedemorgen", "Good morning") : h < 18 ? t("Goedemiddag", "Good afternoon") : t("Goedenavond", "Good evening");

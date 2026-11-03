@@ -96,25 +96,33 @@ export function AdminOverview({ session, lang }) {
 }
 
 // ===== ACCOUNT (filter: sportscholen / members) =====
-export function AdminAccount({ session, lang }) {
+export function AdminAccount({ session, lang, color }) {
   const t = (nl, en) => (lang === "nl" ? nl : en);
   const token = (session && session.access_token) || "";
-  const [mode, setMode] = useState("gyms"); // gyms | members
+  const brand = color || EMBER;
+  const [mode, setMode] = useState("gyms"); // gyms | members | trash
   const [gyms, setGyms] = useState(null);
   const [members, setMembers] = useState(null);
+  const [trash, setTrash] = useState(null);
   const [q, setQ] = useState("");
   const [sel, setSel] = useState(null);   // geselecteerde rij (bewerken)
   const [err, setErr] = useState("");
   const [msg, setMsg] = useState("");
+  const [rowBusy, setRowBusy] = useState("");
+  const [purge, setPurge] = useState(null); // {kind,id,label} wacht op bevestiging definitief verwijderen
 
   async function loadGyms() { try { const d = await call(token, "admin.listGyms"); setGyms(d.gyms || []); } catch (e) { setErr(String(e.message || e)); } }
   async function loadMembers() { try { const d = await call(token, "admin.list"); setMembers(d.accounts || []); } catch (e) { setErr(String(e.message || e)); } }
-  useEffect(() => { loadGyms(); loadMembers(); }, []);
+  async function loadTrash() { try { const d = await call(token, "admin.listTrash"); setTrash(d); } catch (e) { setErr(String(e.message || e)); } }
+  useEffect(() => { loadGyms(); loadMembers(); loadTrash(); }, []);
 
-  const seg = (id, lbl) => (<div onClick={() => { setMode(id); setSel(null); }} style={{ cursor: "pointer", fontSize: 13, fontWeight: 800, ...disp, padding: "9px 16px", borderRadius: 9, border: `1px solid ${mode === id ? GREEN : LINE}`, background: mode === id ? GREEN : "transparent", color: mode === id ? "#fff" : MUTED }}>{lbl}</div>);
+  async function restore(kind, id) { setRowBusy(id); setErr(""); try { await call(token, kind === "gym" ? "admin.restoreGym" : "admin.restoreMember", kind === "gym" ? { orgId: id } : { targetUserId: id }); await loadTrash(); await loadGyms(); await loadMembers(); } catch (e) { setErr(String(e.message || e)); } setRowBusy(""); }
+  async function doPurge() { if (!purge) return; setRowBusy(purge.id); setErr(""); try { await call(token, purge.kind === "gym" ? "admin.purgeGym" : "admin.purgeMember", purge.kind === "gym" ? { orgId: purge.id } : { targetUserId: purge.id }); setPurge(null); await loadTrash(); } catch (e) { setErr(String(e.message || e)); } setRowBusy(""); }
 
-  if (sel && mode === "gyms") return <GymEditor token={token} lang={lang} gym={sel} onBack={() => { setSel(null); loadGyms(); }} />;
-  if (sel && mode === "members") return <MemberEditor token={token} lang={lang} acc={sel} onBack={() => { setSel(null); loadMembers(); }} />;
+  const seg = (id, lbl) => (<div onClick={() => { setMode(id); setSel(null); }} style={{ cursor: "pointer", fontSize: 13, fontWeight: 800, ...disp, padding: "9px 16px", borderRadius: 9, border: `1px solid ${mode === id ? brand : LINE}`, background: mode === id ? brand : "transparent", color: mode === id ? "#fff" : MUTED }}>{lbl}</div>);
+
+  if (sel && mode === "gyms") return <GymEditor token={token} lang={lang} gym={sel} accent={brand} onBack={() => { setSel(null); loadGyms(); loadTrash(); }} />;
+  if (sel && mode === "members") return <MemberEditor token={token} lang={lang} acc={sel} accent={brand} onBack={() => { setSel(null); loadMembers(); loadTrash(); }} />;
 
   const gl = (gyms || []).filter((g) => !q.trim() || ((g.name || "") + " " + (g.city || "")).toLowerCase().includes(q.toLowerCase()));
   const ml = (members || []).filter((m) => !q.trim() || ((m.email || "") + " " + (m.gym || "")).toLowerCase().includes(q.toLowerCase()));
@@ -123,9 +131,9 @@ export function AdminAccount({ session, lang }) {
   return (
     <div style={{ display: "grid", gap: 14 }}>
       <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-        {seg("gyms", t("Sportscholen", "Gyms"))}{seg("members", "Members")}
+        {seg("gyms", t("Sportscholen", "Gyms"))}{seg("members", "Members")}{seg("trash", t("Prullenbak", "Trash") + (trash && (trash.gyms.length + trash.members.length) ? " (" + (trash.gyms.length + trash.members.length) + ")" : ""))}
         <div style={{ flex: 1 }} />
-        {mode === "gyms" && <div onClick={() => setSel({ _new: true, license_tier: "basis", license_status: "active", country: "NL" })} style={btnS(GREEN)}>+ {t("Sportschool", "Gym")}</div>}
+        {mode === "gyms" && <div onClick={() => setSel({ _new: true, license_tier: "basis", license_status: "active", country: "NL" })} style={btnS(brand)}>+ {t("Sportschool", "Gym")}</div>}
       </div>
       <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("Zoeken…", "Search…")} style={{ ...fieldS, flex: "none" }} />
       {err && <div style={{ ...card, color: EMBER }}>{err}</div>}
@@ -169,12 +177,43 @@ export function AdminAccount({ session, lang }) {
           ))}
         </div>
       )}
+
+      {mode === "trash" && (
+        <div style={{ ...card, padding: "4px 16px" }}>
+          {!trash && <div style={{ padding: 18, color: MUTED }}>{t("Laden…", "Loading…")}</div>}
+          {trash && trash.gyms.length === 0 && trash.members.length === 0 && <div style={{ padding: 18, color: MUTED }}>{t("Prullenbak is leeg.", "Trash is empty.")}</div>}
+          {trash && trash.gyms.map((g, i) => (
+            <div key={g.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderTop: i > 0 ? `1px solid ${LINE}` : "none", opacity: rowBusy === g.id ? 0.5 : 1 }}>
+              <div style={{ minWidth: 0 }}><div style={{ fontWeight: 700, fontSize: 14, color: PAPER }}>{g.name} <span style={{ fontSize: 10, color: MUTED }}>· {t("sportschool", "gym")}</span></div><div style={{ fontSize: 11.5, color: MUTED }}>{g.city || ""}</div></div>
+              <div style={{ display: "flex", gap: 6 }}>
+                <div onClick={() => restore("gym", g.id)} style={{ cursor: "pointer", fontSize: 11, fontWeight: 800, ...disp, padding: "6px 11px", borderRadius: 7, border: `1px solid ${GREEN}`, color: GREEN }}>{t("Herstellen", "Restore")}</div>
+                <div onClick={() => setPurge({ kind: "gym", id: g.id, label: g.name })} style={{ cursor: "pointer", fontSize: 11, fontWeight: 800, ...disp, padding: "6px 11px", borderRadius: 7, border: `1px solid ${EMBER}`, color: EMBER }}>{t("Definitief", "Delete")}</div>
+              </div>
+            </div>
+          ))}
+          {trash && trash.members.map((m, i) => (
+            <div key={m.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderTop: (i > 0 || trash.gyms.length) ? `1px solid ${LINE}` : "none", opacity: rowBusy === m.id ? 0.5 : 1 }}>
+              <div style={{ minWidth: 0 }}><div style={{ fontWeight: 700, fontSize: 14, color: PAPER, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.email} <span style={{ fontSize: 10, color: MUTED }}>· member</span></div></div>
+              <div style={{ display: "flex", gap: 6 }}>
+                <div onClick={() => restore("member", m.id)} style={{ cursor: "pointer", fontSize: 11, fontWeight: 800, ...disp, padding: "6px 11px", borderRadius: 7, border: `1px solid ${GREEN}`, color: GREEN }}>{t("Herstellen", "Restore")}</div>
+                <div onClick={() => setPurge({ kind: "member", id: m.id, label: m.email })} style={{ cursor: "pointer", fontSize: 11, fontWeight: 800, ...disp, padding: "6px 11px", borderRadius: 7, border: `1px solid ${EMBER}`, color: EMBER }}>{t("Definitief", "Delete")}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <ConfirmModal open={!!purge} busy={!!rowBusy}
+        title={t("Definitief verwijderen?", "Delete permanently?")}
+        message={t("'" + (purge && purge.label || "") + "' wordt definitief verwijderd. Dit kan NIET meer hersteld worden.", "'" + (purge && purge.label || "") + "' will be permanently deleted. This can NOT be restored.")}
+        confirmLabel={t("Definitief verwijderen", "Delete permanently")} cancelLabel={t("Annuleren", "Cancel")}
+        onConfirm={doPurge} onCancel={() => setPurge(null)} />
     </div>
   );
 }
 
 // ===== Sportschool bewerken / aanmaken =====
-function GymEditor({ token, lang, gym, onBack }) {
+function GymEditor({ token, lang, gym, accent, onBack }) {
   const t = (nl, en) => (lang === "nl" ? nl : en);
   const [f, setF] = useState({ ...gym });
   const [busy, setBusy] = useState(false);
@@ -254,12 +293,12 @@ function GymEditor({ token, lang, gym, onBack }) {
       {!f._new && (
         <div style={{ marginTop: 18, borderTop: `1px solid ${LINE}`, paddingTop: 14 }}>
           <div onClick={() => setConfirmDel(true)} style={{ ...btnS(EMBER), width: "fit-content" }}>{t("Sportschool verwijderen", "Delete gym")}</div>
-          <div style={{ fontSize: 11, color: MUTED, marginTop: 6 }}>{t("Verwijdert de sportschool, alle leden-koppelingen en de coach-login. Kan niet ongedaan worden gemaakt.", "Deletes the gym, all member links and the coach login. Cannot be undone.")}</div>
+          <div style={{ fontSize: 11, color: MUTED, marginTop: 6 }}>{t("Gaat naar de prullenbak — je kunt het daar herstellen.", "Moves to trash — you can restore it there.")}</div>
         </div>
       )}
-      <ConfirmModal open={confirmDel} busy={busy}
+      <ConfirmModal open={confirmDel} busy={busy} accent={accent}
         title={t("Sportschool verwijderen?", "Delete gym?")}
-        message={t("'" + (f.name || "") + "' wordt verwijderd, met alle leden-koppelingen en de coach-login. Dit kan niet ongedaan worden gemaakt.", "'" + (f.name || "") + "' will be deleted, with all member links and the coach login. This cannot be undone.")}
+        message={t("'" + (f.name || "") + "' gaat naar de prullenbak en de coach-login wordt geblokkeerd. Je kunt het binnen de prullenbak weer herstellen.", "'" + (f.name || "") + "' moves to trash and the coach login is blocked. You can restore it from the trash.")}
         confirmLabel={t("Verwijderen", "Delete")} cancelLabel={t("Annuleren", "Cancel")}
         onConfirm={doDelete} onCancel={() => setConfirmDel(false)} />
     </div>
@@ -267,7 +306,7 @@ function GymEditor({ token, lang, gym, onBack }) {
 }
 
 // ===== Member / account bewerken =====
-function MemberEditor({ token, lang, acc, onBack }) {
+function MemberEditor({ token, lang, acc, accent, onBack }) {
   const t = (nl, en) => (lang === "nl" ? nl : en);
   const [email, setEmail] = useState(acc.email || "");
   const [pw, setPw] = useState("");
@@ -310,11 +349,11 @@ function MemberEditor({ token, lang, acc, onBack }) {
       <div style={{ display: "flex", gap: 7 }}>{segTier("pro", "Pro")}{segTier("basis", "Basis")}{segTier("free", t("Gratis / stop", "Free / stop"))}</div>
       <div style={{ marginTop: 18, borderTop: `1px solid ${LINE}`, paddingTop: 14 }}>
         <div onClick={() => setConfirmDel(true)} style={{ ...btnS(EMBER), width: "fit-content" }}>{t("Member verwijderen", "Delete member")}</div>
-        <div style={{ fontSize: 11, color: MUTED, marginTop: 6 }}>{t("Verwijdert het account en alle data. Kan niet ongedaan worden gemaakt.", "Deletes the account and all data. Cannot be undone.")}</div>
+        <div style={{ fontSize: 11, color: MUTED, marginTop: 6 }}>{t("Gaat naar de prullenbak — je kunt het daar herstellen.", "Moves to trash — you can restore it there.")}</div>
       </div>
-      <ConfirmModal open={confirmDel} busy={busy}
+      <ConfirmModal open={confirmDel} busy={busy} accent={accent}
         title={t("Member verwijderen?", "Delete member?")}
-        message={t("'" + (acc.email || "") + "' wordt verwijderd, inclusief account en alle data. Dit kan niet ongedaan worden gemaakt.", "'" + (acc.email || "") + "' will be deleted, including account and all data. This cannot be undone.")}
+        message={t("'" + (acc.email || "") + "' gaat naar de prullenbak (login geblokkeerd, data blijft bewaard). Je kunt het weer herstellen.", "'" + (acc.email || "") + "' moves to trash (login blocked, data kept). You can restore it.")}
         confirmLabel={t("Verwijderen", "Delete")} cancelLabel={t("Annuleren", "Cancel")}
         onConfirm={doDelMember} onCancel={() => setConfirmDel(false)} />
     </div>
