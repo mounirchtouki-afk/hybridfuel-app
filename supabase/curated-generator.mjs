@@ -297,6 +297,25 @@ sql += dishes.map((d) => `('${d.slug}','${esc(d.nl)}','${esc(d.en)}',ARRAY[${d.m
 sql += "\non conflict (slug) do update set name_nl=excluded.name_nl,name_en=excluded.name_en,moments=excluded.moments,goals=excluded.goals,items=excluded.items,tags=excluded.tags,prefs=excluded.prefs,steps=excluded.steps,steps_en=excluded.steps_en,technique=excluded.technique,temp=excluded.temp;\ncommit;\n";
 writeFileSync(new URL("./curated-seed.sql", import.meta.url), sql);
 
+// ---------- MARKDOWN (om de recepten te keuren) ----------
+const momLabel = { breakfast: "Ontbijt", lunch: "Lunch", dinner: "Diner", snack: "Tussendoortje" };
+const goalLabel = { cut: "afvallen", maintain: "onderhoud", gain: "spieropbouw" };
+let md = "# HybridFuel — gecureerde recepten (blok 1)\n\n";
+md += `${dishes.length} recepten · vetarm · sporter-geschikt · macro's per portie zoals getoond.\n\n`;
+for (const mk of ["breakfast", "lunch", "dinner", "snack"]) {
+  const inMoment = dishes.filter((d) => d.moments.includes(mk));
+  md += `## ${momLabel[mk]} (${inMoment.length})\n\n`;
+  inMoment.forEach((d) => {
+    const extra = d.moments.filter((m) => m !== mk).map((m) => momLabel[m]);
+    md += `### ${d.nl}\n`;
+    md += `**${d.mac.kcal} kcal** · ${d.mac.p}g eiwit · ${d.mac.c}g koolhydraten · ${d.mac.f}g vet`;
+    md += `  _(${d.goals.map((g) => goalLabel[g]).join(", ")}${extra.length ? " · ook " + extra.join("/") : ""}${d.temp ? " · sous-vide " + d.temp : ""})_\n\n`;
+    md += "**Ingrediënten:** " + d.items.map((it) => `${it.g} g ${IMAP[it.slug].nl.toLowerCase()}`).join(" · ") + "\n\n";
+    md += "**Bereiding:**\n" + d.steps.split("\n").map((s) => s.replace(/^(\d+)\.\s*/, "$1. ")).join("\n") + "\n\n";
+  });
+}
+writeFileSync(new URL("./curated-recepten.md", import.meta.url), md);
+
 // rapport
 const byMoment = { breakfast: 0, lunch: 0, dinner: 0, snack: 0 };
 dishes.forEach((d) => d.moments.forEach((m) => byMoment[m]++));
