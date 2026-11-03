@@ -215,15 +215,30 @@ export default async function handler(req, res) {
         const jsonHdr = { ...sv, "Content-Type": "application/json" };
         const name = String(body.name || "").trim().slice(0, 80);
         if (!name) return res.status(400).json({ error: "no_name" });
+        // E-mail verplicht + geldig: dit wordt de coach-login van de sportschool.
+        const email = String(body.contact_email || "").trim().toLowerCase();
+        if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return res.status(400).json({ error: "bad_email", detail: "Geldig e-mailadres is verplicht (coach-login)." });
         const slug = ((name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 24)) || "gym") + "-" + Math.random().toString(36).slice(2, 6);
-        const allow = ["address", "postal_code", "city", "country", "contact_name", "contact_email", "contact_phone", "kvk", "vat", "admin_note", "license_tier", "license_status", "license_start", "license_end", "owner_user_id"];
-        const rec = { name, slug }; allow.forEach((k) => { if (body[k] !== undefined && body[k] !== "") rec[k] = body[k]; });
+        // 1) coach-account aanmaken (faalt netjes als e-mail al bestaat)
+        const tmpPass = "Hf" + Math.random().toString(36).slice(2, 10) + "!A1";
+        const cu = await fetch(supaUrl + "/auth/v1/admin/users", { method: "POST", headers: jsonHdr, body: JSON.stringify({ email, password: tmpPass, email_confirm: true }) });
+        const cuRow = await cu.json().catch(() => ({}));
+        const coachId = cuRow && cuRow.id;
+        if (!coachId) return res.status(409).json({ error: "coach_failed", detail: (cuRow && (cuRow.msg || cuRow.error_description || cuRow.error)) || "e-mail mogelijk al in gebruik" });
+        // 2) org + config
+        const allow = ["address", "postal_code", "city", "country", "contact_name", "contact_email", "contact_phone", "kvk", "vat", "admin_note", "license_tier", "license_status", "license_start", "license_end"];
+        const rec = { name, slug, owner_user_id: coachId }; allow.forEach((k) => { if (body[k] !== undefined && body[k] !== "") rec[k] = body[k]; });
         const oIns = await fetch(supaUrl + "/rest/v1/orgs", { method: "POST", headers: { ...jsonHdr, Prefer: "return=representation" }, body: JSON.stringify(rec) });
         const oRows = await oIns.json().catch(() => []);
         const orgId = Array.isArray(oRows) && oRows[0] && oRows[0].id;
         if (!oIns.ok || !orgId) return res.status(502).json({ error: "org_failed", detail: JSON.stringify(oRows).slice(0, 200) });
         await fetch(supaUrl + "/rest/v1/org_config", { method: "POST", headers: { ...jsonHdr, Prefer: "return=minimal,resolution=merge-duplicates" }, body: JSON.stringify({ org_id: orgId, brand_color: "#16A34A", theme: { template: "dark", accent: "#16A34A" } }) });
-        return res.status(200).json({ ok: true, orgId, slug, joinUrl: appBase(req) + "/join/" + slug });
+        // 3) coach koppelen als eigenaar
+        await fetch(supaUrl + "/rest/v1/org_members", { method: "POST", headers: { ...jsonHdr, Prefer: "return=minimal" }, body: JSON.stringify({ org_id: orgId, auth_user_id: coachId, role: "coach", is_owner: true, active: true }) });
+        // 4) uitnodigings-/wachtwoordlink zodat de sportschool zelf een wachtwoord zet
+        let inviteUrl = "";
+        try { const gl = await fetch(supaUrl + "/auth/v1/admin/generate_link", { method: "POST", headers: jsonHdr, body: JSON.stringify({ type: "recovery", email }) }); const gd = await gl.json().catch(() => ({})); inviteUrl = (gd && (gd.action_link || (gd.properties && gd.properties.action_link))) || ""; } catch (e) {}
+        return res.status(200).json({ ok: true, orgId, slug, coachEmail: email, inviteUrl, joinUrl: appBase(req) + "/join/" + slug });
       }
 
       if (op === "admin.updateMember") {

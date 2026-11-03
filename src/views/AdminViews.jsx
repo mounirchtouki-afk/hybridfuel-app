@@ -158,17 +158,39 @@ function GymEditor({ token, lang, gym, onBack }) {
   const [f, setF] = useState({ ...gym });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [created, setCreated] = useState(null);
   const set = (k, v) => setF((p) => ({ ...p, [k]: v }));
   const F = (label, k, ph) => (<div><div style={lblS}>{label}</div><input value={f[k] || ""} onChange={(e) => set(k, e.target.value)} placeholder={ph || ""} style={fieldS} /></div>);
   async function save() {
     if (!f.name || !f.name.trim()) { setErr(t("Naam is verplicht.", "Name is required.")); return; }
+    if (f._new && (!f.contact_email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(f.contact_email.trim()))) { setErr(t("Geldig e-mailadres is verplicht — dit wordt de coach-login.", "Valid email required — this is the coach login.")); return; }
     setBusy(true); setErr("");
     try {
-      if (f._new) { const d = await call(token, "admin.createGym", f); if (f.license_start || f.license_end || f.license_status || f.license_tier) await call(token, "admin.updateGym", { orgId: d.orgId, license_tier: f.license_tier, license_status: f.license_status, license_start: f.license_start, license_end: f.license_end }); }
-      else await call(token, "admin.updateGym", { orgId: f.id, name: f.name, address: f.address, postal_code: f.postal_code, city: f.city, country: f.country, contact_name: f.contact_name, contact_email: f.contact_email, contact_phone: f.contact_phone, kvk: f.kvk, vat: f.vat, admin_note: f.admin_note, license_tier: f.license_tier, license_status: f.license_status, license_start: f.license_start, license_end: f.license_end });
+      if (f._new) {
+        const d = await call(token, "admin.createGym", f);
+        if (f.license_start || f.license_end || f.license_status || f.license_tier) await call(token, "admin.updateGym", { orgId: d.orgId, license_tier: f.license_tier, license_status: f.license_status, license_start: f.license_start, license_end: f.license_end });
+        setCreated(d); setBusy(false); return;
+      }
+      await call(token, "admin.updateGym", { orgId: f.id, name: f.name, address: f.address, postal_code: f.postal_code, city: f.city, country: f.country, contact_name: f.contact_name, contact_email: f.contact_email, contact_phone: f.contact_phone, kvk: f.kvk, vat: f.vat, admin_note: f.admin_note, license_tier: f.license_tier, license_status: f.license_status, license_start: f.license_start, license_end: f.license_end });
       onBack();
     } catch (e) { setErr(String(e.message || e)); setBusy(false); }
   }
+  if (created) return (
+    <div style={{ display: "grid", gap: 10, maxWidth: 560 }}>
+      <div style={{ ...disp, fontWeight: 800, fontSize: 20, color: PAPER }}>{t("Sportschool aangemaakt", "Gym created")} · {f.name}</div>
+      <div style={{ ...card, borderColor: GREEN }}>
+        <div style={{ fontSize: 12.5, color: PAPER, lineHeight: 1.7 }}>
+          {t("Coach-login (stuur dit naar de sportschool):", "Coach login (send this to the gym):")}<br />
+          <b>E-mail:</b> <span style={{ color: GREEN }}>{created.coachEmail}</span><br />
+          <b>{t("Wachtwoord instellen", "Set password")}:</b>
+          {created.inviteUrl ? <div style={{ wordBreak: "break-all", color: GREEN, marginTop: 4 }}>{created.inviteUrl}</div> : <span style={{ color: MUTED }}> {t("(link maken mislukt — gebruik Reset ww bij Members)", "(link failed — use Reset pw under Members)")}</span>}
+        </div>
+        {created.inviteUrl && <div onClick={() => { try { navigator.clipboard.writeText(created.inviteUrl); } catch (e) {} }} style={{ ...btnS(GREEN), display: "inline-block", marginTop: 10, padding: "8px 14px" }}>{t("Kopieer link", "Copy link")}</div>}
+      </div>
+      <div style={{ fontSize: 11.5, color: MUTED }}>{t("De sportschool zet via de link zelf een wachtwoord en logt dan in met het groene coach-dashboard.", "The gym sets a password via the link, then logs in to the green coach dashboard.")}</div>
+      <div onClick={onBack} style={{ ...btnS(GREEN), width: "fit-content", padding: "11px 20px", marginTop: 4 }}>{t("Klaar", "Done")}</div>
+    </div>
+  );
   const segTier = (id, lbl) => (<div onClick={() => set("license_tier", id)} style={{ cursor: "pointer", fontSize: 12.5, fontWeight: 800, ...disp, padding: "8px 14px", borderRadius: 8, border: `1px solid ${f.license_tier === id ? GREEN : LINE}`, background: f.license_tier === id ? GREEN : "transparent", color: f.license_tier === id ? "#fff" : MUTED }}>{lbl}</div>);
   const active = (f.license_status || "active") !== "stopped";
   // standaard licentie-einddatum = 1 jaar na start
@@ -183,7 +205,10 @@ function GymEditor({ token, lang, gym, onBack }) {
       {F(t("Adres", "Address"), "address")}
       <div style={{ display: "flex", gap: 10 }}><div style={{ flex: 1 }}>{F(t("Postcode", "Postal code"), "postal_code")}</div><div style={{ flex: 2 }}>{F(t("Stad", "City"), "city")}</div></div>
       {F(t("Contactpersoon", "Contact"), "contact_name")}
-      <div style={{ display: "flex", gap: 10 }}><div style={{ flex: 1 }}>{F("E-mail", "contact_email")}</div><div style={{ flex: 1 }}>{F(t("Telefoon", "Phone"), "contact_phone")}</div></div>
+      <div style={{ display: "flex", gap: 10 }}>
+        <div style={{ flex: 1 }}><div style={lblS}>E-mail {f._new && <span style={{ color: EMBER }}>*</span>}</div><input value={f.contact_email || ""} onChange={(e) => set("contact_email", e.target.value)} placeholder={f._new ? t("coach-login", "coach login") : ""} style={fieldS} /></div>
+        <div style={{ flex: 1 }}>{F(t("Telefoon", "Phone"), "contact_phone")}</div>
+      </div>
       <div style={{ display: "flex", gap: 10 }}><div style={{ flex: 1 }}>{F("KvK", "kvk")}</div><div style={{ flex: 1 }}>{F("Btw", "vat")}</div></div>
       {F(t("Notitie", "Note"), "admin_note")}
 
