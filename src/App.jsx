@@ -123,6 +123,47 @@ const SNACKS = [
   { id: "veg", nl: "Groente/dips", en: "Veg/dips" },
 ];
 
+// Voorkeuren per eetmoment (onboarding). Startset; leden vullen aan/scannen bij Producten.
+const MEAL_MOMENTS = [
+  { id: "breakfast", nl: "Ontbijt", en: "Breakfast" },
+  { id: "lunch", nl: "Lunch", en: "Lunch" },
+  { id: "dinner", nl: "Diner", en: "Dinner" },
+  { id: "snack", nl: "Snack", en: "Snack" },
+];
+const MEAL_OPTIONS = {
+  breakfast: [
+    { id: "oats", nl: "Havermout", en: "Oats" }, { id: "gyoghurt", nl: "Griekse yoghurt", en: "Greek yoghurt" },
+    { id: "quarkfruit", nl: "Kwark + fruit", en: "Quark + fruit" }, { id: "eggs", nl: "Eieren", en: "Eggs" },
+    { id: "omelet", nl: "Omelet", en: "Omelette" }, { id: "smoothie", nl: "Smoothie", en: "Smoothie" },
+    { id: "wholebread", nl: "Volkoren brood", en: "Wholegrain bread" }, { id: "protpancake", nl: "Proteïne-pannenkoek", en: "Protein pancake" },
+  ],
+  lunch: [
+    { id: "chickenwrap", nl: "Kip-wrap", en: "Chicken wrap" }, { id: "ricechicken", nl: "Rijst + kip", en: "Rice + chicken" },
+    { id: "tunasalad", nl: "Tonijnsalade", en: "Tuna salad" }, { id: "sandwich", nl: "Volkoren brood + beleg", en: "Wholegrain sandwich" },
+    { id: "soup", nl: "Soep + brood", en: "Soup + bread" }, { id: "poke", nl: "Poké bowl", en: "Poké bowl" },
+    { id: "saladegg", nl: "Salade + ei", en: "Salad + egg" },
+  ],
+  dinner: [
+    { id: "salmonveg", nl: "Zalm + groente", en: "Salmon + veg" }, { id: "pastabol", nl: "Pasta bolognese", en: "Pasta bolognese" },
+    { id: "chickenrice", nl: "Kip + rijst", en: "Chicken + rice" }, { id: "stamppot", nl: "Stamppot", en: "Mash & greens" },
+    { id: "curryrice", nl: "Curry + rijst", en: "Curry + rice" }, { id: "steakpotato", nl: "Biefstuk + aardappel", en: "Steak + potato" },
+    { id: "woknoodles", nl: "Wok + noedels", en: "Wok + noodles" },
+  ],
+  snack: [
+    { id: "shake", nl: "Eiwitshake", en: "Protein shake" }, { id: "quark", nl: "Kwark/Skyr", en: "Quark/Skyr" },
+    { id: "nuts", nl: "Noten", en: "Nuts" }, { id: "bar", nl: "Proteïnereep", en: "Protein bar" },
+    { id: "fruit", nl: "Fruit", en: "Fruit" }, { id: "ricecakepb", nl: "Rijstwafels + pindakaas", en: "Rice cakes + PB" },
+  ],
+};
+
+function mealIcon(id, col) {
+  const p = { width: 15, height: 15, viewBox: "0 0 24 24", fill: "none", stroke: col, strokeWidth: 1.9, strokeLinecap: "round", strokeLinejoin: "round" };
+  if (id === "breakfast") return <svg {...p}><path d="M3 20h18" /><path d="M12 4v3" /><path d="M5 11a7 7 0 0 1 14 0" /><path d="M4 11h16" /></svg>;
+  if (id === "lunch") return <svg {...p}><path d="M4 11h16a8 8 0 0 1-16 0z" /><path d="M12 3v4" /></svg>;
+  if (id === "dinner") return <svg {...p}><path d="M5 3v8M5 11v10M3 3v5a2 2 0 0 0 4 0V3" /><path d="M16 3c-1.5 0-2.5 2-2.5 5s1 4 2.5 4v9" /></svg>;
+  return <svg {...p}><path d="M12 7c-3-3-9-1-9 5 0 5 4 9 6 9 1 0 1.5-.4 3-.4s2 .4 3 .4c2 0 5-4 5-9 0-6-6-8-9-5z" /><path d="M12 7c0-2 1-3 2-4" /></svg>;
+}
+
 const SHOP_CATS = [
   { nl: "Groente & Fruit", en: "Produce" },
   { nl: "Vlees & Vis", en: "Protein" },
@@ -544,6 +585,8 @@ export default function App() {
   const [likes, setLikes] = useState("");
   const [cuisines, setCuisines] = useState([]);
   const [proteins, setProteins] = useState([]);
+  const [mealPrefs, setMealPrefs] = useState({ breakfast: [], lunch: [], dinner: [], snack: [] });
+  const toggleMeal = (moment, id) => setMealPrefs((p) => { const cur = p[moment] || []; return { ...p, [moment]: cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id] }; });
   const [trainingDays, setTrainingDays] = useState([0, 2, 4]);
   const [snacks, setSnacks] = useState(2);
   const [snackLikes, setSnackLikes] = useState(["fruit"]);
@@ -986,7 +1029,8 @@ export default function App() {
 
   function common() {
     const dietObj = DIETS.find((d) => d.id === diet);
-    return { sex, age, height, weight, activity, goal, diet: dietObj ? dietObj[lang] : diet, avoid, likes, cuisines: labelsOf(cuisines, CUISINES), proteins: labelsOf(proteins, PROTEINS), snacks, snackLikes, snackLikeLabels: labelsOf(snackLikes, SNACKS), variety, lang };
+    const mealPrefLabels = MEAL_MOMENTS.reduce((acc, mo) => { acc[mo.id] = (mealPrefs[mo.id] || []).map((id) => { const o = MEAL_OPTIONS[mo.id].find((x) => x.id === id); return o ? o[lang] : id; }); return acc; }, {});
+    return { sex, age, height, weight, activity, goal, diet: dietObj ? dietObj[lang] : diet, avoid, likes, cuisines: labelsOf(cuisines, CUISINES), proteins: labelsOf(proteins, PROTEINS), snacks, snackLikes, snackLikeLabels: labelsOf(snackLikes, SNACKS), mealPrefs: mealPrefLabels, variety, lang };
   }
   function currentIntake() { return { ...common(), trainingDays: [...trainingDays] }; }
 
@@ -1790,6 +1834,29 @@ export default function App() {
               </div>
 
               <div style={{ height: 1, background: LINE, margin: "2px 0 16px" }} />
+              <div style={{ ...disp, fontSize: 15, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 4, color: EMBER }}>{lang === "nl" ? "Wat eet je graag?" : "What do you like to eat?"}</div>
+              <div style={{ fontSize: 11.5, color: MUTED, lineHeight: 1.5, marginBottom: 14 }}>{lang === "nl" ? "Kies per moment wat je lekker vindt — hieruit bouwen we je plan. Aanvullen/scannen kan altijd bij Producten." : "Pick what you like per moment — we build your plan from this. Add/scan anytime under Products."}</div>
+              {MEAL_MOMENTS.map((mo) => {
+                const sel = mealPrefs[mo.id] || [];
+                return (
+                  <div key={mo.id} style={{ background: INK2, border: `1px solid ${LINE}`, borderRadius: 12, padding: "12px 13px", marginBottom: 10 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 9 }}>
+                      <span style={{ width: 24, height: 24, borderRadius: 7, background: "rgba(var(--hf-ember-rgb),0.14)", display: "grid", placeItems: "center" }}>{mealIcon(mo.id, EMBER)}</span>
+                      <span style={{ ...disp, fontWeight: 800, fontSize: 14, color: PAPER }}>{mo[lang]}</span>
+                      {sel.length > 0 && <span style={{ marginLeft: "auto", fontSize: 11, color: MUTED }}>{sel.length} {lang === "nl" ? "gekozen" : "picked"}</span>}
+                    </div>
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                      {MEAL_OPTIONS[mo.id].map((o) => {
+                        const on = sel.includes(o.id);
+                        return <div key={o.id} onClick={() => toggleMeal(mo.id, o.id)} style={{ cursor: "pointer", border: `1px solid ${on ? EMBER : LINE}`, background: on ? EMBER : "transparent", color: on ? "#fff" : PAPER, borderRadius: 20, padding: "7px 12px", fontSize: 12, fontWeight: 600, ...disp }}>{o[lang]}</div>;
+                      })}
+                      <div onClick={() => go("producten")} style={{ cursor: "pointer", border: `1px dashed ${SAGE}`, color: SAGE, borderRadius: 20, padding: "7px 12px", fontSize: 12, fontWeight: 700, ...disp }}>{lang === "nl" ? "+ toevoegen / scan" : "+ add / scan"}</div>
+                    </div>
+                  </div>
+                );
+              })}
+
+              <div style={{ height: 1, background: LINE, margin: "8px 0 16px" }} />
               <div style={{ marginBottom: 18 }}>
                 <label style={label}>{T("trainingDays")}</label>
                 <div style={{ display: "flex", gap: 5, marginBottom: 8 }}>
