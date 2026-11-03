@@ -469,7 +469,10 @@ async function buildFromLibrary(body, cyc) {
     { id: "dinner", label: lang === "en" ? "Dinner" : "Diner", share: 0.35, rot: 2 },
   ];
   const snackLabel = lang === "en" ? "Snack" : "Tussendoortje";
-  const reqs = (Array.isArray(body.request) && body.request.length) ? body.request.slice(0, 3) : [{ label: "D1", level: "base" }];
+  // Per-dag plan: body.week = 7 dagen (voor variatie, elk een ander gerecht via rotatie).
+  // Valt terug op body.request (2 templates) als week ontbreekt.
+  const reqs = (Array.isArray(body.week) && body.week.length) ? body.week.slice(0, 7)
+    : ((Array.isArray(body.request) && body.request.length) ? body.request.slice(0, 3) : [{ label: "D1", level: "base" }]);
   const days = [];
   for (let ti = 0; ti < reqs.length; ti++) {
     const r = reqs[ti];
@@ -696,5 +699,6 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "Serverfout", detail: String(e).slice(0, 200) });
   }
 }
+
 
 

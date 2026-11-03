@@ -1165,10 +1165,14 @@ export default function App() {
     setLoading(true); setError("");
     try {
       const nTrain = (intake.trainingDays || []).length;
+      const td0 = intake.trainingDays || [];
+      const wd0 = WD[intake.lang === "nl" ? "nl" : "en"];
+      const levelFor = (i) => nTrain === 0 ? "base" : nTrain === 7 ? "train" : (td0.includes(i) ? "train" : "rest");
+      const weekReq = wd0.map((d, i) => ({ label: d, level: levelFor(i) }));
       const request = (nTrain === 0 || nTrain === 7) ? [{ label: "D1", level: "base" }] : [{ label: "TR", level: "train" }, { label: "RS", level: "rest" }];
       const token = (() => { try { return localStorage.getItem("hf_token") || ""; } catch (e) { return ""; } })();
       const authToken = (session && session.access_token) || "";
-      const data = await fetchChunk({ ...intake, trainingCount: nTrain, request, paid: true, token, authToken });
+      const data = await fetchChunk({ ...intake, trainingCount: nTrain, request, week: weekReq, paid: true, token, authToken });
       setTargets(data.targets);
       if (data.softwareFallback) {
         // AI-tegoed voor deze maand op → GEEN muur: val terug op de software-kant
@@ -1185,19 +1189,24 @@ export default function App() {
       }
       const got = (data.plan && data.plan.days) || [];
       if (!got.length) throw new Error(T("noDays"));
-      const byLevel = {};
-      request.forEach((r, idx) => { byLevel[r.level] = got.find((x) => x && x.d === r.label) || got[idx] || got[0]; });
-      const tg = data.targets || {};
-      const sTrain = scaleDayTo(byLevel["train"], tg.train && tg.train.kcal);
-      const sRest = scaleDayTo(byLevel["rest"], tg.rest && tg.rest.kcal);
-      const sBase = scaleDayTo(byLevel["base"], tg.kcal);
-      const td = intake.trainingDays || [];
-      const wd = WD[intake.lang === "nl" ? "nl" : "en"];
-      const days = wd.map((d, i) => {
-        const isTrain = nTrain === 7 ? true : nTrain === 0 ? false : td.includes(i);
-        const tmpl = (nTrain === 0 || nTrain === 7) ? sBase : (isTrain ? sTrain : sRest);
-        return { d, train: isTrain, m: (tmpl && tmpl.m) || [] };
-      });
+      let days;
+      if (data.source === "library" && got.length === weekReq.length) {
+        // Per-dag uit de bibliotheek: al per dag geschaald, elk een ander gerecht. Direct gebruiken.
+        days = got.map((gd, i) => ({ d: wd0[i] || gd.d, train: weekReq[i].level === "train", m: (gd && gd.m) || [] }));
+      } else {
+        // AI / vangnet: 2 templates over de week verdelen (bestaand gedrag).
+        const byLevel = {};
+        request.forEach((r, idx) => { byLevel[r.level] = got.find((x) => x && x.d === r.label) || got[idx] || got[0]; });
+        const tg = data.targets || {};
+        const sTrain = scaleDayTo(byLevel["train"], tg.train && tg.train.kcal);
+        const sRest = scaleDayTo(byLevel["rest"], tg.rest && tg.rest.kcal);
+        const sBase = scaleDayTo(byLevel["base"], tg.kcal);
+        days = wd0.map((d, i) => {
+          const isTrain = nTrain === 7 ? true : nTrain === 0 ? false : td0.includes(i);
+          const tmpl = (nTrain === 0 || nTrain === 7) ? sBase : (isTrain ? sTrain : sRest);
+          return { d, train: isTrain, m: (tmpl && tmpl.m) || [] };
+        });
+      }
       setWeek({ days });
       try { localStorage.setItem("hf_lastplan", JSON.stringify({ targets: data.targets, week: { days } })); } catch (e) {}
       if (supabase && session) {
