@@ -732,6 +732,19 @@ export default function App() {
   }, [gymCtx]);
   useEffect(() => () => applyOrgTheme(null), []); // opruimen bij unmount
 
+  // Nieuw ingelogd lid/gebruiker zonder plan → direct naar de intake (onboarding),
+  // zodat ze niet op het dashboard stranden zonder te weten waar ze moeten starten.
+  const onboardedRef = useRef(false);
+  useEffect(() => {
+    if (onboardedRef.current) return;
+    if (!session || !session.user) return;
+    let hasPlan = false, hasIntake = false;
+    try { const s = JSON.parse(localStorage.getItem("hf_lastplan") || "null"); hasPlan = !!(s && s.week && s.week.days); } catch (e) {}
+    try { hasIntake = !!JSON.parse(localStorage.getItem("hf_intake") || "null"); } catch (e) {}
+    if (!hasPlan && !hasIntake) { setTab("plan"); setView("plan"); }
+    onboardedRef.current = true;
+  }, [session, gymCtx]);
+
   // Opslag-bevestiging (toast met "Naar dashboard").
   const flashSaved = () => { setSaveFlash(true); setTimeout(() => setSaveFlash(false), 4500); };
 
