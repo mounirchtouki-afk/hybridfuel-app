@@ -1973,7 +1973,7 @@ export default function App() {
                 <label style={label}>{T("planSourceLbl")}</label>
                 <div style={{ display: "flex", border: `1px solid ${LINE}`, borderRadius: 10, overflow: "hidden", marginTop: 4 }}>
                   {[["ai", T("planAi")], ["products", T("planProducts")]].map(([id, lbl]) => (
-                    <div key={id} onClick={() => setPlanSource(id)} style={{ flex: 1, textAlign: "center", cursor: "pointer", padding: "11px 0", ...disp, fontWeight: 700, fontSize: 13.5, letterSpacing: 0.3, background: planSource === id ? EMBER : "transparent", color: planSource === id ? PAPER : MUTED }}>{lbl}</div>
+                    <div key={id} onClick={() => setPlanSource(id)} style={{ flex: 1, textAlign: "center", cursor: "pointer", padding: "11px 0", ...disp, fontWeight: 700, fontSize: 13.5, letterSpacing: 0.3, background: planSource === id ? EMBER : "transparent", color: planSource === id ? "#fff" : MUTED }}>{lbl}</div>
                   ))}
                 </div>
                 {planSource === "ai"

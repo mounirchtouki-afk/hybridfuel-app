@@ -143,6 +143,18 @@ function computeBase(b, p) {
   return { kcal, protein, carbs, fat, maintenance, kg, bmi: Math.round(bmi * 10) / 10, lowBmi, floored };
 }
 
+// Is de ingelogde gebruiker een gym-lid/coach? (toegang via de sportschool, niet via abonnement)
+async function gymAccess(authToken) {
+  if (!authToken || typeof authToken !== "string") return false;
+  const url = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "https://tkmyjpsmdijaalwgzqdy.supabase.co").replace(/\/$/, "");
+  const anon = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || "sb_publishable_5CJ_waXIVhhzkkqD96iqMA_63yJJnaH";
+  try {
+    const r = await fetch(url + "/rest/v1/org_members?select=role&active=eq.true&limit=1", { headers: { apikey: anon, Authorization: "Bearer " + authToken } });
+    if (r.ok) { const rows = await r.json().catch(() => []); return Array.isArray(rows) && rows.length > 0; }
+  } catch (e) {}
+  return false;
+}
+
 // Haalt het org-rekenprofiel op voor een ingelogd gym-lid (RLS geeft alleen de eigen org).
 async function orgCalcProfile(authToken) {
   if (!authToken || typeof authToken !== "string") return null;
@@ -357,7 +369,9 @@ export default async function handler(req, res) {
     // slot actief is via UNLOCK_SECRET). Zonder die env var volstaat de paid-vlag.
     const isPaid = body.paid === true;
     const subVerified = await subActive(body.authToken);
-    const paidVerified = isPaid && (trusted || subVerified || validToken(body.token));
+    const gymOk = await gymAccess(body.authToken); // gym-lid/coach = toegang via de sportschool
+    const access = subVerified || gymOk; // echte toegang zonder credit-muur
+    const paidVerified = isPaid && (trusted || access || validToken(body.token));
     if (!trusted && !paidVerified) {
       return res.status(200).json({ targets, plan: null, locked: true });
     }
@@ -373,7 +387,7 @@ export default async function handler(req, res) {
     // OPTIE B: credits per betaling. Elke generatie telt er één af; bij 0 → opnieuw
     // betalen. Alleen voor echte betaalde gebruikers (niet voor trusted automatisering),
     // en alleen als er een credit-opslag gekoppeld is (anders verandert er niets).
-    if (!trusted && !subVerified && kvConfigured()) {
+    if (!trusted && !access && kvConfigured()) {
       const sid = tokenSid(body.token);
       const dec = sid ? await kv(["DECR", "cr:" + sid]) : { result: -1 };
       const n = typeof dec.result === "number" ? dec.result : parseInt(dec.result, 10);
@@ -390,7 +404,7 @@ export default async function handler(req, res) {
     // Alleen actief als er een credit-opslag (Upstash) gekoppeld is; faalt OPEN zodat
     // echte klanten nooit vastlopen bij een opslagstoring. Env PLAN_LIMIT_PER_MONTH (0 = uit).
     const MONTH_CAP = parseInt(process.env.PLAN_LIMIT_PER_MONTH || "100", 10);
-    if (!trusted && subVerified && kvConfigured() && MONTH_CAP > 0) {
+    if (!trusted && access && kvConfigured() && MONTH_CAP > 0) {
       const uid = jwtSub(body.authToken);
       if (uid) {
         try {
