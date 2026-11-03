@@ -161,6 +161,7 @@ function GymEditor({ token, lang, gym, onBack }) {
   const set = (k, v) => setF((p) => ({ ...p, [k]: v }));
   const F = (label, k, ph) => (<div><div style={lblS}>{label}</div><input value={f[k] || ""} onChange={(e) => set(k, e.target.value)} placeholder={ph || ""} style={fieldS} /></div>);
   async function save() {
+    if (!f.name || !f.name.trim()) { setErr(t("Naam is verplicht.", "Name is required.")); return; }
     setBusy(true); setErr("");
     try {
       if (f._new) { const d = await call(token, "admin.createGym", f); if (f.license_start || f.license_end || f.license_status || f.license_tier) await call(token, "admin.updateGym", { orgId: d.orgId, license_tier: f.license_tier, license_status: f.license_status, license_start: f.license_start, license_end: f.license_end }); }
@@ -176,9 +177,9 @@ function GymEditor({ token, lang, gym, onBack }) {
     <div style={{ display: "grid", gap: 2, maxWidth: 620 }}>
       <div onClick={onBack} style={{ cursor: "pointer", color: MUTED, fontSize: 13, fontWeight: 700, marginBottom: 6 }}>‹ {t("Terug", "Back")}</div>
       <div style={{ ...disp, fontWeight: 800, fontSize: 20, color: PAPER }}>{f._new ? t("Nieuwe sportschool", "New gym") : f.name}</div>
-      <div style={{ fontSize: 12, color: MUTED, marginBottom: 6 }}>{t("Alle administratiegegevens", "All administration data")}</div>
+      <div style={{ fontSize: 12, color: MUTED, marginBottom: 6 }}>{t("Alle administratiegegevens · ", "All administration data · ")}<span style={{ color: EMBER }}>*</span> {t("= verplicht", "= required")}</div>
       {err && <div style={{ ...card, color: EMBER }}>{err}</div>}
-      {F(t("Naam", "Name"), "name")}
+      <div><div style={lblS}>{t("Naam", "Name")} <span style={{ color: EMBER }}>*</span></div><input value={f.name || ""} onChange={(e) => set("name", e.target.value)} style={fieldS} /></div>
       {F(t("Adres", "Address"), "address")}
       <div style={{ display: "flex", gap: 10 }}><div style={{ flex: 1 }}>{F(t("Postcode", "Postal code"), "postal_code")}</div><div style={{ flex: 2 }}>{F(t("Stad", "City"), "city")}</div></div>
       {F(t("Contactpersoon", "Contact"), "contact_name")}
