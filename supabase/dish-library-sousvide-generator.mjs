@@ -79,13 +79,19 @@ add("Onsen-ei 63°C met spinazie","Onsen egg 63°C with spinach",["breakfast","l
 // ---- SQL ----
 const esc=(s)=>s.replace(/'/g,"''");
 const usedSlugs=new Set();dishes.forEach(d=>d.items.forEach(it=>usedSlugs.add(it.slug)));
-let sql="-- SOUS-VIDE batch (core). Draai NA dish-library.sql (en mag na de hoofd-seed).\nbegin;\n";
-sql+="insert into public.ingredients (slug,name_nl,name_en,kcal,protein,carbs,fat,category,source) values\n";
-sql+=[...usedSlugs].map(s=>{const m=IMAP[s];const cat=/steak|iron|lamb|duck|chicken|pork|beef/.test(s)?"vlees":/salmon|fish|shrimp/.test(s)?"vis":/oil|butter/.test(s)?"vet":/potato|rice|quinoa/.test(s)?"granen":/broccoli|bean|aspar|spin|zucch/.test(s)?"groente":"overig";return `('${s}','${esc(m.nl)}','${esc(m.en)}',${m.kcal},${m.p},${m.c},${m.f},'${cat}','core')`;}).join(",\n");
-sql+="\non conflict (slug) do nothing;\n\n";
-sql+="insert into public.dishes (slug,name_nl,name_en,moments,goals,items,tags,prefs,steps,steps_en,technique,temp,source) values\n";
-sql+=dishes.map(d=>`('${d.slug}','${esc(d.nl)}','${esc(d.en)}',ARRAY[${d.moments.map(m=>`'${m}'`).join(",")}],ARRAY[${d.goals.map(g=>`'${g}'`).join(",")}],'${JSON.stringify(d.items.map(it=>({slug:it.slug,g:it.g})))}'::jsonb,ARRAY[${d.tags.map(t=>`'${t}'`).join(",")}]::text[],ARRAY[${d.prefs.map(p=>`'${p}'`).join(",")}]::text[],'${esc(d.steps||"")}','${esc(d.steps_en||"")}','${esc(d.technique||"sousvide")}',${d.temp?`'${esc(d.temp)}'`:"null"},'core')`).join(",\n");
-sql+="\non conflict (slug) do update set name_nl=excluded.name_nl,name_en=excluded.name_en,moments=excluded.moments,goals=excluded.goals,items=excluded.items,tags=excluded.tags,prefs=excluded.prefs,steps=excluded.steps,steps_en=excluded.steps_en,technique=excluded.technique,temp=excluded.temp;\ncommit;\n";
-writeFileSync(new URL("./sousvide-seed.sql",import.meta.url),sql);
-console.log("sous-vide gerechten:",dishes.length);
+const ingBlock="insert into public.ingredients (slug,name_nl,name_en,kcal,protein,carbs,fat,category,source) values\n"
+  +[...usedSlugs].map(s=>{const m=IMAP[s];const cat=/steak|iron|lamb|duck|chicken|pork|beef/.test(s)?"vlees":/salmon|fish|shrimp/.test(s)?"vis":/oil|butter/.test(s)?"vet":/potato|rice|quinoa/.test(s)?"granen":/broccoli|bean|aspar|spin|zucch/.test(s)?"groente":"overig";return `('${s}','${esc(m.nl)}','${esc(m.en)}',${m.kcal},${m.p},${m.c},${m.f},'${cat}','core')`;}).join(",\n")
+  +"\non conflict (slug) do nothing;\n\n";
+const dishRow=(d)=>`('${d.slug}','${esc(d.nl)}','${esc(d.en)}',ARRAY[${d.moments.map(m=>`'${m}'`).join(",")}],ARRAY[${d.goals.map(g=>`'${g}'`).join(",")}],'${JSON.stringify(d.items.map(it=>({slug:it.slug,g:it.g})))}'::jsonb,ARRAY[${d.tags.map(t=>`'${t}'`).join(",")}]::text[],ARRAY[${d.prefs.map(p=>`'${p}'`).join(",")}]::text[],'${esc(d.steps||"")}','${esc(d.steps_en||"")}','${esc(d.technique||"sousvide")}',${d.temp?`'${esc(d.temp)}'`:"null"},'core')`;
+const dishHead="insert into public.dishes (slug,name_nl,name_en,moments,goals,items,tags,prefs,steps,steps_en,technique,temp,source) values\n";
+const dishTail="\non conflict (slug) do update set name_nl=excluded.name_nl,name_en=excluded.name_en,moments=excluded.moments,goals=excluded.goals,items=excluded.items,tags=excluded.tags,prefs=excluded.prefs,steps=excluded.steps,steps_en=excluded.steps_en,technique=excluded.technique,temp=excluded.temp;\ncommit;\n";
+const CHUNK=150;const nParts=Math.ceil(dishes.length/CHUNK);
+for(let p=0;p<nParts;p++){
+  const slice=dishes.slice(p*CHUNK,(p+1)*CHUNK);const num=String(p+1).padStart(2,"0");
+  let out=`-- SOUS-VIDE seed deel ${p+1}/${nParts} (${slice.length} gerechten). Draai NA dish-library.sql.\nbegin;\n`;
+  if(p===0)out+=ingBlock;
+  out+=dishHead+slice.map(dishRow).join(",\n")+dishTail;
+  writeFileSync(new URL(`./sousvide-seed-part-${num}.sql`,import.meta.url),out);
+}
+console.log("sous-vide seed-delen:",nParts,"x (CHUNK="+CHUNK+") — gerechten:",dishes.length);
 dishes.slice(0,5).forEach(d=>{const m=macros(d.items);console.log("  •",d.nl,"→",m.kcal+"kcal",m.p+"p/"+m.c+"c/"+m.f+"f");});

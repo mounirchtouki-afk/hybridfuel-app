@@ -358,18 +358,27 @@ for (const [vs,vnl,ven] of [["tomato","tomaten","tomato"],["cauliflower","bloemk
   add(`${vnl[0].toUpperCase()+vnl.slice(1)}soep met linzen`,`${ven[0].toUpperCase()+ven.slice(1)} soup with lentils`,["lunch"],[{slug:vs,g:250},{slug:"lentils",g:120},{slug:"bread_whole",g:40}],{prefs:["soup"],veggie:true,vegan:true});
 }
 
-// ---------- SQL ----------
+// ---------- SQL (in stukken; Supabase SQL Editor weigert te grote queries) ----------
 const usedSlugs = new Set(); dishes.forEach(d=>d.items.forEach(it=>usedSlugs.add(it.slug)));
 const esc = (s)=>s.replace(/'/g,"''");
-let sql = "-- AUTO-GEGENEREERD: ingrediënten + gerechten (core). Draai NA dish-library.sql.\nbegin;\n";
-sql += "insert into public.ingredients (slug,name_nl,name_en,kcal,protein,carbs,fat,category,source) values\n";
-sql += ING.filter(r=>usedSlugs.has(r[0])).map(r=>`('${r[0]}','${esc(r[1])}','${esc(r[2])}',${r[3]},${r[4]},${r[5]},${r[6]},'${r[7]}','core')`).join(",\n");
-sql += "\non conflict (slug) do nothing;\n\n";
-sql += "insert into public.dishes (slug,name_nl,name_en,moments,goals,items,tags,prefs,steps,steps_en,technique,temp,source) values\n";
-sql += dishes.map(d=>`('${d.slug}','${esc(d.name_nl)}','${esc(d.name_en)}',ARRAY[${d.moments.map(m=>`'${m}'`).join(",")}],ARRAY[${d.goals.map(g=>`'${g}'`).join(",")}],'${JSON.stringify(d.items.map(it=>({slug:it.slug,g:it.g})))}'::jsonb,ARRAY[${d.tags.map(t=>`'${t}'`).join(",")}]::text[],ARRAY[${d.prefs.map(p=>`'${p}'`).join(",")}]::text[],'${esc(d.steps)}','${esc(d.steps_en||"")}','${esc(d.technique||"")}',${d.temp?`'${esc(d.temp)}'`:"null"},'core')`).join(",\n");
-sql += "\non conflict (slug) do update set name_nl=excluded.name_nl,name_en=excluded.name_en,moments=excluded.moments,goals=excluded.goals,items=excluded.items,tags=excluded.tags,prefs=excluded.prefs,steps=excluded.steps,steps_en=excluded.steps_en,technique=excluded.technique,temp=excluded.temp;\ncommit;\n";
-
-writeFileSync(new URL("./seed.sql", import.meta.url), sql);
+const ingBlock = "insert into public.ingredients (slug,name_nl,name_en,kcal,protein,carbs,fat,category,source) values\n"
+  + ING.filter(r=>usedSlugs.has(r[0])).map(r=>`('${r[0]}','${esc(r[1])}','${esc(r[2])}',${r[3]},${r[4]},${r[5]},${r[6]},'${r[7]}','core')`).join(",\n")
+  + "\non conflict (slug) do nothing;\n\n";
+const dishRow = (d)=>`('${d.slug}','${esc(d.name_nl)}','${esc(d.name_en)}',ARRAY[${d.moments.map(m=>`'${m}'`).join(",")}],ARRAY[${d.goals.map(g=>`'${g}'`).join(",")}],'${JSON.stringify(d.items.map(it=>({slug:it.slug,g:it.g})))}'::jsonb,ARRAY[${d.tags.map(t=>`'${t}'`).join(",")}]::text[],ARRAY[${d.prefs.map(p=>`'${p}'`).join(",")}]::text[],'${esc(d.steps)}','${esc(d.steps_en||"")}','${esc(d.technique||"")}',${d.temp?`'${esc(d.temp)}'`:"null"},'core')`;
+const dishHead = "insert into public.dishes (slug,name_nl,name_en,moments,goals,items,tags,prefs,steps,steps_en,technique,temp,source) values\n";
+const dishTail = "\non conflict (slug) do update set name_nl=excluded.name_nl,name_en=excluded.name_en,moments=excluded.moments,goals=excluded.goals,items=excluded.items,tags=excluded.tags,prefs=excluded.prefs,steps=excluded.steps,steps_en=excluded.steps_en,technique=excluded.technique,temp=excluded.temp;\ncommit;\n";
+const CHUNK = 200;
+const nParts = Math.ceil(dishes.length / CHUNK);
+for (let p = 0; p < nParts; p++) {
+  const slice = dishes.slice(p*CHUNK, (p+1)*CHUNK);
+  const num = String(p+1).padStart(2,"0");
+  let out = `-- AUTO-GEGENEREERD core-seed deel ${p+1}/${nParts} (${slice.length} gerechten). Draai NA dish-library.sql.\n`;
+  out += `-- Draai de delen op volgorde (01, 02, ...). Elk deel is los veilig (upsert).\nbegin;\n`;
+  if (p === 0) out += ingBlock;
+  out += dishHead + slice.map(dishRow).join(",\n") + dishTail;
+  writeFileSync(new URL(`./seed-part-${num}.sql`, import.meta.url), out);
+}
+console.log("seed-delen geschreven:", nParts, "x (CHUNK="+CHUNK+")");
 
 // rapport
 const byMoment = {breakfast:0,lunch:0,dinner:0,snack:0};
