@@ -453,17 +453,6 @@ async function buildFromLibrary(body, cyc) {
   const isCarbSlug = (slug) => catOf(slug) === "granen" || slug === "potato" || slug === "sweet_potato";
   const protSlug = (dish) => { const it = (dish.items || []).find((x) => ["vlees", "vis", "vega", "peulvrucht"].includes(catOf(x.slug)) || x.slug === "egg" || catOf(x.slug) === "zuivel"); return it ? it.slug : (dish.items && dish.items[0] && dish.items[0].slug) || dish.slug; };
   const stepsOf = (dish) => lang === "en" ? (dish.steps_en || dish.steps || "") : (dish.steps || "");
-  // Bord-structuur in gewone taal (voor de pills): welk zetmeel, groente ja/nee, welk vet.
-  const isFatSlug = (slug) => ["vet", "noten"].includes(catOf(slug)) || ["olive_oil", "butter", "peanut_butter", "avocado"].includes(slug);
-  function compOf(items) {
-    let carb = null, veg = false, fat = null;
-    for (const it of items || []) {
-      if (!carb && isCarbSlug(it.slug)) carb = name(ing[it.slug]) || it.slug;
-      if (catOf(it.slug) === "groente" || catOf(it.slug) === "fruit") veg = true;
-      if (!fat && isFatSlug(it.slug)) fat = name(ing[it.slug]) || it.slug;
-    }
-    return { carb, veg, fat };
-  }
   // BORDMETHODE / eiwit-eerst: schaal het gerecht op het eiwit-doel van de maaltijd
   // (niet op kcal) -> realistische porties + gelijkmatige eiwitverdeling. Daarna
   // schaalt ALLEEN het zetmeel mee met de trainingsbelasting (carb-periodisering).
@@ -475,7 +464,7 @@ async function buildFromLibrary(body, cyc) {
     const scaled = (dish.items || []).map((it) => ({ slug: it.slug, g: it.g * factor * (isCarbSlug(it.slug) ? cm : 1) }));
     const items = scaled.map((it) => ({ n: name(ing[it.slug]) || it.slug, g: Math.round(it.g) }));
     const mac = dishMac(scaled, ing);
-    return { t: null, n: name(dish), kcal: Math.round(mac.kcal), p: Math.round(mac.p), c: Math.round(mac.c), f: Math.round(mac.f), ing: items, steps: stepsOf(dish), technique: dish.technique || null, temp: dish.temp || null, comp: compOf(dish.items) };
+    return { t: null, n: name(dish), kcal: Math.round(mac.kcal), p: Math.round(mac.p), c: Math.round(mac.c), f: Math.round(mac.f), ing: items, steps: stepsOf(dish), technique: dish.technique || null, temp: dish.temp || null };
   }
   function scaleProduct(prod, targetKcal) {
     const per = prod.per_100 || {}; const k100 = Number(per.kcal) || 0; if (!(k100 > 0)) return null;

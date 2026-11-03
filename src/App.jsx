@@ -1760,14 +1760,26 @@ export default function App() {
                       </span>
                     )}
                   </div>
-                  {m.comp && (
-                    <div style={{ display: "flex", gap: 6, marginTop: 6, flexWrap: "wrap" }}>
-                      {num(m.p) > 0 && <span style={{ fontSize: 10, borderRadius: 20, padding: "3px 9px", fontWeight: 600, background: "rgba(var(--hf-ember-rgb),0.14)", color: EMBER }}>{m.p}{ML.p} {lang === "nl" ? "eiwit" : "protein"}</span>}
-                      {m.comp.carb && <span style={{ fontSize: 10, borderRadius: 20, padding: "3px 9px", fontWeight: 600, background: "rgba(234,160,0,0.16)", color: "#eab308" }}>{lang === "nl" ? "koolhydraten" : "carbs"}: {m.comp.carb}</span>}
-                      {m.comp.veg && <span style={{ fontSize: 10, borderRadius: 20, padding: "3px 9px", fontWeight: 600, background: "rgba(34,197,94,0.15)", color: "#22c55e" }}>{lang === "nl" ? "groente" : "veg"}</span>}
-                      {m.comp.fat && <span style={{ fontSize: 10, borderRadius: 20, padding: "3px 9px", fontWeight: 600, background: "rgba(148,163,184,0.16)", color: "#94a3b8" }}>{m.comp.fat}</span>}
-                    </div>
-                  )}
+                  {(() => {
+                    const pp = num(m.p), cc = num(m.c), ff = num(m.f), tot = pp + cc + ff;
+                    if (!(tot > 0)) return null;
+                    const pct = (x) => (x / tot * 100).toFixed(1) + "%";
+                    const cCarb = "rgba(var(--hf-ember-rgb),0.40)", cFat = "rgba(var(--hf-mut-rgb,148,163,184),0.55)";
+                    return (
+                      <div style={{ marginTop: 8 }}>
+                        <div style={{ height: 6, borderRadius: 4, overflow: "hidden", display: "flex", background: "rgba(var(--hf-mut-rgb,148,163,184),0.18)" }}>
+                          {pp > 0 && <span style={{ width: pct(pp), background: EMBER }} />}
+                          {cc > 0 && <span style={{ width: pct(cc), background: cCarb }} />}
+                          {ff > 0 && <span style={{ width: pct(ff), background: cFat }} />}
+                        </div>
+                        <div style={{ display: "flex", gap: 12, marginTop: 5, fontSize: 9.5, color: MUTED, fontWeight: 600 }}>
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><span style={{ width: 7, height: 7, borderRadius: 2, background: EMBER }} />{pp}g {lang === "nl" ? "eiwit" : "protein"}</span>
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><span style={{ width: 7, height: 7, borderRadius: 2, background: cCarb }} />{cc}g {lang === "nl" ? "koolh." : "carbs"}</span>
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><span style={{ width: 7, height: 7, borderRadius: 2, background: cFat }} />{ff}g {lang === "nl" ? "vet" : "fat"}</span>
+                        </div>
+                      </div>
+                    );
+                  })()}
                   {m.ing && m.ing.length > 0 && (
                     <div style={{ fontSize: 11.5, color: MUTED, marginTop: 3, lineHeight: 1.5 }}>
                       {m.ing.map((ing, ii) => <span key={ii}><span style={{ color: PAPER }}>{gShow(ing.g, units)}{wUnit(units)}</span> {ing.n}{ii < m.ing.length - 1 ? " · " : ""}</span>)}
