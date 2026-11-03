@@ -10,7 +10,7 @@ async function call(token, op, extra) {
     body: JSON.stringify({ authToken: token, op, ...(extra || {}) }),
   });
   const d = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error((d && d.error) || ("http_" + r.status));
+  if (!r.ok) throw new Error(((d && d.error) || ("http_" + r.status)) + (d && d.detail ? " — " + d.detail : ""));
   return d;
 }
 function download(obj, fname) {
