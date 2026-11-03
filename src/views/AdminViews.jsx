@@ -125,7 +125,7 @@ export function AdminAccount({ session, lang, color }) {
   if (sel && mode === "members") return <MemberEditor token={token} lang={lang} acc={sel} accent={brand} onBack={() => { setSel(null); loadMembers(); loadTrash(); }} />;
 
   const gl = (gyms || []).filter((g) => !q.trim() || ((g.name || "") + " " + (g.city || "")).toLowerCase().includes(q.toLowerCase()));
-  const ml = (members || []).filter((m) => !q.trim() || ((m.email || "") + " " + (m.gym || "")).toLowerCase().includes(q.toLowerCase()));
+  const ml = (members || []).filter((m) => m.role !== "coach").filter((m) => !q.trim() || ((m.email || "") + " " + (m.name || "") + " " + (m.gym || "")).toLowerCase().includes(q.toLowerCase()));
   const pill = (txt, c) => <span style={{ fontSize: 9.5, fontWeight: 800, padding: "3px 8px", borderRadius: 5, border: `1px solid ${c || LINE}`, color: c || MUTED }}>{txt}</span>;
 
   return (
@@ -166,8 +166,8 @@ export function AdminAccount({ session, lang, color }) {
           {ml.map((m, i) => (
             <div key={m.id} onClick={() => setSel(m)} style={{ cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderTop: i > 0 ? `1px solid ${LINE}` : "none" }}>
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontWeight: 700, fontSize: 14, color: PAPER, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.email}</div>
-                <div style={{ fontSize: 11.5, color: MUTED, marginTop: 2 }}>{m.gym || t("geen sportschool", "no gym")}</div>
+                <div style={{ fontWeight: 700, fontSize: 14, color: PAPER, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.name || m.email}</div>
+                <div style={{ fontSize: 11.5, color: MUTED, marginTop: 2 }}>{m.gym || (m.name ? m.email : t("geen sportschool", "no gym"))}</div>
               </div>
               <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                 {pill(m.tier === "free" ? t("gratis", "free") : m.tier, m.tier === "free" ? MUTED : GREEN)}

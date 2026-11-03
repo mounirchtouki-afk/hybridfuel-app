@@ -75,15 +75,15 @@ export default async function handler(req, res) {
         const subsR = await fetch(supaUrl + "/rest/v1/subscriptions?select=user_id,email,tier,status,current_period_end,stripe_customer_id", { headers: sv });
         const subs = await subsR.json().catch(() => []);
         const subBy = {}; (Array.isArray(subs) ? subs : []).forEach((s) => { subBy[s.user_id] = s; });
-        const memR = await fetch(supaUrl + "/rest/v1/org_members?select=auth_user_id,org_id", { headers: sv });
+        const memR = await fetch(supaUrl + "/rest/v1/org_members?select=auth_user_id,org_id,role,display_name", { headers: sv });
         const mem = await memR.json().catch(() => []);
         const orgR = await fetch(supaUrl + "/rest/v1/orgs?select=id,name", { headers: sv });
         const orgs = await orgR.json().catch(() => []);
         const orgName = {}; (Array.isArray(orgs) ? orgs : []).forEach((o) => { orgName[o.id] = o.name; });
-        const gymBy = {}; (Array.isArray(mem) ? mem : []).forEach((m) => { if (!gymBy[m.auth_user_id]) gymBy[m.auth_user_id] = orgName[m.org_id] || null; });
+        const gymBy = {}, roleBy = {}, nameBy = {}; (Array.isArray(mem) ? mem : []).forEach((m) => { if (!gymBy[m.auth_user_id]) gymBy[m.auth_user_id] = orgName[m.org_id] || null; if (!roleBy[m.auth_user_id]) roleBy[m.auth_user_id] = m.role || null; if (!nameBy[m.auth_user_id] && m.display_name) nameBy[m.auth_user_id] = m.display_name; });
         const accounts = users.filter((u) => !(u.banned_until && new Date(u.banned_until) > new Date())).map((u) => {
           const s = subBy[u.id] || {};
-          return { id: u.id, email: u.email || s.email || "—", created_at: u.created_at || null, last_sign_in_at: u.last_sign_in_at || null, tier: s.tier || "free", status: s.status || null, period_end: s.current_period_end || null, has_customer: !!s.stripe_customer_id, gym: gymBy[u.id] || null };
+          return { id: u.id, email: u.email || s.email || "—", name: nameBy[u.id] || null, role: roleBy[u.id] || null, created_at: u.created_at || null, last_sign_in_at: u.last_sign_in_at || null, tier: s.tier || "free", status: s.status || null, period_end: s.current_period_end || null, has_customer: !!s.stripe_customer_id, gym: gymBy[u.id] || null };
         });
         accounts.sort((a, b) => String(b.created_at || "").localeCompare(String(a.created_at || "")));
         const counts = {

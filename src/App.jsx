@@ -627,6 +627,7 @@ export default function App() {
   const [showAdmin, setShowAdmin] = useState(false);
   const [showReminders, setShowReminders] = useState(false);
   const [session, setSession] = useState(null);
+  const [sessionChecked, setSessionChecked] = useState(false);
   const isAdmin = String((session && session.user && session.user.email) || "").toLowerCase() === "hybridfuelco@gmail.com";
   const [syncVer, setSyncVer] = useState(0);
   const [showAuth, setShowAuth] = useState(false);
@@ -896,7 +897,7 @@ export default function App() {
   const hasPlus = devMode || gymPro || subTier === "pro"; // Race Protocol, later evt. eigen Plus-laag
   // Demo telt alleen voor niet-ingelogde bezoekers; het geeft GEEN echte toegang
   // (opslaan/genereren blijft achter de paywall), het laat alleen de schermen zien.
-  const inDemo = demoMode && !session;
+  const inDemo = demoMode && !session && sessionChecked; // pas demo zodra we zeker weten dat er geen sessie is (geen flits-redirect bij refresh)
   demoRef.current = inDemo; // zodat de terug-knop-logica (popstate) weet of we in demo zijn
   const canView = hasBasis || inDemo;      // basisschermen tonen in demo
   const canViewPlus = hasPlus || inDemo;   // raceprotocol tonen in demo
@@ -964,7 +965,7 @@ export default function App() {
   // Supabase-sessie (login) volgen.
   useEffect(() => {
     if (!supabase) return;
-    supabase.auth.getSession().then(({ data }) => setSession((data && data.session) || null)).catch(() => {});
+    supabase.auth.getSession().then(({ data }) => { setSession((data && data.session) || null); setSessionChecked(true); }).catch(() => setSessionChecked(true));
     let sub;
     try { sub = supabase.auth.onAuthStateChange((e, s) => { setSession(s || null); if (e === "PASSWORD_RECOVERY") { setAuthRecovery(true); setShowAuth(true); setShowLogout(false); setShowMore(false); } }); } catch (e) {}
     // Recovery-/uitnodigingslink geopend: toon direct het wachtwoord-scherm (niet de uitlog-vraag),
