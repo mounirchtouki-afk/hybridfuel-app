@@ -51,6 +51,7 @@ export default async function handler(req, res) {
     if (action === "create") return await create(req, res, body);
     if (action === "bulkcreate") return await bulkcreate(req, res, body);
     if (action === "reset")  return await reset(req, res, body);
+    if (action === "setcode") return await setcode(req, res, body);
     if (action === "remove") return await remove(req, res, body);
     if (action === "addcoach")   return await addcoach(req, res, body);
     if (action === "setperms")   return await setperms(req, res, body);
@@ -201,6 +202,29 @@ async function bulkcreate(req, res, body) {
 }
 
 // --- reset: coach genereert nieuwe code voor een lid ---
+// Lid wijzigt z'n eigen inlogcode (korter/memorabel). Token = het lid zelf.
+async function setcode(req, res, body) {
+  const uid = await userIdFromToken(String(body.authToken || "").trim());
+  if (!uid) return res.status(401).json({ error: "invalid_token" });
+  const code = String(body.code || "").trim().toUpperCase();
+  if (code.length < 4 || code.length > 16 || !/^[A-Z0-9]+$/.test(code)) return res.status(400).json({ error: "bad_code", detail: "4-16 tekens, letters en cijfers." });
+  // Het eigen member-record ophalen.
+  const mr = await rest("org_members?select=id,org_id,role&auth_user_id=eq." + encodeURIComponent(uid) + "&limit=1");
+  const rows = mr.ok ? await mr.json().catch(() => []) : [];
+  const mem = rows && rows[0];
+  if (!mem || mem.role !== "member") return res.status(403).json({ error: "not_a_member" });
+  const ch = hashCode(code);
+  // Uniek binnen de sportschool (geen andere actief lid met dezelfde code).
+  const dup = await rest("org_members?select=id&org_id=eq." + encodeURIComponent(mem.org_id) + "&code_hash=eq." + encodeURIComponent(ch) + "&role=eq.member&active=eq.true&id=neq." + encodeURIComponent(mem.id) + "&limit=1");
+  const dupRows = dup.ok ? await dup.json().catch(() => []) : [];
+  if (dupRows.length) return res.status(409).json({ error: "code_taken", detail: "Deze code is al in gebruik in jouw sportschool." });
+  const up = await adminSetPassword(uid, code);
+  if (!up.ok) return res.status(502).json({ error: "setcode_failed" });
+  const uh = await rest("org_members?id=eq." + encodeURIComponent(mem.id), { method: "PATCH", body: JSON.stringify({ code_hash: ch }) });
+  if (!uh.ok) return res.status(502).json({ error: "setcode_failed" });
+  return res.status(200).json({ ok: true });
+}
+
 async function reset(req, res, body) {
   const coachId = await userIdFromToken(String(body.authToken || "").trim());
   if (!coachId) return res.status(401).json({ error: "invalid_token" });

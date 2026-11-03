@@ -631,6 +631,23 @@ export default function App() {
   const [showAuth, setShowAuth] = useState(false);
   const [authRecovery, setAuthRecovery] = useState(false);
   const [showLogout, setShowLogout] = useState(false);
+  const [showCodeChange, setShowCodeChange] = useState(false);
+  const [codeNew, setCodeNew] = useState("");
+  const [codeBusy, setCodeBusy] = useState(false);
+  const [codeMsg, setCodeMsg] = useState("");
+  async function saveMyCode() {
+    const c = codeNew.trim().toUpperCase();
+    if (c.length < 4) { setCodeMsg(lang === "nl" ? "Minimaal 4 tekens." : "At least 4 characters."); return; }
+    setCodeBusy(true); setCodeMsg("");
+    try {
+      let tok = session && session.access_token;
+      try { const { data } = await supabase.auth.getSession(); tok = (data && data.session && data.session.access_token) || tok; } catch (e) {}
+      const r = await fetch(apiUrl("/api/gym"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "setcode", authToken: tok, code: c }) });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) { setCodeMsg((d && d.detail) || (lang === "nl" ? "Mislukt." : "Failed.")); setCodeBusy(false); return; }
+      setCodeMsg(lang === "nl" ? "✓ Je code is aangepast." : "✓ Your code is updated."); setCodeNew(""); setCodeBusy(false);
+    } catch (e) { setCodeMsg(lang === "nl" ? "Mislukt." : "Failed."); setCodeBusy(false); }
+  }
   const [units, setUnits] = useState(() => load("hf_units", "metric"));
   const setUnitsSave = (u) => { setUnits(u); try { save("hf_units", u); } catch (e) {} };
   // Thema: 'auto' volgt het systeem, 'light'/'dark' expliciet. Alleen voor consumenten
@@ -2126,6 +2143,7 @@ export default function App() {
               {moreTile(<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18" /><path d="M7 14l3-4 3 3 4-6" /></svg>, lang === "nl" ? "Weekreview" : "Week review", () => go("weekreview"))}
               {moreTile(<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 4-6.5 8-6.5s8 2.5 8 6.5" /></svg>, lang === "nl" ? "Account" : "Account", () => { setShowMore(false); setShowAuth(true); })}
               {moreTile(<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0" /></svg>, lang === "nl" ? "Herinneringen" : "Reminders", () => { setShowMore(false); setShowReminders(true); })}
+              {isGymMember && moreTile(<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="10" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>, lang === "nl" ? "Mijn code" : "My code", () => { setShowMore(false); setShowCodeChange(true); setCodeMsg(""); setCodeNew(""); })}
               {isAdmin && moreTile(<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6z" /><path d="M9 12l2 2 4-4" /></svg>, "Admin", () => { setShowMore(false); setShowAdmin(true); })}
             </div>
             <div style={{ marginTop: 16, borderTop: `1px solid ${LINE}`, paddingTop: 14 }}>
@@ -2186,6 +2204,21 @@ export default function App() {
       )}
 
       {/* Uitlog-bevestiging (vanaf dashboard met de terug-knop) */}
+      {showCodeChange && (
+        <div onClick={() => setShowCodeChange(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 92, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ background: INK2, border: `1px solid ${LINE}`, borderRadius: 16, width: "100%", maxWidth: 360, padding: 22 }}>
+            <div style={{ ...disp, fontWeight: 800, fontSize: 18, color: PAPER, marginBottom: 4 }}>{lang === "nl" ? "Je inlogcode wijzigen" : "Change your code"}</div>
+            <div style={{ fontSize: 12.5, color: MUTED, marginBottom: 14, lineHeight: 1.5 }}>{lang === "nl" ? "Kies een code die je makkelijk onthoudt (4–16 tekens, letters en cijfers)." : "Pick a code you'll remember (4–16 chars, letters and numbers)."}</div>
+            <input value={codeNew} onChange={(e) => setCodeNew(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))} onKeyDown={(e) => { if (e.key === "Enter") saveMyCode(); }} placeholder={lang === "nl" ? "NIEUWE CODE" : "NEW CODE"} autoCapitalize="characters" style={{ width: "100%", background: INK, border: `1px solid ${LINE}`, color: PAPER, padding: "13px", fontSize: 18, letterSpacing: 3, textAlign: "center", borderRadius: 10, outline: "none", ...disp, fontWeight: 700, boxSizing: "border-box" }} />
+            {codeMsg && <div style={{ fontSize: 12.5, color: codeMsg.startsWith("✓") ? "#16A34A" : EMBER_SOFT, marginTop: 10 }}>{codeMsg}</div>}
+            <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+              <div onClick={() => setShowCodeChange(false)} style={{ flex: 1, textAlign: "center", cursor: "pointer", border: `1px solid ${LINE}`, color: PAPER, padding: "12px 0", borderRadius: 10, ...disp, fontWeight: 700, fontSize: 14 }}>{lang === "nl" ? "Sluiten" : "Close"}</div>
+              <div onClick={() => { if (!codeBusy) saveMyCode(); }} style={{ flex: 1, textAlign: "center", cursor: "pointer", background: EMBER, color: "#fff", padding: "12px 0", borderRadius: 10, ...disp, fontWeight: 800, fontSize: 14, opacity: codeBusy ? 0.6 : 1 }}>{codeBusy ? "…" : (lang === "nl" ? "Opslaan" : "Save")}</div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showLogout && (
         <div onClick={() => setShowLogout(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 90, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
           <div onClick={(e) => e.stopPropagation()} style={{ background: INK, border: `1px solid ${LINE}`, borderRadius: 18, width: "100%", maxWidth: 360, padding: 22, textAlign: "center", backgroundImage: "radial-gradient(130% 70% at 50% -10%, rgba(var(--hf-ember-rgb),0.14), transparent 60%)" }}>
