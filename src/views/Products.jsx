@@ -36,6 +36,9 @@ const T = {
   editProp: { nl: "Aangepast, je plan is bijgewerkt op de gekoppelde items.", en: "Updated, your plan was refreshed on the linked items." },
   mealLabel: { nl: "Voor welke maaltijd?", en: "For which meal?" },
   mealHint: { nl: "Kies bij welke maaltijden dit product past. Niets gekozen = overal bruikbaar. Gebruikt bij 'plan uit mijn producten'.", en: "Pick which meals this product suits. Nothing selected = usable anywhere. Used by 'plan from my products'." },
+  addToMeal: { nl: "Toevoegen aan maaltijd", en: "Add to meal" },
+  pickHint: { nl: "Tik 'Kies' om een product in je maaltijd te zetten, of maak hieronder een nieuw product — dat gaat meteen in je maaltijd.", en: "Tap 'Pick' to add a product to your meal, or create a new one below — it goes straight into your meal." },
+  backToPlan: { nl: "Terug naar plan", en: "Back to plan" },
 };
 
 const MEALS = {
@@ -197,25 +200,29 @@ export default function Products({ lang, session, onClose, onPick, embedded, aut
       closeAdd();
       return;
     }
+    // Kwam je vanuit een maaltijd (onPick), dan zet een NIEUW product zichzelf meteen
+    // in die maaltijd — geen losse 'Kies'-stap meer. Anders: terug naar de lijst.
     if (cloud) {
       const row = { user_id: session.user.id, name, brand: br.trim() || null, barcode, per_100, category, unit: "g" };
       if (hasMeal) row.meal_types = meal_types;
       const sel = hasMeal ? "id,name,brand,barcode,per_100,category,meal_types" : "id,name,brand,barcode,per_100,category";
       supabase.from("products").insert(row).select(sel).single()
         .then(({ data, error }) => {
-          if (data) { setItems((p) => [...p, data].sort((a, b) => a.name.localeCompare(b.name))); return; }
+          if (data) { setItems((p) => [...p, data].sort((a, b) => a.name.localeCompare(b.name))); if (onPick) onPick(data); return; }
           if (error && hasMeal) { // kolom bestaat niet -> opnieuw zonder meal_types
             setHasMeal(false);
             const { meal_types: _m, ...r2 } = row;
             supabase.from("products").insert(r2).select("id,name,brand,barcode,per_100,category").single()
-              .then(({ data: d2 }) => { if (d2) setItems((p) => [...p, d2].sort((a, b) => a.name.localeCompare(b.name))); }, () => {});
+              .then(({ data: d2 }) => { if (d2) { setItems((p) => [...p, d2].sort((a, b) => a.name.localeCompare(b.name))); if (onPick) onPick(d2); } }, () => {});
           }
         }, () => {});
-    } else {
-      const row = { id: "l" + Date.now(), name, brand: br.trim() || null, barcode, per_100, category, meal_types };
-      const next = [...items, row].sort((a, b) => a.name.localeCompare(b.name));
-      setItems(next); save("hf_products", next);
+      closeAdd();
+      return;
     }
+    const row = { id: "l" + Date.now(), name, brand: br.trim() || null, barcode, per_100, category, meal_types };
+    const next = [...items, row].sort((a, b) => a.name.localeCompare(b.name));
+    setItems(next); save("hf_products", next);
+    if (onPick) { onPick(row); return; } // direct in de maaltijd (+ sluit de modal)
     closeAdd();
   }
   function del(id) {
@@ -288,7 +295,7 @@ export default function Products({ lang, session, onClose, onPick, embedded, aut
         <div>{macroIn(ft, setFt, "g")}<div style={{ fontSize: 9.5, color: MUTED, textAlign: "center", marginTop: 3 }}>{t("fat")}</div></div>
       </div>
       <div style={{ display: "flex", gap: 8 }}>
-        <button onClick={add} style={{ ...primaryBtn, flex: 1 }}>{editId ? t("save") : t("add")}</button>
+        <button onClick={add} style={{ ...primaryBtn, flex: 1 }}>{editId ? t("save") : (onPick ? t("addToMeal") : t("add"))}</button>
         <button onClick={closeAdd} style={{ ...ghostBtn }}>{t("cancel")}</button>
       </div>
     </div>
@@ -297,7 +304,7 @@ export default function Products({ lang, session, onClose, onPick, embedded, aut
   const body = (
     <>
       {propMsg && <div style={{ fontSize: 12, color: "#4ADE80", lineHeight: 1.5, marginBottom: 12, background: "rgba(74,222,128,0.1)", border: `1px solid rgba(74,222,128,0.3)`, borderRadius: 10, padding: "9px 12px" }}>{t("editProp")}</div>}
-      <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.5, marginBottom: 14 }}>{t("intro")}</div>
+      <div style={{ fontSize: 12, color: onPick ? PAPER : MUTED, lineHeight: 1.5, marginBottom: 14, ...(onPick ? { background: "rgba(var(--hf-ember-rgb),0.10)", border: `1px solid rgba(var(--hf-ember-rgb),0.30)`, borderRadius: 10, padding: "9px 12px" } : {}) }}>{onPick ? t("pickHint") : t("intro")}</div>
 
       {/* Compacte acties */}
       {!adding && (
@@ -348,9 +355,9 @@ export default function Products({ lang, session, onClose, onPick, embedded, aut
   return (
     <div onClick={() => { stopScan(); onClose(); }} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 65, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
       <div onClick={(e) => e.stopPropagation()} style={{ position: "relative", background: INK, border: `1px solid ${LINE}`, borderRadius: 20, width: "100%", maxWidth: 440, maxHeight: "90vh", overflowY: "auto", padding: 22, boxShadow: "0 24px 70px rgba(0,0,0,.65)", backgroundImage: "radial-gradient(130% 70% at 92% -10%, rgba(var(--hf-ember-rgb),0.13), transparent 58%)" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+      <div style={{ position: "sticky", top: -22, background: INK, zIndex: 3, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, margin: "-22px -22px 14px", padding: "16px 22px", borderBottom: `1px solid ${LINE}` }}>
         <div style={sectionTitle}>{t("title")}</div>
-        <div onClick={() => { stopScan(); onClose(); }} style={{ cursor: "pointer", color: MUTED, fontSize: 17, width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 9, border: `1px solid ${LINE}` }}>×</div>
+        <div onClick={() => { stopScan(); onClose(); }} style={{ cursor: "pointer", color: PAPER, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.3, display: "inline-flex", alignItems: "center", gap: 7, padding: "7px 13px", borderRadius: 9, border: `1px solid ${LINE}`, background: INK2, whiteSpace: "nowrap" }}>{onPick ? <>&larr; {t("backToPlan")}</> : "×"}</div>
       </div>
       {body}
       </div>

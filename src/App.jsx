@@ -1638,7 +1638,7 @@ export default function App() {
     const [done, setDone] = useState(false);
     const scopeLbl = scope === "week" ? T("moveWeekScope") : (week && week.days[di] ? week.days[di].d : T("moveDayScope"));
     const dIn = { ...sIn, padding: "9px 10px", fontSize: 13, width: "100%", colorScheme: "dark" };
-    const seg = (on) => ({ flex: 1, textAlign: "center", cursor: "pointer", padding: "9px 0", borderRadius: 8, border: `1px solid ${on ? EMBER : LINE}`, background: on ? EMBER : "transparent", color: on ? PAPER : MUTED, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.5 });
+    const seg = (on) => ({ flex: 1, textAlign: "center", cursor: "pointer", padding: "9px 0", borderRadius: 8, border: `1px solid ${on ? EMBER : LINE}`, background: on ? EMBER : "transparent", color: on ? "#fff" : MUTED, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.5 });
     const radio = (on) => ({ display: "flex", alignItems: "center", gap: 9, cursor: "pointer", padding: "10px 12px", borderRadius: 10, border: `1px solid ${on ? EMBER : LINE}`, background: on ? "rgba(var(--hf-ember-rgb),0.08)" : INK2 });
     const dot = (on) => ({ width: 16, height: 16, borderRadius: "50%", border: `2px solid ${on ? EMBER : MUTED}`, background: on ? EMBER : "transparent", flexShrink: 0 });
     function place() {
@@ -1673,7 +1673,7 @@ export default function App() {
             </div>
           )}
 
-          <div onClick={done ? undefined : place} style={{ cursor: done ? "default" : "pointer", textAlign: "center", background: done ? SAGE : EMBER, color: PAPER, padding: "12px 0", borderRadius: 10, ...disp, fontWeight: 700, fontSize: 15, letterSpacing: 0.5 }}>{done ? T("movePlaced") : T("moveDo")}</div>
+          <div onClick={done ? undefined : place} style={{ cursor: done ? "default" : "pointer", textAlign: "center", background: done ? SAGE : EMBER, color: "#fff", padding: "12px 0", borderRadius: 10, ...disp, fontWeight: 700, fontSize: 15, letterSpacing: 0.5 }}>{done ? T("movePlaced") : T("moveDo")}</div>
           <div style={{ fontSize: 11, color: MUTED, marginTop: 10, lineHeight: 1.5 }}>{T("moveHint")}</div>
 
           {plannedDates.length > 0 && (
@@ -2109,14 +2109,14 @@ export default function App() {
                       <div style={{ marginBottom: 14, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                         <div style={{ display: "inline-flex", gap: 4, background: INK2, border: `1px solid ${LINE}`, borderRadius: 10, padding: 4 }}>
                           {[["plan", T("tabPlan")], ["shop", T("tabShop")]].map(([id, lbl]) => (
-                            <div key={id} onClick={() => setView(id)} style={{ padding: "8px 16px", borderRadius: 7, background: view === id ? EMBER : "transparent", color: PAPER, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.5, cursor: "pointer" }}>{lbl}</div>
+                            <div key={id} onClick={() => setView(id)} style={{ padding: "8px 16px", borderRadius: 7, background: view === id ? EMBER : "transparent", color: view === id ? "#fff" : PAPER, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.5, cursor: "pointer" }}>{lbl}</div>
                           ))}
                         </div>
                         {view === "plan" && (hasBasis ? (
                           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                             {planEdit && <div onClick={() => setMovePlan({ scope: "week" })} style={{ cursor: "pointer", padding: "8px 14px", borderRadius: 8, border: `1px solid ${LINE}`, color: EMBER, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.5 }}>{T("movePlan")}</div>}
                             {planEdit && hasPro && <div onClick={() => setShowProducts(true)} style={{ cursor: "pointer", padding: "8px 14px", borderRadius: 8, border: `1px solid ${LINE}`, color: EMBER, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.5 }}>{T("myProducts")}</div>}
-                            <div onClick={toggleEdit} style={{ cursor: "pointer", padding: "8px 16px", borderRadius: 8, border: `1px solid ${planEdit ? EMBER : LINE}`, background: planEdit ? EMBER : "transparent", color: planEdit ? PAPER : EMBER, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.5 }}>{planEdit ? T("editDone") : T("editPlan")}</div>
+                            <div onClick={toggleEdit} style={{ cursor: "pointer", padding: "8px 16px", borderRadius: 8, border: `1px solid ${planEdit ? EMBER : LINE}`, background: planEdit ? EMBER : "transparent", color: planEdit ? "#fff" : EMBER, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.5 }}>{planEdit ? T("editDone") : T("editPlan")}</div>
                           </div>
                         ) : (
                           <div onClick={() => setShowAuth(true)} style={{ cursor: "pointer", padding: "8px 14px", borderRadius: 8, border: `1px solid ${LINE}`, color: MUTED, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.5, display: "inline-flex", alignItems: "center", gap: 7 }}><LockIcon c={MUTED} s={15} />{T("editPlan")}</div>
