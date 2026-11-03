@@ -103,7 +103,51 @@ const ING = [
   ["dark_choc","Pure chocolade 85%","Dark chocolate 85%",592,10,20,52,"snack"],
   ["avocado2","Avocado","Avocado",160,2,9,15,"vet"],
 ];
-const IMAP = Object.fromEntries(ING.map((r) => [r[0], { kcal: r[3], p: r[4], c: r[5], f: r[6], nl: r[1], en: r[2] }]));
+const IMAP = Object.fromEntries(ING.map((r) => [r[0], { kcal: r[3], p: r[4], c: r[5], f: r[6], nl: r[1], en: r[2], cat: r[7] }]));
+
+// Bereidingswijze op basis van de naam (herkenbare familie) + ingrediënt-categorieën.
+function stepsFor(nameNl, items) {
+  const R = items.map((it) => ({ ...IMAP[it.slug], slug: it.slug, g: it.g })).filter((x) => x.nl);
+  const low = (x) => (x ? x.nl.toLowerCase() : "");
+  const prot = R.find((x) => ["vlees", "vis", "vega", "peulvrucht"].includes(x.cat) || x.slug === "egg");
+  const dairy = R.find((x) => x.cat === "zuivel" && !["egg", "egg_white", "feta", "parmesan", "mozzarella_light", "whey"].includes(x.slug));
+  const carb = R.find((x) => x.cat === "granen" || ["potato", "sweet_potato"].includes(x.slug));
+  const veg = R.filter((x) => x.cat === "groente" && !["potato", "sweet_potato"].includes(x.slug));
+  const fruit = R.find((x) => x.cat === "fruit");
+  const sauce = R.find((x) => x.cat === "saus");
+  const fat = R.find((x) => ["olive_oil", "butter"].includes(x.slug));
+  const feta = R.find((x) => x.slug === "feta");
+  const vegTxt = veg.map(low).join(" en ") || "wat groente";
+  const n = nameNl.toLowerCase();
+  const S = [];
+  if (/smoothie|shake/.test(n)) { S.push("Doe alle ingrediënten in de blender.", "Mix glad en schenk in een glas."); }
+  else if (/pannenkoek/.test(n)) { S.push("Blend de havermout, het ei en de whey tot een glad beslag.", "Bak er kleine pannenkoeken van in een licht ingevette pan.", fruit ? `Top met ${low(fruit)}.` : "Serveer direct."); }
+  else if (/omelet/.test(n)) { S.push("Klop de eieren los met peper en zout.", `Bak ${vegTxt} kort in de pan, giet de eieren erover en laat stollen.`, feta ? "Verkruimel de feta erover." : "Vouw dubbel en serveer."); }
+  else if (/roerei/.test(n)) { S.push("Klop de eieren los.", `Roerbak ze met ${vegTxt} tot ze net gestold zijn.`, carb ? `Serveer met ${low(carb)}.` : "Serveer direct."); }
+  else if (/overnight oats/.test(n)) { S.push("Meng de havermout, melk en chia in een pot.", "Laat minimaal een nacht in de koelkast opstijven.", fruit ? `Top de volgende ochtend met ${low(fruit)}.` : "Roer los en serveer."); }
+  else if (/muesli|granola/.test(n)) { S.push(`Doe de ${dairy ? low(dairy) : "yoghurt"} in een kom.`, `Schep de ${carb ? low(carb) : "muesli"} erover.`, fruit ? `Top met ${low(fruit)}.` : "Serveer direct."); }
+  else if (/toast|brood|sandwich/.test(n)) { S.push("Rooster of snijd het brood.", `Beleg met ${prot ? low(prot) : "je topping"}${veg.length ? " en " + vegTxt : ""}.`, "Breng op smaak met peper en zout."); }
+  else if (/wrap/.test(n)) { S.push("Warm de wrap kort op.", `Beleg met ${prot ? low(prot) : "vulling"}, ${vegTxt}${dairy ? " en " + low(dairy) : ""}.`, "Rol strak op en snijd doormidden."); }
+  else if (/salade|caesar/.test(n)) { S.push(`Meng de sla met ${vegTxt}.`, `Voeg ${prot ? low(prot) : "eiwit"} toe.`, fat ? `Besprenkel met ${low(fat)} en breng op smaak.` : "Breng op smaak met peper en zout."); }
+  else if (/soep/.test(n)) { S.push("Fruit de groente kort aan.", "Voeg bouillon (en eventueel eiwit) toe en laat garen.", "Pureer naar wens en serveer met het brood."); }
+  else if (/poké|poke|buddha|burrito|bowl/.test(n)) { S.push(carb ? `Kook de ${low(carb)} en laat afkoelen.` : "Maak de basis klaar.", `Verdeel alles in een kom: ${prot ? low(prot) : "eiwit"}, ${vegTxt}.`, sauce ? `Werk af met ${low(sauce)}.` : "Werk af naar smaak."); }
+  else if (/kwark|skyr|hüttenkäse|yoghurt/.test(n) && fruit && !carb) { S.push(`Doe de ${dairy ? low(dairy) : "kwark"} in een kom.`, `Meng of top met ${low(fruit)}.`); }
+  else if (/kwark|skyr|yoghurt/.test(n) && carb) { S.push(`Doe de ${dairy ? low(dairy) : "kwark"} in een kom.`, `Roer de ${low(carb)} erdoor.`, fruit ? `Top met ${low(fruit)}.` : "Serveer direct."); }
+  else if (/noten|amandelen|walnoten|pompoenpitten/.test(n)) { S.push("Weeg de portie af.", "Serveer als snack tussendoor."); }
+  else if (/reep/.test(n)) { S.push("Pak de proteïnereep als snack onderweg."); }
+  else if (/edamame/.test(n)) { S.push("Kook of stoom de edamame 4–5 min.", "Bestrooi met een snuf zeezout."); }
+  else if (/gekookte eieren/.test(n)) { S.push("Kook de eieren 8–9 min.", "Pel en bestrooi met peper en zout."); }
+  else if (/chocolade/.test(n)) { S.push("Combineer de pure chocolade met de noten als snack."); }
+  else {
+    // standaard warme maaltijd: eiwit + koolhydraat + groente
+    if (carb) S.push(`Kook de ${low(carb)} volgens de verpakking.`);
+    if (prot) { const isFish = prot.cat === "vis"; S.push(isFish ? `Bak of pocheer de ${low(prot)} kort tot net gaar; kruid met peper en zout.` : `Bak de ${low(prot)} in een pan${fat ? " met " + low(fat) : ""} rondom gaar; kruid met peper en zout.`); }
+    if (veg.length) S.push(`Stoom of wok ${vegTxt} beetgaar.`);
+    if (sauce) S.push(`Roer de ${low(sauce)} erdoor of serveer ernaast.`);
+    S.push("Verdeel over het bord en werk af.");
+  }
+  return S.map((s, i) => `${i + 1}. ${s}`).join("\n");
+}
 
 function macros(items) {
   let kcal = 0, p = 0, c = 0, f = 0;
@@ -132,7 +176,7 @@ function add(name_nl, name_en, moments, items, { tags=[], prefs=[], veggie=false
   if (used.has(key)) return; used.add(key);
   const mac = macros(items);
   const et = [...tags]; if (veggie) et.push("vegetarian"); if (vegan) et.push("vegan");
-  dishes.push({ slug:key, name_nl, name_en, moments, goals: goalsFor(mac), items, tags: tagsFor(mac, et), prefs, mac });
+  dishes.push({ slug:key, name_nl, name_en, moments, goals: goalsFor(mac), items, tags: tagsFor(mac, et), prefs, steps: stepsFor(name_nl, items), mac });
 }
 
 // ---------- DINER & LUNCH warm: eiwit + koolhydraat + groente (+ saus/vet) ----------
@@ -310,9 +354,9 @@ let sql = "-- AUTO-GEGENEREERD: ingrediënten + gerechten (core). Draai NA dish-
 sql += "insert into public.ingredients (slug,name_nl,name_en,kcal,protein,carbs,fat,category,source) values\n";
 sql += ING.filter(r=>usedSlugs.has(r[0])).map(r=>`('${r[0]}','${esc(r[1])}','${esc(r[2])}',${r[3]},${r[4]},${r[5]},${r[6]},'${r[7]}','core')`).join(",\n");
 sql += "\non conflict (slug) do nothing;\n\n";
-sql += "insert into public.dishes (slug,name_nl,name_en,moments,goals,items,tags,prefs,source) values\n";
-sql += dishes.map(d=>`('${d.slug}','${esc(d.name_nl)}','${esc(d.name_en)}',ARRAY[${d.moments.map(m=>`'${m}'`).join(",")}],ARRAY[${d.goals.map(g=>`'${g}'`).join(",")}],'${JSON.stringify(d.items.map(it=>({slug:it.slug,g:it.g})))}'::jsonb,ARRAY[${d.tags.map(t=>`'${t}'`).join(",")}]::text[],ARRAY[${d.prefs.map(p=>`'${p}'`).join(",")}]::text[],'core')`).join(",\n");
-sql += "\non conflict (slug) do nothing;\ncommit;\n";
+sql += "insert into public.dishes (slug,name_nl,name_en,moments,goals,items,tags,prefs,steps,source) values\n";
+sql += dishes.map(d=>`('${d.slug}','${esc(d.name_nl)}','${esc(d.name_en)}',ARRAY[${d.moments.map(m=>`'${m}'`).join(",")}],ARRAY[${d.goals.map(g=>`'${g}'`).join(",")}],'${JSON.stringify(d.items.map(it=>({slug:it.slug,g:it.g})))}'::jsonb,ARRAY[${d.tags.map(t=>`'${t}'`).join(",")}]::text[],ARRAY[${d.prefs.map(p=>`'${p}'`).join(",")}]::text[],'${esc(d.steps)}','core')`).join(",\n");
+sql += "\non conflict (slug) do update set name_nl=excluded.name_nl,name_en=excluded.name_en,moments=excluded.moments,goals=excluded.goals,items=excluded.items,tags=excluded.tags,prefs=excluded.prefs,steps=excluded.steps;\ncommit;\n";
 
 writeFileSync(new URL("./seed.sql", import.meta.url), sql);
 
