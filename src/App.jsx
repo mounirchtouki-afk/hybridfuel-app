@@ -779,6 +779,7 @@ export default function App() {
       else if (s.planEdit) { try { persistRef.current(); } catch (e) {} setPlanEdit(false); flashSaved(); nav.planEdit = false; }
       else if (s.tab !== "dashboard") { setTab("dashboard"); nav.tab = "dashboard"; try { window.scrollTo(0, 0); } catch (e) {} }
       else if (demoRef.current) { try { window.location.href = SITE_URL; } catch (e) {} return; } // demo: terug = naar de website, geen uitlog-vraag
+      else if (s.authRecovery) { /* bezig met wachtwoord instellen via uitnodigingslink → geen uitlog-vraag */ }
       else { setShowLogout(true); nav.showLogout = true; } // al op het dashboard → uitlog-check
       topUp(); // buffer weer aanvullen
     };
@@ -1291,7 +1292,7 @@ export default function App() {
   }
   function toggleEdit() { if (planEdit) { persistPlanCloud(); flashSaved(); } setPlanEdit(!planEdit); }
   // Refs voor de terug-knop up-to-date houden (de popstate-listener leest hieruit).
-  navRef.current = { tab, showMore, showReminders, showAuth, showBuilder, showProducts, movePlan, copyPick, recipePick, fab, planEdit, showLogout };
+  navRef.current = { tab, showMore, showReminders, showAuth, showBuilder, showProducts, movePlan, copyPick, recipePick, fab, planEdit, showLogout, authRecovery };
   persistRef.current = persistPlanCloud;
   function copyDayTo(fromDi, toDi) {
     if (!week || fromDi === toDi) return;
