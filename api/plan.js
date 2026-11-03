@@ -306,8 +306,8 @@ function buildPrompt(b, cyc) {
       : (lang === "en" ? "Keep one or two staples but rotate a snack or two across the week." : "Houd één of twee vaste tussendoortjes maar wissel er een paar af over de week.");
   const snackGuide = nSnackSafe > 0
     ? (lang === "en"
-        ? `- Keep each Snack small (roughly 8-15% of the day's calories) and simple; let the 3 main meals carry the rest. Spread the snacks between the main meals so the day is well distributed. Pick snacks FROM this list: ${snackCands}. ${varyAcross} If in doubt, a banana is the most obvious default.`
-        : `- Houd elk Tussendoortje klein (ongeveer 8-15% van de dagcalorieën) en simpel; de 3 hoofdmaaltijden dragen de rest. Spreid de tussendoortjes tussen de hoofdmaaltijden zodat de dag goed verdeeld is. Kies de tussendoortjes UIT deze lijst: ${snackCands}. ${varyAcross} Bij twijfel is een banaan de meest voor de hand liggende keuze.`)
+        ? `- Keep each Snack small (roughly 8-15% of the day's calories) and simple; let the 3 main meals carry the rest. Spread the snacks between the main meals so the day is well distributed. If the person listed Snack choices in the MEAL CHOICES block, use those; otherwise good concrete options to draw from: ${snackCands}. ${varyAcross} If in doubt, a banana is the most obvious default.`
+        : `- Houd elk Tussendoortje klein (ongeveer 8-15% van de dagcalorieën) en simpel; de 3 hoofdmaaltijden dragen de rest. Spreid de tussendoortjes tussen de hoofdmaaltijden zodat de dag goed verdeeld is. Koos de persoon Tussendoortjes in het MAALTIJDKEUZES-blok, gebruik die; anders zijn goede concrete opties: ${snackCands}. ${varyAcross} Bij twijfel is een banaan de meest voor de hand liggende keuze.`)
     : "";
   const L = lang === "en"
     ? {
@@ -334,11 +334,29 @@ function buildPrompt(b, cyc) {
     ? "Keep meals realistic and easy to cook."
     : "Make the days distinct and realistic to cook.";
 
+  // Per-eetmoment keuzes uit "Wat eet je graag?" (chips). Deze MOETEN leidend zijn:
+  // elke maaltijd van een moment komt uit de lijst van dát moment, nooit verschoven
+  // naar een ander moment. Dit veld werd eerder genegeerd -> AI verzon eigen maaltijden.
+  const MM = lang === "en"
+    ? { breakfast: "Breakfast", lunch: "Lunch", dinner: "Dinner", snack: "Snack" }
+    : { breakfast: "Ontbijt", lunch: "Lunch", dinner: "Diner", snack: "Tussendoortje" };
+  const mp = (b.mealPrefs && typeof b.mealPrefs === "object") ? b.mealPrefs : {};
+  const mealPrefRows = ["breakfast", "lunch", "dinner", "snack"].map((k) => {
+    const arr = Array.isArray(mp[k]) ? mp[k].slice(0, 12).map((x) => cleanStr(x, 40)).filter(Boolean) : [];
+    return arr.length ? `- ${MM[k]}: ${arr.join(", ")}` : null;
+  }).filter(Boolean);
+  const mealPrefBlock = mealPrefRows.length
+    ? (lang === "en"
+        ? `MEAL CHOICES PER MOMENT (HARD CONSTRAINT — the person explicitly picked these for each meal moment). Build each day's meal from the MATCHING list only, and NEVER move a choice to another meal moment (a Dinner choice must not appear at Lunch, nor a Lunch choice at Breakfast). Use the listed options (rotate across them over the week unless a fixed daily pattern is requested above); scale portions to hit each day's targets. Do not invent dishes outside these lists for a listed moment:\n${mealPrefRows.join("\n")}\nFor any meal moment NOT listed here, choose something that fits the overall preferences.`
+        : `MAALTIJDKEUZES PER MOMENT (HARDE EIS — de persoon koos deze expliciet per eetmoment). Bouw elke maaltijd ALLEEN uit de bijbehorende lijst en verplaats NOOIT een keuze naar een ander eetmoment (een Diner-keuze mag niet bij Lunch staan, een Lunch-keuze niet bij Ontbijt). Gebruik de genoemde opties (wissel er over de week tussen, tenzij hierboven een vast dagpatroon is gevraagd); schaal porties naar de dagdoelen. Verzin voor een genoemd moment geen gerechten buiten deze lijst:\n${mealPrefRows.join("\n")}\nVoor een eetmoment dat hier NIET genoemd is, kies iets dat bij de algemene voorkeuren past.`)
+    : "";
+
   return `You are a sports nutrition coach. Build these meal-days, each hitting ITS OWN targets:
 ${dayLines}
 
 Diet: ${diet}. Avoid: ${avoid}.
 Preferences: ${prefText}
+${mealPrefBlock ? "\n" + mealPrefBlock + "\n" : ""}
 ${varietyRule}
 
 Optional recipe ideas that suit this person's taste — use any that fit the day's targets, the diet and the avoid-list, scaling portions to hit the numbers. Otherwise build your own simple, realistic meals around their stated preferences. Do NOT introduce novelty or "superfood" ingredients (matcha, ashwagandha, etc.) unless their preferences above mention them:

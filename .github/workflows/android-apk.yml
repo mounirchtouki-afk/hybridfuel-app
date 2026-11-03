@@ -36,7 +36,10 @@ jobs:
         run: npm ci
 
       - name: Build web (native config, absolute API)
-        run: npx cross-env VITE_API_BASE=https://app.hybridfuelco.com vite build
+        # Tijdelijk: APK praat met de capacitor-wrap preview (die de gym-/code-login-
+        # /tier-backend draait), i.p.v. productie (main) die dat nog mist. Terug naar
+        # https://app.hybridfuelco.com zodra capacitor-wrap naar main is gemerged.
+        run: npx cross-env VITE_API_BASE=https://hybridfuel-app-git-capacitor-wrap-mounirchtouki-afk.vercel.app vite build
 
       - name: Capacitor sync (android)
         run: |
