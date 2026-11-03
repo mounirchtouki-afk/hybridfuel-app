@@ -2,18 +2,16 @@ import { apiUrl } from "../apiBase";
 import React, { useState, useEffect } from "react";
 import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, disp, input, label, sectionTitle, primaryBtn, ghostBtn } from "../shared.js";
 import { supabase, supaReady } from "../supabaseClient.js";
+import { Capacitor } from "@capacitor/core";
+// In de store-app (native) tonen we geen afrekenen/koopknoppen en verwijzen we niet
+// naar web-betaling (Apple/Google anti-steering). Abonneren kan alleen via de website.
+const IS_NATIVE = (() => { try { return Capacitor.isNativePlatform(); } catch (e) { return false; } })();
 
 // Opent de Stripe-checkout. Op native (Capacitor) via de externe/in-app browser
 // zodat de app-webview niet wegnavigeert; op web gewoon in dezelfde tab.
 async function openCheckout(url) {
-  try {
-    const { Capacitor } = await import("@capacitor/core");
-    if (Capacitor.isNativePlatform()) {
-      const { Browser } = await import("@capacitor/browser");
-      await Browser.open({ url });
-      return;
-    }
-  } catch (e) {}
+  // Store-app: nooit naar een web-betaling navigeren (anti-steering). Alleen op web.
+  try { if (Capacitor.isNativePlatform()) return; } catch (e) {}
   window.location.href = url;
 }
 
@@ -270,6 +268,13 @@ export default function Auth({ lang, session, tier, recovery, onClose, gym }) {
 
         {isGymMember ? (
           <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.5, marginBottom: 14 }}>{t("gymNote")}</div>
+        ) : IS_NATIVE ? (
+          // Store-app: geen koopknoppen/afrekenen en geen verwijzing naar web-betaling.
+          <div style={{ fontSize: 12.5, color: MUTED, lineHeight: 1.55, marginBottom: 14 }}>
+            {(!tier || tier === "free")
+              ? (lang === "nl" ? "Dit account heeft nog geen actieve toegang. Log in met een account dat toegang heeft, of via de code van je sportschool." : "This account has no active access yet. Log in with an account that has access, or via your gym code.")
+              : (lang === "nl" ? "Je toegang is actief. Je beheert je abonnement op het apparaat waar je het hebt afgesloten." : "Your access is active. Manage your subscription on the device where you set it up.")}
+          </div>
         ) : (!tier || tier === "free") ? (
           <div style={{ marginBottom: 10 }}>
             <div style={sectionTitle}>{t("upgradeTitle")}</div>
