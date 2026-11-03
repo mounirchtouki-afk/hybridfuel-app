@@ -195,6 +195,12 @@ function GymEditor({ token, lang, gym, onBack }) {
   const active = (f.license_status || "active") !== "stopped";
   // standaard licentie-einddatum = 1 jaar na start
   const setYear = () => { const s = f.license_start ? new Date(f.license_start) : new Date(); const e = new Date(s); e.setFullYear(e.getFullYear() + 1); set("license_start", s.toISOString().slice(0, 10)); set("license_end", e.toISOString().slice(0, 10)); };
+  async function del() {
+    if (!window.confirm(t("Weet je zeker dat je '" + (f.name || "") + "' verwijdert? Dit kan niet ongedaan worden gemaakt.", "Delete '" + (f.name || "") + "'? This cannot be undone."))) return;
+    setBusy(true); setErr("");
+    try { await call(token, "admin.deleteGym", { orgId: f.id }); onBack(); }
+    catch (e) { setErr(t("Verwijderen mislukt: ", "Delete failed: ") + String(e.message || e)); setBusy(false); }
+  }
   return (
     <div style={{ display: "grid", gap: 2, maxWidth: 620 }}>
       <div onClick={onBack} style={{ cursor: "pointer", color: MUTED, fontSize: 13, fontWeight: 700, marginBottom: 6 }}>‹ {t("Terug", "Back")}</div>
@@ -224,6 +230,12 @@ function GymEditor({ token, lang, gym, onBack }) {
         <div style={{ flex: 1 }} />
         <div onClick={busy ? null : save} style={{ ...btnS(GREEN), opacity: busy ? 0.6 : 1, padding: "12px 22px" }}>{busy ? "…" : t("Opslaan", "Save")}</div>
       </div>
+      {!f._new && (
+        <div style={{ marginTop: 18, borderTop: `1px solid ${LINE}`, paddingTop: 14 }}>
+          <div onClick={busy ? null : del} style={{ ...btnS(EMBER), width: "fit-content", opacity: busy ? 0.6 : 1 }}>{t("Sportschool verwijderen", "Delete gym")}</div>
+          <div style={{ fontSize: 11, color: MUTED, marginTop: 6 }}>{t("Verwijdert de sportschool, alle leden-koppelingen en de coach-login. Kan niet ongedaan worden gemaakt.", "Deletes the gym, all member links and the coach login. Cannot be undone.")}</div>
+        </div>
+      )}
     </div>
   );
 }
@@ -240,6 +252,12 @@ function MemberEditor({ token, lang, acc, onBack }) {
   async function saveEmail() { setBusy(true); setErr(""); try { await call(token, "admin.updateAccount", { targetUserId: acc.id, email }); } catch (e) { setErr(String(e.message || e)); } setBusy(false); }
   async function savePw() { if (pw.length < 6) { setErr(t("Wachtwoord min. 6 tekens.", "Password min 6 chars.")); return; } setBusy(true); setErr(""); try { await call(token, "admin.updateAccount", { targetUserId: acc.id, password: pw }); setPw(""); } catch (e) { setErr(String(e.message || e)); } setBusy(false); }
   async function resetLink() { setBusy(true); setErr(""); try { const d = await call(token, "admin.resetPassword", { email }); setResetUrl(d.url); } catch (e) { setErr(String(e.message || e)); } setBusy(false); }
+  async function delMember() {
+    if (!window.confirm(t("Member '" + (acc.email || "") + "' verwijderen? Account + data worden gewist. Kan niet ongedaan worden gemaakt.", "Delete member '" + (acc.email || "") + "'? Account + data removed. Cannot be undone."))) return;
+    setBusy(true); setErr("");
+    try { await call(token, "admin.deleteMember", { targetUserId: acc.id }); onBack(); }
+    catch (e) { setErr(t("Verwijderen mislukt: ", "Delete failed: ") + String(e.message || e)); setBusy(false); }
+  }
   async function changeTier(v) {
     setErr("");
     try {
@@ -264,6 +282,10 @@ function MemberEditor({ token, lang, acc, onBack }) {
       {resetUrl && <div style={{ ...card, marginTop: 8, wordBreak: "break-all", fontSize: 12, color: PAPER }}>{resetUrl}<div onClick={() => { try { navigator.clipboard.writeText(resetUrl); } catch (e) {} }} style={{ ...btnS(GREEN), display: "inline-block", marginTop: 8, padding: "7px 12px" }}>{t("Kopieer", "Copy")}</div></div>}
       <div style={lblS}>{t("Licentie / pakket", "License / plan")}</div>
       <div style={{ display: "flex", gap: 7 }}>{segTier("pro", "Pro")}{segTier("basis", "Basis")}{segTier("free", t("Gratis / stop", "Free / stop"))}</div>
+      <div style={{ marginTop: 18, borderTop: `1px solid ${LINE}`, paddingTop: 14 }}>
+        <div onClick={busy ? null : delMember} style={{ ...btnS(EMBER), width: "fit-content", opacity: busy ? 0.6 : 1 }}>{t("Member verwijderen", "Delete member")}</div>
+        <div style={{ fontSize: 11, color: MUTED, marginTop: 6 }}>{t("Verwijdert het account en alle data. Kan niet ongedaan worden gemaakt.", "Deletes the account and all data. Cannot be undone.")}</div>
+      </div>
     </div>
   );
 }

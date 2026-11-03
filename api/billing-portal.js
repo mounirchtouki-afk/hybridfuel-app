@@ -211,6 +211,35 @@ export default async function handler(req, res) {
         return res.status(200).json({ ok: true });
       }
 
+      if (op === "admin.deleteGym") {
+        const orgId = String(body.orgId || "").trim();
+        if (!orgId) return res.status(400).json({ error: "no_org" });
+        // Eigenaar(s)/coaches van deze org ophalen zodat we hun login-accounts kunnen opruimen.
+        let coachIds = [];
+        try {
+          const cr = await fetch(supaUrl + "/rest/v1/org_members?select=auth_user_id&org_id=eq." + encodeURIComponent(orgId) + "&role=eq.coach", { headers: sv });
+          if (cr.ok) coachIds = (await cr.json().catch(() => [])).map((r) => r.auth_user_id).filter(Boolean);
+        } catch (e) {}
+        // orgs heeft on delete cascade naar org_config / org_members / member_progress.
+        const del = await fetch(supaUrl + "/rest/v1/orgs?id=eq." + encodeURIComponent(orgId), { method: "DELETE", headers: { ...sv, Prefer: "return=minimal" } });
+        if (!del.ok) { const txt = await del.text().catch(() => ""); return res.status(502).json({ error: "delete_failed", detail: txt.slice(0, 200) }); }
+        // Coach-login(s) van deze sportschool opruimen (geen weesaccounts). Admin zelf nooit.
+        const adminSelf = userId;
+        for (const cid of coachIds) {
+          if (cid && cid !== adminSelf) { try { await fetch(supaUrl + "/auth/v1/admin/users/" + encodeURIComponent(cid), { method: "DELETE", headers: sv }); } catch (e) {} }
+        }
+        return res.status(200).json({ ok: true, removedCoaches: coachIds.length });
+      }
+
+      if (op === "admin.deleteMember") {
+        const target = String(body.targetUserId || "").trim();
+        if (!target) return res.status(400).json({ error: "no_user" });
+        // Verwijdert het auth-account; cascade ruimt subscriptions/weights/plans/org_members op.
+        const del = await fetch(supaUrl + "/auth/v1/admin/users/" + encodeURIComponent(target), { method: "DELETE", headers: sv });
+        if (!del.ok) { const txt = await del.text().catch(() => ""); return res.status(502).json({ error: "delete_failed", detail: txt.slice(0, 200) }); }
+        return res.status(200).json({ ok: true });
+      }
+
       if (op === "admin.createGym") {
         const jsonHdr = { ...sv, "Content-Type": "application/json" };
         const name = String(body.name || "").trim().slice(0, 80);
