@@ -452,14 +452,17 @@ async function buildFromLibrary(body, cyc) {
     const base = dishMac(dish.items, ing);
     if (!(base.kcal > 0)) return null;
     let factor = targetKcal / base.kcal;
-    factor = Math.max(0.45, Math.min(2.6, factor));
+    factor = Math.max(0.5, Math.min(2.0, factor));
     const items = (dish.items || []).map((it) => ({ n: name(ing[it.slug]) || it.slug, g: Math.round(it.g * factor) }));
     const mac = dishMac((dish.items || []).map((it) => ({ slug: it.slug, g: it.g * factor })), ing);
     return { t: null, n: name(dish), kcal: Math.round(mac.kcal), p: Math.round(mac.p), c: Math.round(mac.c), f: Math.round(mac.f), ing: items, steps: dish.steps || "" };
   }
   function scaleProduct(prod, targetKcal) {
     const per = prod.per_100 || {}; const k100 = Number(per.kcal) || 0; if (!(k100 > 0)) return null;
-    let g = Math.round(targetKcal / (k100 / 100)); g = Math.max(30, Math.min(600, g));
+    // Een los product als hele maaltijd mag niet absurd groot worden. Cap op dichtheid:
+    // energiedicht (whey/olie/reep >300 kcal/100g) -> max 90g, matig -> 280g, licht -> 450g.
+    const maxG = k100 > 300 ? 90 : k100 > 140 ? 280 : 450;
+    let g = Math.round(targetKcal / (k100 / 100)); g = Math.max(25, Math.min(maxG, g));
     const f2 = g / 100;
     return { t: null, n: prod.name, kcal: Math.round(k100 * f2), p: Math.round((Number(per.p) || 0) * f2), c: Math.round((Number(per.c) || 0) * f2), f: Math.round((Number(per.f) || 0) * f2), ing: [{ n: prod.name, g }] };
   }

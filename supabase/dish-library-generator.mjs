@@ -131,8 +131,10 @@ function stepsFor(nameNl, items) {
   else if (/salade|caesar/.test(n)) { S.push(`Meng de sla met ${vegTxt}.`, `Voeg ${prot ? low(prot) : "eiwit"} toe.`, fat ? `Besprenkel met ${low(fat)} en breng op smaak.` : "Breng op smaak met peper en zout."); }
   else if (/soep/.test(n)) { S.push("Fruit de groente kort aan.", "Voeg bouillon (en eventueel eiwit) toe en laat garen.", "Pureer naar wens en serveer met het brood."); }
   else if (/poké|poke|buddha|burrito|bowl/.test(n)) { S.push(carb ? `Kook de ${low(carb)} en laat afkoelen.` : "Maak de basis klaar.", `Verdeel alles in een kom: ${prot ? low(prot) : "eiwit"}, ${vegTxt}.`, sauce ? `Werk af met ${low(sauce)}.` : "Werk af naar smaak."); }
-  else if (/kwark|skyr|hüttenkäse|yoghurt/.test(n) && fruit && !carb) { S.push(`Doe de ${dairy ? low(dairy) : "kwark"} in een kom.`, `Meng of top met ${low(fruit)}.`); }
+  else if (/kwark|skyr|hüttenkäse|yoghurt/.test(n) && !carb && (fruit || veg.length)) { const top = fruit || veg[0]; S.push(`Doe de ${dairy ? low(dairy) : "kwark"} in een kom.`, fruit ? `Meng of top met ${low(top)}.` : `Serveer met ${low(top)}.`); }
   else if (/kwark|skyr|yoghurt/.test(n) && carb) { S.push(`Doe de ${dairy ? low(dairy) : "kwark"} in een kom.`, `Roer de ${low(carb)} erdoor.`, fruit ? `Top met ${low(fruit)}.` : "Serveer direct."); }
+  else if (/rijstwafels/.test(n)) { const top = R.find((x) => x.slug !== "rice_cakes"); S.push(top ? `Beleg de rijstwafels met ${low(top)}.` : "Serveer de rijstwafels."); }
+  else if (/appel met|peer met|banaan met/.test(n)) { const top = R.find((x) => x.cat !== "fruit"); S.push(`Snijd ${fruit ? low(fruit) : "het fruit"} in partjes.`, top ? `Serveer met ${low(top)} om in te dippen.` : "Serveer direct."); }
   else if (/noten|amandelen|walnoten|pompoenpitten/.test(n)) { S.push("Weeg de portie af.", "Serveer als snack tussendoor."); }
   else if (/reep/.test(n)) { S.push("Pak de proteïnereep als snack onderweg."); }
   else if (/edamame/.test(n)) { S.push("Kook of stoom de edamame 4–5 min.", "Bestrooi met een snuf zeezout."); }

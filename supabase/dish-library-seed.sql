@@ -6209,14 +6209,12 @@ insert into public.dishes (slug,name_nl,name_en,moments,goals,items,tags,prefs,s
 2. Serveer als snack tussendoor.','core'),
 ('handful_of_walnuts','Handje walnoten','Handful of walnuts',ARRAY['snack'],ARRAY['maintain'],'[{"slug":"walnuts","g":30}]'::jsonb,ARRAY['vegetarian','vegan']::text[],ARRAY['nuts']::text[],'1. Weeg de portie af.
 2. Serveer als snack tussendoor.','core'),
-('rice_cakes_with_peanut_butter','Rijstwafels met pindakaas','Rice cakes with peanut butter',ARRAY['snack'],ARRAY['maintain'],'[{"slug":"rice_cakes","g":20},{"slug":"peanut_butter","g":20}]'::jsonb,ARRAY['vegetarian','vegan']::text[],ARRAY['ricecakepb']::text[],'1. Kook de rijstwafels volgens de verpakking.
-2. Verdeel over het bord en werk af.','core'),
-('rice_cakes_with_hummus','Rijstwafels met hummus','Rice cakes with hummus',ARRAY['snack'],ARRAY['maintain'],'[{"slug":"rice_cakes","g":20},{"slug":"hummus","g":40}]'::jsonb,ARRAY['vegetarian','vegan']::text[],ARRAY['ricecakepb']::text[],'1. Kook de rijstwafels volgens de verpakking.
-2. Roer de hummus erdoor of serveer ernaast.
-3. Verdeel over het bord en werk af.','core'),
-('apple_with_peanut_butter','Appel met pindakaas','Apple with peanut butter',ARRAY['snack'],ARRAY['maintain'],'[{"slug":"apple","g":150},{"slug":"peanut_butter","g":20}]'::jsonb,ARRAY['vegetarian','vegan']::text[],ARRAY['fruit']::text[],'1. Verdeel over het bord en werk af.','core'),
-('cottage_cheese_with_cucumber','Hüttenkäse met komkommer','Cottage cheese with cucumber',ARRAY['snack'],ARRAY['cut','maintain'],'[{"slug":"cottage","g":150},{"slug":"cucumber","g":80}]'::jsonb,ARRAY['vegetarian','high_protein']::text[],ARRAY['quark']::text[],'1. Stoom of wok komkommer beetgaar.
-2. Verdeel over het bord en werk af.','core'),
+('rice_cakes_with_peanut_butter','Rijstwafels met pindakaas','Rice cakes with peanut butter',ARRAY['snack'],ARRAY['maintain'],'[{"slug":"rice_cakes","g":20},{"slug":"peanut_butter","g":20}]'::jsonb,ARRAY['vegetarian','vegan']::text[],ARRAY['ricecakepb']::text[],'1. Beleg de rijstwafels met pindakaas.','core'),
+('rice_cakes_with_hummus','Rijstwafels met hummus','Rice cakes with hummus',ARRAY['snack'],ARRAY['maintain'],'[{"slug":"rice_cakes","g":20},{"slug":"hummus","g":40}]'::jsonb,ARRAY['vegetarian','vegan']::text[],ARRAY['ricecakepb']::text[],'1. Beleg de rijstwafels met hummus.','core'),
+('apple_with_peanut_butter','Appel met pindakaas','Apple with peanut butter',ARRAY['snack'],ARRAY['maintain'],'[{"slug":"apple","g":150},{"slug":"peanut_butter","g":20}]'::jsonb,ARRAY['vegetarian','vegan']::text[],ARRAY['fruit']::text[],'1. Snijd appel in partjes.
+2. Serveer met pindakaas om in te dippen.','core'),
+('cottage_cheese_with_cucumber','Hüttenkäse met komkommer','Cottage cheese with cucumber',ARRAY['snack'],ARRAY['cut','maintain'],'[{"slug":"cottage","g":150},{"slug":"cucumber","g":80}]'::jsonb,ARRAY['vegetarian','high_protein']::text[],ARRAY['quark']::text[],'1. Doe de hüttenkäse in een kom.
+2. Serveer met komkommer.','core'),
 ('poke_bowl_with_salmon_cucumber','Poké bowl met zalm & komkommer','Poké bowl with salmon & cucumber',ARRAY['lunch','dinner'],ARRAY['maintain'],'[{"slug":"salmon","g":120},{"slug":"rice_dry","g":65},{"slug":"cucumber","g":80},{"slug":"edamame","g":50},{"slug":"teriyaki","g":20}]'::jsonb,ARRAY[]::text[],ARRAY['poke']::text[],'1. Kook de witte rijst (droog) en laat afkoelen.
 2. Verdeel alles in een kom: zalmfilet, komkommer.
 3. Werk af met teriyakisaus.','core'),
@@ -6417,8 +6415,8 @@ insert into public.dishes (slug,name_nl,name_en,moments,goals,items,tags,prefs,s
 ('greek_yoghurt_with_granola','Griekse yoghurt met granola','Greek yoghurt with granola',ARRAY['snack'],ARRAY['maintain'],'[{"slug":"greek_yoghurt","g":150},{"slug":"granola","g":30}]'::jsonb,ARRAY['vegetarian']::text[],ARRAY[]::text[],'1. Doe de griekse yoghurt 2% in een kom.
 2. Schep de granola erover.
 3. Serveer direct.','core'),
-('apple_with_almonds','Appel met amandelen','Apple with almonds',ARRAY['snack'],ARRAY['maintain'],'[{"slug":"apple","g":150},{"slug":"almonds","g":20}]'::jsonb,ARRAY['vegetarian','vegan']::text[],ARRAY['fruit']::text[],'1. Weeg de portie af.
-2. Serveer als snack tussendoor.','core'),
+('apple_with_almonds','Appel met amandelen','Apple with almonds',ARRAY['snack'],ARRAY['maintain'],'[{"slug":"apple","g":150},{"slug":"almonds","g":20}]'::jsonb,ARRAY['vegetarian','vegan']::text[],ARRAY['fruit']::text[],'1. Snijd appel in partjes.
+2. Serveer met amandelen om in te dippen.','core'),
 ('tomato_soup_with_chicken','Tomatensoep met kip','Tomato soup with chicken',ARRAY['lunch'],ARRAY['cut','maintain'],'[{"slug":"tomato","g":250},{"slug":"chicken_breast","g":100},{"slug":"bread_whole","g":40},{"slug":"olive_oil","g":5}]'::jsonb,ARRAY['high_protein']::text[],ARRAY['soup']::text[],'1. Fruit de groente kort aan.
 2. Voeg bouillon (en eventueel eiwit) toe en laat garen.
 3. Pureer naar wens en serveer met het brood.','core'),
