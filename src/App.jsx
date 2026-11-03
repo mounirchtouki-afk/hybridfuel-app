@@ -1970,7 +1970,7 @@ export default function App() {
                         const on = sel.includes(o.id);
                         return <div key={o.id} onClick={() => toggleMeal(mo.id, o.id)} style={{ cursor: "pointer", border: `1px solid ${on ? EMBER : LINE}`, background: on ? EMBER : "transparent", color: on ? "#fff" : PAPER, borderRadius: 20, padding: "7px 12px", fontSize: 12, fontWeight: 600, ...disp }}>{o[lang]}</div>;
                       })}
-                      <div onClick={() => go("producten")} style={{ cursor: "pointer", border: `1px dashed ${SAGE}`, color: SAGE, borderRadius: 20, padding: "7px 12px", fontSize: 12, fontWeight: 700, ...disp }}>{lang === "nl" ? "+ toevoegen / scan" : "+ add / scan"}</div>
+                      <div onClick={() => { setPickTarget(null); setFabScan(false); setShowProducts(true); }} style={{ cursor: "pointer", border: `1px dashed ${SAGE}`, color: SAGE, borderRadius: 20, padding: "7px 12px", fontSize: 12, fontWeight: 700, ...disp }}>{lang === "nl" ? "+ toevoegen / scan" : "+ add / scan"}</div>
                     </div>
                   </div>
                 );
