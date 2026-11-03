@@ -73,5 +73,10 @@ drop policy if exists "dishes write own" on public.dishes;
 create policy "dishes write own" on public.dishes for all
   using (created_by = auth.uid()) with check (created_by = auth.uid());
 
+-- Leesrechten voor de app (anon = uitgelogd/plan-endpoint, authenticated = ingelogd).
+grant select on public.ingredients to anon, authenticated;
+grant select on public.dishes      to anon, authenticated;
+grant select on public.dish_macros to anon, authenticated;
+
 -- De 'core'-set (door ons gevuld) en gym-gedeelde gerechten worden server-side
 -- (service-role) geschreven; die omzeilt RLS. Leden zien ze via de read-policy's.

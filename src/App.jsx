@@ -1098,7 +1098,12 @@ export default function App() {
   function common() {
     const dietObj = DIETS.find((d) => d.id === diet);
     const mealPrefLabels = MEAL_MOMENTS.reduce((acc, mo) => { acc[mo.id] = (mealPrefs[mo.id] || []).map((id) => { if (typeof id === "string" && id.indexOf("prod:") === 0) { const p = userProducts.find((x) => ("prod:" + x.id) === id); return p ? p.name : null; } const o = MEAL_OPTIONS[mo.id].find((x) => x.id === id); return o ? o[lang] : id; }).filter(Boolean); return acc; }, {});
-    return { sex, age, height, weight, activity, goal, diet: dietObj ? dietObj[lang] : diet, avoid, likes, cuisines: labelsOf(cuisines, CUISINES), proteins: labelsOf(proteins, PROTEINS), snacks, snackLikes, snackLikeLabels: labelsOf(snackLikes, SNACKS), mealPrefs: mealPrefLabels, variety, lang };
+    // Ruwe keuze-ids (chip-ids + prod:<id>) voor de database-first plan-bouw.
+    const mealPrefIds = MEAL_MOMENTS.reduce((acc, mo) => { acc[mo.id] = (mealPrefs[mo.id] || []).slice(); return acc; }, {});
+    // Gekozen eigen producten (met macro's) zodat de server er direct een maaltijd van maakt.
+    const chosenProducts = [];
+    MEAL_MOMENTS.forEach((mo) => (mealPrefs[mo.id] || []).forEach((id) => { if (typeof id === "string" && id.indexOf("prod:") === 0) { const p = userProducts.find((x) => ("prod:" + x.id) === id); if (p) chosenProducts.push({ moment: mo.id, name: p.name, per_100: p.per_100 || {} }); } }));
+    return { sex, age, height, weight, activity, goal, diet: dietObj ? dietObj[lang] : diet, avoid, likes, cuisines: labelsOf(cuisines, CUISINES), proteins: labelsOf(proteins, PROTEINS), snacks, snackLikes, snackLikeLabels: labelsOf(snackLikes, SNACKS), mealPrefs: mealPrefLabels, mealPrefIds, chosenProducts, variety, lang };
   }
   function currentIntake() { return { ...common(), trainingDays: [...trainingDays] }; }
 

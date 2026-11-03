@@ -382,6 +382,125 @@ Return ONLY valid JSON, no markdown, exactly this shape (keep the JSON keys in E
 ${L.example}`;
 }
 
+// ============================================================================
+// DATABASE-FIRST: bouw het plan uit de gerechten-bibliotheek (Supabase).
+// Matcht gerechten op de gekozen eetmoment-keuzes, schaalt porties naar de
+// dagdoelen. AI wordt alleen het vangnet als een moment geen enkel gerecht heeft.
+// ============================================================================
+function supaBase() {
+  const url = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "https://tkmyjpsmdijaalwgzqdy.supabase.co").replace(/\/$/, "");
+  const anon = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || "sb_publishable_5CJ_waXIVhhzkkqD96iqMA_63yJJnaH";
+  return { url, anon, headers: { apikey: anon, Authorization: "Bearer " + anon } };
+}
+let _ingCache = null, _ingAt = 0;
+async function getIngredients() {
+  if (_ingCache && (Date.now() - _ingAt) < 600000) return _ingCache;
+  const { url, headers } = supaBase();
+  try {
+    const r = await fetch(url + "/rest/v1/ingredients?select=slug,name_nl,name_en,kcal,protein,carbs,fat", { headers });
+    if (!r.ok) return _ingCache || {};
+    const rows = await r.json().catch(() => []);
+    const map = {}; (rows || []).forEach((x) => { map[x.slug] = x; });
+    if (Object.keys(map).length) { _ingCache = map; _ingAt = Date.now(); }
+    return _ingCache || map;
+  } catch (e) { return _ingCache || {}; }
+}
+function dishMac(items, ing) {
+  let kcal = 0, p = 0, c = 0, f = 0;
+  for (const it of items || []) { const m = ing[it.slug]; if (!m) continue; const k = (it.g || 0) / 100; kcal += m.kcal * k; p += m.protein * k; c += m.carbs * k; f += m.fat * k; }
+  return { kcal, p, c, f };
+}
+async function fetchDishes(moment, chipIds) {
+  const { url, headers } = supaBase();
+  let q = url + "/rest/v1/dishes?select=slug,name_nl,name_en,moments,goals,items,tags,prefs&active=eq.true&source=eq.core&moments=ov.%7B" + encodeURIComponent(moment) + "%7D&limit=400";
+  if (chipIds && chipIds.length) q += "&prefs=ov.%7B" + chipIds.map(encodeURIComponent).join(",") + "%7D";
+  try {
+    const r = await fetch(q, { headers });
+    if (!r.ok) return [];
+    return (await r.json().catch(() => [])) || [];
+  } catch (e) { return []; }
+}
+async function buildFromLibrary(body, cyc) {
+  const lang = body.lang === "en" ? "en" : "nl";
+  const ing = await getIngredients();
+  if (!ing || !Object.keys(ing).length) return { complete: false };
+  const nSnack = Math.max(0, Math.min(3, parseInt(body.snacks, 10) || 0));
+  const prefIds = (body.mealPrefIds && typeof body.mealPrefIds === "object") ? body.mealPrefIds : {};
+  const chosenProducts = Array.isArray(body.chosenProducts) ? body.chosenProducts : [];
+  const diet = cleanStr(body.diet, 40) || "";
+  const avoid = (cleanStr(body.avoid, 200) || "").toLowerCase().split(/[,;\n]/).map((s) => s.trim()).filter((x) => x.length > 2);
+  const isVegan = /vegan|veganis/i.test(diet);
+  const isVeg = /vegetar/i.test(diet);
+  const name = (m) => (m ? m["name_" + lang] || m.name_en || m.name_nl : "");
+  const filt = (rows) => (rows || []).filter((d) => {
+    if (isVegan && !(d.tags || []).includes("vegan")) return false;
+    if (isVeg && !(d.tags || []).includes("vegetarian")) return false;
+    if (avoid.length && (d.items || []).some((it) => { const m = ing[it.slug]; if (!m) return false; const nm = ((m.name_nl || "") + " " + (m.name_en || "")).toLowerCase(); return avoid.some((a) => nm.includes(a)); })) return false;
+    return true;
+  });
+  const cache = {};
+  async function candidatesFor(momId) {
+    if (cache[momId]) return cache[momId];
+    const chips = (prefIds[momId] || []).filter((x) => typeof x === "string" && x.indexOf("prod:") !== 0);
+    let rows = filt(await fetchDishes(momId, chips));
+    if (chips.length && !rows.length) rows = filt(await fetchDishes(momId, null)); // keuze zonder match -> algemene set
+    if (!rows.length) rows = filt(await fetchDishes(momId, null));
+    cache[momId] = rows;
+    return rows;
+  }
+  function scaleDish(dish, targetKcal) {
+    const base = dishMac(dish.items, ing);
+    if (!(base.kcal > 0)) return null;
+    let factor = targetKcal / base.kcal;
+    factor = Math.max(0.45, Math.min(2.6, factor));
+    const items = (dish.items || []).map((it) => ({ n: name(ing[it.slug]) || it.slug, g: Math.round(it.g * factor) }));
+    const mac = dishMac((dish.items || []).map((it) => ({ slug: it.slug, g: it.g * factor })), ing);
+    return { t: null, n: name(dish), kcal: Math.round(mac.kcal), p: Math.round(mac.p), c: Math.round(mac.c), f: Math.round(mac.f), ing: items };
+  }
+  function scaleProduct(prod, targetKcal) {
+    const per = prod.per_100 || {}; const k100 = Number(per.kcal) || 0; if (!(k100 > 0)) return null;
+    let g = Math.round(targetKcal / (k100 / 100)); g = Math.max(30, Math.min(600, g));
+    const f2 = g / 100;
+    return { t: null, n: prod.name, kcal: Math.round(k100 * f2), p: Math.round((Number(per.p) || 0) * f2), c: Math.round((Number(per.c) || 0) * f2), f: Math.round((Number(per.f) || 0) * f2), ing: [{ n: prod.name, g }] };
+  }
+  const moments = [
+    { id: "breakfast", label: lang === "en" ? "Breakfast" : "Ontbijt", share: 0.30, rot: 0 },
+    { id: "lunch", label: lang === "en" ? "Lunch" : "Lunch", share: 0.35, rot: 1 },
+    { id: "dinner", label: lang === "en" ? "Dinner" : "Diner", share: 0.35, rot: 2 },
+  ];
+  const snackLabel = lang === "en" ? "Snack" : "Tussendoortje";
+  const reqs = (Array.isArray(body.request) && body.request.length) ? body.request.slice(0, 3) : [{ label: "D1", level: "base" }];
+  const days = [];
+  for (let ti = 0; ti < reqs.length; ti++) {
+    const r = reqs[ti];
+    const dayT = r.level === "train" ? cyc.train : r.level === "rest" ? cyc.rest : cyc.base;
+    const snackKcal = nSnack > 0 ? Math.max(120, Math.round(dayT.kcal * 0.10)) : 0;
+    const mainKcal = dayT.kcal - snackKcal * nSnack;
+    const meals = [];
+    let miss = false;
+    for (const md of moments) {
+      const tgt = Math.round(mainKcal * md.share);
+      const prods = chosenProducts.filter((p) => p.moment === md.id);
+      let meal = prods.length ? scaleProduct(prods[ti % prods.length], tgt) : null;
+      if (!meal) { const cands = await candidatesFor(md.id); if (cands.length) meal = scaleDish(cands[(ti * 3 + md.rot) % cands.length], tgt); }
+      if (!meal) { miss = true; break; }
+      meal.t = md.label; meals.push(meal);
+    }
+    if (miss) return { complete: false };
+    for (let s = 0; s < nSnack; s++) {
+      const prods = chosenProducts.filter((p) => p.moment === "snack");
+      let meal = prods.length ? scaleProduct(prods[(ti + s) % prods.length], snackKcal) : null;
+      if (!meal) { const cands = await candidatesFor("snack"); if (cands.length) meal = scaleDish(cands[(ti * 2 + s) % cands.length], snackKcal); }
+      if (!meal) { miss = true; break; }
+      meal.t = snackLabel; meals.push(meal);
+    }
+    if (miss) return { complete: false };
+    days.push({ d: r.label, m: meals });
+  }
+  if (!days.length) return { complete: false };
+  return { complete: true, plan: { days } };
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
@@ -413,6 +532,18 @@ export default async function handler(req, res) {
     const paidVerified = isPaid && (trusted || access || validToken(body.token));
     if (!trusted && !paidVerified) {
       return res.status(200).json({ targets, plan: null, locked: true });
+    }
+
+    // DATABASE-FIRST: voor abonnees/gym-leden (en automatisering) eerst uit de
+    // gerechten-bibliotheek bouwen — gratis, instant, geen AI-kosten, geen credit.
+    // Alleen als een eetmoment geen enkel passend gerecht heeft, valt 't door naar AI.
+    if (trusted || access) {
+      try {
+        const lib = await buildFromLibrary(body, cyc);
+        if (lib && lib.complete && lib.plan && lib.plan.days && lib.plan.days.length) {
+          return res.status(200).json({ targets, plan: lib.plan, source: "library" });
+        }
+      } catch (e) { /* bibliotheek onbereikbaar → AI-vangnet hieronder */ }
     }
 
     // BETAALD (of vertrouwde automatisering): AI-generatie, met rate-limit als backstop.
@@ -565,4 +696,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "Serverfout", detail: String(e).slice(0, 200) });
   }
 }
+
 
