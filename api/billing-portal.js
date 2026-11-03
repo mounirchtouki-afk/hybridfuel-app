@@ -233,6 +233,18 @@ export default async function handler(req, res) {
         try { const cr = await fetch(supaUrl + "/rest/v1/org_members?select=auth_user_id&org_id=eq." + encodeURIComponent(orgId) + "&role=eq.coach", { headers: sv }); if (cr.ok) return (await cr.json().catch(() => [])).map((r) => r.auth_user_id).filter(Boolean); } catch (e) {}
         return [];
       }
+      // FK-verwijzingen losmaken die een auth-user-delete blokkeren (geen cascade).
+      async function detachUser(uid) {
+        if (!uid) return;
+        const h = { ...sv, "Content-Type": "application/json", Prefer: "return=minimal" };
+        try { await fetch(supaUrl + "/rest/v1/org_config?terms_accepted_by=eq." + encodeURIComponent(uid), { method: "PATCH", headers: h, body: JSON.stringify({ terms_accepted_by: null }) }); } catch (e) {}
+        try { await fetch(supaUrl + "/rest/v1/orgs?owner_user_id=eq." + encodeURIComponent(uid), { method: "PATCH", headers: h, body: JSON.stringify({ owner_user_id: null }) }); } catch (e) {}
+      }
+      async function deleteAuthUser(uid) {
+        if (!uid || uid === userId) return { ok: false };
+        await detachUser(uid);
+        try { return await fetch(supaUrl + "/auth/v1/admin/users/" + encodeURIComponent(uid), { method: "DELETE", headers: sv }); } catch (e) { return { ok: false }; }
+      }
 
       if (op === "admin.deleteGym") {
         // SOFT delete: markeer verwijderd + blokkeer coach-login. Herstelbaar via prullenbak.
@@ -257,7 +269,7 @@ export default async function handler(req, res) {
         const coachIds = await coachesOf(orgId);
         const del = await fetch(supaUrl + "/rest/v1/orgs?id=eq." + encodeURIComponent(orgId), { method: "DELETE", headers: { ...sv, Prefer: "return=minimal" } });
         if (!del.ok) { const txt = await del.text().catch(() => ""); return res.status(502).json({ error: "purge_failed", detail: txt.slice(0, 200) }); }
-        for (const cid of coachIds) { if (cid && cid !== userId) { try { await fetch(supaUrl + "/auth/v1/admin/users/" + encodeURIComponent(cid), { method: "DELETE", headers: sv }); } catch (e) {} } }
+        for (const cid of coachIds) { await deleteAuthUser(cid); }
         return res.status(200).json({ ok: true });
       }
 
@@ -279,8 +291,8 @@ export default async function handler(req, res) {
         const target = String(body.targetUserId || "").trim();
         if (!target) return res.status(400).json({ error: "no_user" });
         if (target === userId) return res.status(400).json({ error: "cannot_delete_self" });
-        const del = await fetch(supaUrl + "/auth/v1/admin/users/" + encodeURIComponent(target), { method: "DELETE", headers: sv });
-        if (!del.ok) { const txt = await del.text().catch(() => ""); return res.status(502).json({ error: "purge_failed", detail: txt.slice(0, 200) }); }
+        const del = await deleteAuthUser(target);
+        if (!del.ok) { const txt = del.text ? await del.text().catch(() => "") : ""; return res.status(502).json({ error: "purge_failed", detail: txt.slice(0, 200) }); }
         return res.status(200).json({ ok: true });
       }
       if (op === "admin.listTrash") {
