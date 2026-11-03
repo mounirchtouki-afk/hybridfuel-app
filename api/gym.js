@@ -14,6 +14,21 @@ import {
 } from "./_gym.js";
 
 const ALL_MODULES = ["members", "classes", "pt", "plans", "branding", "formula"];
+const MAIL_WEBHOOK = process.env.RENEWAL_WEBHOOK || "https://hook.eu1.make.com/1o3ll8fvbtyewn9wyfrax5sd9ywofnln";
+
+// Code-mail voor een nieuw lid, in de huisstijl van de sportschool (brand-kleur).
+function memberCodeEmailHtml(gymName, memberName, code, joinUrl, brand) {
+  const c = /^#[0-9a-fA-F]{6}$/.test(brand || "") ? brand : "#E11D48";
+  const btn = "<a href='" + joinUrl + "' style='display:inline-block;background:" + c + ";color:#ffffff;text-decoration:none;font-weight:bold;padding:14px 26px;border-radius:10px;font-size:15px'>Open de app</a>";
+  return "<div style='font-family:Arial,Helvetica,sans-serif;color:#141215;max-width:560px;line-height:1.6;margin:0 auto'>" +
+    "<div style='font-weight:800;font-size:22px;color:" + c + ";margin-bottom:4px'>" + (gymName || "") + "</div>" +
+    "<p style='font-size:17px;font-weight:bold;margin:14px 0 6px'>Hoi " + (memberName || "") + " 💪</p>" +
+    "<p>Je hebt toegang gekregen tot de voedings- en trainingsapp van " + (gymName || "je sportschool") + ". Open de app en log in met je persoonlijke code:</p>" +
+    "<p style='font-size:30px;font-weight:800;letter-spacing:8px;color:" + c + ";margin:10px 0'>" + code + "</p>" +
+    "<p style='margin:22px 0'>" + btn + "</p>" +
+    "<p style='font-size:14px;color:#67646E'>Werkt de knop niet? Ga naar: " + joinUrl + "</p>" +
+    "<p>Succes met trainen!<br>" + (gymName || "HybridFuelCo") + "</p></div>";
+}
 
 // Platte vorm die de rekenmotor (api/plan.js) direct begrijpt. Alleen deze waarden
 // zijn instelbaar; BMR (Mifflin), activiteitsfactoren en de veiligheidsvloer staan vast.
@@ -135,7 +150,22 @@ async function create(req, res, body) {
   if (!orgId) return res.status(403).json({ error: "not_a_coach" });
   try {
     const m = await createOneMember(orgId, body.display_name, body.tier);
-    return res.status(200).json({ ok: true, ...m });
+    // Optioneel: de code automatisch naar het lid mailen (in de huisstijl van de gym).
+    let emailSent = false;
+    const email = String(body.email || "").trim().toLowerCase();
+    if (email && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) && m.code) {
+      try {
+        const or = await rest("orgs?select=slug,name&id=eq." + encodeURIComponent(orgId) + "&limit=1");
+        const org = ((or.ok ? await or.json().catch(() => []) : [])[0]) || {};
+        const cr = await rest("org_config?select=brand_color&org_id=eq." + encodeURIComponent(orgId) + "&limit=1");
+        const brand = (((cr.ok ? await cr.json().catch(() => []) : [])[0]) || {}).brand_color || "#E11D48";
+        const base = (String(body.appOrigin || "").replace(/\/$/, "")) || ((req.headers["x-forwarded-proto"] || "https").split(",")[0] + "://" + (req.headers["x-forwarded-host"] || req.headers.host));
+        const joinUrl = base + "/join/" + (org.slug || "");
+        const mr = await fetch(MAIL_WEBHOOK, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ to: email, subject: "Je toegang tot " + (org.name || "de app"), html: memberCodeEmailHtml(org.name, body.display_name, m.code, joinUrl, brand) }) });
+        emailSent = mr.ok;
+      } catch (e) {}
+    }
+    return res.status(200).json({ ok: true, ...m, emailSent });
   } catch (err) {
     return res.status(502).json({ error: err.message || "create_failed", detail: err.detail });
   }

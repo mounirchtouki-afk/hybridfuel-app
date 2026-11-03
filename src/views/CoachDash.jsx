@@ -83,6 +83,7 @@ export default function CoachDash({ session, org, isOwner, perms, lang, isAdmin,
   const [newName, setNewName] = useState("");
   const [newFirst, setNewFirst] = useState("");
   const [newLast, setNewLast] = useState("");
+  const [newEmail, setNewEmail] = useState("");
   const [newPlan, setNewPlan] = useState("");
   const [openMEdit, setOpenMEdit] = useState(null); // lid-id waarvan de bewerk-editor open staat
   const [meFirst, setMeFirst] = useState("");
@@ -423,12 +424,12 @@ export default function CoachDash({ session, org, isOwner, perms, lang, isAdmin,
     if (!name || busy) return;
     setBusy(true); setErr("");
     try {
-      const r = await fetch(apiUrl("/api/gym"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "create", authToken: await freshToken(), display_name: name, tier: newTier }) });
+      const r = await fetch(apiUrl("/api/gym"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "create", authToken: await freshToken(), display_name: name, tier: newTier, email: newEmail.trim(), appOrigin: (typeof window !== "undefined" ? window.location.origin : "") }) });
       const d = await r.json().catch(() => ({}));
       if (!r.ok || !d.code) { setErr(t("Aanmaken mislukt.", "Create failed.")); setBusy(false); return; }
       // Abonnement meteen koppelen als gekozen (guarded; plan_id-kolom bestaat na migratie).
       if (newPlan && d.member_id) { try { await supabase.from("org_members").update({ plan_id: newPlan }).eq("id", d.member_id); } catch (e) {} }
-      setCodeShown({ name, code: d.code }); setNewFirst(""); setNewLast(""); setNewPlan(""); setBusy(false); load();
+      setCodeShown({ name, code: d.code, email: newEmail.trim(), emailSent: !!d.emailSent }); setNewFirst(""); setNewLast(""); setNewEmail(""); setNewPlan(""); setBusy(false); load();
     } catch (e) { setErr(t("Aanmaken mislukt.", "Create failed.")); setBusy(false); }
   }
   // Lid bewerken: voor- en achternaam (uit display_name gesplitst) + code opnieuw sturen.
@@ -1142,6 +1143,9 @@ export default function CoachDash({ session, org, isOwner, perms, lang, isAdmin,
           <div style={{ ...card, border: `1px solid ${color}`, background: "linear-gradient(180deg, rgba(255,255,255,0.04), transparent 70%)" }}>
             <div style={{ fontSize: 12.5, color: MUTED, marginBottom: 6 }}>{t("Code voor", "Code for")} <strong style={{ color: PAPER }}>{codeShown.name}</strong> {t("(geef 'm door, hij is nu niet meer te zien)", "(share it now, it won't show again)")}</div>
             <div style={{ ...disp, fontSize: 30, fontWeight: 800, letterSpacing: 6, color }}>{codeShown.code}</div>
+            {codeShown.email && (codeShown.emailSent
+              ? <div style={{ fontSize: 12, color: "#16A34A", fontWeight: 700, marginTop: 8 }}>✓ {t("Code gemaild naar ", "Code emailed to ")}{codeShown.email}</div>
+              : <div style={{ fontSize: 12, color: EMBER_SOFT, fontWeight: 700, marginTop: 8 }}>{t("Mail niet verstuurd — geef de code zelf door.", "Email not sent — share the code yourself.")}</div>)}
             <div onClick={() => setCodeShown(null)} style={{ cursor: "pointer", marginTop: 10, fontSize: 12.5, color: MUTED, textAlign: "right" }}>{t("Sluiten", "Close")}</div>
           </div>
         )}
@@ -1164,6 +1168,7 @@ export default function CoachDash({ session, org, isOwner, perms, lang, isAdmin,
               : <span style={{ display: isWide ? "block" : "none" }} />}
             <div onClick={addMember} style={{ cursor: busy ? "default" : "pointer", opacity: busy ? 0.7 : 1, background: color, color: "#fff", padding: "11px 18px", borderRadius: 8, ...disp, fontWeight: 700, fontSize: 13.5, letterSpacing: 0.3, whiteSpace: "nowrap", textAlign: "center" }}>{busy ? t("Bezig…", "…") : t("Aanmaken", "Create")}</div>
           </div>
+          <input style={{ ...input, marginTop: 8 }} type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") addMember(); }} placeholder={t("E-mail (optioneel — code wordt dan automatisch gemaild)", "Email (optional — code is then emailed automatically)")} />
           <div style={{ fontSize: 11, color: MUTED, marginTop: 7, lineHeight: 1.5 }}>{t("basis = voeding + rooster · pro = ook persoonlijke PT · abo bepaalt les/PT-toegang", "basis = nutrition + schedule · pro = also personal PT · plan sets class/PT access")}</div>
           <div style={{ fontSize: 11.5, color: MUTED, marginTop: 10, lineHeight: 1.5 }}>{t("Deel de join-link + code met je lid:", "Share the join link + code with your member:")} <span style={{ color: PAPER }}>{joinUrl}</span></div>
           {err && <div style={{ fontSize: 12, color: EMBER_SOFT, marginTop: 8 }}>{err}</div>}
