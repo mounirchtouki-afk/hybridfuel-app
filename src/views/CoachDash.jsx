@@ -38,7 +38,7 @@ function MultiPick({ options, selected, onToggle, placeholder, color }) {
 
 // Coach-dashboard: verschijnt als een ingelogde gebruiker de rol 'coach' heeft.
 // Toont de leden + voortgang, en laat de coach leden aanmaken (met code) + code resetten.
-export default function CoachDash({ session, org, isOwner, perms, lang, isAdmin, onLogout }) {
+export default function CoachDash({ session, org, isOwner, perms, lang, isAdmin, onLogout, onExit }) {
   const t = (nl, en) => (lang === "nl" ? nl : en);
   const color = (org && org.brand_color) || "#E11D48";
   const token = session && session.access_token;
@@ -859,6 +859,12 @@ export default function CoachDash({ session, org, isOwner, perms, lang, isAdmin,
         <div style={{ ...disp, fontWeight: 700, fontSize: 12.5, color: PAPER, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{myName || t("Beheerder", "Admin")}</div>
         <div style={{ fontSize: 10.5, color: MUTED }}>{isOwner ? t("Eigenaar", "Owner") : t("Coach", "Coach")}</div>
       </div>
+      {onExit && (
+        <div onClick={onExit} title={t("Naar de app", "To the app")} style={{ cursor: "pointer", color: PAPER, display: "flex", alignItems: "center", gap: 6, padding: "0 10px", height: 30, borderRadius: 8, border: `1px solid ${LINE}`, fontSize: 12, fontWeight: 700, ...disp }}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><path d="M9 22V12h6v10" /></svg>
+          {t("App", "App")}
+        </div>
+      )}
       <div onClick={onLogout} title={t("Uitloggen", "Log out")} style={{ cursor: "pointer", color: MUTED, display: "grid", placeItems: "center", width: 30, height: 30, borderRadius: 8, border: `1px solid ${LINE}` }}>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="M16 17l5-5-5-5M21 12H9" /></svg>
       </div>

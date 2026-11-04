@@ -1,6 +1,6 @@
 {
   "name": "hybridfuel-app",
-  "version": "0.0.66",
+  "version": "0.0.67",
   "private": true,
   "scripts": {
     "dev": "vite",

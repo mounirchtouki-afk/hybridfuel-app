@@ -631,6 +631,7 @@ export default function App() {
 
   // App-navigatie + PWA
   const [tab, setTab] = useState("dashboard");
+  const [dashOpen, setDashOpen] = useState(false); // coach: coach-dashboard open? (niet meer gedwongen bij login)
   const [showMore, setShowMore] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
   const [showReminders, setShowReminders] = useState(false);
@@ -1888,7 +1889,10 @@ export default function App() {
     try { return localStorage.getItem("hf_gymslug") || null; } catch (e) { return null; } // onthouden gym → terug naar code-login na uitloggen
   })();
   if (joinSlug && !session) return <Join slug={joinSlug} lang={lang} />;
-  if (session && gymCtx && gymCtx.role === "coach") return <CoachDash session={session} org={gymCtx.org} isOwner={gymCtx.isOwner} perms={gymCtx.perms} lang={lang} isAdmin={isAdmin} onLogout={confirmLogout} />;
+  const isCoach = !!(session && gymCtx && gymCtx.role === "coach");
+  // Coach wordt NIET meer gedwongen het dashboard in: je landt in de gewone app en
+  // opent het coach-dashboard zelf via de knop in de header.
+  if (isCoach && dashOpen) return <CoachDash session={session} org={gymCtx.org} isOwner={gymCtx.isOwner} perms={gymCtx.perms} lang={lang} isAdmin={isAdmin} onLogout={confirmLogout} onExit={() => setDashOpen(false)} />;
 
   return (
     <div style={{ minHeight: "100vh", background: isGymMember ? INK : "var(--hf-bg)", backgroundAttachment: "fixed", position: "relative", color: PAPER, fontFamily: "Inter, sans-serif", paddingBottom: `calc(${98 + consentH}px + env(safe-area-inset-bottom))` }}>
@@ -1921,6 +1925,12 @@ export default function App() {
             <span style={{ fontSize: 9.5, color: MUTED, letterSpacing: 1, textTransform: "uppercase", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{isGymMember ? "Powered by HybridFuel" : T("tagline")}</span>
           </div>
         </div>
+        {isCoach && (
+          <div onClick={() => setDashOpen(true)} title={lang === "nl" ? "Coachdashboard" : "Coach dashboard"} style={{ cursor: "pointer", height: 32, borderRadius: 16, border: `1px solid ${EMBER}`, background: "rgba(var(--hf-ember-rgb),0.14)", color: EMBER, display: "flex", alignItems: "center", gap: 6, padding: "0 12px", flexShrink: 0, ...disp, fontSize: 12, fontWeight: 700 }}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9"><rect x="3" y="3" width="7" height="9" rx="1.5" /><rect x="14" y="3" width="7" height="5" rx="1.5" /><rect x="14" y="12" width="7" height="9" rx="1.5" /><rect x="3" y="16" width="7" height="5" rx="1.5" /></svg>
+            {lang === "nl" ? "Dashboard" : "Dashboard"}
+          </div>
+        )}
         <div onClick={() => setShowReminders(true)} title="Reminders" style={{ cursor: "pointer", width: 32, height: 32, borderRadius: "50%", border: `1px solid ${LINE}`, background: "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={MUTED} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0" /></svg>
         </div>
