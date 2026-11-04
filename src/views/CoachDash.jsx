@@ -426,7 +426,7 @@ export default function CoachDash({ session, org, isOwner, perms, lang, isAdmin,
     try {
       const r = await fetch(apiUrl("/api/gym"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "create", authToken: await freshToken(), display_name: name, tier: newTier, email: newEmail.trim(), appOrigin: webBase() }) });
       const d = await r.json().catch(() => ({}));
-      if (!r.ok || !d.code) { setErr(t("Aanmaken mislukt.", "Create failed.")); setBusy(false); return; }
+      if (!r.ok || !d.code) { const why = (d && (d.detail || d.error)) ? " (" + (d.detail || d.error) + ")" : (r.status ? " (" + r.status + ")" : ""); setErr(t("Aanmaken mislukt", "Create failed") + why + "."); setBusy(false); return; }
       // Abonnement meteen koppelen als gekozen (guarded; plan_id-kolom bestaat na migratie).
       if (newPlan && d.member_id) { try { await supabase.from("org_members").update({ plan_id: newPlan }).eq("id", d.member_id); } catch (e) {} }
       setCodeShown({ name, code: d.code, email: newEmail.trim(), emailSent: !!d.emailSent }); setNewFirst(""); setNewLast(""); setNewEmail(""); setNewPlan(""); setBusy(false); load();
