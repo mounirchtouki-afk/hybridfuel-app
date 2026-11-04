@@ -1,4 +1,4 @@
-import { apiUrl } from "../apiBase";
+import { apiUrl, webBase } from "../apiBase";
 import React, { useState, useEffect } from "react";
 import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, disp, input, label, sectionTitle, primaryBtn, ghostBtn } from "../shared.js";
 import { supabase, supaReady } from "../supabaseClient.js";
@@ -124,7 +124,7 @@ export default function Auth({ lang, session, tier, recovery, onClose, gym, onCo
     setErr(""); setMsg(""); setBusy(true);
     try {
       if (mode === "forgot") {
-        const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: window.location.origin });
+        const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: webBase() });
         if (error) throw error;
         setMsg(t("resetSent"));
       } else if (mode === "signup") {

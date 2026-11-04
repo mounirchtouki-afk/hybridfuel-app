@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { INK, INK2, PAPER, MUTED, LINE, EMBER, disp } from "../shared.js";
-import { apiUrl } from "../apiBase";
+import { apiUrl, webBase } from "../apiBase";
 
 const GREEN = "#16A34A";
 
@@ -228,7 +228,7 @@ function GymEditor({ token, lang, gym, accent, onBack }) {
     setBusy(true); setErr("");
     try {
       if (f._new) {
-        const d = await call(token, "admin.createGym", { ...f, redirectTo: (typeof window !== "undefined" ? window.location.origin : "") });
+        const d = await call(token, "admin.createGym", { ...f, redirectTo: webBase() });
         if (f.license_start || f.license_end || f.license_status || f.license_tier) await call(token, "admin.updateGym", { orgId: d.orgId, license_tier: f.license_tier, license_status: f.license_status, license_start: f.license_start, license_end: f.license_end });
         setCreated(d); setBusy(false); return;
       }

@@ -1,4 +1,4 @@
-import { apiUrl } from "../apiBase";
+import { apiUrl, webBase } from "../apiBase";
 import React, { useState, useEffect } from "react";
 import { INK, INK2, PAPER, MUTED, LINE, SAGE, EMBER_SOFT, disp, sectionTitle, applyOrgTheme, THEME_TEMPLATES } from "../shared.js";
 import { supabase } from "../supabaseClient.js";
@@ -186,7 +186,7 @@ export default function CoachDash({ session, org, isOwner, perms, lang, isAdmin,
   const [sBusy, setSBusy] = useState(false);
   const [sErr, setSErr] = useState("");
 
-  const joinUrl = (typeof window !== "undefined" ? window.location.origin : "") + "/join/" + (org && org.slug);
+  const joinUrl = webBase() + "/join/" + (org && org.slug);
 
   async function load() {
     if (!supabase) return;
@@ -424,7 +424,7 @@ export default function CoachDash({ session, org, isOwner, perms, lang, isAdmin,
     if (!name || busy) return;
     setBusy(true); setErr("");
     try {
-      const r = await fetch(apiUrl("/api/gym"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "create", authToken: await freshToken(), display_name: name, tier: newTier, email: newEmail.trim(), appOrigin: (typeof window !== "undefined" ? window.location.origin : "") }) });
+      const r = await fetch(apiUrl("/api/gym"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "create", authToken: await freshToken(), display_name: name, tier: newTier, email: newEmail.trim(), appOrigin: webBase() }) });
       const d = await r.json().catch(() => ({}));
       if (!r.ok || !d.code) { setErr(t("Aanmaken mislukt.", "Create failed.")); setBusy(false); return; }
       // Abonnement meteen koppelen als gekozen (guarded; plan_id-kolom bestaat na migratie).
