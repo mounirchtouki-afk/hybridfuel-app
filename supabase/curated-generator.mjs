@@ -152,6 +152,12 @@ const ING = [
   ["endive","Andijvie","Endive",17,1.3,3,0.2,"groente"],
   ["oyster_sauce","Oestersaus","Oyster sauce",51,2,11,0.3,"overig"],
   ["almond_butter","Amandelpasta","Almond butter",614,21,19,56,"noten"],
+  // blok 7
+  ["trout","Forel","Trout",140,20,0,6,"vis"],
+  ["mussels","Mosselen","Mussels",86,12,4,2,"vis"],
+  ["pomegranate","Granaatappel","Pomegranate",83,1.7,19,1.2,"fruit"],
+  ["melon","Meloen","Melon",34,0.8,8,0.2,"fruit"],
+  ["cherries","Kersen","Cherries",63,1,16,0.2,"fruit"],
 ];
 const IMAP = {}; ING.forEach((r) => { IMAP[r[0]] = { nl: r[1], en: r[2], kcal: r[3], p: r[4], c: r[5], f: r[6], cat: r[7] }; });
 
@@ -1140,6 +1146,187 @@ add("Skyr met dadels & walnoot","Skyr with dates & walnut",["snack"],
 add("Druiven met amandelen","Grapes with almonds",["snack"],
   [{slug:"grapes",g:120},{slug:"almonds",g:15}],
   {veg:true,vegan:true,tech:"assembly",steps:{nl:["Was de druiven.","Serveer met een handje amandelen als frisse, knapperige snack."],en:["Wash the grapes.","Serve with a handful of almonds as a fresh, crunchy snack."]}});
+
+// ========================= BLOK 7 (vis/zeevruchten, Perzisch/Ethiopisch/Scandinavisch) =========================
+// --- ontbijt ---
+add("Omelet met tomaat, bosui & magere kaas","Omelette with tomato, spring onion & low-fat cheese",["breakfast","lunch"],
+  [{slug:"egg",g:120},{slug:"egg_white",g:60},{slug:"tomato",g:60},{slug:"spring_onion",g:15},{slug:"low_fat_cheese",g:25}],
+  {veg:true,steps:{nl:["Klop het ei met het eiwit los.","Giet in een hete antiaanbakpan, strooi tomaat, bosui en magere kaas erover.","Vouw dubbel en laat kort nagaren."],en:["Whisk the egg with the egg white.","Pour into a hot non-stick pan, scatter tomato, spring onion and low-fat cheese over.","Fold and cook briefly."]}});
+
+add("Skyr met kersen & amandel","Skyr with cherries & almonds",["breakfast","snack"],
+  [{slug:"skyr",g:200},{slug:"cherries",g:80},{slug:"almonds",g:10}],
+  {veg:true,tech:"assembly",steps:{nl:["Schep de skyr in een kom.","Ontpit de kersen en verdeel erover.","Strooi grof gehakte amandelen erover."],en:["Spoon the skyr into a bowl.","Pit the cherries and scatter over.","Scatter roughly chopped almonds over."]}});
+
+add("Havermout met melk, banaan & pompoenpit","Oatmeal with milk, banana & pumpkin seeds",["breakfast"],
+  [{slug:"oats",g:70},{slug:"milk_semi",g:250},{slug:"banana",g:80},{slug:"pumpkin_seeds",g:10}],
+  {veg:true,steps:{nl:["Breng de havermout met de melk al roerend aan de kook en gaar 3–4 min.","Top met schijfjes banaan.","Strooi de pompoenpitten erover."],en:["Bring the oats and milk to a simmer, stirring, and cook 3–4 min.","Top with banana slices.","Scatter the pumpkin seeds over."]}});
+
+add("Volkorenbrood met ei, avocado & rucola","Wholegrain bread with egg, avocado & rocket",["breakfast","lunch"],
+  [{slug:"bread_whole",g:80},{slug:"egg",g:55},{slug:"avocado",g:45},{slug:"rocket",g:20}],
+  {veg:true,steps:{nl:["Rooster het volkorenbrood.","Prak de avocado met citroen en peper erop.","Leg een gepocheerd ei en wat rucola erop."],en:["Toast the wholegrain bread.","Mash the avocado with lemon and pepper on top.","Top with a poached egg and some rocket."]}});
+
+add("Kwark-smoothiebowl met bosvruchten & granola","Quark smoothie bowl with mixed berries & granola",["breakfast"],
+  [{slug:"quark_lowfat",g:200},{slug:"mixed_berries",g:100},{slug:"banana",g:60},{slug:"granola",g:25}],
+  {veg:true,tech:"blender",steps:{nl:["Mix de kwark, bosvruchten en banaan tot een dikke smoothie.","Schep in een kom.","Strooi de granola erover."],en:["Blend the quark, mixed berries and banana into a thick smoothie.","Spoon into a bowl.","Scatter the granola over."]}});
+
+add("Vegan havermout met havermelk, appel & kaneel","Vegan oatmeal with oat milk, apple & cinnamon",["breakfast"],
+  [{slug:"oats",g:70},{slug:"oat_milk",g:250},{slug:"apple",g:100},{slug:"walnuts",g:10}],
+  {vegan:true,steps:{nl:["Breng de havermout met de havermelk aan de kook en gaar 3–4 min.","Roer er een snuf kaneel door.","Top met blokjes appel en walnoot."],en:["Bring the oats and oat milk to a simmer and cook 3–4 min.","Stir in a pinch of cinnamon.","Top with diced apple and walnut."]}});
+
+add("Spinazie-ei shakshuka verde","Green shakshuka with spinach & egg",["breakfast","lunch"],
+  [{slug:"egg",g:120},{slug:"spinach",g:100},{slug:"onion",g:40},{slug:"bread_whole",g:60},{slug:"feta_light",g:25}],
+  {veg:true,tech:"pan",steps:{nl:["Fruit de ui, voeg veel spinazie toe tot geslonken.","Maak kuiltjes en breek de eieren erin; dek af tot het eiwit stolt.","Verkruimel de feta erover en serveer met het brood."],en:["Sweat the onion, add plenty of spinach until wilted.","Make wells and crack the eggs in; cover until the whites set.","Crumble the feta over and serve with the bread."]}});
+
+add("Volkoren bananenpannenkoek met kwark & walnoot","Wholegrain banana pancake with quark & walnut",["breakfast"],
+  [{slug:"oats",g:50},{slug:"banana",g:70},{slug:"egg",g:50},{slug:"egg_white",g:60},{slug:"quark_lowfat",g:80}],
+  {veg:true,steps:{nl:["Pureer de havermout, banaan, het ei en eiwit tot beslag.","Bak er pannenkoekjes van.","Serveer met een lepel kwark en walnoot."],en:["Blend the oats, banana, egg and egg white into a batter.","Cook pancakes.","Serve with a spoon of quark and walnut."]}});
+
+// --- lunch ---
+add("Forelsalade met aardappel, haricots & mosterddressing","Trout salad with potato, green beans & mustard dressing",["lunch","dinner"],
+  [{slug:"trout",g:130},{slug:"potato",g:180},{slug:"green_beans",g:120},{slug:"yoghurt_lowfat",g:40},{slug:"mustard",g:5}],
+  {steps:{nl:["Kook de aardappels en sperziebonen beetgaar; gaar de forel kort.","Roer een dressing van yoghurt, mosterd en citroen.","Pluk de forel in stukken en meng alles met de dressing."],en:["Boil the potatoes and green beans; cook the trout briefly.","Stir a dressing of yoghurt, mustard and lemon.","Flake the trout and toss everything with the dressing."]}});
+
+add("Pastasalade met feta, olijf, komkommer & tomaat","Pasta salad with feta, olive, cucumber & tomato",["lunch"],
+  [{slug:"pasta_whole",g:70},{slug:"feta_light",g:40},{slug:"olives",g:20},{slug:"cucumber",g:80},{slug:"tomato",g:80}],
+  {veg:true,steps:{nl:["Kook de volkoren pasta beetgaar en spoel koud.","Meng met komkommer, tomaat en olijven.","Verkruimel de feta erover en maak aan met citroen, oregano en peper."],en:["Cook the wholegrain pasta al dente and rinse cold.","Mix with cucumber, tomato and olives.","Crumble the feta over and dress with lemon, oregano and pepper."]}});
+
+add("Kip-pita met harissa, sla & yoghurt","Chicken pita with harissa, lettuce & yoghurt",["lunch"],
+  [{slug:"pita_whole",g:60},{slug:"chicken_breast",g:140},{slug:"harissa",g:12},{slug:"lettuce",g:30},{slug:"yoghurt_lowfat",g:40}],
+  {steps:{nl:["Bak de kipreepjes met wat harissa.","Roer een frisse yoghurtsaus met citroen.","Vul de warme pita met sla, kip en de yoghurtsaus."],en:["Fry the chicken strips with a little harissa.","Stir a fresh yoghurt sauce with lemon.","Fill the warm pita with lettuce, chicken and the yoghurt sauce."]}});
+
+add("Linzen-bietensalade met walnoot & feta","Lentil-beetroot salad with walnut & feta",["lunch"],
+  [{slug:"lentils",g:160},{slug:"beetroot",g:100},{slug:"feta_light",g:30},{slug:"rocket",g:30},{slug:"walnuts",g:10}],
+  {veg:true,steps:{nl:["Meng de gekookte linzen met blokjes rode biet en rucola.","Verkruimel de feta erover en strooi walnoten erop.","Maak aan met citroen, mosterd en peper."],en:["Mix the cooked lentils with diced beetroot and rocket.","Crumble the feta over and scatter walnuts on top.","Dress with lemon, mustard and pepper."]}});
+
+add("Spaanse pintxos-bord met ei, tonijn & paprika","Spanish pintxos plate with egg, tuna & pepper",["lunch"],
+  [{slug:"bread_whole",g:70},{slug:"tuna_can",g:80},{slug:"egg",g:55},{slug:"paprika",g:60},{slug:"olives",g:15}],
+  {steps:{nl:["Kook het ei en snijd in plakjes.","Rooster plakjes volkorenbrood.","Beleg met tonijn, ei, geroosterde paprika en een olijf; prik vast met een stokje."],en:["Boil the egg and slice.","Toast slices of wholegrain bread.","Top with tuna, egg, roasted pepper and an olive; secure with a stick."]}});
+
+add("Baba ganoush-mezze met bulgur","Baba ganoush mezze with bulgur",["lunch"],
+  [{slug:"eggplant",g:150},{slug:"bulgur",g:55},{slug:"chickpeas",g:80},{slug:"tomato",g:60},{slug:"olive_oil",g:6}],
+  {vegan:true,tech:"oven",steps:{nl:["Rooster de aubergine tot zacht en pureer met knoflook, citroen en olijfolie tot baba ganoush.","Kook de bulgur gaar.","Schik met de kikkererwten en tomaat en lepel de baba ganoush erbij."],en:["Roast the eggplant until soft and blend with garlic, lemon and olive oil into baba ganoush.","Cook the bulgur.","Arrange with the chickpeas and tomato and spoon the baba ganoush alongside."]}});
+
+add("Kip-mango-avocadosalade","Chicken, mango & avocado salad",["lunch"],
+  [{slug:"chicken_breast",g:130},{slug:"mango",g:80},{slug:"avocado",g:40},{slug:"lettuce",g:60},{slug:"cucumber",g:50}],
+  {steps:{nl:["Gril de kipfilet en snijd in reepjes.","Meng de sla met blokjes mango, avocado en komkommer.","Leg de kip erop en maak aan met limoen, peper en zout."],en:["Grill the chicken and slice.","Toss the lettuce with diced mango, avocado and cucumber.","Top with the chicken and dress with lime, salt and pepper."]}});
+
+add("Rijstsalade met edamame, mais & tofu","Rice salad with edamame, corn & tofu",["lunch"],
+  [{slug:"tofu",g:140},{slug:"rice_dry",g:60},{slug:"edamame",g:60},{slug:"corn",g:60},{slug:"soy_sauce",g:10}],
+  {vegan:true,steps:{nl:["Kook de rijst en laat afkoelen.","Bak de tofublokjes goudbruin.","Meng de rijst met edamame, mais en tofu en besprenkel met sojasaus, limoen en sesam."],en:["Cook the rice and let cool.","Fry the tofu cubes until golden.","Mix the rice with edamame, corn and tofu and drizzle with soy sauce, lime and sesame."]}});
+
+add("Kalkoen-clubsalade met ei & tomaat","Turkey club salad with egg & tomato",["lunch"],
+  [{slug:"turkey_breast",g:120},{slug:"lettuce",g:80},{slug:"egg",g:55},{slug:"tomato",g:60},{slug:"bread_whole",g:40}],
+  {steps:{nl:["Kook het ei en halveer; rooster blokjes brood tot croutons.","Schik de sla met de kalkoen, tomaat en ei.","Werk af met een yoghurt-mosterddressing en de croutons."],en:["Boil the egg and halve; toast diced bread into croutons.","Arrange the lettuce with the turkey, tomato and egg.","Finish with a yoghurt-mustard dressing and the croutons."]}});
+
+add("Soto ayam — Indonesische kippensoep met rijst","Soto ayam — Indonesian chicken soup with rice",["lunch","dinner"],
+  [{slug:"chicken_breast",g:120},{slug:"rice_dry",g:55},{slug:"bean_sprouts",g:60},{slug:"carrot",g:50},{slug:"egg",g:55}],
+  {tech:"soup",steps:{nl:["Trek een gele bouillon met kurkuma, gember en knoflook.","Gaar de kip erin en pluk 'm fijn; kook de rijst apart.","Serveer de bouillon met rijst, kip, taugé en een halve gekookt ei."],en:["Make a yellow broth with turmeric, ginger and garlic.","Poach the chicken in it and shred; cook the rice separately.","Serve the broth with rice, chicken, bean sprouts and half a boiled egg."]}});
+
+add("Caprese-salade met mozzarella, tomaat & basilicum","Caprese salad with mozzarella, tomato & basil",["lunch"],
+  [{slug:"mozzarella_light",g:80},{slug:"tomato",g:150},{slug:"bread_whole",g:50},{slug:"olive_oil",g:6}],
+  {veg:true,steps:{nl:["Snijd de tomaat en mozzarella in plakken en leg dakpansgewijs.","Besprenkel met olijfolie, peper en verse basilicum.","Serveer met geroosterd volkorenbrood."],en:["Slice the tomato and mozzarella and arrange overlapping.","Drizzle with olive oil, pepper and fresh basil.","Serve with toasted wholegrain bread."]}});
+
+// --- diner ---
+add("Gegrilde forel met aardappel & venkel","Grilled trout with potato & fennel",["dinner"],
+  [{slug:"trout",g:160},{slug:"potato",g:220},{slug:"fennel",g:120},{slug:"olive_oil",g:6}],
+  {tech:"oven",steps:{nl:["Rooster de venkel en aardappel met olijfolie 22 min op 200°C.","Gril of bak de forel 3–4 min per kant met citroen.","Serveer samen met wat venkelgroen."],en:["Roast the fennel and potato with olive oil 22 min at 200°C.","Grill or pan-fry the trout 3–4 min per side with lemon.","Serve together with some fennel fronds."]}});
+
+add("Mosselen in tomaten-knoflookbouillon met brood","Mussels in tomato-garlic broth with bread",["dinner"],
+  [{slug:"mussels",g:300},{slug:"passata",g:120},{slug:"onion",g:50},{slug:"bread_whole",g:70},{slug:"olive_oil",g:5}],
+  {tech:"soup",steps:{nl:["Fruit de ui en knoflook in de olijfolie, voeg passata en een scheut water toe.","Doe de schoongemaakte mosselen erin, dek af en stoom 5–6 min tot ze open zijn.","Werk af met peterselie en serveer met het brood om te dippen."],en:["Sweat the onion and garlic in the olive oil, add passata and a splash of water.","Add the cleaned mussels, cover and steam 5–6 min until open.","Finish with parsley and serve with the bread to dip."]}});
+
+add("Perzische kip met saffraanrijst & granaatappel","Persian chicken with saffron rice & pomegranate",["dinner"],
+  [{slug:"chicken_breast",g:150},{slug:"rice_dry",g:65},{slug:"pomegranate",g:50},{slug:"yoghurt_lowfat",g:40},{slug:"onion",g:40}],
+  {steps:{nl:["Kook de rijst met een snuf saffraan.","Bak de kip met ui en wat kaneel gaar.","Serveer met een lepel yoghurt en granaatappelpitjes."],en:["Cook the rice with a pinch of saffron.","Fry the chicken with onion and a little cinnamon.","Serve with a spoon of yoghurt and pomegranate seeds."]}});
+
+add("Ethiopische misir wot (linzen) met rijst","Ethiopian misir wot (lentils) with rice",["dinner"],
+  [{slug:"lentils",g:200},{slug:"rice_dry",g:60},{slug:"passata",g:120},{slug:"onion",g:50},{slug:"curry_paste",g:15}],
+  {vegan:true,steps:{nl:["Kook de rijst gaar.","Fruit de ui met berbere-kruiden (of currypasta), voeg de linzen en passata toe.","Laat 15 min pruttelen tot een dikke stoof en serveer over de rijst."],en:["Cook the rice.","Fry the onion with berbere spice (or curry paste), add the lentils and passata.","Simmer 15 min into a thick stew and serve over the rice."]}});
+
+add("Kip-schnitzel uit de oven met aardappelsalade","Oven chicken schnitzel with potato salad",["dinner"],
+  [{slug:"chicken_breast",g:150},{slug:"bread_whole",g:30},{slug:"potato",g:200},{slug:"yoghurt_lowfat",g:40},{slug:"cucumber",g:50}],
+  {tech:"oven",steps:{nl:["Paneer de platgeslagen kipfilet met verkruimeld volkorenbrood en bak 20 min krokant op 200°C.","Kook de aardappels en laat afkoelen.","Meng de aardappel met yoghurt, mosterd, komkommer en bieslook tot salade."],en:["Coat the flattened chicken with crushed wholegrain bread and bake 20 min crisp at 200°C.","Boil the potatoes and let cool.","Mix the potato with yoghurt, mustard, cucumber and chives into a salad."]}});
+
+add("Spaanse kip met paprika, tomaat & rijst","Spanish chicken with pepper, tomato & rice",["dinner"],
+  [{slug:"chicken_thigh",g:150},{slug:"rice_dry",g:65},{slug:"paprika",g:100},{slug:"passata",g:100},{slug:"onion",g:40}],
+  {steps:{nl:["Kook de rijst gaar.","Bak de kipdij aan, voeg ui, paprika en passata toe met paprikapoeder.","Laat 12 min stoven en serveer over de rijst."],en:["Cook the rice.","Sear the chicken thigh, add onion, pepper and passata with paprika.","Stew 12 min and serve over the rice."]}});
+
+add("Gyudon — Japanse rund-ui op rijst","Gyudon — Japanese beef & onion on rice",["dinner"],
+  [{slug:"beef_lean",g:140},{slug:"rice_dry",g:65},{slug:"onion",g:80},{slug:"soy_sauce",g:15},{slug:"egg",g:55}],
+  {steps:{nl:["Kook de rijst gaar.","Sudder dungesneden rundvlees met ui in sojasaus, dashi en wat honing.","Schep over de rijst en leg een zacht gekookt ei erop."],en:["Cook the rice.","Simmer thinly sliced beef with onion in soy sauce, dashi and a little honey.","Spoon over the rice and top with a soft-boiled egg."]}});
+
+add("Bibimbap met tofu & groente","Bibimbap with tofu & vegetables",["dinner"],
+  [{slug:"tofu",g:160},{slug:"rice_dry",g:65},{slug:"spinach",g:60},{slug:"carrot",g:50},{slug:"gochujang",g:20}],
+  {vegan:true,steps:{nl:["Kook de rijst gaar.","Bak de tofublokjes goudbruin; blancheer de spinazie en wortel apart.","Schik over de rijst en serveer met de gochujang."],en:["Cook the rice.","Fry the tofu until golden; blanch the spinach and carrot separately.","Arrange over the rice and serve with the gochujang."]}});
+
+add("Zoete-aardappel-chili met rund","Sweet potato chili with beef",["dinner"],
+  [{slug:"beef_mince5",g:140},{slug:"sweet_potato",g:180},{slug:"kidney_beans",g:120},{slug:"passata",g:120},{slug:"corn",g:50}],
+  {steps:{nl:["Rul het gehakt, voeg blokjes zoete aardappel, passata, bonen en mais toe met komijn en chili.","Laat 20 min pruttelen tot de zoete aardappel gaar is.","Werk af met koriander."],en:["Brown the mince, add diced sweet potato, passata, beans and corn with cumin and chili.","Simmer 20 min until the sweet potato is done.","Finish with coriander."]}});
+
+add("Thaise groene curry met kip & aubergine","Thai green curry with chicken & eggplant",["dinner"],
+  [{slug:"chicken_breast",g:150},{slug:"rice_dry",g:65},{slug:"coconut_light",g:80},{slug:"eggplant",g:100},{slug:"curry_paste",g:20}],
+  {steps:{nl:["Kook de rijst gaar.","Bak de groene currypasta kort, voeg de kip en aubergine toe.","Blus met kokosmelk, laat 10 min pruttelen en werk af met Thaise basilicum."],en:["Cook the rice.","Fry the green curry paste briefly, add the chicken and eggplant.","Add coconut milk, simmer 10 min and finish with Thai basil."]}});
+
+add("Pho light met rund & rijstnoedels","Light pho with beef & rice noodles",["dinner"],
+  [{slug:"beef_lean",g:120},{slug:"rice_noodles",g:55},{slug:"bean_sprouts",g:60},{slug:"carrot",g:40},{slug:"soy_sauce",g:12}],
+  {tech:"soup",steps:{nl:["Trek een heldere bouillon met gember, kaneel en steranijs.","Week de rijstnoedels gaar en verdeel in een kom met taugé.","Leg dunne plakjes rauw rundvlees erop en overgiet met de hete bouillon; werk af met limoen en kruiden."],en:["Make a clear broth with ginger, cinnamon and star anise.","Soak the rice noodles and divide into a bowl with bean sprouts.","Lay thin slices of raw beef on top and pour over the hot broth; finish with lime and herbs."]}});
+
+add("Palak met kikkererwt & spinazie","Palak with chickpea & spinach",["dinner"],
+  [{slug:"chickpeas",g:180},{slug:"rice_dry",g:60},{slug:"spinach",g:120},{slug:"onion",g:40},{slug:"curry_paste",g:15}],
+  {vegan:true,steps:{nl:["Kook de rijst gaar.","Fruit de ui met de currypasta, pureer de spinazie erdoor tot een groene saus.","Roer de kikkererwten erdoor en laat 8 min pruttelen; serveer over de rijst."],en:["Cook the rice.","Fry the onion with the curry paste, blend the spinach through into a green sauce.","Stir the chickpeas through and simmer 8 min; serve over the rice."]}});
+
+add("Kip-parmigiana light met volkoren pasta","Light chicken parmigiana with wholegrain pasta",["dinner"],
+  [{slug:"chicken_breast",g:150},{slug:"pasta_whole",g:70},{slug:"passata",g:150},{slug:"mozzarella_light",g:40},{slug:"onion",g:40}],
+  {tech:"oven",steps:{nl:["Kook de volkoren pasta beetgaar.","Bak de kipfilet aan, leg in een schaal met passata en mozzarella en gratineer 12 min op 200°C.","Serveer op de pasta met basilicum."],en:["Cook the wholegrain pasta al dente.","Sear the chicken, place in a dish with passata and mozzarella and bake 12 min at 200°C.","Serve on the pasta with basil."]}});
+
+add("Zalm met dille-mosterd, aardappel & doperwten","Salmon with dill-mustard, potato & peas",["dinner"],
+  [{slug:"salmon",g:140},{slug:"potato",g:220},{slug:"peas",g:120},{slug:"mustard",g:8},{slug:"yoghurt_lowfat",g:30}],
+  {steps:{nl:["Kook de aardappels en doperwten.","Bak de zalm gaar.","Roer een saus van yoghurt, mosterd, dille en citroen en lepel over de zalm."],en:["Boil the potatoes and peas.","Cook the salmon.","Stir a sauce of yoghurt, mustard, dill and lemon and spoon over the salmon."]}});
+
+add("Biefstuk sous-vide 54°C met pepersaus light & groente","Sous-vide steak 54°C with light pepper sauce & vegetables",["dinner"],
+  [{slug:"beef_lean",g:150},{slug:"potato",g:200},{slug:"green_beans",g:120},{slug:"milk_semi",g:50}],
+  {tech:"sousvide",temp:"54°C",steps:{nl:["Vacumeer de biefstuk en gaar sous-vide op 54°C (1,5–4 u).","Maak een lichte pepersaus met melk, bouillon en gebroken peper.","Schroei de biefstuk kort, serveer met aardappel, sperziebonen en de saus."],en:["Vacuum-seal the steak and cook sous-vide at 54°C (1.5–4 h).","Make a light pepper sauce with milk, stock and cracked pepper.","Sear the steak briefly, serve with potato, green beans and the sauce."]}});
+
+add("Kip sous-vide 63°C met bulgur & geroosterde groente","Sous-vide chicken 63°C with bulgur & roasted vegetables",["dinner"],
+  [{slug:"chicken_breast",g:160},{slug:"bulgur",g:60},{slug:"paprika",g:80},{slug:"zucchini",g:80},{slug:"olive_oil",g:5}],
+  {tech:"sousvide",temp:"63°C",steps:{nl:["Vacumeer de kipfilet en gaar sous-vide op 63°C (1,5–4 u).","Kook de bulgur gaar en rooster de paprika en courgette.","Schroei de kip kort aan en serveer op de bulgur met de groente."],en:["Vacuum-seal the chicken and cook sous-vide at 63°C (1.5–4 h).","Cook the bulgur and roast the pepper and zucchini.","Sear the chicken briefly and serve on the bulgur with the vegetables."]}});
+
+add("Tofu-rendang light met rijst","Light tofu rendang with rice",["dinner"],
+  [{slug:"tofu",g:180},{slug:"rice_dry",g:65},{slug:"coconut_light",g:80},{slug:"onion",g:40},{slug:"curry_paste",g:20}],
+  {vegan:true,steps:{nl:["Kook de rijst gaar.","Bak de tofublokjes goudbruin, voeg ui, currypasta en kokosmelk toe.","Laat zachtjes inkoken tot een dikke, kruidige saus en serveer over de rijst."],en:["Cook the rice.","Fry the tofu until golden, add onion, curry paste and coconut milk.","Reduce gently into a thick, spiced sauce and serve over the rice."]}});
+
+// --- snack ---
+add("Skyr met granaatappel & pompoenpit","Skyr with pomegranate & pumpkin seeds",["snack"],
+  [{slug:"skyr",g:150},{slug:"pomegranate",g:50},{slug:"pumpkin_seeds",g:10}],
+  {veg:true,tech:"assembly",steps:{nl:["Schep de skyr in een kom.","Top met granaatappelpitjes en pompoenpitten."],en:["Spoon the skyr into a bowl.","Top with pomegranate seeds and pumpkin seeds."]}});
+
+add("Meloen met magere ham","Melon with lean ham",["snack"],
+  [{slug:"melon",g:150},{slug:"ham_lean",g:40}],
+  {tech:"assembly",steps:{nl:["Snijd de meloen in partjes.","Wikkel er dunne plakjes magere ham omheen."],en:["Slice the melon into wedges.","Wrap thin slices of lean ham around them."]}});
+
+add("Kwark met kersen & amandel","Quark with cherries & almonds",["snack"],
+  [{slug:"quark_lowfat",g:150},{slug:"cherries",g:70},{slug:"almonds",g:10}],
+  {veg:true,tech:"assembly",steps:{nl:["Schep de kwark in een kom.","Ontpit de kersen en verdeel met de amandelen erover."],en:["Spoon the quark into a bowl.","Pit the cherries and scatter with the almonds over."]}});
+
+add("Volkoren crackers met tonijn & komkommer","Wholegrain crackers with tuna & cucumber",["snack"],
+  [{slug:"crackers_whole",g:24},{slug:"tuna_can",g:60},{slug:"cucumber",g:40}],
+  {tech:"assembly",steps:{nl:["Meng de tonijn met wat peper en citroen.","Verdeel over de crackers en beleg met komkommer."],en:["Mix the tuna with some pepper and lemon.","Spread over the crackers and top with cucumber."]}});
+
+add("Rijstwafels met amandelpasta & banaan","Rice cakes with almond butter & banana",["snack"],
+  [{slug:"rice_cakes",g:26},{slug:"almond_butter",g:15},{slug:"banana",g:60}],
+  {veg:true,vegan:true,tech:"assembly",steps:{nl:["Besmeer de rijstwafels dun met amandelpasta.","Beleg met schijfjes banaan."],en:["Spread the rice cakes thinly with almond butter.","Top with banana slices."]}});
+
+add("Hüttenkäse met tomaat & bieslook","Cottage cheese with tomato & chives",["snack"],
+  [{slug:"cottage",g:150},{slug:"cherry_tomato",g:60}],
+  {veg:true,tech:"assembly",steps:{nl:["Schep de hüttenkäse in een kom.","Meng er gehalveerde cherrytomaat door en werk af met bieslook en peper."],en:["Spoon the cottage cheese into a bowl.","Mix in halved cherry tomato and finish with chives and pepper."]}});
+
+add("Appel met walnoot & kaneel","Apple with walnut & cinnamon",["snack"],
+  [{slug:"apple",g:150},{slug:"walnuts",g:12}],
+  {veg:true,vegan:true,tech:"assembly",steps:{nl:["Snijd de appel in partjes.","Bestrooi met kaneel en serveer met grof gehakte walnoten."],en:["Slice the apple into wedges.","Dust with cinnamon and serve with roughly chopped walnuts."]}});
+
+add("Meloen met kwark & munt","Melon with quark & mint",["snack"],
+  [{slug:"melon",g:150},{slug:"quark_lowfat",g:100}],
+  {veg:true,tech:"assembly",steps:{nl:["Snijd de meloen in blokjes.","Serveer met een lepel kwark en wat verse munt."],en:["Cube the melon.","Serve with a spoon of quark and some fresh mint."]}});
 
 // ---------- SQL ----------
 const usedSlugs = new Set(); dishes.forEach((d) => d.items.forEach((it) => usedSlugs.add(it.slug)));
