@@ -702,9 +702,11 @@ export default function App() {
   }
   const [units, setUnits] = useState(() => load("hf_units", "metric"));
   const setUnitsSave = (u) => { setUnits(u); try { save("hf_units", u); } catch (e) {} };
-  // Thema: 'auto' volgt het systeem, 'light'/'dark' expliciet. Alleen voor consumenten
-  // (gym-leden krijgen de org-huisstijl). Zet data-theme op <html>; leeg = auto.
-  const [theme, setTheme] = useState(() => { try { return localStorage.getItem("hf_theme") || "auto"; } catch (e) { return "auto"; } });
+  // Thema: standaard 'light' (het normale thema) zodat de app NIET meegaat met de
+  // systeem-donkermodus (daar klopte de kleurstelling niet). 'auto' volgt het systeem,
+  // 'dark' is expliciet donker — allebei alleen als de gebruiker dat zelf kiest.
+  // Gym-leden krijgen hoe dan ook de org-huisstijl (applyOrgTheme overschrijft dit).
+  const [theme, setTheme] = useState(() => { try { return localStorage.getItem("hf_theme") || "light"; } catch (e) { return "light"; } });
   const setThemeSave = (v) => {
     setTheme(v);
     try { localStorage.setItem("hf_theme", v); } catch (e) {}
