@@ -2409,7 +2409,7 @@ export default function App() {
       {/* MEER-menu */}
       {showMore && (
         <div onClick={() => setShowMore(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)", WebkitBackdropFilter: "blur(4px)", zIndex: 50, display: "flex", alignItems: "flex-end" }}>
-          <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", background: INK, borderTop: `1px solid ${LINE}`, borderRadius: "20px 20px 0 0", padding: "16px 16px calc(20px + env(safe-area-inset-bottom))", backgroundImage: "radial-gradient(130% 60% at 90% 0%, rgba(var(--hf-ember-rgb),0.1), transparent 60%)" }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxHeight: "92vh", overflowY: "auto", WebkitOverflowScrolling: "touch", background: INK, borderTop: `1px solid ${LINE}`, borderRadius: "20px 20px 0 0", padding: "16px 16px calc(20px + env(safe-area-inset-bottom))", backgroundImage: "radial-gradient(130% 60% at 90% 0%, rgba(var(--hf-ember-rgb),0.1), transparent 60%)" }}>
             <div style={{ width: 40, height: 4, background: LINE, borderRadius: 2, margin: "0 auto 14px" }} />
             <div style={{ ...disp, fontSize: 12.5, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", color: EMBER, marginBottom: 12 }}>{T("navMore")}</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>

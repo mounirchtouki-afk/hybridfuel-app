@@ -29,6 +29,7 @@ export default function Recipes({ lang, session, units }) {
   const [open, setOpen] = useState(null);
   const [mine, setMine] = useState(() => (cloud ? [] : load("hf_recipes", [])));
   const [build, setBuild] = useState(false);
+  const [editRec, setEditRec] = useState(null); // eigen recept dat bewerkt wordt
 
   useEffect(() => {
     let active = true;
@@ -113,7 +114,10 @@ export default function Recipes({ lang, session, units }) {
                           <div style={{ fontSize: 13, color: PAPER, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{r.steps}</div>
                         </>
                       )}
-                      <div onClick={() => delMine(r.id)} style={{ cursor: "pointer", color: MUTED, fontSize: 12, marginTop: 14, textAlign: "right" }}>×  verwijderen</div>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 14 }}>
+                        <div onClick={() => setEditRec(r)} style={{ cursor: "pointer", color: EMBER, fontSize: 12.5, fontWeight: 700, border: `1px solid ${EMBER}`, borderRadius: 8, padding: "7px 14px" }}>{lang === "nl" ? "Bewerken" : "Edit"}</div>
+                        <div onClick={() => delMine(r.id)} style={{ cursor: "pointer", color: MUTED, fontSize: 12 }}>×  {lang === "nl" ? "verwijderen" : "delete"}</div>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -169,7 +173,8 @@ export default function Recipes({ lang, session, units }) {
         </div>
       </div>
 
-      {build && <RecipeBuilder lang={lang} session={session} onClose={() => setBuild(false)} onSaved={(r) => setMine((a) => [r, ...a])} />}
+      {build && <RecipeBuilder lang={lang} session={session} units={units} onClose={() => setBuild(false)} onSaved={(r) => setMine((a) => (a.some((x) => x.id === r.id) ? a.map((x) => (x.id === r.id ? r : x)) : [r, ...a]))} />}
+      {editRec && <RecipeBuilder lang={lang} session={session} units={units} edit={editRec} onClose={() => setEditRec(null)} onSaved={(r) => setMine((a) => a.map((x) => (x.id === editRec.id ? r : x)))} />}
     </div>
   );
 }

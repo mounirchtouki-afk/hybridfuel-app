@@ -1,9 +1,19 @@
 import React, { useState, useEffect, useRef } from "react";
 import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, disp, num, input, label, sectionTitle, primaryBtn, ghostBtn, load, save, macroLetters } from "../shared.js";
 import { supabase } from "../supabaseClient.js";
+import { apiUrl } from "../apiBase";
 
 const T = {
   title: { nl: "Mijn producten", en: "My products" },
+  photoBtn: { nl: "Foto's", en: "Photos" },
+  photoTitle: { nl: "Foto's → AI herkent het", en: "Photos → AI reads it" },
+  photoHint: { nl: "Upload 1–4 foto's van hetzelfde product: de voorkant (wat het is) én de voedingswaardentabel. Scherp en recht = beste herkenning.", en: "Upload 1–4 photos of the same product: the front (what it is) and the nutrition table. Sharp and straight = best recognition." },
+  photoAdd: { nl: "+ Foto maken / uploaden", en: "+ Take / upload photo" },
+  photoRecognize: { nl: "Herken met AI", en: "Recognise with AI" },
+  photoRecognizing: { nl: "Bezig met herkennen…", en: "Recognising…" },
+  photoNeed: { nl: "Voeg eerst minstens één foto toe.", en: "Add at least one photo first." },
+  photoOk: { nl: "Herkend! Controleer de waarden voordat je opslaat.", en: "Recognised! Check the values before saving." },
+  photoLow: { nl: "Niet alles was leesbaar — vul de ontbrekende waarden zelf aan.", en: "Not everything was readable — fill in the missing values yourself." },
   intro: { nl: "Scan een barcode of voeg handmatig toe. Je producten worden per categorie geordend.", en: "Scan a barcode or add manually. Your products are grouped by category." },
   name: { nl: "Naam", en: "Name" },
   brand: { nl: "Merk (optioneel)", en: "Brand (optional)" },
@@ -115,8 +125,60 @@ export default function Products({ lang, session, onClose, onPick, embedded, aut
   const [looking, setLooking] = useState(false);
   const [manualBc, setManualBc] = useState("");
   const [q, setQ] = useState("");
+  const [photoMode, setPhotoMode] = useState(false); // foto-AI toevoegflow
+  const [photos, setPhotos] = useState([]);          // data-URLs, max 4
+  const [aiBusy, setAiBusy] = useState(false);
   const videoRef = useRef(null);
   const readerRef = useRef(null);
+  const photoRef = useRef(null);
+
+  // Verklein client-side (max 1000px, jpeg) zodat de upload licht blijft.
+  function addPhotos(fileList) {
+    const files = Array.from(fileList || []).slice(0, 4 - photos.length);
+    files.forEach((file) => {
+      if (!file || !/^image\//.test(file.type)) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const max = 1000; let w = img.width, h = img.height;
+          if (w > h && w > max) { h = Math.round(h * max / w); w = max; }
+          else if (h > max) { w = Math.round(w * max / h); h = max; }
+          let data;
+          try { const c = document.createElement("canvas"); c.width = w; c.height = h; c.getContext("2d").drawImage(img, 0, 0, w, h); data = c.toDataURL("image/jpeg", 0.7); }
+          catch (err) { data = e.target.result; }
+          setPhotos((p) => (p.length >= 4 ? p : [...p, data]));
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+  function delPhoto(i) { setPhotos((p) => p.filter((_, j) => j !== i)); }
+
+  function openPhoto() { setScanning(false); resetForm(); setPhotos([]); setPhotoMode(true); setAdding(true); }
+
+  async function runPhotoScan() {
+    if (!photos.length) { setMsg(t("photoNeed")); return; }
+    const authToken = (session && session.access_token) || "";
+    setAiBusy(true); setMsg("");
+    try {
+      const r = await fetch(apiUrl("/api/product-scan"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ images: photos, authToken, lang }) });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok || !d || !d.result) { setMsg((d && d.error) || t("notFound")); setAiBusy(false); return; }
+      const res = d.result, p = res.per_100 || {};
+      if (res.name) setNm(res.name);
+      if (res.brand) setBr(res.brand);
+      if (p.kcal != null) setKc(p.kcal);
+      if (p.p != null) setPr(p.p);
+      if (p.c != null) setCb(p.c);
+      if (p.f != null) setFt(p.f);
+      const complete = res.confident && p.kcal != null && p.p != null && p.c != null && p.f != null;
+      setMsg(complete ? t("photoOk") : t("photoLow"));
+      setPhotoMode(false); // door naar het (voor-ingevulde) formulier
+    } catch (e) { setMsg(t("notFound")); }
+    setAiBusy(false);
+  }
 
   useEffect(() => {
     let active = true;
@@ -142,7 +204,7 @@ export default function Products({ lang, session, onClose, onPick, embedded, aut
     try { const v = videoRef.current; if (v && v.srcObject) { v.srcObject.getTracks().forEach((tk) => tk.stop()); v.srcObject = null; } } catch (e) {}
   }
   function resetForm() { setNm(""); setBr(""); setBc(""); setKc(""); setPr(""); setCb(""); setFt(""); setCat(""); setMt([]); setMsg(""); setManualBc(""); }
-  function closeAdd() { stopScan(); setScanning(false); setAdding(false); setEditId(null); resetForm(); }
+  function closeAdd() { stopScan(); setScanning(false); setAdding(false); setEditId(null); setPhotoMode(false); setPhotos([]); setAiBusy(false); resetForm(); }
   function startEdit(it) {
     setEditId(it.id); setScanning(false); setMsg("");
     setNm(it.name || ""); setBr(it.brand || ""); setBc(it.barcode || "");
@@ -255,11 +317,32 @@ export default function Products({ lang, session, onClose, onPick, embedded, aut
           <div style={{ fontSize: 11.5, color: MUTED, textAlign: "center", marginTop: 8 }}>{t("scanning")}</div>
         </div>
       )}
-      <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-        <input value={manualBc} onChange={(e) => setManualBc(e.target.value)} inputMode="numeric" placeholder={t("manualCode")} style={{ ...input, flex: 1 }} />
-        <button onClick={() => manualBc.trim() && lookup(manualBc.trim())} disabled={looking} style={{ ...ghostBtn, whiteSpace: "nowrap", opacity: looking ? 0.7 : 1 }}>{looking ? t("looking") : t("lookup")}</button>
-      </div>
-      {msg && <div style={{ fontSize: 11.5, color: msg === t("found") ? "#4ADE80" : EMBER_SOFT, marginBottom: 12, lineHeight: 1.4 }}>{msg}</div>}
+      {photoMode && (
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ ...disp, fontSize: 13, fontWeight: 700, color: PAPER, marginBottom: 4 }}>{t("photoTitle")}</div>
+          <div style={{ fontSize: 11.5, color: MUTED, lineHeight: 1.5, marginBottom: 10 }}>{t("photoHint")}</div>
+          <input ref={photoRef} type="file" accept="image/*" capture="environment" multiple style={{ display: "none" }} onChange={(e) => { addPhotos(e.target.files); e.target.value = ""; }} />
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
+            {photos.map((src, i) => (
+              <div key={i} style={{ position: "relative", width: 64, height: 64, borderRadius: 9, overflow: "hidden", border: `1px solid ${LINE}` }}>
+                <img src={src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                <div onClick={() => delPhoto(i)} style={{ position: "absolute", top: 2, right: 2, width: 18, height: 18, borderRadius: "50%", background: "rgba(10,10,10,0.8)", color: "#fff", fontSize: 12, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>×</div>
+              </div>
+            ))}
+            {photos.length < 4 && (
+              <div onClick={() => photoRef.current && photoRef.current.click()} style={{ width: 64, height: 64, borderRadius: 9, border: `1px dashed ${EMBER}`, color: EMBER, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, cursor: "pointer" }}>+</div>
+            )}
+          </div>
+          <button onClick={runPhotoScan} disabled={aiBusy || !photos.length} style={{ ...primaryBtn, width: "100%", opacity: (aiBusy || !photos.length) ? 0.6 : 1 }}>{aiBusy ? t("photoRecognizing") : t("photoRecognize")}</button>
+        </div>
+      )}
+      {!photoMode && (
+        <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+          <input value={manualBc} onChange={(e) => setManualBc(e.target.value)} inputMode="numeric" placeholder={t("manualCode")} style={{ ...input, flex: 1 }} />
+          <button onClick={() => manualBc.trim() && lookup(manualBc.trim())} disabled={looking} style={{ ...ghostBtn, whiteSpace: "nowrap", opacity: looking ? 0.7 : 1 }}>{looking ? t("looking") : t("lookup")}</button>
+        </div>
+      )}
+      {msg && <div style={{ fontSize: 11.5, color: (msg === t("found") || msg === t("photoOk")) ? "#4ADE80" : EMBER_SOFT, marginBottom: 12, lineHeight: 1.4 }}>{msg}</div>}
       <div style={{ marginBottom: 10 }}>
         <label style={label}>{t("name")}</label>
         <input value={nm} onChange={(e) => setNm(e.target.value)} placeholder={t("namePh")} style={input} />
@@ -309,8 +392,9 @@ export default function Products({ lang, session, onClose, onPick, embedded, aut
       {/* Compacte acties */}
       {!adding && (
         <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-          <button onClick={startScan} style={{ ...primaryBtn, flex: 1, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 9, padding: "11px 0" }}><BarcodeIcon c="#fff" />{t("scanBtn")}</button>
-          <button onClick={openManual} style={{ ...ghostBtn, flex: 1, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "11px 0" }}><PlusIcon c={EMBER} />{t("manualBtn")}</button>
+          <button onClick={startScan} style={{ ...primaryBtn, flex: 1, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 7, padding: "11px 0" }}><BarcodeIcon c="#fff" />{t("scanBtn")}</button>
+          <button onClick={openPhoto} style={{ ...ghostBtn, flex: 1, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 7, padding: "11px 0" }}>📷 {t("photoBtn")}</button>
+          <button onClick={openManual} style={{ ...ghostBtn, flex: 1, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 7, padding: "11px 0" }}><PlusIcon c={EMBER} />{t("manualBtn")}</button>
         </div>
       )}
       {addCard}

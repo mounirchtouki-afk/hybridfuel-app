@@ -5,6 +5,7 @@ import Products from "./Products.jsx";
 
 const T = {
   title: { nl: "Recept maken", en: "Create recipe" },
+  titleEdit: { nl: "Recept bewerken", en: "Edit recipe" },
   name: { nl: "Naam van het recept", en: "Recipe name" },
   namePh: { nl: "bijv. Kip-rijst bowl", en: "e.g. chicken rice bowl" },
   type: { nl: "Soort", en: "Type" },
@@ -27,15 +28,18 @@ const T = {
   g: { nl: "g", en: "g" },
 };
 
-export default function RecipeBuilder({ lang, session, units, onClose, onSaved }) {
+export default function RecipeBuilder({ lang, session, units, onClose, onSaved, edit }) {
   const t = (k) => (T[k] ? T[k][lang] : k);
   const ml = macroLetters(lang);
   const cloud = !!(session && supabase);
-  const [name, setName] = useState("");
-  const [type, setType] = useState("dinner");
-  const [steps, setSteps] = useState("");
-  const [photo, setPhoto] = useState("");
-  const [ings, setIngs] = useState([]);
+  const isEdit = !!(edit && edit.id);
+  const [name, setName] = useState(() => (edit && edit.name) || "");
+  const [type, setType] = useState(() => (edit && edit.type) || "dinner");
+  const [steps, setSteps] = useState(() => (edit && edit.steps) || "");
+  const [photo, setPhoto] = useState(() => (edit && edit.image_url) || "");
+  const [ings, setIngs] = useState(() => (edit && Array.isArray(edit.ingredients))
+    ? edit.ingredients.map((x) => ({ name: x.name, grams: x.grams, per100: x.per100 || null, kcal: num(x.kcal), p: num(x.p), c: num(x.c), f: num(x.f) }))
+    : []);
   const [showPick, setShowPick] = useState(false);
   const [busy, setBusy] = useState(false);
   const fileRef = useRef(null);
@@ -83,13 +87,20 @@ export default function RecipeBuilder({ lang, session, units, onClose, onSaved }
     setBusy(true);
     const ingredients = ings.map((x) => ({ name: x.name, grams: num(x.grams), kcal: num(x.kcal), p: num(x.p), c: num(x.c), f: num(x.f) }));
     const rec = { name: name.trim(), type, ingredients, macros, image_url: photo || null, steps: steps.trim() || null };
+    const localId = isEdit ? edit.id : "l" + Date.now();
+    const cloudId = isEdit && !String(edit.id).startsWith("l");
     try {
-      if (cloud) {
-        const { data } = await supabase.from("recipes").insert({ user_id: session.user.id, ...rec, is_system: false }).select("id,name,type,ingredients,macros,image_url,steps").single();
+      if (cloud && (!isEdit || cloudId)) {
+        const q = isEdit
+          ? supabase.from("recipes").update(rec).eq("id", edit.id).select("id,name,type,ingredients,macros,image_url,steps").single()
+          : supabase.from("recipes").insert({ user_id: session.user.id, ...rec, is_system: false }).select("id,name,type,ingredients,macros,image_url,steps").single();
+        const { data } = await q;
         if (data) onSaved && onSaved(data);
       } else {
-        const row = { id: "l" + Date.now(), ...rec };
-        const all = load("hf_recipes", []); const next = [...all, row]; save("hf_recipes", next);
+        const row = { id: localId, ...rec };
+        const all = load("hf_recipes", []);
+        const next = isEdit ? all.map((r) => (r.id === localId ? row : r)) : [...all, row];
+        save("hf_recipes", next);
         onSaved && onSaved(row);
       }
       onClose();
@@ -100,7 +111,7 @@ export default function RecipeBuilder({ lang, session, units, onClose, onSaved }
     <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 66, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
       <div onClick={(e) => e.stopPropagation()} style={{ position: "relative", background: INK, border: `1px solid ${LINE}`, borderRadius: 20, width: "100%", maxWidth: 440, maxHeight: "90vh", overflowY: "auto", padding: 22, boxShadow: "0 24px 70px rgba(0,0,0,.65)", backgroundImage: "radial-gradient(130% 70% at 92% -10%, rgba(var(--hf-ember-rgb),0.13), transparent 58%)" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-          <div style={sectionTitle}>{t("title")}</div>
+          <div style={sectionTitle}>{t(isEdit ? "titleEdit" : "title")}</div>
           <div onClick={onClose} style={{ cursor: "pointer", color: MUTED, fontSize: 17, width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 9, border: `1px solid ${LINE}` }}>×</div>
         </div>
 
