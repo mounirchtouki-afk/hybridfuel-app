@@ -715,15 +715,6 @@ export default function App() {
   useEffect(() => {
     try { const el = document.documentElement; if (theme === "auto") el.removeAttribute("data-theme"); else el.setAttribute("data-theme", theme); } catch (e) {}
   }, [theme]);
-  // Het coach-dashboard leeft op <hoofddomein>/admin: open het dashboard direct als de
-  // URL /admin is (en de gebruiker coach is); anders de login tonen.
-  useEffect(() => {
-    try {
-      if (!/^\/admin(\/|$)/i.test(window.location.pathname)) return;
-      if (session && gymCtx && gymCtx.role === "coach") setDashOpen(true);
-      else if (!session) setShowAuth(true);
-    } catch (e) {}
-  }, [session, gymCtx]);
   const [saveFlash, setSaveFlash] = useState(false);
   const [showInstallHelp, setShowInstallHelp] = useState(false);
   const [subTier, setSubTier] = useState("free");
@@ -1014,6 +1005,16 @@ export default function App() {
     try { const h = (typeof window !== "undefined" && window.location.hash) || ""; if (h.indexOf("type=recovery") >= 0) { setAuthRecovery(true); setShowAuth(true); setShowLogout(false); } } catch (e) {}
     return () => { try { sub.data.subscription.unsubscribe(); } catch (e) {} };
   }, []);
+
+  // Het coach-dashboard leeft op <hoofddomein>/admin: open het dashboard direct als de
+  // URL /admin is (en de gebruiker coach is); anders de login tonen.
+  useEffect(() => {
+    try {
+      if (!/^\/admin(\/|$)/i.test(window.location.pathname)) return;
+      if (session && gymCtx && gymCtx.role === "coach") setDashOpen(true);
+      else if (!session) setShowAuth(true);
+    } catch (e) {}
+  }, [session, gymCtx]);
 
   // Abonnement-laag ophalen zodra er een sessie is, én telkens als de app weer in
   // beeld komt (bv. terug van de Stripe-checkout in de externe browser) zodat de
@@ -1917,7 +1918,7 @@ export default function App() {
       )}
 
       {/* HEADER */}
-      <div style={{ borderBottom: `1px solid ${LINE}`, padding: "12px 14px", paddingTop: "calc(12px + env(safe-area-inset-top))", display: "flex", alignItems: "center", gap: 8, position: "sticky", top: 0, background: INK2, borderBottom: `1px solid ${LINE}`, zIndex: 20 }}>
+      <div style={{ padding: "12px 14px", paddingTop: "calc(12px + env(safe-area-inset-top))", display: "flex", alignItems: "center", gap: 8, position: "sticky", top: 0, background: INK2, borderBottom: `1px solid ${LINE}`, zIndex: 20 }}>
         {isGymMember && gymCtx.org.logo_url ? (
           <img src={gymCtx.org.logo_url} alt={gymCtx.org.name || ""} style={{ height: 30, maxWidth: 140, objectFit: "contain", flexShrink: 0 }} />
         ) : isGymMember ? (
