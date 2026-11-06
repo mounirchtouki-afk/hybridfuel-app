@@ -774,13 +774,14 @@ Haal deze velden eruit en niets anders:
 3) per_100 — de voedingswaarden PER 100 g (of per 100 ml): kcal (het getal in kcal, NIET kJ), eiwit (g), koolhydraten (g), vet (g).
 4) serving_g — het gewicht van ÉÉN stuk/portie in gram, als dat ergens staat (bijv. "10 x 150 g" -> 150; "portie 150 g" -> 150). Anders null.
 5) pieces — het aantal stuks per verpakking als dat staat (bijv. "10 x 150 g" -> 10; "circa 1,5 kg stuk" -> null). Anders null.
+6) allergens — een lijst van de allergenen die op het etiket staan (de sectie "Allergenen" / "Bevat …"), precies zoals vermeld (bijv. ["Vis"], ["Gluten","Melk"]). Niets vermeld? lege lijst [].
 Harde regels:
 - Gebruik voor per_100 ALTIJD de kolom "per 100 g" / "100 g", NOOIT de "portie"-kolom. kcal = de regel met "kcal" (niet de kJ-regel).
 - Staat er alleen een portie-tabel (geen per-100g)? Reken om naar per 100 g met het portiegewicht.
-- Een waarde niet duidelijk leesbaar? Zet die op null. NOOIT een getal verzinnen, schatten of afronden-naar-mooi.
-- Geen voedingsproduct of geen leesbare tabel? Alle waarden null en confident:false.
+- Een waarde niet duidelijk leesbaar? Zet die op null. NOOIT een getal of allergeen verzinnen, schatten of afronden-naar-mooi. Allergenen alleen als ze er echt staan.
+- Geen voedingsproduct of geen leesbare tabel? Alle waarden null, allergens [] en confident:false.
 Antwoord UITSLUITEND als JSON, niets eromheen:
-{"name":"...","brand":"...","per_100":{"kcal":231,"p":18,"c":0,"f":16.7},"serving_g":150,"pieces":10,"confident":true}`;
+{"name":"...","brand":"...","per_100":{"kcal":231,"p":18,"c":0,"f":16.7},"serving_g":150,"pieces":10,"allergens":["Vis"],"confident":true}`;
 const SCAN_PROMPT_EN = `You are an OCR / product recogniser. The photos show ONE food product: packaging, a label, or a screenshot of a product page. Read ALL photos together as one product.
 Extract these fields and nothing else:
 1) name — the product name (e.g. "Salmon fillet portions with skin"). Leave brand and quantity text out of the name.
@@ -788,13 +789,14 @@ Extract these fields and nothing else:
 3) per_100 — nutrition PER 100 g (or per 100 ml): kcal (the kcal number, NOT kJ), protein (g), carbs (g), fat (g).
 4) serving_g — the weight of ONE piece/serving in grams if stated (e.g. "10 x 150 g" -> 150; "serving 150 g" -> 150). Else null.
 5) pieces — the number of pieces per pack if stated (e.g. "10 x 150 g" -> 10). Else null.
+6) allergens — a list of the allergens stated on the label (the "Allergens" / "Contains …" section), exactly as listed (e.g. ["Fish"], ["Gluten","Milk"]). None stated? empty list [].
 Hard rules:
 - For per_100 ALWAYS use the "per 100 g" / "100 g" column, NEVER the "serving" column. kcal = the "kcal" line (not the kJ line).
 - If only a per-serving table is shown, convert to per 100 g using the serving weight.
-- Any value not clearly readable? Set it to null. NEVER invent, estimate or round-to-nice a number.
-- Not a food product or no readable table? All values null and confident:false.
+- Any value not clearly readable? Set it to null. NEVER invent, estimate or round-to-nice a number or allergen. Allergens only if actually printed.
+- Not a food product or no readable table? All values null, allergens [] and confident:false.
 Reply ONLY as JSON, nothing around it:
-{"name":"...","brand":"...","per_100":{"kcal":231,"p":18,"c":0,"f":16.7},"serving_g":150,"pieces":10,"confident":true}`;
+{"name":"...","brand":"...","per_100":{"kcal":231,"p":18,"c":0,"f":16.7},"serving_g":150,"pieces":10,"allergens":["Fish"],"confident":true}`;
 async function callVisionAnthropic(imgs, lang) {
   const key = process.env.ANTHROPIC_API_KEY;
   if (!key) return { err: "ANTHROPIC_API_KEY ontbreekt" };
@@ -836,7 +838,8 @@ async function buildProductScan(body) {
   const per = j.per_100 || {};
   const serving_g = cleanNum(j.serving_g);
   const pieces = cleanNum(j.pieces);
-  return { result: { name: String(j.name || "").slice(0, 120).trim(), brand: String(j.brand || "").slice(0, 80).trim(), per_100: { kcal: cleanNum(per.kcal), p: cleanNum(per.p), c: cleanNum(per.c), f: cleanNum(per.f) }, serving_g, pieces, confident: j.confident !== false } };
+  const allergens = Array.isArray(j.allergens) ? j.allergens.map((x) => String(x).slice(0, 40).trim()).filter(Boolean).slice(0, 15) : [];
+  return { result: { name: String(j.name || "").slice(0, 120).trim(), brand: String(j.brand || "").slice(0, 80).trim(), per_100: { kcal: cleanNum(per.kcal), p: cleanNum(per.p), c: cleanNum(per.c), f: cleanNum(per.f) }, serving_g, pieces, allergens, confident: j.confident !== false } };
 }
 
 export default async function handler(req, res) {

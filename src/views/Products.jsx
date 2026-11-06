@@ -12,6 +12,7 @@ const T = {
   photoShot1: { nl: "De voorkant — voor naam en merk", en: "The front — for name and brand" },
   photoShot2: { nl: "De voedingswaardentabel — voor de waarden per 100 g", en: "The nutrition table — for the values per 100 g" },
   photoShot3: { nl: "De hoeveelheid, bijv. \"10 x 150 g\" — dan wordt ook de gram per stuk opgeslagen", en: "The quantity, e.g. \"10 x 150 g\" — then grams per piece are saved too" },
+  photoShot4: { nl: "De allergenen (\"Bevat …\") — worden mee opgeslagen", en: "The allergens (\"Contains …\") — saved along too" },
   photoTip: { nl: "Scherp en recht van voren = beste herkenning.", en: "Sharp and straight-on = best recognition." },
   photoAdd: { nl: "+ Foto maken / uploaden", en: "+ Take / upload photo" },
   photoRecognize: { nl: "Herken met AI", en: "Recognise with AI" },
@@ -22,6 +23,8 @@ const T = {
   photoNone: { nl: "Niets kunnen lezen op deze foto's. Maak een scherpere foto van de voorkant én de voedingswaardentabel.", en: "Couldn't read anything in these photos. Take a sharper shot of the front and the nutrition table." },
   servLabel: { nl: "Gram per stuk (optioneel)", en: "Grams per piece (optional)" },
   servPh: { nl: "bijv. 150", en: "e.g. 150" },
+  allergLabel: { nl: "Allergenen (optioneel)", en: "Allergens (optional)" },
+  allergPh: { nl: "bijv. Vis, Gluten", en: "e.g. Fish, Gluten" },
   intro: { nl: "Scan een barcode of voeg handmatig toe. Je producten worden per categorie geordend.", en: "Scan a barcode or add manually. Your products are grouped by category." },
   name: { nl: "Naam", en: "Name" },
   brand: { nl: "Merk (optioneel)", en: "Brand (optional)" },
@@ -137,6 +140,7 @@ export default function Products({ lang, session, onClose, onPick, embedded, aut
   const [photos, setPhotos] = useState([]);          // data-URLs, max 4
   const [aiBusy, setAiBusy] = useState(false);
   const [servG, setServG] = useState("");            // gram per stuk/portie (optioneel)
+  const [allerg, setAllerg] = useState("");          // allergenen, komma-gescheiden (optioneel)
   const videoRef = useRef(null);
   const readerRef = useRef(null);
   const photoRef = useRef(null);
@@ -183,6 +187,7 @@ export default function Products({ lang, session, onClose, onPick, embedded, aut
       if (p.c != null) setCb(p.c);
       if (p.f != null) setFt(p.f);
       if (res.serving_g != null) setServG(res.serving_g);
+      if (Array.isArray(res.allergens) && res.allergens.length) setAllerg(res.allergens.join(", "));
       const anyVal = p.kcal != null || p.p != null || p.c != null || p.f != null || res.name;
       const complete = res.confident && p.kcal != null && p.p != null && p.c != null && p.f != null;
       if (!anyVal) { setMsg(t("photoNone")); setAiBusy(false); return; } // niks gelezen -> foto's blijven staan
@@ -215,12 +220,12 @@ export default function Products({ lang, session, onClose, onPick, embedded, aut
     try { if (readerRef.current) { readerRef.current.reset(); readerRef.current = null; } } catch (e) {}
     try { const v = videoRef.current; if (v && v.srcObject) { v.srcObject.getTracks().forEach((tk) => tk.stop()); v.srcObject = null; } } catch (e) {}
   }
-  function resetForm() { setNm(""); setBr(""); setBc(""); setKc(""); setPr(""); setCb(""); setFt(""); setCat(""); setMt([]); setMsg(""); setManualBc(""); setServG(""); }
+  function resetForm() { setNm(""); setBr(""); setBc(""); setKc(""); setPr(""); setCb(""); setFt(""); setCat(""); setMt([]); setMsg(""); setManualBc(""); setServG(""); setAllerg(""); }
   function closeAdd() { stopScan(); setScanning(false); setAdding(false); setEditId(null); setPhotoMode(false); setPhotos([]); setAiBusy(false); resetForm(); }
   function startEdit(it) {
     setEditId(it.id); setScanning(false); setMsg("");
     setNm(it.name || ""); setBr(it.brand || ""); setBc(it.barcode || "");
-    const p = it.per_100 || {}; setKc(p.kcal != null ? p.kcal : ""); setPr(p.p != null ? p.p : ""); setCb(p.c != null ? p.c : ""); setFt(p.f != null ? p.f : ""); setServG(p.serving_g != null ? p.serving_g : "");
+    const p = it.per_100 || {}; setKc(p.kcal != null ? p.kcal : ""); setPr(p.p != null ? p.p : ""); setCb(p.c != null ? p.c : ""); setFt(p.f != null ? p.f : ""); setServG(p.serving_g != null ? p.serving_g : ""); setAllerg(Array.isArray(p.allergens) ? p.allergens.join(", ") : "");
     setCat(it.category || ""); setMt(Array.isArray(it.meal_types) ? it.meal_types : []); setAdding(true);
   }
 
@@ -260,6 +265,7 @@ export default function Products({ lang, session, onClose, onPick, embedded, aut
     const d2 = (v) => Math.round(num(String(v).replace(",", ".")) * 100) / 100;
     const per_100 = { kcal: d2(kc), p: d2(pr), c: d2(cb), f: d2(ft) };
     const sg = num(String(servG).replace(",", ".")); if (sg > 0) per_100.serving_g = Math.round(sg); // gram per stuk (in jsonb, geen migratie)
+    const alg = String(allerg || "").split(",").map((x) => x.trim()).filter(Boolean); if (alg.length) per_100.allergens = alg.slice(0, 15); // allergenen (in jsonb)
     const barcode = bc.trim() || null;
     const category = cat || null;
     const meal_types = Array.isArray(mt) ? mt : [];
@@ -336,7 +342,7 @@ export default function Products({ lang, session, onClose, onPick, embedded, aut
           <div style={{ fontSize: 11.5, color: MUTED, lineHeight: 1.5, marginBottom: 8 }}>{t("photoHint")}</div>
           <div style={{ fontSize: 11, color: PAPER, fontWeight: 600, marginBottom: 5 }}>{t("photoWhat")}</div>
           <div style={{ display: "grid", gap: 4, marginBottom: 8 }}>
-            {[t("photoShot1"), t("photoShot2"), t("photoShot3")].map((s, i) => (
+            {[t("photoShot1"), t("photoShot2"), t("photoShot3"), t("photoShot4")].map((s, i) => (
               <div key={i} style={{ display: "flex", gap: 7, fontSize: 11, color: MUTED, lineHeight: 1.45 }}>
                 <span style={{ color: EMBER, flex: "0 0 auto" }}>•</span><span>{s}</span>
               </div>
@@ -402,6 +408,10 @@ export default function Products({ lang, session, onClose, onPick, embedded, aut
       <div style={{ marginBottom: 12 }}>
         <label style={label}>{t("servLabel")}</label>
         <input value={servG} onChange={(e) => setServG(e.target.value)} inputMode="numeric" placeholder={t("servPh")} style={input} />
+      </div>
+      <div style={{ marginBottom: 12 }}>
+        <label style={label}>{t("allergLabel")}</label>
+        <input value={allerg} onChange={(e) => setAllerg(e.target.value)} placeholder={t("allergPh")} style={input} />
       </div>
       <div style={{ display: "flex", gap: 8 }}>
         <button onClick={add} style={{ ...primaryBtn, flex: 1 }}>{editId ? t("save") : (onPick ? t("addToMeal") : t("add"))}</button>
