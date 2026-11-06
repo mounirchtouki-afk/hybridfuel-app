@@ -393,7 +393,7 @@ export default function Products({ lang, session, onClose, onPick, embedded, aut
       {!adding && (
         <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
           <button onClick={startScan} style={{ ...primaryBtn, flex: 1, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 7, padding: "11px 0" }}><BarcodeIcon c="#fff" />{t("scanBtn")}</button>
-          <button onClick={openPhoto} style={{ ...ghostBtn, flex: 1, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 7, padding: "11px 0" }}>📷 {t("photoBtn")}</button>
+          <button onClick={openPhoto} style={{ ...ghostBtn, flex: 1, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 7, padding: "11px 0" }}><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h3l2-3h8l2 3h3a2 2 0 0 1 2 2z" /><circle cx="12" cy="13" r="3.5" /></svg>{t("photoBtn")}</button>
           <button onClick={openManual} style={{ ...ghostBtn, flex: 1, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 7, padding: "11px 0" }}><PlusIcon c={EMBER} />{t("manualBtn")}</button>
         </div>
       )}
