@@ -339,6 +339,8 @@ const TXT = {
   creditsOutSub: { nl: "Je hebt je gegenereerde plannen gebruikt. Ontgrendel een nieuwe week om verder te gaan.", en: "You've used your generated plans. Unlock another week to continue." },
   softNoteTitle: { nl: "Je verse AI-plannen voor deze maand zijn op", en: "You've used this month's fresh AI plans" },
   softNoteSub: { nl: "Geen zorgen — je dagdoelen blijven kloppen en je plan werkt gewoon door. Volgende maand staat je AI-tegoed weer vers klaar.", en: "No worries — your daily targets still apply and your plan keeps working. Your AI credits refresh next month." },
+  aiNoteTitle: { nl: "AI-voorstel", en: "AI suggestion" },
+  aiNoteSub: { nl: "Voor één of meer eetmomenten had de receptenbibliotheek nog geen gerecht dat precies bij je keuze past. Dit plan is daarom door de AI samengesteld en past binnen je dagdoelen. Hoe meer je invult en bijstuurt, hoe beter het wordt.", en: "For one or more meal moments the recipe library didn't yet have a dish matching your choice exactly. This plan was built by the AI and fits your daily targets. The more you fill in and adjust, the better it gets." },
   leadTitle: { nl: "Nog niet klaar om te kopen?", en: "Not ready to buy yet?" },
   leadSub: { nl: "Pak de gratis starter: 5 Hyrox-voedingsregels die 90% van de fouten oplossen. Direct in je inbox.", en: "Grab the free starter: 5 Hyrox fueling rules that fix 90% of mistakes. Straight to your inbox." },
   leadPh: { nl: "jouw@email.com", en: "your@email.com" },
@@ -627,6 +629,7 @@ export default function App() {
   const [trackerBusy, setTrackerBusy] = useState(false);
   const [lockReason, setLockReason] = useState("");
   const [softwareNote, setSoftwareNote] = useState(false);
+  const [aiPlanNote, setAiPlanNote] = useState(false); // plan is door AI gemaakt i.p.v. uit de bibliotheek (receptgat)
   const [planEmail, setPlanEmail] = useState("");
   const [planSource, setPlanSource] = useState("ai"); // 'ai' = AI stelt samen · 'products' = uit eigen producten
 
@@ -1129,7 +1132,7 @@ export default function App() {
   async function handleBuild() {
     if (!basicsFilled) { setError(T("fillBasics")); return; } // kader: eerst leeftijd/gewicht/lengte
     if (inDemo) { setShowAuth(true); return; } // demo: 'jouw' plan is het betaalde moment
-    setError(""); setStarted(true); setView("plan"); setChecked({}); setWeek(null); setLockReason(""); setSoftwareNote(false); setPlanEmail("");
+    setError(""); setStarted(true); setView("plan"); setChecked({}); setWeek(null); setLockReason(""); setSoftwareNote(false); setAiPlanNote(false); setPlanEmail("");
     const intake = currentIntake();
     try { localStorage.setItem("hf_intake", JSON.stringify(intake)); } catch (e) {}
     if (planSource === "products") { await buildFromProducts(intake); return; }
@@ -1149,7 +1152,7 @@ export default function App() {
   async function buildOwnPlan() {
     if (!basicsFilled) { setError(T("fillBasics")); return; } // kader: eerst leeftijd/gewicht/lengte
     if (inDemo) { setShowAuth(true); return; } // demo: zelf samenstellen is betaald
-    setError(""); setStarted(true); setView("plan"); setChecked({}); setWeek(null); setLockReason(""); setSoftwareNote(false); setPlanEmail("");
+    setError(""); setStarted(true); setView("plan"); setChecked({}); setWeek(null); setLockReason(""); setSoftwareNote(false); setAiPlanNote(false); setPlanEmail("");
     const intake = currentIntake();
     try { localStorage.setItem("hf_intake", JSON.stringify(intake)); } catch (e) {}
     await computeFree(intake); // altijd de targets berekenen zodat je weet waar je naartoe werkt
@@ -1210,6 +1213,7 @@ export default function App() {
       }
       const got = (data.plan && data.plan.days) || [];
       if (!got.length) throw new Error(T("noDays"));
+      setAiPlanNote(data.source !== "library"); // vangnet/AI -> transparante melding
       let days;
       if (data.source === "library" && got.length === weekReq.length) {
         // Per-dag uit de bibliotheek: al per dag geschaald, elk een ander gerecht. Direct gebruiken.
@@ -2241,6 +2245,16 @@ export default function App() {
                     <div style={{ background: "rgba(var(--hf-ember-rgb),0.10)", border: "1px solid rgba(var(--hf-ember-rgb),0.35)", borderRadius: 12, padding: "13px 15px", marginBottom: 14 }}>
                       <div style={{ ...disp, fontSize: 14.5, fontWeight: 700, color: PAPER, marginBottom: 4 }}>{T("softNoteTitle")}</div>
                       <div style={{ fontSize: 12.5, color: MUTED, lineHeight: 1.5 }}>{T("softNoteSub")}</div>
+                    </div>
+                  )}
+
+                  {aiPlanNote && !loading && (
+                    <div style={{ display: "flex", gap: 10, background: "rgba(var(--hf-ember-rgb),0.10)", border: "1px solid rgba(var(--hf-ember-rgb),0.45)", borderRadius: 12, padding: "12px 14px", marginBottom: 14 }}>
+                      <div style={{ flex: "0 0 auto", width: 22, height: 22, borderRadius: "50%", background: EMBER, color: "#fff", fontWeight: 800, fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center", marginTop: 1 }}>!</div>
+                      <div>
+                        <div style={{ ...disp, fontSize: 13, fontWeight: 800, color: PAPER, marginBottom: 3, letterSpacing: 0.3 }}>{T("aiNoteTitle")}</div>
+                        <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.5 }}>{T("aiNoteSub")}</div>
+                      </div>
                     </div>
                   )}
 

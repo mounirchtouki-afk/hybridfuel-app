@@ -97,7 +97,7 @@ export default function CoachDash({ session, org, isOwner, perms, lang, isAdmin,
   const [codeShown, setCodeShown] = useState(null);  // {name, code}
   const [err, setErr] = useState("");
 
-  // AI-ledenimport (CSV/Excel → koppen herkennen → bulk aanmaken)
+  // Ledenimport (CSV/Excel → koppen herkennen → bulk aanmaken; geen AI)
   const [imp, setImp] = useState(null);     // {headers:[], rows:[[...]], map:{name,first,last,tier}, fileName}
   const [impBusy, setImpBusy] = useState(false);
   const [impErr, setImpErr] = useState("");
@@ -464,7 +464,7 @@ export default function CoachDash({ session, org, isOwner, perms, lang, isAdmin,
     } catch (e) {}
   }
 
-  // --- AI-ledenimport ---
+  // --- Ledenimport (CSV/Excel, kolomherkenning) ---
   // Raadt per veld de meest waarschijnlijke kolom (op basis van de kop-tekst).
   function guessMap(headers) {
     const lc = headers.map((h) => String(h || "").toLowerCase().trim());
@@ -1180,7 +1180,7 @@ export default function CoachDash({ session, org, isOwner, perms, lang, isAdmin,
           {err && <div style={{ fontSize: 12, color: EMBER_SOFT, marginTop: 8 }}>{err}</div>}
         </div>
 
-        {/* AI-ledenimport */}
+        {/* Ledenimport (CSV/Excel, kolomherkenning) */}
         <div style={card}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
             <span style={{ color }}>{ICON.members && ICON.members({ col: color })}</span>

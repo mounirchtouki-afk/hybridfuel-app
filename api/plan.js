@@ -571,6 +571,7 @@ async function buildFromLibrary(body, cyc) {
   const fixedSnack = {}; // idem voor snacks (per snack-index)
   const avoidYesterday = variety !== "mix"; // "varied"/"fixed": ook niet hetzelfde als gisteren
   const days = [];
+  const gaps = []; // eetmomenten zonder passend gerecht (voedt het gat-logboek)
   for (let ti = 0; ti < reqs.length; ti++) {
     const r = reqs[ti];
     const dayT = r.level === "train" ? cyc.train : r.level === "rest" ? cyc.rest : cyc.base;
@@ -608,10 +609,10 @@ async function buildFromLibrary(body, cyc) {
           const cf = carbFamOf(dish); if (cf) usedCarb.add(cf);
         }
       }
-      if (!meal) { miss = true; break; }
+      if (!meal) { gaps.push({ moment: md.id, chips: (prefIds[md.id] || []).filter((x) => typeof x === "string") }); miss = true; break; }
       meal.t = md.label; meals.push(meal);
     }
-    if (miss) return { complete: false };
+    if (miss) return { complete: false, gaps };
     for (let s = 0; s < nSnack; s++) {
       const prods = chosenProducts.filter((p) => p.moment === "snack");
       let meal = prods.length ? scaleProduct(prods[(ti + s) % prods.length], Math.round(dayT.kcal * 0.10)) : null;
@@ -631,14 +632,112 @@ async function buildFromLibrary(body, cyc) {
           usedProt.add(protFamOf(dish));
         }
       }
-      if (!meal) { miss = true; break; }
+      if (!meal) { gaps.push({ moment: "snack", chips: (prefIds.snack || []).filter((x) => typeof x === "string") }); miss = true; break; }
       meal.t = snackLabel; meals.push(meal);
     }
-    if (miss) return { complete: false };
+    if (miss) return { complete: false, gaps };
     days.push({ d: r.label, m: meals });
   }
-  if (!days.length) return { complete: false };
+  if (!days.length) return { complete: false, gaps };
   return { complete: true, plan: { days } };
+}
+
+// Generieke AI-call voor korte JSON-taken (weekreview). Zelfde provider-switch
+// + fallback als de maaltijd-generatie, maar los herbruikbaar en met klein budget.
+async function callModel(prompt, haiku) {
+  const anKey = process.env.ANTHROPIC_API_KEY;
+  const orKey = process.env.OPENROUTER_API_KEY;
+  const provider = (process.env.AI_PROVIDER || "anthropic").toLowerCase();
+  if (!anKey && !orKey) return { err: "geen AI-sleutel" };
+  const mAn = haiku ? (process.env.AI_MODEL_HAIKU || "claude-3-5-haiku-latest") : (process.env.AI_MODEL_ANTHROPIC || "claude-sonnet-4-6");
+  const mOr = haiku ? (process.env.AI_MODEL_HAIKU_OR || "anthropic/claude-3.5-haiku") : (process.env.AI_MODEL || "anthropic/claude-sonnet-4");
+  async function an() {
+    if (!anKey) return { err: "ANTHROPIC_API_KEY ontbreekt" };
+    const r = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", headers: { "Content-Type": "application/json", "x-api-key": anKey, "anthropic-version": "2023-06-01" }, body: JSON.stringify({ model: mAn, max_tokens: 1500, messages: [{ role: "user", content: prompt }] }) });
+    if (!r.ok) return { err: "anthropic " + r.status, detail: (await r.text()).slice(0, 200) };
+    const d = await r.json(); return { text: (d.content || []).filter((x) => x.type === "text").map((x) => x.text).join("").trim() };
+  }
+  async function or() {
+    if (!orKey) return { err: "OPENROUTER_API_KEY ontbreekt" };
+    const r = await fetch("https://openrouter.ai/api/v1/chat/completions", { method: "POST", headers: { "Content-Type": "application/json", "Authorization": "Bearer " + orKey, "HTTP-Referer": "https://hybridfuelco.com", "X-Title": "HybridFuelCo" }, body: JSON.stringify({ model: mOr, max_tokens: 1500, messages: [{ role: "user", content: prompt }] }) });
+    if (!r.ok) return { err: "openrouter " + r.status, detail: (await r.text()).slice(0, 200) };
+    const d = await r.json(); const m = d.choices && d.choices[0] && d.choices[0].message; let c = m && m.content; if (Array.isArray(c)) c = c.map((x) => (x && x.text) || "").join(""); return { text: (c || "").trim() };
+  }
+  let out = provider === "openrouter" ? await or() : await an();
+  if ((out.err || !out.text) && (provider === "openrouter" ? anKey : orKey)) out = provider === "openrouter" ? await an() : await or();
+  return out;
+}
+function parseJsonLoose(text) {
+  let t = (text || "").replace(/```json/gi, "").replace(/```/g, "").trim();
+  try { return JSON.parse(t); } catch (e) { const a = t.indexOf("{"), b = t.lastIndexOf("}"); if (a >= 0 && b > a) { try { return JSON.parse(t.slice(a, b + 1)); } catch (e2) {} } return null; }
+}
+// Weekreview-prompt: coachen BINNEN de kaders. Kerndoelen (kcal/macro's) liggen
+// vast en veranderen NOOIT; alleen kleine, veilige aanpassingen voor de indeling
+// van komende week, afgestemd op de trainingsmethode (train/rust-dagen).
+function weekReviewPrompt(rv, lang) {
+  const nl = lang !== "en";
+  const t = rv.targets || {};
+  const tr = t.train || {}, rs = t.rest || {};
+  const facts = [
+    `window: ${rv.window && rv.window.start} .. ${rv.window && rv.window.end} (7 days)`,
+    `days logged: ${rv.daysLogged} / 7`,
+    `avg kcal eaten: ${rv.avgKcalEaten || "unknown"}`,
+    `target kcal: ${t.kcal || "unknown"} (protein ${t.protein || "?"}g / carbs ${t.carbs || "?"}g / fat ${t.fat || "?"}g)`,
+    `training-day target kcal: ${tr.kcal || "?"} · rest-day target kcal: ${rs.kcal || "?"}`,
+    `trainings planned: ${rv.trainingPlanned} · trainings done: ${rv.trainingDone}`,
+    `weight start: ${rv.weightStart != null ? rv.weightStart + " kg" : "unknown"} · weight end: ${rv.weightEnd != null ? rv.weightEnd + " kg" : "unknown"}`,
+  ].join("\n");
+  const rules = nl
+    ? `Je bent de HybridFuel coaching-engine. Beoordeel de afgelopen 7 dagen van deze sporter en stel een KORTE review op.
+HARDE REGELS:
+- De kerndoelen (kcal + macro's) liggen VAST en veranderen NOOIT. Stel die niet bij.
+- Geef alleen kleine, veilige aanpassingen voor de INDELING van komende week: consistentie van loggen, eiwit halen, en vooral de afstemming op de trainingsmethode (meer koolhydraten/energie op trainingsdagen, minder op rustdagen) en of de geplande trainingen gehaald zijn.
+- Blijf binnen de veilige tempo-normen (vetverlies 0,5–1%/wk, onderhoud ±0,5%, opbouw 0,25–0,5%). Nooit crash-advies.
+- Weinig data (weinig dagen gelogd of onbekende waarden)? Zeg dat eerlijk en houd het mild; verzin geen cijfers.
+- Jij adviseert, de gebruiker beslist. Geen medische claims.
+Toon = "attention" als er iets duidelijk afwijkt (veel onder/boven de kcal, trainingen gemist, gewicht verkeerde kant op t.o.v. doel), anders "ok".
+Antwoord UITSLUITEND als JSON, geen tekst eromheen:
+{"tone":"ok"|"attention","headline":"korte kop (max ~8 woorden)","summary":"2-4 zinnen in het Nederlands","actions":["actie 1","actie 2","actie 3"]}
+Maximaal 3 acties, elk één concrete zin.`
+    : `You are the HybridFuel coaching engine. Review this athlete's last 7 days and write a SHORT review.
+HARD RULES:
+- Core targets (kcal + macros) are FIXED and NEVER change. Do not adjust them.
+- Only suggest small, safe tweaks to how NEXT week is laid out: logging consistency, hitting protein, and above all fit to the training method (more carbs/energy on training days, less on rest days) and whether planned trainings were done.
+- Stay within safe-rate norms (fat loss 0.5–1%/wk, maintenance ±0.5%, lean gain 0.25–0.5%). Never crash advice.
+- Thin data (few days logged or unknown values)? Say so honestly and keep it gentle; do not invent numbers.
+- You advise, the user decides. No medical claims.
+Tone = "attention" if something clearly deviates (well under/over kcal, missed trainings, weight moving wrong way vs goal), else "ok".
+Reply ONLY as JSON, no surrounding text:
+{"tone":"ok"|"attention","headline":"short headline (max ~8 words)","summary":"2-4 sentences in English","actions":["action 1","action 2","action 3"]}
+At most 3 actions, each one concrete sentence.`;
+  return rules + "\n\nDATA:\n" + facts;
+}
+async function buildWeekReview(body) {
+  const lang = body.lang === "en" ? "en" : "nl";
+  const out = await callModel(weekReviewPrompt(body.review || {}, lang), true); // Haiku: kort + goedkoop
+  if (out.err || !out.text) return { err: out.err || "leeg antwoord", detail: out.detail };
+  const j = parseJsonLoose(out.text);
+  if (!j || typeof j !== "object") return { err: "onleesbaar" };
+  const headline = String(j.headline || "").slice(0, 120).trim();
+  const summary = String(j.summary || "").slice(0, 700).trim();
+  if (!headline || !summary) return { err: "incompleet" };
+  const actions = Array.isArray(j.actions) ? j.actions.map((a) => String(a).slice(0, 200).trim()).filter(Boolean).slice(0, 3) : [];
+  return { review: { tone: j.tone === "attention" ? "attention" : "ok", headline, summary, actions } };
+}
+
+// Gat-logboek: elk eetmoment zonder passend gerecht wordt vastgelegd, zodat
+// zichtbaar wordt welke recepten de bibliotheek mist. Best-effort: faalt stil,
+// blokkeert nooit een plan. Lijst wordt op 1000 regels gehouden.
+async function logGaps(gaps) {
+  try {
+    const ts = new Date().toISOString();
+    for (const g of gaps.slice(0, 8)) {
+      const line = JSON.stringify({ ts, moment: g.moment, chips: (g.chips || []).slice(0, 10) });
+      try { console.log("[recipe-gap] " + line); } catch (e) {}
+      if (kvConfigured()) { try { await kv(["RPUSH", "hf:gaps", line]); } catch (e) {} }
+    }
+    if (kvConfigured()) { try { await kv(["LTRIM", "hf:gaps", "-1000", "-1"]); } catch (e) {} }
+  } catch (e) { /* nooit blokkeren */ }
 }
 
 export default async function handler(req, res) {
@@ -669,6 +768,25 @@ export default async function handler(req, res) {
     const gym = await gymProfile(body.authToken); // { access, tier } — toegang via de sportschool
     const gymOk = gym.access;
     const access = subVerified || gymOk; // echte toegang zonder betaalmuur
+
+    // WEEKREVIEW: korte AI-coaching op de 7-daagse logging, binnen de kaders.
+    // Alleen voor abonnees/leden; eigen (goedkope) Haiku-call, met rate-limit-backstop.
+    if (body.mode === "weekreview") {
+      const wlang = body.lang === "en" ? "en" : "nl";
+      if (!trusted && !access) {
+        return res.status(200).json({ error: wlang === "nl" ? "Weekreview is voor abonnees en leden." : "Week review is for subscribers and members." });
+      }
+      if (!trusted) {
+        const ip = (req.headers["x-forwarded-for"] || "unknown").split(",")[0].trim();
+        if (rateLimited(ip)) return res.status(429).json({ error: wlang === "nl" ? "Even te druk — probeer het zo weer." : "Too busy right now — try again shortly." });
+      }
+      const wr = await buildWeekReview(body);
+      if (wr.err || !wr.review) {
+        return res.status(502).json({ error: wlang === "nl" ? "Kon de review niet maken. Probeer het zo opnieuw." : "Couldn't build the review. Try again shortly.", detail: wr.err || "leeg" });
+      }
+      return res.status(200).json({ review: wr.review });
+    }
+
     const paidVerified = isPaid && (trusted || access || validToken(body.token));
     if (!trusted && !paidVerified) {
       return res.status(200).json({ targets, plan: null, locked: true });
@@ -683,6 +801,9 @@ export default async function handler(req, res) {
         if (lib && lib.complete && lib.plan && lib.plan.days && lib.plan.days.length) {
           return res.status(200).json({ targets, plan: lib.plan, source: "library" });
         }
+        // Gat-logboek: welke eetmomenten + keuzes hadden geen passend gerecht?
+        // Stuurt welke recepten Mounir moet toevoegen. Best-effort, blokkeert nooit.
+        if (lib && Array.isArray(lib.gaps) && lib.gaps.length) await logGaps(lib.gaps);
       } catch (e) { /* bibliotheek onbereikbaar → AI-vangnet hieronder */ }
     }
 
@@ -831,7 +952,7 @@ export default async function handler(req, res) {
       }
     }
 
-    return res.status(200).json({ targets, plan });
+    return res.status(200).json({ targets, plan, source: "ai" });
   } catch (e) {
     return res.status(500).json({ error: "Serverfout", detail: String(e).slice(0, 200) });
   }
