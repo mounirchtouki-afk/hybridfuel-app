@@ -203,6 +203,7 @@ const TXT = {
   trainingDaysHint: { nl: "Welke dagen train je? Die dagen krijgen meer calorieën (koolhydraten), rustdagen minder, je weekgemiddelde blijft op je doel.", en: "Which days do you train? Those days get more calories (carbs), rest days fewer, your weekly average stays on your goal." },
   build: { nl: "Maak mijn plan", en: "Build my plan" },
   building: { nl: "Bezig…", en: "Building…" },
+  fillBasics: { nl: "Vul eerst leeftijd, gewicht en lengte in", en: "Fill in age, weight and height first" },
   planSourceLbl: { nl: "Hoe wil je je plan?", en: "How do you want your plan?" },
   planAi: { nl: "AI stelt samen", en: "AI builds it" },
   planProducts: { nl: "Mijn producten", en: "My products" },
@@ -578,9 +579,9 @@ export default function App() {
   const setLang = (l) => { setLangState(l); try { localStorage.setItem("hf_lang", l); } catch (e) {} };
 
   const [sex, setSex] = useState("male");
-  const [age, setAge] = useState("43");
-  const [height, setHeight] = useState("190");
-  const [weight, setWeight] = useState("87");
+  const [age, setAge] = useState("");
+  const [height, setHeight] = useState("");
+  const [weight, setWeight] = useState("");
   const [activity, setActivity] = useState("moderate");
   const [goal, setGoal] = useState("maintain");
   const [diet, setDiet] = useState("highprotein");
@@ -926,6 +927,9 @@ export default function App() {
   // Abonnement (indien ingesteld) bepaalt de persoonlijke PT-laag; anders de tier (fallback).
   const gymPlan = gymCtx && gymCtx.plan;
   const gymPro = isGymMember && (gymPlan ? gymPlan.pt_included : (gymCtx.tier || "pro") === "pro");
+  // Harde kader: geen plan (en geen targets) zonder leeftijd, gewicht én lengte.
+  const numOk = (v) => { const n = parseFloat(String(v == null ? "" : v).replace(",", ".")); return isFinite(n) && n > 0; };
+  const basicsFilled = numOk(age) && numOk(height) && numOk(weight);
   const hasBasis = devMode || isGymMember || subTier === "basis" || subTier === "pro";
   const hasPro = devMode || gymPro || subTier === "pro";
   const hasPlus = devMode || gymPro || subTier === "pro"; // Race Protocol, later evt. eigen Plus-laag
@@ -1123,6 +1127,7 @@ export default function App() {
   function currentIntake() { return { ...common(), trainingDays: [...trainingDays] }; }
 
   async function handleBuild() {
+    if (!basicsFilled) { setError(T("fillBasics")); return; } // kader: eerst leeftijd/gewicht/lengte
     if (inDemo) { setShowAuth(true); return; } // demo: 'jouw' plan is het betaalde moment
     setError(""); setStarted(true); setView("plan"); setChecked({}); setWeek(null); setLockReason(""); setSoftwareNote(false); setPlanEmail("");
     const intake = currentIntake();
@@ -1142,6 +1147,7 @@ export default function App() {
 
   // Zelf een plan samenstellen: leeg weekschema dat de klant zelf vult via de +.
   async function buildOwnPlan() {
+    if (!basicsFilled) { setError(T("fillBasics")); return; } // kader: eerst leeftijd/gewicht/lengte
     if (inDemo) { setShowAuth(true); return; } // demo: zelf samenstellen is betaald
     setError(""); setStarted(true); setView("plan"); setChecked({}); setWeek(null); setLockReason(""); setSoftwareNote(false); setPlanEmail("");
     const intake = currentIntake();
@@ -2173,10 +2179,11 @@ export default function App() {
                     </div>}
               </div>
 
-              <button onClick={handleBuild} disabled={loading} style={{ width: "100%", background: EMBER, color: "#fff", border: "none", padding: "14px 0", borderRadius: 10, ...disp, fontWeight: 700, fontSize: 16, letterSpacing: 1, textTransform: "uppercase", cursor: loading ? "default" : "pointer", opacity: loading ? 0.7 : 1 }}>
+              <button onClick={handleBuild} disabled={loading || !basicsFilled} style={{ width: "100%", background: basicsFilled ? EMBER : "#2a2a2a", color: basicsFilled ? "#fff" : "#5a5a5a", border: "none", padding: "14px 0", borderRadius: 10, ...disp, fontWeight: 700, fontSize: 16, letterSpacing: 1, textTransform: "uppercase", cursor: (loading || !basicsFilled) ? "default" : "pointer", opacity: loading ? 0.7 : 1 }}>
                 {loading ? T("building") : T("build")}
               </button>
-              <div onClick={() => { if (!loading) buildOwnPlan(); }} style={{ cursor: loading ? "default" : "pointer", textAlign: "center", marginTop: 10, color: EMBER, fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.3 }}>{T("buildOwn")}</div>
+              {!basicsFilled && <div style={{ fontSize: 11.5, color: EMBER, textAlign: "center", marginTop: 8, fontWeight: 600, ...disp }}>{T("fillBasics")}</div>}
+              <div onClick={() => { if (!loading && basicsFilled) buildOwnPlan(); }} style={{ cursor: (loading || !basicsFilled) ? "default" : "pointer", textAlign: "center", marginTop: 10, color: basicsFilled ? EMBER : "#5a5a5a", fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.3, opacity: basicsFilled ? 1 : 0.6 }}>{T("buildOwn")}</div>
               <div style={{ fontSize: 10.5, color: MUTED, textAlign: "center", marginTop: 4, lineHeight: 1.4 }}>{T("ownPlanHint")}</div>
             </div>
 
