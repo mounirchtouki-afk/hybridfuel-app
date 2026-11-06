@@ -203,7 +203,7 @@ const TXT = {
   trainingDaysHint: { nl: "Welke dagen train je? Die dagen krijgen meer calorieën (koolhydraten), rustdagen minder, je weekgemiddelde blijft op je doel.", en: "Which days do you train? Those days get more calories (carbs), rest days fewer, your weekly average stays on your goal." },
   build: { nl: "Maak mijn plan", en: "Build my plan" },
   building: { nl: "Bezig…", en: "Building…" },
-  fillBasics: { nl: "Vul eerst leeftijd, gewicht en lengte in", en: "Fill in age, weight and height first" },
+  fillBasics: { nl: "Vul eerst leeftijd, geslacht, gewicht en lengte in", en: "Fill in age, sex, weight and height first" },
   planSourceLbl: { nl: "Hoe wil je je plan?", en: "How do you want your plan?" },
   planAi: { nl: "AI stelt samen", en: "AI builds it" },
   planProducts: { nl: "Mijn producten", en: "My products" },
@@ -578,7 +578,7 @@ export default function App() {
   const T = (k) => TXT[k][lang];
   const setLang = (l) => { setLangState(l); try { localStorage.setItem("hf_lang", l); } catch (e) {} };
 
-  const [sex, setSex] = useState("male");
+  const [sex, setSex] = useState("");
   const [age, setAge] = useState("");
   const [height, setHeight] = useState("");
   const [weight, setWeight] = useState("");
@@ -597,7 +597,7 @@ export default function App() {
   const [momentAdd, setMomentAdd] = useState(null); // eetmoment waarvoor we een product toevoegen/scannen
   const [trainingDays, setTrainingDays] = useState([0, 2, 4]);
   const [snacks, setSnacks] = useState(2);
-  const [snackLikes, setSnackLikes] = useState(["fruit"]);
+  const [snackLikes, setSnackLikes] = useState([]);
   const [variety, setVariety] = useState("mix");
 
   const [targets, setTargets] = useState(null);
@@ -929,7 +929,7 @@ export default function App() {
   const gymPro = isGymMember && (gymPlan ? gymPlan.pt_included : (gymCtx.tier || "pro") === "pro");
   // Harde kader: geen plan (en geen targets) zonder leeftijd, gewicht én lengte.
   const numOk = (v) => { const n = parseFloat(String(v == null ? "" : v).replace(",", ".")); return isFinite(n) && n > 0; };
-  const basicsFilled = numOk(age) && numOk(height) && numOk(weight);
+  const basicsFilled = numOk(age) && numOk(height) && numOk(weight) && (sex === "male" || sex === "female");
   const hasBasis = devMode || isGymMember || subTier === "basis" || subTier === "pro";
   const hasPro = devMode || gymPro || subTier === "pro";
   const hasPlus = devMode || gymPro || subTier === "pro"; // Race Protocol, later evt. eigen Plus-laag
@@ -1122,7 +1122,7 @@ export default function App() {
     // Gekozen eigen producten (met macro's) zodat de server er direct een maaltijd van maakt.
     const chosenProducts = [];
     MEAL_MOMENTS.forEach((mo) => (mealPrefs[mo.id] || []).forEach((id) => { if (typeof id === "string" && id.indexOf("prod:") === 0) { const p = userProducts.find((x) => ("prod:" + x.id) === id); if (p) chosenProducts.push({ moment: mo.id, name: p.name, per_100: p.per_100 || {} }); } }));
-    return { sex, age, height, weight, activity, goal, diet: dietObj ? dietObj[lang] : diet, avoid, likes, cuisines: labelsOf(cuisines, CUISINES), proteins: labelsOf(proteins, PROTEINS), snacks, snackLikes, snackLikeLabels: labelsOf(snackLikes, SNACKS), mealPrefs: mealPrefLabels, mealPrefIds, chosenProducts, variety, lang };
+    return { sex, age, height, weight, activity, goal, diet: dietObj ? dietObj[lang] : diet, avoid, likes, cuisines: labelsOf(cuisines, CUISINES), proteins: labelsOf(proteins, PROTEINS), proteinIds: proteins.slice(), snacks, snackLikes, snackLikeLabels: labelsOf(snackLikes, SNACKS), mealPrefs: mealPrefLabels, mealPrefIds, chosenProducts, variety, lang };
   }
   function currentIntake() { return { ...common(), trainingDays: [...trainingDays] }; }
 
@@ -2050,7 +2050,7 @@ export default function App() {
 
               <div style={{ marginBottom: 14 }}>
                 <label style={label}>{T("sexLbl")}</label>
-                <Dropdown value={sex} onChange={setSex} options={[{ id: "male", label: T("man") }, { id: "female", label: T("woman") }]} />
+                <Dropdown value={sex} onChange={setSex} options={[{ id: "", label: "—" }, { id: "male", label: T("man") }, { id: "female", label: T("woman") }]} />
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 14 }}>
                 <div><label style={label}>{T("age")}</label><input style={input} value={age} onChange={(e) => setAge(e.target.value)} inputMode="numeric" /></div>
@@ -2079,16 +2079,8 @@ export default function App() {
               <div style={{ height: 1, background: LINE, margin: "2px 0 16px" }} />
               <div style={{ ...disp, fontSize: 15, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 14, color: EMBER }}>{T("whatYouLove")}</div>
               <div style={{ marginBottom: 14 }}>
-                <label style={label}>{T("favFoods")}</label>
-                <input style={input} value={likes} onChange={(e) => setLikes(e.target.value)} placeholder={T("favPh")} />
-              </div>
-              <div style={{ marginBottom: 14 }}>
                 <label style={label}>{T("goToProteins")}</label>
                 <MultiDropdown values={proteins} onChange={setProteins} options={PROTEINS.map((p) => ({ id: p.id, label: p[lang] }))} placeholder={T("pickMulti")} />
-              </div>
-              <div style={{ marginBottom: 16 }}>
-                <label style={label}>{T("cuisine")}</label>
-                <MultiDropdown values={cuisines} onChange={setCuisines} options={CUISINES.map((c) => ({ id: c.id, label: c[lang] }))} placeholder={T("pickMulti")} />
               </div>
 
               <div style={{ marginBottom: 18 }}>

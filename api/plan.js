@@ -431,6 +431,11 @@ async function buildFromLibrary(body, cyc) {
   const avoid = (cleanStr(body.avoid, 200) || "").toLowerCase().split(/[,;\n]/).map((s) => s.trim()).filter((x) => x.length > 2);
   const isVegan = /vegan|veganis/i.test(diet);
   const isVeg = /vegetar/i.test(diet);
+  const variety = cleanStr(body.variety, 20) || "mix";
+  // Voorkeurs-eiwitbronnen (ids uit de app) -> toegestane eiwit-families.
+  const PROT_FAM_MAP = { chicken: ["kip"], beef: ["rund"], fish: ["zalm", "tonijn", "garnaal", "witvis"], eggs: ["ei"], tofu: ["soja"], quark: ["zuivel"], beans: ["peulvrucht"] };
+  const allowedProt = new Set();
+  (Array.isArray(body.proteinIds) ? body.proteinIds : []).forEach((id) => (PROT_FAM_MAP[id] || []).forEach((f) => allowedProt.add(f)));
   const name = (m) => (m ? m["name_" + lang] || m.name_en || m.name_nl : "");
   const filt = (rows) => (rows || []).filter((d) => {
     if (isVegan && !(d.tags || []).includes("vegan")) return false;
@@ -502,7 +507,11 @@ async function buildFromLibrary(body, cyc) {
     let rows = filt(await fetchDishes(momId, null)); // alle recepten voor dit moment (dieet/avoid al toegepast)
     if (chips.length) {
       const matched = rows.filter((d) => chips.some((c) => matchesPref(d, c)));
-      if (matched.length) rows = matched; // keuze honoreren; geen match -> algemene set behouden
+      if (matched.length) rows = matched; // per-moment keuze is leidend; geen match -> algemene set
+    }
+    if (allowedProt.size) {
+      const pf = rows.filter((d) => allowedProt.has(protFamOf(d))); // binnen de keuze: voorkeurs-eiwitten
+      if (pf.length) rows = pf; // geen enkel passend eiwit op dit moment -> set houden (bv. ontbijt)
     }
     cache[momId] = rows;
     return rows;
@@ -558,6 +567,9 @@ async function buildFromLibrary(body, cyc) {
   const reqs = (Array.isArray(body.week) && body.week.length) ? body.week.slice(0, 7)
     : ((Array.isArray(body.request) && body.request.length) ? body.request.slice(0, 3) : [{ label: "D1", level: "base" }]);
   const lastProt = {}; // per moment: eiwit van gisteren (niet twee dagen achter elkaar hetzelfde)
+  const fixedMain = {}; // variety "fixed": gekozen gerecht per moment, hergebruikt elke dag
+  const fixedSnack = {}; // idem voor snacks (per snack-index)
+  const avoidYesterday = variety !== "mix"; // "varied"/"fixed": ook niet hetzelfde als gisteren
   const days = [];
   for (let ti = 0; ti < reqs.length; ti++) {
     const r = reqs[ti];
@@ -576,15 +588,21 @@ async function buildFromLibrary(body, cyc) {
       if (!meal) {
         const cands = await candidatesFor(md.id);
         if (cands.length) {
-          // 1e keus: koolhydraat-houdend, nieuwe eiwit-familie (niet vandaag, niet gisteren
-          // op dit moment) én nieuwe koolhydraat-familie. Daarna lossere pogingen.
-          const freshP = (d) => !usedProt.has(protFamOf(d)) && lastProt[md.id] !== protFamOf(d);
-          const freshC = (d) => { const cf = carbFamOf(d); return !cf || !usedCarb.has(cf); };
-          const off = ti * 3 + md.rot;
-          let dish = pick(cands, off, (d) => hasCarb(d) && freshP(d) && freshC(d));
-          if (!dish) dish = pick(cands, off, (d) => hasCarb(d) && freshP(d));
-          if (!dish) dish = pick(cands, off, (d) => freshP(d));
-          if (!dish) dish = cands[off % cands.length];
+          let dish;
+          if (variety === "fixed" && fixedMain[md.id] && cands.indexOf(fixedMain[md.id]) !== -1) {
+            dish = fixedMain[md.id]; // vaste patronen: zelfde gerecht, alleen porties schalen
+          } else {
+            // 1e keus: koolhydraat-houdend, nieuwe eiwit-familie (niet vandaag, bij variatie
+            // ook niet gisteren) én nieuwe koolhydraat-familie. Daarna lossere pogingen.
+            const freshP = (d) => !usedProt.has(protFamOf(d)) && (!avoidYesterday || lastProt[md.id] !== protFamOf(d));
+            const freshC = (d) => { const cf = carbFamOf(d); return !cf || !usedCarb.has(cf); };
+            const off = ti * 3 + md.rot;
+            dish = pick(cands, off, (d) => hasCarb(d) && freshP(d) && freshC(d));
+            if (!dish) dish = pick(cands, off, (d) => hasCarb(d) && freshP(d));
+            if (!dish) dish = pick(cands, off, (d) => freshP(d));
+            if (!dish) dish = cands[off % cands.length];
+            if (variety === "fixed") fixedMain[md.id] = dish;
+          }
           meal = scaleDish(dish, pMain, 2.2, carbMult, 26);
           usedProt.add(protFamOf(dish)); lastProt[md.id] = protFamOf(dish);
           const cf = carbFamOf(dish); if (cf) usedCarb.add(cf);
@@ -600,9 +618,15 @@ async function buildFromLibrary(body, cyc) {
       if (!meal) {
         const cands = await candidatesFor("snack");
         if (cands.length) {
-          const off = ti * 2 + s;
-          let dish = pick(cands, off, (d) => !usedProt.has(protFamOf(d)));
-          if (!dish) dish = cands[off % cands.length];
+          let dish;
+          if (variety === "fixed" && fixedSnack[s] && cands.indexOf(fixedSnack[s]) !== -1) {
+            dish = fixedSnack[s];
+          } else {
+            const off = ti * 2 + s;
+            dish = pick(cands, off, (d) => !usedProt.has(protFamOf(d)));
+            if (!dish) dish = cands[off % cands.length];
+            if (variety === "fixed") fixedSnack[s] = dish;
+          }
           meal = scaleDish(dish, pSnack, 1.6, 1, 20);
           usedProt.add(protFamOf(dish));
         }
