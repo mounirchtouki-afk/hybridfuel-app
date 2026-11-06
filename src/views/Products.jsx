@@ -7,7 +7,12 @@ const T = {
   title: { nl: "Mijn producten", en: "My products" },
   photoBtn: { nl: "Foto's", en: "Photos" },
   photoTitle: { nl: "Foto's → AI herkent het", en: "Photos → AI reads it" },
-  photoHint: { nl: "Upload 1–4 foto's van hetzelfde product: de voorkant (wat het is) én de voedingswaardentabel. Scherp en recht = beste herkenning.", en: "Upload 1–4 photos of the same product: the front (what it is) and the nutrition table. Sharp and straight = best recognition." },
+  photoHint: { nl: "Maak of upload 1–4 foto's van hetzelfde product. De AI leest ze samen uit en vult het formulier voor — jij controleert en slaat op.", en: "Take or upload 1–4 photos of the same product. The AI reads them together and pre-fills the form — you check and save." },
+  photoWhat: { nl: "Handig om te fotograferen:", en: "Useful to photograph:" },
+  photoShot1: { nl: "De voorkant — voor naam en merk", en: "The front — for name and brand" },
+  photoShot2: { nl: "De voedingswaardentabel — voor de waarden per 100 g", en: "The nutrition table — for the values per 100 g" },
+  photoShot3: { nl: "De hoeveelheid, bijv. \"10 x 150 g\" — dan wordt ook de gram per stuk opgeslagen", en: "The quantity, e.g. \"10 x 150 g\" — then grams per piece are saved too" },
+  photoTip: { nl: "Scherp en recht van voren = beste herkenning.", en: "Sharp and straight-on = best recognition." },
   photoAdd: { nl: "+ Foto maken / uploaden", en: "+ Take / upload photo" },
   photoRecognize: { nl: "Herken met AI", en: "Recognise with AI" },
   photoRecognizing: { nl: "Bezig met herkennen…", en: "Recognising…" },
@@ -328,7 +333,16 @@ export default function Products({ lang, session, onClose, onPick, embedded, aut
       {photoMode && (
         <div style={{ marginBottom: 12 }}>
           <div style={{ ...disp, fontSize: 13, fontWeight: 700, color: PAPER, marginBottom: 4 }}>{t("photoTitle")}</div>
-          <div style={{ fontSize: 11.5, color: MUTED, lineHeight: 1.5, marginBottom: 10 }}>{t("photoHint")}</div>
+          <div style={{ fontSize: 11.5, color: MUTED, lineHeight: 1.5, marginBottom: 8 }}>{t("photoHint")}</div>
+          <div style={{ fontSize: 11, color: PAPER, fontWeight: 600, marginBottom: 5 }}>{t("photoWhat")}</div>
+          <div style={{ display: "grid", gap: 4, marginBottom: 8 }}>
+            {[t("photoShot1"), t("photoShot2"), t("photoShot3")].map((s, i) => (
+              <div key={i} style={{ display: "flex", gap: 7, fontSize: 11, color: MUTED, lineHeight: 1.45 }}>
+                <span style={{ color: EMBER, flex: "0 0 auto" }}>•</span><span>{s}</span>
+              </div>
+            ))}
+          </div>
+          <div style={{ fontSize: 10.5, color: MUTED, fontStyle: "italic", marginBottom: 10 }}>{t("photoTip")}</div>
           <input ref={photoRef} type="file" accept="image/*" capture="environment" multiple style={{ display: "none" }} onChange={(e) => { addPhotos(e.target.files); e.target.value = ""; }} />
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
             {photos.map((src, i) => (
