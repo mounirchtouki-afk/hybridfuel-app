@@ -798,7 +798,10 @@ Reply ONLY as JSON, nothing around it:
 async function callVisionAnthropic(imgs, lang) {
   const key = process.env.ANTHROPIC_API_KEY;
   if (!key) return { err: "ANTHROPIC_API_KEY ontbreekt" };
-  const model = process.env.AI_MODEL_VISION || process.env.AI_MODEL_HAIKU || "claude-3-5-haiku-latest";
+  // Gebruik bij voorkeur het model dat elders al werkt (het mealplan-Sonnet), want
+  // dat ondersteunt beeld en is in deze omgeving geconfigureerd. AI_MODEL_VISION
+  // overschrijft het expliciet.
+  const model = process.env.AI_MODEL_VISION || process.env.AI_MODEL_ANTHROPIC || "claude-sonnet-4-6";
   const content = imgs.map((im) => ({ type: "image", source: { type: "base64", media_type: im.media_type, data: im.data } }));
   content.push({ type: "text", text: lang === "en" ? SCAN_PROMPT_EN : SCAN_PROMPT_NL });
   const r = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", headers: { "Content-Type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01" }, body: JSON.stringify({ model, max_tokens: 700, messages: [{ role: "user", content }] }) });
