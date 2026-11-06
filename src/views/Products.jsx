@@ -163,7 +163,7 @@ export default function Products({ lang, session, onClose, onPick, embedded, aut
     const authToken = (session && session.access_token) || "";
     setAiBusy(true); setMsg("");
     try {
-      const r = await fetch(apiUrl("/api/product-scan"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ images: photos, authToken, lang }) });
+      const r = await fetch(apiUrl("/api/plan"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ mode: "product-scan", images: photos, authToken, lang }) });
       const d = await r.json().catch(() => ({}));
       if (!r.ok || !d || !d.result) { setMsg((d && d.error) || t("notFound")); setAiBusy(false); return; }
       const res = d.result, p = res.per_100 || {};
