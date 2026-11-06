@@ -702,11 +702,11 @@ export default function App() {
   }
   const [units, setUnits] = useState(() => load("hf_units", "metric"));
   const setUnitsSave = (u) => { setUnits(u); try { save("hf_units", u); } catch (e) {} };
-  // Thema: standaard 'light' (het normale thema) zodat de app NIET meegaat met de
-  // systeem-donkermodus (daar klopte de kleurstelling niet). 'auto' volgt het systeem,
-  // 'dark' is expliciet donker — allebei alleen als de gebruiker dat zelf kiest.
-  // Gym-leden krijgen hoe dan ook de org-huisstijl (applyOrgTheme overschrijft dit).
-  const [theme, setTheme] = useState(() => { try { return localStorage.getItem("hf_theme") || "light"; } catch (e) { return "light"; } });
+  // Thema: standaard 'dark' — het donkere merk-thema is de basis (rood/zwart met rode
+  // accenten). 'light' en 'auto' alleen als de gebruiker dat zelf kiest. De eerdere
+  // "kapotte" donkere weergave kwam door de gym-huisstijl die op de eigenaar werd
+  // toegepast; dat is nu gescheiden (alleen leden krijgen de org-huisstijl).
+  const [theme, setTheme] = useState(() => { try { return localStorage.getItem("hf_theme") || "dark"; } catch (e) { return "dark"; } });
   const setThemeSave = (v) => {
     setTheme(v);
     try { localStorage.setItem("hf_theme", v); } catch (e) {}
@@ -838,10 +838,11 @@ export default function App() {
     return () => { alive = false; };
   }, [session]);
 
-  // White-label thema toepassen: zodra we weten bij welke org de gebruiker hoort, zetten
-  // we de org-huisstijl als CSS-variabelen op <html>. Geen org → defaults terug.
+  // White-label thema alleen voor LEDEN: een lid ziet de huisstijl van z'n sportschool.
+  // Een coach/eigenaar gebruikt z'n eigen app en houdt het standaard (donkere) merk-thema,
+  // zodat een (eventueel verkeerd ingestelde) gym-huisstijl zijn eigen app niet verknalt.
   useEffect(() => {
-    applyOrgTheme(gymCtx && gymCtx.org ? gymCtx.org.theme : null);
+    applyOrgTheme(gymCtx && gymCtx.role === "member" && gymCtx.org ? gymCtx.org.theme : null);
     return () => {}; // reset gebeurt bij de volgende run (of hieronder bij unmount)
   }, [gymCtx]);
   useEffect(() => () => applyOrgTheme(null), []); // opruimen bij unmount
