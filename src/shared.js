@@ -68,6 +68,31 @@ export function applyOrgTheme(theme) {
   } catch (e) {}
 }
 
+// White-label voor LEDEN: verander ALLEEN de accentkleur (het rood) naar die van de
+// sportschool. De lay-out (licht/donker, kaarten, tekst) blijft de HybridFuel-huisstijl.
+export function applyOrgAccent(accent) {
+  try {
+    const root = document.documentElement;
+    if (!root || !root.style) return;
+    const keys = ["ember", "ember-soft", "ember-rgb", "ember-deep"];
+    if (!accent) {
+      keys.forEach((k) => root.style.removeProperty("--hf-" + k));
+      try { localStorage.removeItem("hf_org_theme"); } catch (e) {}
+      return;
+    }
+    const resolved = {
+      ember: accent,
+      "ember-soft": accent,
+      "ember-rgb": hexToRgb(accent),
+      "ember-deep": darkenHex(accent, 0.7),
+    };
+    Object.entries(resolved).forEach(([k, val]) => { if (val) root.style.setProperty("--hf-" + k, val); });
+    // Alleen de accent-tokens cachen, zodat boot.js nooit een hele (licht/donker) lay-out
+    // vooraf toepast — alleen de kleur.
+    try { localStorage.setItem("hf_org_theme", JSON.stringify(resolved)); } catch (e) {}
+  } catch (e) {}
+}
+
 export const disp = { fontFamily: "Oswald, sans-serif" };
 
 // --- Agenda-export (ICS + Google Calendar) voor sessies/lessen -------------

@@ -2,7 +2,7 @@ import { apiUrl, API_BASE } from "./apiBase";
 import { initPush } from "./push";
 import { initNative } from "./native";
 import React, { useState, useEffect, useRef } from "react";
-import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, SAGE, load, save, genSteps, todayISO, macroLetters, wUnit, bUnit, gShow, gStore, kgShow, kgStore, cmToFtIn, ftInToCm, applyOrgTheme } from "./shared.js";
+import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, SAGE, load, save, genSteps, todayISO, macroLetters, wUnit, bUnit, gShow, gStore, kgShow, kgStore, cmToFtIn, ftInToCm, applyOrgTheme, applyOrgAccent } from "./shared.js";
 import Today from "./views/Today.jsx";
 import Dashboard from "./views/Dashboard.jsx";
 import AdminDash from "./views/AdminDash.jsx";
@@ -702,10 +702,9 @@ export default function App() {
   }
   const [units, setUnits] = useState(() => load("hf_units", "metric"));
   const setUnitsSave = (u) => { setUnits(u); try { save("hf_units", u); } catch (e) {} };
-  // Thema: standaard 'dark' — het donkere merk-thema is de basis (rood/zwart met rode
-  // accenten). 'light' en 'auto' alleen als de gebruiker dat zelf kiest. De eerdere
-  // "kapotte" donkere weergave kwam door de gym-huisstijl die op de eigenaar werd
-  // toegepast; dat is nu gescheiden (alleen leden krijgen de org-huisstijl).
+  // Thema: consumenten openen met 'dark' (merk-basis) en kunnen zelf wisselen naar
+  // 'auto' (volgt systeem) of 'light' via de thema-knop. Leden krijgen dezelfde lay-out;
+  // alleen de accentkleur wordt die van hun sportschool (zie applyOrgAccent).
   const [theme, setTheme] = useState(() => { try { return localStorage.getItem("hf_theme") || "dark"; } catch (e) { return "dark"; } });
   const setThemeSave = (v) => {
     setTheme(v);
@@ -838,14 +837,16 @@ export default function App() {
     return () => { alive = false; };
   }, [session]);
 
-  // White-label thema alleen voor LEDEN: een lid ziet de huisstijl van z'n sportschool.
-  // Een coach/eigenaar gebruikt z'n eigen app en houdt het standaard (donkere) merk-thema,
-  // zodat een (eventueel verkeerd ingestelde) gym-huisstijl zijn eigen app niet verknalt.
+  // White-label voor LEDEN: alleen de accentkleur (het rood) wordt die van de sportschool;
+  // de lichte HybridFuel-lay-out blijft. Een coach/eigenaar gebruikt z'n eigen app en houdt
+  // de volledige HybridFuel-huisstijl (geen org-kleur).
   useEffect(() => {
-    applyOrgTheme(gymCtx && gymCtx.role === "member" && gymCtx.org ? gymCtx.org.theme : null);
-    return () => {}; // reset gebeurt bij de volgende run (of hieronder bij unmount)
+    const org = gymCtx && gymCtx.org;
+    const acc = gymCtx && gymCtx.role === "member" && org ? ((org.theme && org.theme.accent) || org.brand_color) : null;
+    applyOrgAccent(acc || null);
+    return () => {};
   }, [gymCtx]);
-  useEffect(() => () => applyOrgTheme(null), []); // opruimen bij unmount
+  useEffect(() => () => applyOrgAccent(null), []); // opruimen bij unmount
 
   // Nieuw ingelogd lid/gebruiker zonder plan → direct naar de intake (onboarding),
   // zodat ze niet op het dashboard stranden zonder te weten waar ze moeten starten.
