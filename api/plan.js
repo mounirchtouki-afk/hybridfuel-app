@@ -767,22 +767,34 @@ function cleanNum(v) {
   if (!isFinite(n) || n < 0 || n > 10000) return null;
   return Math.round(n * 10) / 10;
 }
-const SCAN_PROMPT_NL = `Je krijgt 1-4 foto's van ÉÉN voedingsproduct (meestal de voorkant + de voedingswaardentabel).
-Haal eruit: productnaam, merk, en de voedingswaarden PER 100 g (of per 100 ml): kcal, eiwit (g), koolhydraten (g), vet (g).
-Regels:
-- Lees de getallen uit de tabel. Staat de tabel per portie i.p.v. per 100 g, reken dan om naar per 100 g.
-- Zie je een waarde niet duidelijk? Zet die op null. NOOIT een getal verzinnen of schatten.
-- Geen product of geen leesbare tabel? Geef alles null en confident:false.
+const SCAN_PROMPT_NL = `Je bent een OCR-/productherkenner. De foto's tonen ÉÉN voedingsproduct: een verpakking, een etiket, of een screenshot van een productpagina. Lees ALLE foto's samen als één product.
+Haal deze velden eruit en niets anders:
+1) name — de productnaam (bijv. "Zalmfilet porties met vel"). Laat merk- en hoeveelheidstekst weg uit de naam.
+2) brand — het merk (bijv. "METRO Chef"). Niet zichtbaar? null.
+3) per_100 — de voedingswaarden PER 100 g (of per 100 ml): kcal (het getal in kcal, NIET kJ), eiwit (g), koolhydraten (g), vet (g).
+4) serving_g — het gewicht van ÉÉN stuk/portie in gram, als dat ergens staat (bijv. "10 x 150 g" -> 150; "portie 150 g" -> 150). Anders null.
+5) pieces — het aantal stuks per verpakking als dat staat (bijv. "10 x 150 g" -> 10; "circa 1,5 kg stuk" -> null). Anders null.
+Harde regels:
+- Gebruik voor per_100 ALTIJD de kolom "per 100 g" / "100 g", NOOIT de "portie"-kolom. kcal = de regel met "kcal" (niet de kJ-regel).
+- Staat er alleen een portie-tabel (geen per-100g)? Reken om naar per 100 g met het portiegewicht.
+- Een waarde niet duidelijk leesbaar? Zet die op null. NOOIT een getal verzinnen, schatten of afronden-naar-mooi.
+- Geen voedingsproduct of geen leesbare tabel? Alle waarden null en confident:false.
 Antwoord UITSLUITEND als JSON, niets eromheen:
-{"name":"...","brand":"...","per_100":{"kcal":123,"p":12.3,"c":4.5,"f":0.2},"confident":true}`;
-const SCAN_PROMPT_EN = `You get 1-4 photos of ONE food product (usually the front + the nutrition table).
-Extract: product name, brand, and nutrition PER 100 g (or per 100 ml): kcal, protein (g), carbs (g), fat (g).
-Rules:
-- Read the numbers from the table. If it's per serving instead of per 100 g, convert to per 100 g.
-- Can't read a value clearly? Set it to null. NEVER invent or estimate a number.
-- No product or no readable table? Return all null and confident:false.
+{"name":"...","brand":"...","per_100":{"kcal":231,"p":18,"c":0,"f":16.7},"serving_g":150,"pieces":10,"confident":true}`;
+const SCAN_PROMPT_EN = `You are an OCR / product recogniser. The photos show ONE food product: packaging, a label, or a screenshot of a product page. Read ALL photos together as one product.
+Extract these fields and nothing else:
+1) name — the product name (e.g. "Salmon fillet portions with skin"). Leave brand and quantity text out of the name.
+2) brand — the brand (e.g. "METRO Chef"). Not visible? null.
+3) per_100 — nutrition PER 100 g (or per 100 ml): kcal (the kcal number, NOT kJ), protein (g), carbs (g), fat (g).
+4) serving_g — the weight of ONE piece/serving in grams if stated (e.g. "10 x 150 g" -> 150; "serving 150 g" -> 150). Else null.
+5) pieces — the number of pieces per pack if stated (e.g. "10 x 150 g" -> 10). Else null.
+Hard rules:
+- For per_100 ALWAYS use the "per 100 g" / "100 g" column, NEVER the "serving" column. kcal = the "kcal" line (not the kJ line).
+- If only a per-serving table is shown, convert to per 100 g using the serving weight.
+- Any value not clearly readable? Set it to null. NEVER invent, estimate or round-to-nice a number.
+- Not a food product or no readable table? All values null and confident:false.
 Reply ONLY as JSON, nothing around it:
-{"name":"...","brand":"...","per_100":{"kcal":123,"p":12.3,"c":4.5,"f":0.2},"confident":true}`;
+{"name":"...","brand":"...","per_100":{"kcal":231,"p":18,"c":0,"f":16.7},"serving_g":150,"pieces":10,"confident":true}`;
 async function callVisionAnthropic(imgs, lang) {
   const key = process.env.ANTHROPIC_API_KEY;
   if (!key) return { err: "ANTHROPIC_API_KEY ontbreekt" };
@@ -819,7 +831,9 @@ async function buildProductScan(body) {
   const j = parseJsonLoose(out.text);
   if (!j || typeof j !== "object") return { err: "onleesbaar" };
   const per = j.per_100 || {};
-  return { result: { name: String(j.name || "").slice(0, 120).trim(), brand: String(j.brand || "").slice(0, 80).trim(), per_100: { kcal: cleanNum(per.kcal), p: cleanNum(per.p), c: cleanNum(per.c), f: cleanNum(per.f) }, confident: j.confident !== false } };
+  const serving_g = cleanNum(j.serving_g);
+  const pieces = cleanNum(j.pieces);
+  return { result: { name: String(j.name || "").slice(0, 120).trim(), brand: String(j.brand || "").slice(0, 80).trim(), per_100: { kcal: cleanNum(per.kcal), p: cleanNum(per.p), c: cleanNum(per.c), f: cleanNum(per.f) }, serving_g, pieces, confident: j.confident !== false } };
 }
 
 export default async function handler(req, res) {

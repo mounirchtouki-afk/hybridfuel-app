@@ -14,6 +14,9 @@ const T = {
   photoNeed: { nl: "Voeg eerst minstens één foto toe.", en: "Add at least one photo first." },
   photoOk: { nl: "Herkend! Controleer de waarden voordat je opslaat.", en: "Recognised! Check the values before saving." },
   photoLow: { nl: "Niet alles was leesbaar — vul de ontbrekende waarden zelf aan.", en: "Not everything was readable — fill in the missing values yourself." },
+  photoNone: { nl: "Niets kunnen lezen op deze foto's. Maak een scherpere foto van de voorkant én de voedingswaardentabel.", en: "Couldn't read anything in these photos. Take a sharper shot of the front and the nutrition table." },
+  servLabel: { nl: "Gram per stuk (optioneel)", en: "Grams per piece (optional)" },
+  servPh: { nl: "bijv. 150", en: "e.g. 150" },
   intro: { nl: "Scan een barcode of voeg handmatig toe. Je producten worden per categorie geordend.", en: "Scan a barcode or add manually. Your products are grouped by category." },
   name: { nl: "Naam", en: "Name" },
   brand: { nl: "Merk (optioneel)", en: "Brand (optional)" },
@@ -128,6 +131,7 @@ export default function Products({ lang, session, onClose, onPick, embedded, aut
   const [photoMode, setPhotoMode] = useState(false); // foto-AI toevoegflow
   const [photos, setPhotos] = useState([]);          // data-URLs, max 4
   const [aiBusy, setAiBusy] = useState(false);
+  const [servG, setServG] = useState("");            // gram per stuk/portie (optioneel)
   const videoRef = useRef(null);
   const readerRef = useRef(null);
   const photoRef = useRef(null);
@@ -165,7 +169,7 @@ export default function Products({ lang, session, onClose, onPick, embedded, aut
     try {
       const r = await fetch(apiUrl("/api/plan"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ mode: "product-scan", images: photos, authToken, lang }) });
       const d = await r.json().catch(() => ({}));
-      if (!r.ok || !d || !d.result) { setMsg((d && d.error) || t("notFound")); setAiBusy(false); return; }
+      if (!r.ok || !d || !d.result) { setMsg(((d && d.error) || t("notFound")) + (d && d.detail ? " (" + d.detail + ")" : "")); setAiBusy(false); return; }
       const res = d.result, p = res.per_100 || {};
       if (res.name) setNm(res.name);
       if (res.brand) setBr(res.brand);
@@ -173,7 +177,10 @@ export default function Products({ lang, session, onClose, onPick, embedded, aut
       if (p.p != null) setPr(p.p);
       if (p.c != null) setCb(p.c);
       if (p.f != null) setFt(p.f);
+      if (res.serving_g != null) setServG(res.serving_g);
+      const anyVal = p.kcal != null || p.p != null || p.c != null || p.f != null || res.name;
       const complete = res.confident && p.kcal != null && p.p != null && p.c != null && p.f != null;
+      if (!anyVal) { setMsg(t("photoNone")); setAiBusy(false); return; } // niks gelezen -> foto's blijven staan
       setMsg(complete ? t("photoOk") : t("photoLow"));
       setPhotoMode(false); // door naar het (voor-ingevulde) formulier
     } catch (e) { setMsg(t("notFound")); }
@@ -203,12 +210,12 @@ export default function Products({ lang, session, onClose, onPick, embedded, aut
     try { if (readerRef.current) { readerRef.current.reset(); readerRef.current = null; } } catch (e) {}
     try { const v = videoRef.current; if (v && v.srcObject) { v.srcObject.getTracks().forEach((tk) => tk.stop()); v.srcObject = null; } } catch (e) {}
   }
-  function resetForm() { setNm(""); setBr(""); setBc(""); setKc(""); setPr(""); setCb(""); setFt(""); setCat(""); setMt([]); setMsg(""); setManualBc(""); }
+  function resetForm() { setNm(""); setBr(""); setBc(""); setKc(""); setPr(""); setCb(""); setFt(""); setCat(""); setMt([]); setMsg(""); setManualBc(""); setServG(""); }
   function closeAdd() { stopScan(); setScanning(false); setAdding(false); setEditId(null); setPhotoMode(false); setPhotos([]); setAiBusy(false); resetForm(); }
   function startEdit(it) {
     setEditId(it.id); setScanning(false); setMsg("");
     setNm(it.name || ""); setBr(it.brand || ""); setBc(it.barcode || "");
-    const p = it.per_100 || {}; setKc(p.kcal != null ? p.kcal : ""); setPr(p.p != null ? p.p : ""); setCb(p.c != null ? p.c : ""); setFt(p.f != null ? p.f : "");
+    const p = it.per_100 || {}; setKc(p.kcal != null ? p.kcal : ""); setPr(p.p != null ? p.p : ""); setCb(p.c != null ? p.c : ""); setFt(p.f != null ? p.f : ""); setServG(p.serving_g != null ? p.serving_g : "");
     setCat(it.category || ""); setMt(Array.isArray(it.meal_types) ? it.meal_types : []); setAdding(true);
   }
 
@@ -247,6 +254,7 @@ export default function Products({ lang, session, onClose, onPick, embedded, aut
     if (!name) return;
     const d2 = (v) => Math.round(num(String(v).replace(",", ".")) * 100) / 100;
     const per_100 = { kcal: d2(kc), p: d2(pr), c: d2(cb), f: d2(ft) };
+    const sg = num(String(servG).replace(",", ".")); if (sg > 0) per_100.serving_g = Math.round(sg); // gram per stuk (in jsonb, geen migratie)
     const barcode = bc.trim() || null;
     const category = cat || null;
     const meal_types = Array.isArray(mt) ? mt : [];
@@ -376,6 +384,10 @@ export default function Products({ lang, session, onClose, onPick, embedded, aut
         <div>{macroIn(pr, setPr, "g")}<div style={{ fontSize: 9.5, color: MUTED, textAlign: "center", marginTop: 3 }}>{t("prot")}</div></div>
         <div>{macroIn(cb, setCb, "g")}<div style={{ fontSize: 9.5, color: MUTED, textAlign: "center", marginTop: 3 }}>{t("carb")}</div></div>
         <div>{macroIn(ft, setFt, "g")}<div style={{ fontSize: 9.5, color: MUTED, textAlign: "center", marginTop: 3 }}>{t("fat")}</div></div>
+      </div>
+      <div style={{ marginBottom: 12 }}>
+        <label style={label}>{t("servLabel")}</label>
+        <input value={servG} onChange={(e) => setServG(e.target.value)} inputMode="numeric" placeholder={t("servPh")} style={input} />
       </div>
       <div style={{ display: "flex", gap: 8 }}>
         <button onClick={add} style={{ ...primaryBtn, flex: 1 }}>{editId ? t("save") : (onPick ? t("addToMeal") : t("add"))}</button>
