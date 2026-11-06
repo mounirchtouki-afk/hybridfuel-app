@@ -438,13 +438,72 @@ async function buildFromLibrary(body, cyc) {
     if (avoid.length && (d.items || []).some((it) => { const m = ing[it.slug]; if (!m) return false; const nm = ((m.name_nl || "") + " " + (m.name_en || "")).toLowerCase(); return avoid.some((a) => nm.includes(a)); })) return false;
     return true;
   });
+  // Matcht de keuze van de gebruiker ("wat eet je graag") op het recept zelf
+  // (ingrediënten + naam), zodat de keuze gehonoreerd wordt ook als de prefs-kolom
+  // in de database leeg is. Zo krijgt "Volkoren brood + beleg" ook écht een boterham.
+  function matchesPref(d, chip) {
+    const slugs = (d.items || []).map((it) => it.slug);
+    const has = (s) => slugs.includes(s);
+    const any = (arr) => arr.some((s) => slugs.includes(s));
+    const nm = ((d.name_nl || "") + " " + (d.name_en || "")).toLowerCase();
+    const chicken = any(["chicken_breast", "chicken_thigh", "chicken_mince", "turkey_breast", "turkey_mince"]);
+    const rice = any(["rice_dry", "rice_yellow", "brown_rice"]);
+    const bread = any(["bread_whole", "sourdough", "crackers_whole"]);
+    const wrap = any(["wrap_whole", "pita_whole"]);
+    const tuna = any(["tuna_can", "tuna_steak"]);
+    const salmon = any(["salmon", "smoked_salmon", "trout"]);
+    const pasta = has("pasta_whole");
+    const mince = any(["beef_mince5", "chicken_mince", "turkey_mince"]);
+    const steak = any(["beef_lean", "flat_iron"]);
+    const potato = any(["potato", "sweet_potato"]);
+    const noodle = any(["noodles_whole", "rice_noodles"]);
+    const egg = any(["egg", "egg_white"]);
+    const dairy = any(["quark_lowfat", "skyr", "greek_yoghurt", "cottage", "yoghurt_lowfat", "soy_yoghurt"]);
+    const fruit = any(["banana", "apple", "blueberries", "strawberry", "mixed_berries", "mango", "pear", "cherries", "grapes", "pineapple", "raspberry", "orange", "kiwi"]);
+    const nuts = any(["almonds", "walnuts", "cashew", "peanut_butter", "almond_butter", "pumpkin_seeds"]);
+    const omeletRe = /omelet|menemen|shakshuka|roerei|tortilla|frittata/;
+    const soupy = d.technique === "soup" || /soep|soup|minestrone|pho|gazpacho|taginestoof|stoofpot/.test(nm);
+    const wokky = noodle || /wok|chow mein|pad |bulgogi|kung pao|roerbak|japchae|teriyaki|bibimbap|nasi/.test(nm);
+    const curryish = /curry|tikka|masala|tandoori|rendang|\bdal\b|biryani|keema|saag|chana|misir|makhani/.test(nm) || has("curry_paste");
+    switch (chip) {
+      case "quarkfruit": return dairy && fruit;
+      case "eggs": return egg && !omeletRe.test(nm);
+      case "omelet": return omeletRe.test(nm);
+      case "smoothie": return /smoothie/.test(nm);
+      case "wholebread": return bread && !wrap;
+      case "protpancake": return /pannenkoek|pancake|wafel|waffle/.test(nm);
+      case "chickenwrap": return wrap && chicken;
+      case "ricechicken": return rice && chicken;
+      case "tunasalad": return tuna;
+      case "sandwich": return bread && !wrap;
+      case "soup": return soupy;
+      case "poke": return /poke|poké|sushi|bowl/.test(nm);
+      case "saladegg": return /salade|salad/.test(nm) && egg;
+      case "salmonveg": return salmon;
+      case "pastabol": return pasta && mince;
+      case "chickenrice": return chicken && rice;
+      case "stamppot": return /stamppot/.test(nm);
+      case "curryrice": return curryish && rice;
+      case "steakpotato": return steak && potato;
+      case "woknoodles": return wokky;
+      case "shake": return has("whey") && /shake|smoothie/.test(nm);
+      case "quark": return dairy;
+      case "nuts": return nuts && !dairy;
+      case "bar": return /balletjes|energie|energy|bar|reep/.test(nm);
+      case "fruit": return fruit && !dairy;
+      case "ricecakepb": return has("rice_cakes");
+      default: return false;
+    }
+  }
   const cache = {};
   async function candidatesFor(momId) {
     if (cache[momId]) return cache[momId];
     const chips = (prefIds[momId] || []).filter((x) => typeof x === "string" && x.indexOf("prod:") !== 0);
-    let rows = filt(await fetchDishes(momId, chips));
-    if (chips.length && !rows.length) rows = filt(await fetchDishes(momId, null)); // keuze zonder match -> algemene set
-    if (!rows.length) rows = filt(await fetchDishes(momId, null));
+    let rows = filt(await fetchDishes(momId, null)); // alle recepten voor dit moment (dieet/avoid al toegepast)
+    if (chips.length) {
+      const matched = rows.filter((d) => chips.some((c) => matchesPref(d, c)));
+      if (matched.length) rows = matched; // keuze honoreren; geen match -> algemene set behouden
+    }
     cache[momId] = rows;
     return rows;
   }
