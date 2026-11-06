@@ -9,15 +9,37 @@ function supa() {
   return { url, anon };
 }
 
-async function validUser(authToken) {
-  if (!authToken || typeof authToken !== "string") return false;
+// Pro-abonnee: subscriptions-rij met tier=pro, actief/trialing en niet verlopen.
+async function isProSub(authToken) {
   try {
     const { url, anon } = supa();
-    const r = await fetch(url + "/auth/v1/user", { headers: { apikey: anon, Authorization: "Bearer " + authToken } });
+    const r = await fetch(url + "/rest/v1/subscriptions?select=tier,status,current_period_end", { headers: { apikey: anon, Authorization: "Bearer " + authToken } });
     if (!r.ok) return false;
-    const u = await r.json().catch(() => ({}));
-    return !!(u && u.id);
+    const s = (await r.json().catch(() => []))[0];
+    if (!s) return false;
+    const activeStatus = s.status === "active" || s.status === "trialing";
+    const notExpired = !!s.current_period_end && new Date(s.current_period_end).getTime() > Date.now();
+    return !!(activeStatus && s.tier === "pro" && notExpired);
   } catch (e) { return false; }
+}
+
+// Gym-lid: actieve org_members-rij. Gym-leden hebben Producten (= deze feature) net als Pro.
+async function isGymMember(authToken) {
+  try {
+    const { url, anon } = supa();
+    const r = await fetch(url + "/rest/v1/org_members?select=role&active=eq.true&limit=1", { headers: { apikey: anon, Authorization: "Bearer " + authToken } });
+    if (!r.ok) return false;
+    const rows = await r.json().catch(() => []);
+    return Array.isArray(rows) && rows.length > 0;
+  } catch (e) { return false; }
+}
+
+// Toegang tot foto-herkenning = Pro-abonnee OF gym-lid (gelijk aan de app-gate op Producten).
+async function allowed(authToken) {
+  if (!authToken || typeof authToken !== "string") return false;
+  if (await isProSub(authToken)) return true;
+  if (await isGymMember(authToken)) return true;
+  return false;
 }
 
 // data:-URL -> { media_type, data(base64) }. Alleen jpeg/png/webp, max ~5 MB elk.
@@ -102,8 +124,8 @@ export default async function handler(req, res) {
     const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body || {};
     const lang = body.lang === "en" ? "en" : "nl";
 
-    if (!(await validUser(body.authToken))) {
-      return res.status(401).json({ error: lang === "nl" ? "Log in om foto-herkenning te gebruiken." : "Log in to use photo recognition." });
+    if (!(await allowed(body.authToken))) {
+      return res.status(403).json({ error: lang === "nl" ? "Foto-herkenning zit in Pro (of je sportschool-lidmaatschap)." : "Photo recognition is part of Pro (or your gym membership)." });
     }
 
     const raw = Array.isArray(body.images) ? body.images.slice(0, 4) : [];
