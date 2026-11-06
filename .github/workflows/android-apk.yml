@@ -42,7 +42,7 @@ jobs:
         # VITE_WEB_BASE = publiek webdomein met gym-backend (join-links, reset- en
         # lid-mails wijzen hierheen i.p.v. localhost op native). Pas aan naar het
         # subdomein dat je in Vercel koppelt.
-        run: npx cross-env VITE_API_BASE=https://hybridfuel-app-git-capacitor-wrap-mounirchtouki-afk.vercel.app VITE_WEB_BASE=https://dashboard.hybridfuelco.com vite build
+        run: npx cross-env VITE_API_BASE=https://hybridfuel-app-git-capacitor-wrap-mounirchtouki-afk.vercel.app VITE_WEB_BASE=https://hybridfuelco.com vite build
 
       - name: Capacitor sync (android)
         run: |

@@ -715,6 +715,15 @@ export default function App() {
   useEffect(() => {
     try { const el = document.documentElement; if (theme === "auto") el.removeAttribute("data-theme"); else el.setAttribute("data-theme", theme); } catch (e) {}
   }, [theme]);
+  // Het coach-dashboard leeft op <hoofddomein>/admin: open het dashboard direct als de
+  // URL /admin is (en de gebruiker coach is); anders de login tonen.
+  useEffect(() => {
+    try {
+      if (!/^\/admin(\/|$)/i.test(window.location.pathname)) return;
+      if (session && gymCtx && gymCtx.role === "coach") setDashOpen(true);
+      else if (!session) setShowAuth(true);
+    } catch (e) {}
+  }, [session, gymCtx]);
   const [saveFlash, setSaveFlash] = useState(false);
   const [showInstallHelp, setShowInstallHelp] = useState(false);
   const [subTier, setSubTier] = useState("free");

@@ -3,7 +3,9 @@
     { "path": "/api/renewal-reminders", "schedule": "0 9 * * *" }
   ],
   "rewrites": [
-    { "source": "/join/:slug", "destination": "/" }
+    { "source": "/join/:slug", "destination": "/" },
+    { "source": "/admin", "destination": "/" },
+    { "source": "/admin/:path*", "destination": "/" }
   ],
   "headers": [
     {
