@@ -45,7 +45,7 @@ const T = {
   basisName: { nl: "Basis", en: "Basic" },
   proName: { nl: "Pro", en: "Pro" },
   basisFeat: { nl: "Weekplan in de app · tracker · water · boodschappen", en: "Weekly plan in-app · tracker · water · shopping list" },
-  proFeat: { nl: "Alles van Basis + zelf aanpassen · eigen producten · barcode-scan", en: "Everything in Basic + customise · own products · barcode scan" },
+  proFeat: { nl: "Alles van Basis + zelf aanpassen · eigen producten · barcode-scan · foto-herkenning", en: "Everything in Basic + customise · own products · barcode scan · photo recognition" },
   choose: { nl: "Kiezen", en: "Choose" },
   popular: { nl: "Populair", en: "Popular" },
   manage: { nl: "Facturen bekijken", en: "View invoices" },
