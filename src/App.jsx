@@ -333,7 +333,7 @@ const TXT = {
   lockedTitle: { nl: "Zit in Basis", en: "Part of Basic" },
   lockedSub: { nl: "Deze functie zit in de betaalde toegang. Ontgrendel de volledige app.", en: "This feature is part of paid access. Unlock the full app." },
   lockedPro: { nl: "Zit in Pro", en: "Part of Pro" },
-  lockedProSub: { nl: "Eigen producten en barcode-scan zitten in Pro.", en: "Own products and barcode scan are in Pro." },
+  lockedProSub: { nl: "Eigen producten, barcode-scan en foto-herkenning zitten in Pro.", en: "Own products, barcode scan and photo recognition are in Pro." },
   unlockBtn: { nl: "Bekijk toegang", en: "See access options" },
   creditsOutTitle: { nl: "Je plannen zijn op", en: "You've used your plans" },
   creditsOutSub: { nl: "Je hebt je gegenereerde plannen gebruikt. Ontgrendel een nieuwe week om verder te gaan.", en: "You've used your generated plans. Unlock another week to continue." },
