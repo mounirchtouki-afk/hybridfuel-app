@@ -642,6 +642,9 @@ export default function App() {
   const [session, setSession] = useState(null);
   const [sessionChecked, setSessionChecked] = useState(false);
   const isAdmin = String((session && session.user && session.user.email) || "").toLowerCase() === "hybridfuelco@gmail.com";
+  // B2B (sportschool-editie) is nog niet af — voorlopig alleen de consumentenkant open.
+  // Zet op true zodra de gym-flow klaar is; dat toont weer 'Log in met code' e.d.
+  const B2B_OPEN = false;
   const [syncVer, setSyncVer] = useState(0);
   const [showAuth, setShowAuth] = useState(false);
   const [authRecovery, setAuthRecovery] = useState(false);
@@ -1971,9 +1974,9 @@ export default function App() {
       {inDemo && (
         <div style={{ background: EMBER, color: "#fff", padding: "9px 14px", display: "flex", alignItems: "center", gap: 10, position: "relative", zIndex: 1, flexWrap: "wrap" }}>
           <span style={{ fontSize: 11, fontWeight: 700, ...disp, letterSpacing: 1, color: "#fff", background: "rgba(255,255,255,0.18)", borderRadius: 4, padding: "2px 7px" }}>{lang === "nl" ? "VOORBEELD" : "PREVIEW"}</span>
-          <span style={{ flex: 1, minWidth: 110, fontSize: 12.5, lineHeight: 1.4, color: "#fff" }}>{lang === "nl" ? "Je bekijkt een voorbeeld. Log in met je code of ontgrendel." : "You're viewing a sample. Log in with your code or unlock."}</span>
+          <span style={{ flex: 1, minWidth: 110, fontSize: 12.5, lineHeight: 1.4, color: "#fff" }}>{lang === "nl" ? (B2B_OPEN ? "Je bekijkt een voorbeeld. Log in met je code of ontgrendel." : "Je bekijkt een voorbeeld. Ontgrendel de volledige app.") : (B2B_OPEN ? "You're viewing a sample. Log in with your code or unlock." : "You're viewing a sample. Unlock the full app.")}</span>
           {!IS_NATIVE && <a href={SITE_URL} style={{ color: "#fff", fontSize: 12.5, fontWeight: 700, ...disp, letterSpacing: 0.3, textDecoration: "none", whiteSpace: "nowrap", opacity: 0.92 }}>{lang === "nl" ? "← Website" : "← Website"}</a>}
-          <div onClick={() => { setShowCodeLogin(true); setLoginMsg(""); setLoginCode(""); }} style={{ cursor: "pointer", border: "1px solid #fff", color: "#fff", padding: "7px 13px", borderRadius: 8, fontSize: 12.5, fontWeight: 700, ...disp, letterSpacing: 0.3, whiteSpace: "nowrap" }}>{lang === "nl" ? "Log in met code" : "Log in with code"}</div>
+          {B2B_OPEN && <div onClick={() => { setShowCodeLogin(true); setLoginMsg(""); setLoginCode(""); }} style={{ cursor: "pointer", border: "1px solid #fff", color: "#fff", padding: "7px 13px", borderRadius: 8, fontSize: 12.5, fontWeight: 700, ...disp, letterSpacing: 0.3, whiteSpace: "nowrap" }}>{lang === "nl" ? "Log in met code" : "Log in with code"}</div>}
           <div onClick={() => setShowAuth(true)} style={{ cursor: "pointer", background: "#fff", color: EMBER, padding: "7px 15px", borderRadius: 8, fontSize: 12.5, fontWeight: 700, ...disp, letterSpacing: 0.3, whiteSpace: "nowrap" }}>{lang === "nl" ? "Ontgrendel" : "Unlock"}</div>
         </div>
       )}
@@ -2418,7 +2421,7 @@ export default function App() {
               {moreTile(mIcon("water"), T("navWater"), () => go("water"))}
               {moreTile(mIcon("producten"), T("navProducts"), () => go("producten"))}
               {moreTile(mIcon("race"), T("navRace"), () => go("race"))}
-              {moreTile(<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><path d="M14 14h3v3M20 14v.01M14 20h.01M17 20h.01M20 17v3" /></svg>, lang === "nl" ? "Toegang" : "Access", () => go("access"))}
+              {(isGymMember || (gymCtx && gymCtx.role === "coach")) && moreTile(<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><path d="M14 14h3v3M20 14v.01M14 20h.01M17 20h.01M20 17v3" /></svg>, lang === "nl" ? "Toegang" : "Access", () => go("access"))}
               {moreTile(<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M6.5 6.5l11 11M4 9l-1.5 1.5a1.5 1.5 0 000 2L4 14M20 9l1.5 1.5a1.5 1.5 0 010 2L20 14M7 4l1.5 1.5M17 20l-1.5-1.5" /></svg>, lang === "nl" ? "Training" : "Training", () => go("training"))}
               {moreTile(<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="17" rx="2" /><path d="M3 9h18M8 2v4M16 2v4" /></svg>, lang === "nl" ? "Weekplan" : "Week plan", () => go("weekplan"))}
               {moreTile(<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18" /><path d="M7 14l3-4 3 3 4-6" /></svg>, lang === "nl" ? "Weekreview" : "Week review", () => go("weekreview"))}
@@ -2468,7 +2471,7 @@ export default function App() {
       )}
 
       {showReminders && <Reminders lang={lang} onClose={() => setShowReminders(false)} />}
-      {showAuth && <Auth lang={lang} session={session} tier={subTier} recovery={authRecovery} gym={isGymMember ? gymCtx.org : null} onClose={() => { setShowAuth(false); setAuthRecovery(false); }} onCodeLogin={() => { setShowCodeLogin(true); setLoginMsg(""); setLoginCode(""); }} />}
+      {showAuth && <Auth lang={lang} session={session} tier={subTier} recovery={authRecovery} gym={isGymMember ? gymCtx.org : null} onClose={() => { setShowAuth(false); setAuthRecovery(false); }} onCodeLogin={B2B_OPEN ? (() => { setShowCodeLogin(true); setLoginMsg(""); setLoginCode(""); }) : undefined} />}
       {showAdmin && isAdmin && <AdminDash session={session} lang={lang} onClose={() => setShowAdmin(false)} />}
       {showProducts && <Products lang={lang} session={session} autoScan={fabScan} momentLabel={momentAdd ? (MEAL_MOMENTS.find((m) => m.id === momentAdd) || {})[lang] : null} onClose={() => { setShowProducts(false); setPickTarget(null); setFabScan(false); setMomentAdd(null); }} onPick={momentAdd ? (prod) => { tagProductToMoment(prod, momentAdd); setShowProducts(false); setMomentAdd(null); } : pickTarget ? (prod) => { if (pickTarget.mi == null) addProductAsMeal(pickTarget.di, prod); else addProductIng(pickTarget.di, pickTarget.mi, prod); setShowProducts(false); setPickTarget(null); } : fabScan ? (prod) => { addTodayProduct(prod); setShowProducts(false); setFabScan(false); } : null} />}
       {showBuilder && <RecipeBuilder lang={lang} session={session} units={units} onClose={() => setShowBuilder(false)} onSaved={() => flashSaved()} />}
