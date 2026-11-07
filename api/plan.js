@@ -649,8 +649,8 @@ async function callModel(prompt, haiku) {
   const orKey = process.env.OPENROUTER_API_KEY;
   const provider = (process.env.AI_PROVIDER || "anthropic").toLowerCase();
   if (!anKey && !orKey) return { err: "geen AI-sleutel" };
-  const mAn = haiku ? (process.env.AI_MODEL_HAIKU || "claude-3-5-haiku-latest") : (process.env.AI_MODEL_ANTHROPIC || "claude-sonnet-4-6");
-  const mOr = haiku ? (process.env.AI_MODEL_HAIKU_OR || "anthropic/claude-3.5-haiku") : (process.env.AI_MODEL || "anthropic/claude-sonnet-4");
+  const mAn = haiku ? (process.env.AI_MODEL_HAIKU || "claude-haiku-5-5") : (process.env.AI_MODEL_ANTHROPIC || "claude-haiku-5-5");
+  const mOr = haiku ? (process.env.AI_MODEL_HAIKU_OR || "anthropic/claude-haiku-5.5") : (process.env.AI_MODEL || "anthropic/claude-haiku-5.5");
   async function an() {
     if (!anKey) return { err: "ANTHROPIC_API_KEY ontbreekt" };
     const r = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", headers: { "Content-Type": "application/json", "x-api-key": anKey, "anthropic-version": "2023-06-01" }, body: JSON.stringify({ model: mAn, max_tokens: 1500, messages: [{ role: "user", content: prompt }] }) });
@@ -801,12 +801,12 @@ async function callVisionAnthropic(imgs, lang) {
   const key = process.env.ANTHROPIC_API_KEY;
   if (!key) return { err: "ANTHROPIC_API_KEY ontbreekt" };
   // Gebruik bij voorkeur het model dat elders al werkt (het mealplan-Sonnet), want
-  // dat ondersteunt beeld en is in deze omgeving geconfigureerd. AI_MODEL_VISION
-  // overschrijft het expliciet.
-  const model = process.env.AI_MODEL_VISION || process.env.AI_MODEL_ANTHROPIC || "claude-sonnet-4-6";
+  // Haiku 5.5 is ruim goed genoeg voor etiket-OCR en veel goedkoper. AI_MODEL_VISION
+  // overschrijft het expliciet. Ruimere max_tokens omdat Haiku 5.5 adaptief 'denkt'.
+  const model = process.env.AI_MODEL_VISION || process.env.AI_MODEL_HAIKU || "claude-haiku-5-5";
   const content = imgs.map((im) => ({ type: "image", source: { type: "base64", media_type: im.media_type, data: im.data } }));
   content.push({ type: "text", text: lang === "en" ? SCAN_PROMPT_EN : SCAN_PROMPT_NL });
-  const r = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", headers: { "Content-Type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01" }, body: JSON.stringify({ model, max_tokens: 700, messages: [{ role: "user", content }] }) });
+  const r = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", headers: { "Content-Type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01" }, body: JSON.stringify({ model, max_tokens: 1500, messages: [{ role: "user", content }] }) });
   if (!r.ok) return { err: "anthropic " + r.status, detail: (await r.text()).slice(0, 200) };
   const d = await r.json();
   return { text: (d.content || []).filter((x) => x.type === "text").map((x) => x.text).join("").trim() };
@@ -814,10 +814,10 @@ async function callVisionAnthropic(imgs, lang) {
 async function callVisionOpenRouter(imgs, lang) {
   const key = process.env.OPENROUTER_API_KEY;
   if (!key) return { err: "OPENROUTER_API_KEY ontbreekt" };
-  const model = process.env.AI_MODEL_VISION_OR || "anthropic/claude-3.5-haiku";
+  const model = process.env.AI_MODEL_VISION_OR || "anthropic/claude-haiku-5.5";
   const content = imgs.map((im) => ({ type: "image_url", image_url: { url: "data:" + im.media_type + ";base64," + im.data } }));
   content.push({ type: "text", text: lang === "en" ? SCAN_PROMPT_EN : SCAN_PROMPT_NL });
-  const r = await fetch("https://openrouter.ai/api/v1/chat/completions", { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + key, "HTTP-Referer": "https://hybridfuelco.com", "X-Title": "HybridFuelCo" }, body: JSON.stringify({ model, max_tokens: 700, messages: [{ role: "user", content }] }) });
+  const r = await fetch("https://openrouter.ai/api/v1/chat/completions", { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + key, "HTTP-Referer": "https://hybridfuelco.com", "X-Title": "HybridFuelCo" }, body: JSON.stringify({ model, max_tokens: 1500, messages: [{ role: "user", content }] }) });
   if (!r.ok) return { err: "openrouter " + r.status, detail: (await r.text()).slice(0, 200) };
   const d = await r.json();
   const m = d.choices && d.choices[0] && d.choices[0].message;
@@ -1001,11 +1001,11 @@ export default async function handler(req, res) {
     // Gym-tier bepaalt het model; abonnees/overig blijven op Sonnet. Alles via env te zetten.
     const useHaiku = gymOk && gym.tier === "basis";
     const modelAnthropic = useHaiku
-      ? (process.env.AI_MODEL_HAIKU || "claude-3-5-haiku-latest")
-      : (process.env.AI_MODEL_ANTHROPIC || "claude-sonnet-4-6");
+      ? (process.env.AI_MODEL_HAIKU || "claude-haiku-5-5")
+      : (process.env.AI_MODEL_ANTHROPIC || "claude-haiku-5-5");
     const modelOpenRouter = useHaiku
-      ? (process.env.AI_MODEL_HAIKU_OR || "anthropic/claude-3.5-haiku")
-      : (process.env.AI_MODEL || "anthropic/claude-sonnet-4");
+      ? (process.env.AI_MODEL_HAIKU_OR || "anthropic/claude-haiku-5.5")
+      : (process.env.AI_MODEL || "anthropic/claude-haiku-5.5");
 
     async function callAnthropic() {
       if (!anKey) return { err: "ANTHROPIC_API_KEY ontbreekt" };
