@@ -392,6 +392,63 @@ function supaBase() {
   const anon = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || "sb_publishable_5CJ_waXIVhhzkkqD96iqMA_63yJJnaH";
   return { url, anon, headers: { apikey: anon, Authorization: "Bearer " + anon } };
 }
+function supaSvc() {
+  const url = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "https://tkmyjpsmdijaalwgzqdy.supabase.co").replace(/\/$/, "");
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+  return { url, key };
+}
+
+// --- Zichtbaar AI-tegoed per account (kostenteller) -----------------------
+// Per maand, per functie een limiet + een harde kosten-vangrail (€2). Op user-id,
+// dus stabiel over elk apparaat/IP. FAIL-OPEN: bij geen key, ontbrekende tabel of
+// welke fout dan ook wordt de call gewoon toegestaan — betalers lopen nooit stuk op
+// een meter-glitch. De app toont het saldo uit het antwoord.
+const AI_CAPS = {
+  basis: { mealplans: 40, scans: 100, reviews: 4 },
+  pro: { mealplans: 60, scans: 150, reviews: 8 },
+};
+const AI_PERIOD_MS = 30 * 24 * 60 * 60 * 1000;
+const AI_HARD_CENTS = 200; // €2 harde noodrem per periode
+function aiCapsFor(tier) { return AI_CAPS[tier] || AI_CAPS.basis; }
+function aiBalanceOf(row, tier, periodStartMs) {
+  const caps = aiCapsFor(tier);
+  const f = (k) => ({ used: (row && row[k]) || 0, cap: caps[k], left: Math.max(0, caps[k] - ((row && row[k]) || 0)) });
+  return { mealplans: f("mealplans"), scans: f("scans"), reviews: f("reviews"), resetAt: new Date(periodStartMs + AI_PERIOD_MS).toISOString(), tier };
+}
+async function aiBudget(authToken, feature, tier) {
+  const open = { ok: true, balance: null, commit: async () => {} }; // fail-open
+  try {
+    const userId = jwtSub(authToken);
+    const { url, key } = supaSvc();
+    if (!userId || !key) return open;
+    const h = { apikey: key, Authorization: "Bearer " + key, "Content-Type": "application/json" };
+    const r = await fetch(url + "/rest/v1/ai_usage?user_id=eq." + userId + "&select=*", { headers: h });
+    if (!r.ok) return open; // tabel bestaat nog niet / fout -> toestaan
+    let row = (await r.json().catch(() => []))[0] || null;
+    const now = Date.now();
+    let periodStart = row ? new Date(row.period_start).getTime() : now;
+    if (!row || (now - periodStart) > AI_PERIOD_MS) { periodStart = now; row = { mealplans: 0, scans: 0, reviews: 0, cost_cents: 0 }; }
+    const caps = aiCapsFor(tier);
+    const ok = (row[feature] || 0) < (caps[feature] || 0) && (row.cost_cents || 0) < AI_HARD_CENTS;
+    const balance = aiBalanceOf(row, tier, periodStart);
+    const base = row;
+    const commit = async (costCents) => {
+      try {
+        const next = {
+          user_id: userId,
+          period_start: new Date(periodStart).toISOString(),
+          mealplans: (base.mealplans || 0) + (feature === "mealplans" ? 1 : 0),
+          scans: (base.scans || 0) + (feature === "scans" ? 1 : 0),
+          reviews: (base.reviews || 0) + (feature === "reviews" ? 1 : 0),
+          cost_cents: (base.cost_cents || 0) + Math.max(0, Math.round(costCents == null ? 1 : costCents)),
+          updated_at: new Date().toISOString(),
+        };
+        await fetch(url + "/rest/v1/ai_usage", { method: "POST", headers: { ...h, Prefer: "resolution=merge-duplicates" }, body: JSON.stringify(next) });
+      } catch (e) {}
+    };
+    return { ok, balance, commit };
+  } catch (e) { return open; }
+}
 let _ingCache = null, _ingAt = 0;
 async function getIngredients() {
   if (_ingCache && (Date.now() - _ingAt) < 600000) return _ingCache;
@@ -870,6 +927,11 @@ export default async function handler(req, res) {
     const gym = await gymProfile(body.authToken); // { access, tier } — toegang via de sportschool
     const gymOk = gym.access;
     const access = subVerified || gymOk; // echte toegang zonder betaalmuur
+    // Mealplan-tegoed (zichtbaar, zacht): telt generaties en geeft saldo terug. Blokkeert
+    // het plan niet — mealplans zijn database-first (quasi gratis); de €2-vangrail is de rem.
+    const mtier = ((gymOk && gym.tier === "pro") || (access && (await proSub(body.authToken)))) ? "pro" : "basis";
+    const mbud = (trusted || access) ? await aiBudget(body.authToken, "mealplans", mtier) : { ok: true, balance: null, commit: async () => {} };
+    const mBal = () => { if (mbud.balance && mbud.balance.mealplans) { mbud.balance.mealplans.used += 1; mbud.balance.mealplans.left = Math.max(0, mbud.balance.mealplans.left - 1); } return mbud.balance; };
 
     // WEEKREVIEW: korte AI-coaching op de 7-daagse logging, binnen de kaders.
     // Alleen voor abonnees/leden; eigen (goedkope) Haiku-call, met rate-limit-backstop.
@@ -882,18 +944,26 @@ export default async function handler(req, res) {
         const ip = (req.headers["x-forwarded-for"] || "unknown").split(",")[0].trim();
         if (rateLimited(ip)) return res.status(429).json({ error: wlang === "nl" ? "Even te druk — probeer het zo weer." : "Too busy right now — try again shortly." });
       }
+      const wtier = ((gymOk && gym.tier === "pro") || (await proSub(body.authToken))) ? "pro" : "basis";
+      const bud = await aiBudget(body.authToken, "reviews", wtier);
+      if (!bud.ok) {
+        return res.status(200).json({ error: wlang === "nl" ? "Je weekreview-tegoed voor deze maand is op. Het reset vanzelf." : "Your week-review allowance for this month is used up. It resets automatically.", balance: bud.balance });
+      }
       const wr = await buildWeekReview(body);
       if (wr.err || !wr.review) {
         return res.status(502).json({ error: wlang === "nl" ? "Kon de review niet maken. Probeer het zo opnieuw." : "Couldn't build the review. Try again shortly.", detail: wr.err || "leeg" });
       }
-      return res.status(200).json({ review: wr.review });
+      await bud.commit(1);
+      if (bud.balance && bud.balance.reviews) { bud.balance.reviews.used += 1; bud.balance.reviews.left = Math.max(0, bud.balance.reviews.left - 1); }
+      return res.status(200).json({ review: wr.review, balance: bud.balance });
     }
 
     // FOTO-AI PRODUCTHERKENNING: naam + merk + voedingswaarden per 100 g uit 1-4
     // foto's. Gate = Pro-abonnee OF gym-lid (gelijk aan de app-gate op Producten).
     if (body.mode === "product-scan") {
       const slang = body.lang === "en" ? "en" : "nl";
-      const okAccess = trusted || gymOk || (await proSub(body.authToken));
+      const proAcc = await proSub(body.authToken);
+      const okAccess = trusted || gymOk || proAcc;
       if (!okAccess) {
         return res.status(403).json({ error: slang === "nl" ? "Foto-herkenning zit in Pro (of je sportschool-lidmaatschap)." : "Photo recognition is part of Pro (or your gym membership)." });
       }
@@ -901,12 +971,19 @@ export default async function handler(req, res) {
         const ip = (req.headers["x-forwarded-for"] || "unknown").split(",")[0].trim();
         if (rateLimited(ip)) return res.status(429).json({ error: slang === "nl" ? "Even te druk — probeer het zo weer." : "Too busy right now — try again shortly." });
       }
+      const stier = (proAcc || (gymOk && gym.tier === "pro")) ? "pro" : "basis";
+      const bud = await aiBudget(body.authToken, "scans", stier);
+      if (!bud.ok) {
+        return res.status(200).json({ error: slang === "nl" ? "Je foto-scan-tegoed voor deze maand is op. Het reset vanzelf; vul zolang handmatig in." : "Your photo-scan allowance for this month is used up. It resets automatically; fill in manually for now.", balance: bud.balance });
+      }
       const ps = await buildProductScan(body);
       if (ps.err || !ps.result) {
         if (ps.err === "no_images") return res.status(400).json({ error: slang === "nl" ? "Geen geldige foto's ontvangen." : "No valid photos received." });
         return res.status(502).json({ error: slang === "nl" ? "Herkenning lukte niet. Probeer het opnieuw of vul handmatig in." : "Recognition failed. Try again or fill in manually.", detail: ps.err });
       }
-      return res.status(200).json({ result: ps.result });
+      await bud.commit(1);
+      if (bud.balance && bud.balance.scans) { bud.balance.scans.used += 1; bud.balance.scans.left = Math.max(0, bud.balance.scans.left - 1); }
+      return res.status(200).json({ result: ps.result, balance: bud.balance });
     }
 
     const paidVerified = isPaid && (trusted || access || validToken(body.token));
@@ -921,7 +998,8 @@ export default async function handler(req, res) {
       try {
         const lib = await buildFromLibrary(body, cyc);
         if (lib && lib.complete && lib.plan && lib.plan.days && lib.plan.days.length) {
-          return res.status(200).json({ targets, plan: lib.plan, source: "library" });
+          await mbud.commit(0); // DB-plan = geen AI-kosten, telt wel als generatie
+          return res.status(200).json({ targets, plan: lib.plan, source: "library", balance: mBal() });
         }
         // Gat-logboek: welke eetmomenten + keuzes hadden geen passend gerecht?
         // Stuurt welke recepten Mounir moet toevoegen. Best-effort, blokkeert nooit.
@@ -1074,7 +1152,8 @@ export default async function handler(req, res) {
       }
     }
 
-    return res.status(200).json({ targets, plan, source: "ai" });
+    await mbud.commit(1); // AI-vangnet draaide -> telt als generatie + kleine kost
+    return res.status(200).json({ targets, plan, source: "ai", balance: mBal() });
   } catch (e) {
     return res.status(500).json({ error: "Serverfout", detail: String(e).slice(0, 200) });
   }
