@@ -372,6 +372,22 @@ function buildPrompt(b, cyc) {
         : `TELBARE PRODUCTEN (per stuk — de persoon weegt deze NIET). Eén stuk weegt het getal hieronder. Gebruik je zo'n product, reken dan in HELE stuks: zet de grammen op een heel veelvoud van het stukgewicht en benoem het per stuk (bijv. "2 broodjes"), nooit een vreemd gewicht als 137 g:\n${countU.map((p) => `- ${p.name}: 1 stuk = ${p.g} g`).join("\n")}`)
     : "";
 
+  const portionNorms = lang === "en"
+    ? `REALISTIC PORTIONS (per main meal — stay within these ranges; toward the low end when cutting, the high end when bulking, but NEVER outside):
+- Carb base, pick ONE: rice/pasta/couscous/quinoa (dry) 60-110 g · potato/sweet potato 200-350 g · bread 2-4 slices (~35 g each) · oats 40-80 g.
+- Protein, pick ONE: chicken/turkey/lean meat 120-200 g · beef/steak 120-200 g · fish (salmon/white fish) 120-180 g · mince 100-150 g · eggs 2-4 · tofu/tempeh/legumes 100-200 g.
+- Dairy base (breakfast/snack): quark/skyr/yoghurt 150-300 g. Vegetables 100-200 g. Fruit 100-200 g (one piece / a handful).
+- Fat/nuts/cheese: oil 5-15 g · nuts 20-40 g · cheese 20-40 g · peanut butter 15-30 g.
+- Flavour/sauce/sweet (ketjap, soy, honey, syrup, chocolate chips, dressing, mayo): keep SMALL and roughly fixed at 5-20 g — NEVER inflate a sauce or sweetener to hit macros.
+A proper main meal = 1 protein + 1 carb base + vegetables (+ optional small accent). Never 10 g of rice, never 290 g of fish, never 65 g of honey. If you cannot hit the numbers inside these ranges, get CLOSE and accept a small miss.`
+    : `REALISTISCHE PORTIES (per hoofdmaaltijd — blijf binnen deze ranges; richting onderkant bij afvallen, bovenkant bij aankomen, maar NOOIT erbuiten):
+- Koolhydraatbasis, kies ÉÉN: rijst/pasta/couscous/quinoa (droog) 60-110 g · aardappel/zoete aardappel 200-350 g · brood 2-4 sneetjes (~35 g per snee) · havermout 40-80 g.
+- Eiwitbron, kies ÉÉN: kip/kalkoen/mager vlees 120-200 g · rund/steak 120-200 g · vis (zalm/witvis) 120-180 g · gehakt 100-150 g · eieren 2-4 · tofu/tempeh/peulvruchten 100-200 g.
+- Zuivelbasis (ontbijt/snack): kwark/skyr/yoghurt 150-300 g. Groente 100-200 g. Fruit 100-200 g (1 stuk / handje).
+- Vet/noten/kaas: olie 5-15 g · noten 20-40 g · kaas 20-40 g · pindakaas 15-30 g.
+- Smaakmaker/saus/zoet (ketjap, soja, honing, siroop, chocodruppels, dressing, mayo): houd KLEIN en ongeveer vast op 5-20 g — blaas een saus of zoetstof NOOIT op om macro's te halen.
+Een goede hoofdmaaltijd = 1 eiwitbron + 1 koolhydraatbasis + groente (+ evt. klein accent). Nooit 10 g rijst, nooit 290 g vis, nooit 65 g honing. Lukt het getal niet binnen deze ranges, kom dan DICHTBIJ en accepteer een kleine afwijking.`;
+
   return `You are a sports nutrition coach. Build these meal-days, each hitting ITS OWN targets:
 ${dayLines}
 
@@ -383,6 +399,8 @@ ${recipeIntro}
 ${recipeLines}
 
 Keep protein high and roughly equal on every day; put the calorie difference between training and rest days mainly into carbohydrates (rice, oats, potato, fruit). ${cookLine}
+
+${portionNorms}
 
 Rules:
 ${L.rule1}

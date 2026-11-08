@@ -50,59 +50,109 @@ function scaleSavedMeal(meal, kcalTarget, label) {
 function pick(list, offset) { return list.length ? list[((offset % list.length) + list.length) % list.length] : null; }
 const idOf = (p) => p && (p.id || p.name);
 
-// Rol van een product op basis van z'n dominante macro (en caloriedichtheid).
-// 'veg' = caloriearme vulling (bv. broccoli), nooit een hoofd-koolhydraatbron.
-function roleOf(p) {
+// Realistische portie-kaders per rol (gram), afgestemd met de kok.
+const KADER = {
+  protein: { min: 120, max: 200 }, mince: { min: 100, max: 150 }, fish: { min: 120, max: 180 },
+  eggs: { min: 100, max: 200 }, dairy: { min: 150, max: 300 },
+  carbdry: { min: 60, max: 120 }, carbwet: { min: 120, max: 250 }, potato: { min: 200, max: 350 },
+  bread: { min: 70, max: 140 }, oats: { min: 40, max: 80 },
+  veg: { min: 100, max: 200 }, fruit: { min: 100, max: 200 },
+  nuts: { min: 20, max: 40 }, oil: { min: 5, max: 15 }, cheese: { min: 20, max: 40 },
+  accent: { min: 5, max: 20 }, bar: { min: 30, max: 80 }, other: { min: 40, max: 200 },
+};
+// Naam is het sterkste signaal (werkt ongeacht categorie).
+const NAME_ROLE = [
+  [/honing|honey|siroop|syrup|ketjap|sojasaus|soja|\bsaus\b|sauce|mayo|dressing|\bjam\b|pesto|sambal|mosterd|mustard|hagelslag|\bchoco/i, "accent"],
+  [/aardappel|potato|puree|friet|\bfries\b/i, "potato"],
+  [/havermout|oats|oatmeal|muesli|granola|cruesli/i, "oats"],
+  [/brood|bread|wrap|tortilla|cracker|beschuit|toast|bagel|pita|crackers|knackebrod/i, "bread"],
+  [/rijst|\brice\b|pasta|spaghetti|penne|macaroni|couscous|quinoa|bulgur|noedel|noodle|\bmie\b/i, "carb"],
+  [/kwark|skyr|yoghurt|yogurt|kefir/i, "dairy"],
+  [/kaas|cheese|feta|mozzarella|parmezaan/i, "cheese"],
+  [/pindakaas|peanut butter|notenpasta|amandelpasta/i, "nuts"],
+  [/\bnoot|noten|nuts|amandel|almond|walnoot|cashew|\bpinda|hazelnoot|zaden|seeds|pit\b/i, "nuts"],
+  [/olijfolie|\bolie\b|\boil\b|roomboter|\bboter\b|butter/i, "oil"],
+  [/gehakt|mince/i, "mince"],
+  [/\bei\b|eieren|\beggs?\b|omelet/i, "eggs"],
+  [/zalm|salmon|tonijn|tuna|\bvis\b|\bfish\b|kabeljauw|witvis|garnaal|shrimp|makreel|haring|pangasius|tilapia/i, "fish"],
+  [/\bkip|chicken|kalkoen|turkey|\brund|beef|steak|biefstuk|varken|pork|tofu|tempeh|\bham\b|filet|worst|\bspek|bacon|shoarma|peulvrucht|linze|\bbo(o|)n/i, "protein"],
+];
+function classify(p) {
+  const nm = ((p && p.name) || "") + " " + ((p && p.brand) || "");
   const x = per100(p);
-  if (x.kcal < 55) return "veg";
+  for (const [re, role] of NAME_ROLE) if (re.test(nm)) {
+    if (role === "carb") return x.kcal >= 250 ? "carbdry" : "carbwet";
+    return role;
+  }
+  const cat = p && p.category;
+  if (cat === "sauce") return "accent";
+  if (cat === "nuts") return "nuts";
+  if (cat === "meat") return (x.p >= 24 && x.f >= 12) ? "mince" : (x.f >= 8 && x.kcal >= 180 ? "fish" : "protein");
+  if (cat === "dairy") return (x.f * 9 >= x.kcal * 0.5 && x.kcal >= 250) ? "cheese" : "dairy";
+  if (cat === "grain") return x.kcal >= 250 ? "carbdry" : "carbwet";
+  if (cat === "veg") return (x.c >= 10 && x.kcal >= 50) ? "fruit" : "veg";
+  if (cat === "snack") return "bar";
+  // Laatste redmiddel: macro's + densiteit.
   const ps = x.p * 4, cs = x.c * 4, fs = x.f * 9;
+  if (x.kcal < 55) return "veg";
+  if (fs >= cs && fs > ps) return x.kcal >= 700 ? "oil" : "nuts";
   if (ps >= cs && ps >= fs) return "protein";
-  if (fs >= cs && fs > ps) return "fat";
-  if (x.kcal < 80) return "veg"; // caloriearm + koolhydraat-dominant = vulling
-  return "carb";
+  if (x.kcal < 80) return "veg";
+  return x.kcal >= 250 ? "carbdry" : "carbwet";
 }
+const PROTEIN_ROLES = ["protein", "mince", "fish", "eggs"];
+const CARB_ROLES = ["carbdry", "carbwet", "potato", "bread", "oats"];
+const clampG = (g, role) => { const k = KADER[role] || KADER.other; return Math.max(k.min, Math.min(k.max, g)); };
 
-// Bouwt één maaltijd greedy: eiwit eerst (op eiwitdoel), dan koolhydraten (op
-// koolhydraatdoel), dan evt. vet + een groente-side. Realistische porties.
-function buildMealMacro(cands, target, dayIdx, label) {
+// Bouwt één maaltijd BINNEN de kaders: 1 eiwitbron + 1 koolhydraatbasis + groente,
+// elk op z'n macro-doel maar geklemd op een realistische portie. Accenten/sauzen
+// worden NOOIT opgeschaald om macro's te halen. Snacks = één logisch tussendoortje.
+function buildMealMacro(cands, target, dayIdx, label, slot) {
   if (!cands.length) return null;
-  const P = Math.max(0, num(target.p)), C = Math.max(0, num(target.c)), F = Math.max(0, num(target.f)), K = Math.max(0, num(target.kcal));
-  const byRole = (r) => cands.filter((p) => roleOf(p) === r);
-  const protList = byRole("protein").sort((a, b) => per100(b).p - per100(a).p);
-  const carbList = byRole("carb").sort((a, b) => per100(b).c - per100(a).c);
-  const fatList = byRole("fat").sort((a, b) => per100(b).f - per100(a).f);
-  const vegList = byRole("veg");
+  const P = Math.max(0, num(target.p)), C = Math.max(0, num(target.c)), K = Math.max(0, num(target.kcal));
+  const tagged = cands.map((p) => ({ p, role: classify(p) }));
+  const of = (roles) => tagged.filter((t) => roles.includes(t.role)).map((t) => t.p);
 
-  const protSrc = pick(protList.slice(0, Math.min(3, protList.length)), dayIdx);
-  let carbSrc = pick(carbList.slice(0, Math.min(3, carbList.length)), dayIdx + 1);
-  if (carbSrc && protSrc && idOf(carbSrc) === idOf(protSrc)) carbSrc = carbList.find((x) => idOf(x) !== idOf(protSrc)) || null;
+  if (slot === "snack") {
+    const pools = [of(["fruit"]), of(["dairy"]), of(["bar"]), of(["nuts"])].filter((l) => l.length);
+    const pool = pools.length ? pools[((dayIdx % pools.length) + pools.length) % pools.length] : cands;
+    const it = pick(pool, dayIdx);
+    if (!it) return scaleToKcal(cands, target, dayIdx, label);
+    const r = classify(it), kc = per100(it).kcal || 1;
+    return assemble([[it, roundG(clampG((K / kc) * 100, r))]], label);
+  }
 
-  // Geen eiwit- én geen koolhydraatbron herkend → val terug op kcal-schalen.
+  const prots = of(PROTEIN_ROLES).sort((a, b) => per100(b).p - per100(a).p);
+  const carbs = of(CARB_ROLES);
+  const vegs = of(["veg"]);
+  const fruits = of(["fruit"]);
+  const dairy = of(["dairy"]);
+
+  const protSrc = pick(prots.slice(0, Math.min(3, prots.length)), dayIdx) || pick(dairy, dayIdx);
+  const carbSrc = pick(carbs.slice(0, Math.min(3, carbs.length)), dayIdx + 1);
   if (!protSrc && !carbSrc) return scaleToKcal(cands, target, dayIdx, label);
 
   const items = [];
   const used = new Set();
-  const addItem = (prod, grams) => { if (prod && !used.has(idOf(prod)) && grams >= 8) { items.push([prod, roundG(grams)]); used.add(idOf(prod)); } };
+  const add = (prod, grams, role) => { if (prod && !used.has(idOf(prod))) { items.push([prod, roundG(clampG(grams, role))]); used.add(idOf(prod)); } };
 
-  let remP = P, remC = C, remF = F;
-  const sub = (prod, g) => { const x = per100(prod); remP -= x.p * g / 100; remC -= x.c * g / 100; remF -= x.f * g / 100; };
-
-  // 1) Eiwit: dek ~75% van het eiwitdoel met de eiwitbron (de rest komt uit
-  //    koolhydraat-/vetbronnen die ook eiwit bevatten → voorkomt overschot).
-  if (protSrc) { const pp = per100(protSrc).p || 1; const g = Math.max(20, Math.min(300, (P * 0.75) / (pp / 100))); addItem(protSrc, g); sub(protSrc, roundG(g)); }
-  // 2) Koolhydraten: dek de resterende koolhydraten met de koolhydraatbron.
-  if (carbSrc && remC > 5) { const cc = per100(carbSrc).c || 1; const g = Math.max(20, Math.min(400, remC / (cc / 100))); addItem(carbSrc, g); sub(carbSrc, roundG(g)); }
-  // 3) Vet: als er nog vet mist en er is een vetbron (noten/olie/vette vis) → toevoegen.
-  if (remF > 5 && fatList.length) { const fat = pick(fatList, dayIdx + 2); const ff = per100(fat).f || 1; const g = Math.max(8, Math.min(70, remF / (ff / 100))); addItem(fat, g); sub(fat, roundG(g)); }
-  // 4) Groente-side voor volume (klein, vast) bij hoofdmaaltijden.
-  if (vegList.length && label && items.length) { const veg = pick(vegList, dayIdx + 3); addItem(veg, 120); }
+  // 1) Eiwitbron op ~90% van het eiwitdoel, binnen kader.
+  if (protSrc) { const r = classify(protSrc), pp = per100(protSrc).p || 1; add(protSrc, (P * 0.9) / (pp / 100), r); }
+  // 2) Koolhydraatbasis op het koolhydraatdoel, binnen kader.
+  if (carbSrc) { const r = classify(carbSrc), cc = per100(carbSrc).c || 1; add(carbSrc, C / (cc / 100), r); }
+  // 3) Groente-side (vast volume) bij hoofdmaaltijden; anders een stuk fruit.
+  if (vegs.length) add(pick(vegs, dayIdx + 2), 150, "veg");
+  else if (fruits.length && !carbSrc) add(pick(fruits, dayIdx + 2), 150, "fruit");
 
   if (!items.length) return scaleToKcal(cands, target, dayIdx, label);
   let meal = assemble(items, label);
-  // Te veel calorieën? Schaal de staples (niet de vaste groente) evenredig terug.
-  if (K > 0 && meal.kcal > K * 1.3) {
-    const f = (K * 1.1) / meal.kcal;
-    meal = assemble(items.map(([prod, g]) => [prod, roundG(g * f)]), label);
+  // Fijn-afstemming op kcal: schaal ALLEEN eiwit+koolhydraat, en blijf in hun kader.
+  if (K > 0 && meal.kcal > 0) {
+    const f = K / meal.kcal;
+    if (f < 0.9 || f > 1.12) {
+      const adj = items.map(([prod, g]) => { const r = classify(prod); const flex = PROTEIN_ROLES.includes(r) || CARB_ROLES.includes(r); return [prod, flex ? roundG(clampG(g * f, r)) : g]; });
+      meal = assemble(adj, label);
+    }
   }
   return meal;
 }
@@ -154,7 +204,7 @@ function buildDay(products, meals, dayMacros, dayIdx, nSnacks, lang) {
       if (meal) { out.push(scaleSavedMeal(meal, target.kcal, label)); return; }
     }
     const cands = candidatesFor(products, slot);
-    const meal = buildMealMacro(cands, target, dayIdx + idx, label);
+    const meal = buildMealMacro(cands, target, dayIdx + idx, label, slot);
     if (meal) out.push(meal);
   });
   return out;
