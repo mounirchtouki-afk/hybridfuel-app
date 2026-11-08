@@ -2204,7 +2204,7 @@ export default function App() {
         </div>
       )}
 
-      <div style={{ maxWidth: 680, margin: "0 auto", padding: 16, position: "relative", zIndex: 1 }}>
+      <div style={{ maxWidth: 680, margin: "0 auto", padding: 16, position: "relative" }}>
 
         {tab === "dashboard" && gymPro && <GymAgendaMember lang={lang} color={gymCtx.org.brand_color} />}
         {tab === "dashboard" && isGymMember && <GymClasses lang={lang} color={gymCtx.org.brand_color} classAccess={gymPlan ? gymPlan.class_ids : gymCtx.classAccess} session={session} />}
@@ -2619,12 +2619,12 @@ export default function App() {
           {fabAct(lang === "nl" ? "Scan / log eten" : "Scan / log food", <svg width="20" height="20" viewBox="0 0 24 24" fill={EMBER} aria-hidden="true"><rect x="3" y="5" width="1.7" height="14" /><rect x="6" y="5" width="1" height="14" /><rect x="8.5" y="5" width="2" height="14" /><rect x="12" y="5" width="1" height="14" /><rect x="14.6" y="5" width="1.7" height="14" /><rect x="17.6" y="5" width="1" height="14" /><rect x="20" y="5" width="1.4" height="14" /></svg>, () => { setFab(false); if (!hasPro) { setShowAuth(true); return; } setFabScan(true); setShowProducts(true); })}
         </div>
       )}
-      <div onClick={() => setFab(!fab)} title="+" style={{ position: "fixed", left: "50%", bottom: "calc(env(safe-area-inset-bottom) + 48px)", zIndex: 47, width: 58, height: 58, borderRadius: "50%", background: EMBER, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 8px 22px rgba(var(--hf-ember-rgb),0.45)", cursor: "pointer", transition: "transform .2s", transform: `translateX(-50%) ${fab ? "rotate(45deg)" : ""}`, border: `4px solid ${INK}` }}>
+      <div onClick={() => setFab(!fab)} title="+" style={{ position: "fixed", left: "50%", bottom: "calc(env(safe-area-inset-bottom) + 48px)", zIndex: 47, width: 58, height: 58, borderRadius: "50%", background: EMBER, display: (showProducts || showBuilder) ? "none" : "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 8px 22px rgba(var(--hf-ember-rgb),0.45)", cursor: "pointer", transition: "transform .2s", transform: `translateX(-50%) ${fab ? "rotate(45deg)" : ""}`, border: `4px solid ${INK}` }}>
         <svg width="27" height="27" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
       </div>
 
       {/* BOTTOM NAV, 2 links, +, 2 rechts */}
-      <div style={{ position: "fixed", left: 14, right: 14, bottom: "calc(env(safe-area-inset-bottom) + 14px)", background: INK2, border: `1px solid ${LINE}`, borderRadius: 24, display: "flex", zIndex: 45, boxShadow: "0 2px 10px rgba(0,0,0,0.10), 0 14px 34px rgba(0,0,0,0.22)", overflow: "hidden" }}>
+      <div style={{ position: "fixed", left: 14, right: 14, bottom: "calc(env(safe-area-inset-bottom) + 14px)", background: INK2, border: `1px solid ${LINE}`, borderRadius: 24, display: (showProducts || showBuilder) ? "none" : "flex", zIndex: 45, boxShadow: "0 2px 10px rgba(0,0,0,0.10), 0 14px 34px rgba(0,0,0,0.22)", overflow: "hidden" }}>
         {navCell("dashboard", "navDash", () => go("dashboard"), tab === "dashboard")}
         {navCell("plan", "navPlan", () => go("plan"), tab === "plan")}
         <div style={{ flex: 1 }} />
