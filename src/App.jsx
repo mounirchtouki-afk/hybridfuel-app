@@ -670,6 +670,7 @@ export default function App() {
   const toggleMeal = (moment, id) => setMealPrefs((p) => { const cur = p[moment] || []; return { ...p, [moment]: cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id] }; });
   // Eigen producten voor de eetmoment-kiezer (uitklap + aanvinken + bron).
   const [userProducts, setUserProducts] = useState([]);
+  const [userRecipes, setUserRecipes] = useState([]);
   const [openMoment, setOpenMoment] = useState("breakfast"); // welke sectie uitgeklapt is
   const [momentAdd, setMomentAdd] = useState(null); // eetmoment waarvoor we een product toevoegen/scannen
   const [trainingDays, setTrainingDays] = useState([0, 2, 4]);
@@ -1208,7 +1209,7 @@ export default function App() {
 
   function common() {
     const dietObj = DIETS.find((d) => d.id === diet);
-    const mealPrefLabels = MEAL_MOMENTS.reduce((acc, mo) => { acc[mo.id] = (mealPrefs[mo.id] || []).map((id) => { if (typeof id === "string" && id.indexOf("prod:") === 0) { const p = userProducts.find((x) => ("prod:" + x.id) === id); return p ? p.name : null; } const o = MEAL_OPTIONS[mo.id].find((x) => x.id === id); return o ? o[lang] : id; }).filter(Boolean); return acc; }, {});
+    const mealPrefLabels = MEAL_MOMENTS.reduce((acc, mo) => { acc[mo.id] = (mealPrefs[mo.id] || []).map((id) => { if (typeof id === "string" && id.indexOf("prod:") === 0) { const p = userProducts.find((x) => ("prod:" + x.id) === id); return p ? p.name : null; } if (typeof id === "string" && id.indexOf("rec:") === 0) { const r = userRecipes.find((x) => ("rec:" + x.id) === id); return r ? r.name : null; } const o = MEAL_OPTIONS[mo.id].find((x) => x.id === id); return o ? o[lang] : id; }).filter(Boolean); return acc; }, {});
     // Ruwe keuze-ids (chip-ids + prod:<id>) voor de database-first plan-bouw.
     const mealPrefIds = MEAL_MOMENTS.reduce((acc, mo) => { acc[mo.id] = (mealPrefs[mo.id] || []).slice(); return acc; }, {});
     // Gekozen eigen producten (met macro's) zodat de server er direct een maaltijd van maakt.
@@ -1348,6 +1349,26 @@ export default function App() {
 
   const refreshUserProducts = async () => { try { const prods = await loadUserProducts(); setUserProducts(prods || []); } catch (e) {} };
   useEffect(() => { let alive = true; (async () => { const prods = await loadUserProducts(); if (alive) setUserProducts(prods || []); })(); return () => { alive = false; }; }, [session]);
+
+  // Eigen recepten (met moment-tags) voor de "wat eet je graag"-keuzes per moment.
+  async function loadUserRecipes() {
+    if (supabase && session) {
+      try {
+        let { data, error } = await supabase.from("recipes")
+          .select("id,name,type,meal_types").eq("user_id", session.user.id);
+        if (error) { // kolom meal_types bestaat mogelijk nog niet (vóór migratie)
+          const r2 = await supabase.from("recipes").select("id,name,type").eq("user_id", session.user.id);
+          data = r2.data || [];
+        }
+        return data || [];
+      } catch (e) { return []; }
+    }
+    try { return JSON.parse(localStorage.getItem("hf_recipes") || "[]") || []; } catch (e) { return []; }
+  }
+  const refreshUserRecipes = async () => { try { const recs = await loadUserRecipes(); setUserRecipes(recs || []); } catch (e) {} };
+  useEffect(() => { let alive = true; (async () => { const recs = await loadUserRecipes(); if (alive) setUserRecipes(recs || []); })(); return () => { alive = false; }; }, [session]);
+  // Verse recept-tags tonen zodra je naar het plan gaat (na aanmaken/bewerken).
+  useEffect(() => { if (tab === "plan") refreshUserRecipes(); }, [tab]);
 
   // Tag een product aan een eetmoment (en vink het meteen aan) — vanuit "+ toevoegen / scan".
   async function tagProductToMoment(prod, moment) {
@@ -2217,9 +2238,11 @@ export default function App() {
                 const sel = mealPrefs[mo.id] || [];
                 const open = openMoment === mo.id;
                 const myProds = userProducts.filter((p) => Array.isArray(p.meal_types) && p.meal_types.includes(mo.id));
+                const myRecs = userRecipes.filter((r) => { const mt = Array.isArray(r.meal_types) && r.meal_types.length ? r.meal_types : (r.type ? [r.type] : []); return mt.includes(mo.id); });
                 const srcTag = (kind) => {
                   const m = kind === "eigen" ? { t: lang === "nl" ? "Eigen" : "Own", c: EMBER, bg: "rgba(var(--hf-ember-rgb),0.12)" }
                     : kind === "scan" ? { t: lang === "nl" ? "Gescand" : "Scanned", c: "#4C8DFF", bg: "rgba(76,141,255,0.14)" }
+                    : kind === "recept" ? { t: lang === "nl" ? "Recept" : "Recipe", c: EMBER, bg: "rgba(var(--hf-ember-rgb),0.14)" }
                     : { t: lang === "nl" ? "Standaard" : "Standard", c: MUTED, bg: "rgba(130,130,130,0.12)" };
                   return <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: 0.4, textTransform: "uppercase", padding: "3px 8px", borderRadius: 20, color: m.c, background: m.bg, whiteSpace: "nowrap", flexShrink: 0 }}>{m.t}</span>;
                 };
@@ -2247,6 +2270,7 @@ export default function App() {
                       <div style={{ padding: "0 13px 10px" }}>
                         {MEAL_OPTIONS[mo.id].map((o) => rowEl(o.id, o[lang], null, "std"))}
                         {myProds.map((p) => rowEl("prod:" + p.id, p.name, p.brand, p.barcode ? "scan" : "eigen"))}
+                        {myRecs.map((r) => rowEl("rec:" + r.id, r.name, null, "recept"))}
                         <div onClick={() => { setMomentAdd(mo.id); setPickTarget(null); setFabScan(false); setShowProducts(true); }} style={{ cursor: "pointer", marginTop: 9, border: `1px dashed ${SAGE}`, color: SAGE, borderRadius: 10, padding: "9px 0", textAlign: "center", fontSize: 12.5, fontWeight: 700, ...disp }}>{lang === "nl" ? "+ toevoegen / scan" : "+ add / scan"}</div>
                       </div>
                     )}

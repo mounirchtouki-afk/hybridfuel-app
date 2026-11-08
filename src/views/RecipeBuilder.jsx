@@ -35,6 +35,12 @@ export default function RecipeBuilder({ lang, session, units, onClose, onSaved, 
   const isEdit = !!(edit && edit.id);
   const [name, setName] = useState(() => (edit && edit.name) || "");
   const [type, setType] = useState(() => (edit && edit.type) || "dinner");
+  const [mealTypes, setMealTypes] = useState(() => {
+    if (edit && Array.isArray(edit.meal_types) && edit.meal_types.length) return edit.meal_types;
+    if (edit && edit.type) return [edit.type];
+    return [(edit && edit.type) || "dinner"];
+  });
+  const toggleMealType = (ty) => setMealTypes((a) => a.includes(ty) ? a.filter((x) => x !== ty) : [...a, ty]);
   const [steps, setSteps] = useState(() => (edit && edit.steps) || "");
   const [photo, setPhoto] = useState(() => (edit && edit.image_url) || "");
   const [ings, setIngs] = useState(() => (edit && Array.isArray(edit.ingredients))
@@ -88,18 +94,21 @@ export default function RecipeBuilder({ lang, session, units, onClose, onSaved, 
     if (!name.trim() || !ings.length) return;
     setBusy(true);
     const ingredients = ings.map((x) => ({ name: x.name, grams: num(x.grams), kcal: num(x.kcal), p: num(x.p), c: num(x.c), f: num(x.f) }));
+    const mt = (mealTypes && mealTypes.length ? mealTypes : [type]);
     const rec = { name: name.trim(), type, ingredients, macros, image_url: photo || null, steps: steps.trim() || null };
     const localId = isEdit ? edit.id : "l" + Date.now();
     const cloudId = isEdit && !String(edit.id).startsWith("l");
     try {
       if (cloud && (!isEdit || cloudId)) {
-        const q = isEdit
-          ? supabase.from("recipes").update(rec).eq("id", edit.id).select("id,name,type,ingredients,macros,image_url,steps").single()
-          : supabase.from("recipes").insert({ user_id: session.user.id, ...rec, is_system: false }).select("id,name,type,ingredients,macros,image_url,steps").single();
-        const { data } = await q;
+        const sel = "id,name,type,ingredients,macros,image_url,steps";
+        const run = (payload, selCols) => isEdit
+          ? supabase.from("recipes").update(payload).eq("id", edit.id).select(selCols).single()
+          : supabase.from("recipes").insert({ user_id: session.user.id, ...payload, is_system: false }).select(selCols).single();
+        let { data, error } = await run({ ...rec, meal_types: mt }, sel + ",meal_types");
+        if (error) { const r2 = await run(rec, sel); data = r2.data; } // kolom meal_types bestaat nog niet (vóór migratie)
         if (data) onSaved && onSaved(data);
       } else {
-        const row = { id: localId, ...rec };
+        const row = { id: localId, ...rec, meal_types: mt };
         const all = load("hf_recipes", []);
         const next = isEdit ? all.map((r) => (r.id === localId ? row : r)) : [...all, row];
         save("hf_recipes", next);
@@ -138,9 +147,17 @@ export default function RecipeBuilder({ lang, session, units, onClose, onSaved, 
         <label style={label}>{t("type")}</label>
         <div style={{ display: "flex", gap: 6, marginBottom: 14, flexWrap: "wrap" }}>
           {["breakfast", "lunch", "dinner", "snack"].map((ty) => (
-            <div key={ty} onClick={() => setType(ty)} style={{ padding: "7px 13px", borderRadius: 8, border: `1px solid ${type === ty ? EMBER : LINE}`, background: type === ty ? "rgba(var(--hf-ember-rgb),0.14)" : "transparent", color: type === ty ? PAPER : MUTED, fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}>{t(ty)}</div>
+            <div key={ty} onClick={() => { setType(ty); setMealTypes((a) => a.includes(ty) ? a : [...a, ty]); }} style={{ padding: "7px 13px", borderRadius: 8, border: `1px solid ${type === ty ? EMBER : LINE}`, background: type === ty ? "rgba(var(--hf-ember-rgb),0.14)" : "transparent", color: type === ty ? PAPER : MUTED, fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}>{t(ty)}</div>
           ))}
         </div>
+
+        <label style={label}>{lang === "nl" ? "Telt mee bij in je mealplan" : "Counts for in your meal plan"}</label>
+        <div style={{ display: "flex", gap: 6, marginBottom: 6, flexWrap: "wrap" }}>
+          {["breakfast", "lunch", "dinner", "snack"].map((ty) => { const on = mealTypes.includes(ty); return (
+            <div key={ty} onClick={() => toggleMealType(ty)} style={{ padding: "7px 13px", borderRadius: 8, border: `1px solid ${on ? EMBER : LINE}`, background: on ? EMBER : "transparent", color: on ? "#fff" : MUTED, fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>{on ? "✓ " : ""}{t(ty)}</div>
+          ); })}
+        </div>
+        <div style={{ fontSize: 11, color: MUTED, lineHeight: 1.5, marginBottom: 14 }}>{lang === "nl" ? "Bij deze momenten kun je dit recept kiezen in “Wat eet je graag?”, zodat de AI het meeneemt en op porties schaalt." : "At these moments you can pick this recipe under “What do you like to eat?”, so the AI uses it and scales the portions."}</div>
 
         {/* Ingrediënten */}
         <div style={{ ...label, marginBottom: 8 }}>{t("ingredients")}</div>
