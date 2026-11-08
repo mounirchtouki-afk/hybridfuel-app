@@ -709,6 +709,7 @@ export default function App() {
   const [userProducts, setUserProducts] = useState([]);
   const [userRecipes, setUserRecipes] = useState([]);
   const [openMoment, setOpenMoment] = useState("breakfast"); // welke sectie uitgeklapt is
+  const [openSub, setOpenSub] = useState({}); // welke subgroep (recepten/producten/suggesties) per moment open is
   const [momentAdd, setMomentAdd] = useState(null); // eetmoment waarvoor we een product toevoegen/scannen
   const [trainingDays, setTrainingDays] = useState([0, 2, 4]);
   const [snacks, setSnacks] = useState(2);
@@ -2314,6 +2315,23 @@ export default function App() {
                     </div>
                   );
                 };
+                // Subgroepen: Mijn recepten (standaard open) / Mijn producten / Onze suggesties.
+                const subOpen = (subId) => { const k = mo.id + ":" + subId; return openSub[k] != null ? openSub[k] : subId === "recipes"; };
+                const toggleSub = (subId) => { const k = mo.id + ":" + subId; setOpenSub((s) => ({ ...s, [k]: !(s[k] != null ? s[k] : subId === "recipes") })); };
+                const selIn = (ids) => ids.filter((id) => sel.includes(id)).length;
+                const subGroup = (subId, title, items, selCount) => items.length ? (
+                  <div style={{ border: `1px solid ${LINE}`, borderRadius: 10, marginBottom: 7, overflow: "hidden", background: INK }}>
+                    <div onClick={() => toggleSub(subId)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 11px", cursor: "pointer" }}>
+                      <span style={{ ...disp, fontSize: 12.5, fontWeight: 700, color: PAPER }}>{title}</span>
+                      <span style={{ fontSize: 10, fontWeight: 700, borderRadius: 20, padding: "1px 8px", ...(selCount > 0 ? { background: "rgba(var(--hf-ember-rgb),0.14)", border: `1px solid ${EMBER}`, color: EMBER } : { background: INK2, border: `1px solid ${LINE}`, color: MUTED }) }}>{items.length}{selCount > 0 ? ` · ${selCount} ${lang === "nl" ? "gekozen" : "picked"}` : ""}</span>
+                      <span style={{ marginLeft: "auto", color: MUTED, fontSize: 9, display: "inline-block", transform: subOpen(subId) ? "rotate(180deg)" : "none", transition: "transform .15s" }}>▼</span>
+                    </div>
+                    {subOpen(subId) && <div style={{ padding: "0 11px 4px" }}>{items}</div>}
+                  </div>
+                ) : null;
+                const recItems = myRecs.map((r) => rowEl("rec:" + r.id, r.name, null, "recept"));
+                const prodItems = myProds.map((p) => rowEl("prod:" + p.id, p.name, p.brand, p.barcode ? "scan" : "eigen"));
+                const stdItems = MEAL_OPTIONS[mo.id].map((o) => rowEl(o.id, o[lang], null, "std"));
                 return (
                   <div key={mo.id} style={{ background: INK2, border: `1px solid ${LINE}`, borderRadius: 12, marginBottom: 10, overflow: "hidden" }}>
                     <div onClick={() => setOpenMoment(open ? null : mo.id)} style={{ display: "flex", alignItems: "center", gap: 9, padding: "12px 13px", cursor: "pointer" }}>
@@ -2335,10 +2353,10 @@ export default function App() {
                             <span onClick={() => { setMomentAdd(mo.id); setPickTarget(null); setFabScan(false); setShowProducts(true); }} style={{ cursor: "pointer", background: EMBER, color: "#fff", borderRadius: 8, padding: "6px 11px", fontSize: 11.5, fontWeight: 800, whiteSpace: "nowrap" }}>{lang === "nl" ? "+ Toevoegen" : "+ Add"}</span>
                           </div>
                         )}
-                        {MEAL_OPTIONS[mo.id].map((o) => rowEl(o.id, o[lang], null, "std"))}
-                        {myProds.map((p) => rowEl("prod:" + p.id, p.name, p.brand, p.barcode ? "scan" : "eigen"))}
-                        {myRecs.map((r) => rowEl("rec:" + r.id, r.name, null, "recept"))}
-                        <div onClick={() => { setMomentAdd(mo.id); setPickTarget(null); setFabScan(false); setShowProducts(true); }} style={{ cursor: "pointer", marginTop: 9, border: `1px dashed ${SAGE}`, color: SAGE, borderRadius: 10, padding: "9px 0", textAlign: "center", fontSize: 12.5, fontWeight: 700, ...disp }}>{lang === "nl" ? "+ toevoegen / scan" : "+ add / scan"}</div>
+                        {subGroup("recipes", lang === "nl" ? "Mijn recepten" : "My recipes", recItems, selIn(myRecs.map((r) => "rec:" + r.id)))}
+                        {subGroup("products", lang === "nl" ? "Mijn producten" : "My products", prodItems, selIn(myProds.map((p) => "prod:" + p.id)))}
+                        {subGroup("standard", lang === "nl" ? "Onze suggesties" : "Our suggestions", stdItems, selIn(MEAL_OPTIONS[mo.id].map((o) => o.id)))}
+                        <div onClick={() => { setMomentAdd(mo.id); setPickTarget(null); setFabScan(false); setShowProducts(true); }} style={{ cursor: "pointer", marginTop: 4, border: `1px dashed ${SAGE}`, color: SAGE, borderRadius: 10, padding: "9px 0", textAlign: "center", fontSize: 12.5, fontWeight: 700, ...disp }}>{lang === "nl" ? "+ toevoegen / scan" : "+ add / scan"}</div>
                       </div>
                     )}
                   </div>
