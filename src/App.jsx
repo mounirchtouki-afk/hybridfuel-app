@@ -18,7 +18,7 @@ import WeekReview from "./views/WeekReview.jsx";
 import WeekPlan from "./views/WeekPlan.jsx";
 import { APP_VERSION } from "./version.js";
 import { RECIPES, snackOptions } from "./recipes.js";
-import { buildDaysFromProducts, productPlanReadiness, productRole } from "./ownplan.js";
+import { buildDaysFromProducts, productPlanReadiness, productRole, overlayChosenRecipes } from "./ownplan.js";
 import Reminders, { checkReminders } from "./views/Reminders.jsx";
 import Auth from "./views/Auth.jsx";
 import Join from "./views/Join.jsx";
@@ -1359,12 +1359,14 @@ export default function App() {
           return { d, train: isTrain, m: (tmpl && tmpl.m) || [] };
         });
       }
-      setWeek({ days });
-      try { localStorage.setItem("hf_lastplan", JSON.stringify({ targets: data.targets, week: { days } })); } catch (e) {}
+      let wk = { days };
+      try { const rMeals = await loadUserMeals(); const rProds = await loadUserProducts(); wk = overlayWeek(wk, data.targets, rMeals, rProds); } catch (e) {}
+      setWeek(wk);
+      try { localStorage.setItem("hf_lastplan", JSON.stringify({ targets: data.targets, week: wk })); } catch (e) {}
       if (supabase && session) {
-        supabase.from("plans").insert({ user_id: session.user.id, targets: data.targets, week: { days }, is_active: true }).then(() => {}, () => {});
+        supabase.from("plans").insert({ user_id: session.user.id, targets: data.targets, week: wk, is_active: true }).then(() => {}, () => {});
       }
-      emailPlan({ days });
+      emailPlan(wk);
     } catch (e) { setError(e && e.message ? e.message : T("unknownErr")); } finally { setLoading(false); }
   }
 
@@ -1430,17 +1432,27 @@ export default function App() {
   async function loadUserMeals() {
     let rows = [];
     if (supabase && session) {
-      try { const { data } = await supabase.from("recipes").select("name,type,ingredients,macros").eq("user_id", session.user.id); rows = data || []; } catch (e) { rows = []; }
+      try { let { data, error } = await supabase.from("recipes").select("id,name,type,ingredients,macros,meal_types").eq("user_id", session.user.id); if (error) { const r2 = await supabase.from("recipes").select("id,name,type,ingredients,macros").eq("user_id", session.user.id); data = r2.data || []; } rows = data || []; } catch (e) { rows = []; }
     } else {
       try { rows = JSON.parse(localStorage.getItem("hf_recipes") || "[]") || []; } catch (e) { rows = []; }
     }
     return (rows || []).map((r) => ({
-      name: r.name, type: r.type,
+      id: r.id, name: r.name, type: r.type, meal_types: Array.isArray(r.meal_types) ? r.meal_types : [],
       macros: r.macros || {},
       // Per-ingrediënt macro's meenemen zodat het plan de maaltijd piece-aware
       // + binnen de kaders kan herverdelen (zie scaleSavedMeal in ownplan.js).
       ing: (r.ingredients || []).map((i) => ({ n: i.name || i.n || i.nl || i.en || "", g: i.grams != null ? i.grams : (i.g != null ? i.g : 0), kcal: num(i.kcal), p: num(i.p), c: num(i.c), f: num(i.f) })),
     })).filter((m) => m.macros && (m.macros.kcal || 0) > 0 && m.ing.length);
+  }
+
+  // HARDE overschrijving: zet voor elk moment met gekozen recept(en) die recepten
+  // op dat moment (afgewisseld, geschaald). Momenten zonder keuze blijven zoals ze zijn.
+  function overlayWeek(week, tgts, meals, products) {
+    try {
+      const byId = {}; (meals || []).forEach((r) => { if (r && r.id != null) byId[String(r.id)] = r; });
+      if (!Object.keys(byId).length) return week;
+      return overlayChosenRecipes(week, { mealPrefs, recipesById: byId, targets: tgts, trainingDays, nSnacks: snacks, products: products || userProducts, lang });
+    } catch (e) { return week; }
   }
 
   // AI-tegoed op → bouw de week softwarematig uit eigen/gym-producten (geen AI, geen kosten).
@@ -1452,10 +1464,11 @@ export default function App() {
       const ready = productPlanReadiness(products, meals);
       if (!ready.mainsCovered) { setWeek(null); return; }
       const { days } = buildDaysFromProducts({ products, meals, targets: tgs, intake, WD });
-      setWeek({ days });
-      try { localStorage.setItem("hf_lastplan", JSON.stringify({ targets: tgs, week: { days } })); } catch (e) {}
+      const wk = overlayWeek({ days }, tgs, meals, products);
+      setWeek(wk);
+      try { localStorage.setItem("hf_lastplan", JSON.stringify({ targets: tgs, week: wk })); } catch (e) {}
       if (supabase && session) {
-        supabase.from("plans").insert({ user_id: session.user.id, targets: tgs, week: { days }, is_active: true }).then(() => {}, () => {});
+        supabase.from("plans").insert({ user_id: session.user.id, targets: tgs, week: wk, is_active: true }).then(() => {}, () => {});
       }
     } catch (e) { setWeek(null); }
   }
@@ -1479,10 +1492,11 @@ export default function App() {
         return;
       }
       const { days } = buildDaysFromProducts({ products, meals, targets: tg.targets, intake, WD });
-      setWeek({ days });
-      try { localStorage.setItem("hf_lastplan", JSON.stringify({ targets: tg.targets, week: { days } })); } catch (e) {}
+      const wk = overlayWeek({ days }, tg.targets, meals, products);
+      setWeek(wk);
+      try { localStorage.setItem("hf_lastplan", JSON.stringify({ targets: tg.targets, week: wk })); } catch (e) {}
       if (supabase && session) {
-        supabase.from("plans").insert({ user_id: session.user.id, targets: tg.targets, week: { days }, is_active: true }).then(() => {}, () => {});
+        supabase.from("plans").insert({ user_id: session.user.id, targets: tg.targets, week: wk, is_active: true }).then(() => {}, () => {});
       }
     } catch (e) { setError(e && e.message ? e.message : T("unknownErr")); } finally { setLoading(false); }
   }
@@ -2272,7 +2286,11 @@ export default function App() {
 
               <div style={{ height: 1, background: LINE, margin: "2px 0 16px" }} />
               <div style={{ ...disp, fontSize: 15, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 4, color: EMBER }}>{lang === "nl" ? "Wat eet je graag?" : "What do you like to eat?"}</div>
-              <div style={{ fontSize: 11.5, color: MUTED, lineHeight: 1.5, marginBottom: 14 }}>{lang === "nl" ? "Kies per moment wat je lekker vindt — hieruit bouwen we je plan. Aanvullen/scannen kan altijd bij Producten." : "Pick what you like per moment — we build your plan from this. Add/scan anytime under Products."}</div>
+              <div style={{ fontSize: 11.5, color: MUTED, lineHeight: 1.5, marginBottom: 10 }}>{lang === "nl" ? "Kies per moment wat je lekker vindt — hieruit bouwen we je plan. Aanvullen/scannen kan altijd bij Producten." : "Pick what you like per moment — we build your plan from this. Add/scan anytime under Products."}</div>
+              <div style={{ fontSize: 11.5, color: PAPER, lineHeight: 1.5, marginBottom: 14, background: "rgba(var(--hf-ember-rgb),0.08)", border: `1px solid ${LINE}`, borderRadius: 10, padding: "9px 12px" }}>
+                <span style={{ color: EMBER, fontWeight: 700 }}>{lang === "nl" ? "Recepten gaan vóór: " : "Recipes come first: "}</span>
+                {lang === "nl" ? "kies je een recept voor een moment, dan gebruikt het plan precies dát (meerdere recepten wisselen af over de week). Kies je geen recept, dan stelt de AI dat moment zelf samen uit je producten." : "pick a recipe for a moment and the plan uses exactly that (several recipes rotate across the week). No recipe picked? The AI composes that moment from your products."}
+              </div>
               {MEAL_MOMENTS.filter((mo) => mo.id === "snack" ? snacks >= 1 : mo.id === "snack2" ? snacks >= 2 : true).map((mo) => {
                 const sel = mealPrefs[mo.id] || [];
                 const st = momentStatus(mo.id, sel);

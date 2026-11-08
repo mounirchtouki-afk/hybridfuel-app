@@ -306,3 +306,44 @@ export function buildDaysFromProducts({ products, meals, targets, intake, WD }) 
 
 // Rol van één product (voor de compleetheids-check in de intake).
 export function productRole(p) { return classify(p); }
+
+// HARDE overschrijving: voor elk moment waar de gebruiker recept(en) koos, zet
+// die recepten op dat moment (afgewisseld over de week, geschaald naar het
+// per-maaltijd-doel, piece-aware + binnen de kaders). Momenten zonder gekozen
+// recept blijven zoals de AI/software ze maakte. Werkt op een bestaand weekplan.
+export function overlayChosenRecipes(week, opts) {
+  const o = opts || {};
+  if (!week || !Array.isArray(week.days) || !o.recipesById) return week;
+  const L = o.lang === "nl" ? "nl" : "en";
+  const prodByName = {};
+  (o.products || []).forEach((p) => { if (p && p.name) prodByName[String(p.name).toLowerCase().trim()] = p; });
+  const td = Array.isArray(o.trainingDays) ? o.trainingDays : [];
+  const nTrain = td.length;
+  const ns = Math.max(0, Math.min(2, (o.nSnacks | 0)));
+  const moments = ["breakfast", "lunch", "dinner"]; if (ns >= 1) moments.push("snack"); if (ns >= 2) moments.push("snack2");
+  const snackShare = Math.min(0.12 * ns, 0.3), mainShare = 1 - snackShare;
+  const shareOf = (m) => m === "breakfast" ? 0.3 * mainShare : m === "lunch" ? 0.35 * mainShare : m === "dinner" ? 0.35 * mainShare : (snackShare / Math.max(1, ns));
+  const recIdsFor = (m) => (((o.mealPrefs && o.mealPrefs[m]) || []).filter((id) => typeof id === "string" && id.indexOf("rec:") === 0).map((id) => id.slice(4)));
+  if (!moments.some((m) => recIdsFor(m).length)) return week;
+  const t = o.targets || {};
+  const dayMacro = (isTrain) => { const s = isTrain ? (t.train || t) : (t.rest || t); return { kcal: num(s.kcal), p: num(s.protein != null ? s.protein : s.p), c: num(s.carbs != null ? s.carbs : s.c), f: num(s.fat != null ? s.fat : s.f) }; };
+  const label = (m) => (SLOT_LABEL[m] ? SLOT_LABEL[m][L] : m);
+  week.days.forEach((day, i) => {
+    if (!day || !Array.isArray(day.m)) return;
+    const isTrain = nTrain === 7 ? true : nTrain === 0 ? false : td.includes(i);
+    const dm = dayMacro(isTrain);
+    const build = (m) => { const ids = recIdsFor(m); if (!ids.length) return null; const rec = o.recipesById[ids[((i % ids.length) + ids.length) % ids.length]]; if (!rec) return null; return scaleSavedMeal(rec, dm.kcal * shareOf(m), label(m), prodByName); };
+    if (day.m.length === moments.length) {
+      day.m = moments.map((m, k) => build(m) || day.m[k]);
+    } else {
+      const used = [];
+      moments.forEach((m) => {
+        const nm = build(m); if (!nm) return; const lbl = label(m);
+        let idx = day.m.findIndex((mm, j) => !used.includes(j) && mm && mm.t === lbl);
+        if (idx < 0 && (m === "snack" || m === "snack2")) idx = day.m.findIndex((mm, j) => !used.includes(j) && mm && /snack|tussen/i.test(mm.t || ""));
+        if (idx >= 0) { day.m[idx] = nm; used.push(idx); } else { day.m.push(nm); used.push(day.m.length - 1); }
+      });
+    }
+  });
+  return week;
+}
