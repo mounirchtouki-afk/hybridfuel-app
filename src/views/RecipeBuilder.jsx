@@ -65,7 +65,9 @@ export default function RecipeBuilder({ lang, session, units, onClose, onSaved, 
   }
 
   function addFromProduct(p) {
-    const g = 100, p1 = p.per_100 || {};
+    // Neem het opgeslagen stuk-/portiegewicht over (serving_g); is dat er niet,
+    // begin dan op 0 — niet op een misleidende 100 g.
+    const p1 = p.per_100 || {}, g = num(p1.serving_g) > 0 ? Math.round(num(p1.serving_g)) : 0;
     const calc = (k) => Math.round(num(p1[k]) * g / 100);
     setIngs((a) => [...a, { name: p.name, grams: g, per100: p1, kcal: calc("kcal"), p: calc("p"), c: calc("c"), f: calc("f") }]);
     setShowPick(false);
