@@ -368,7 +368,7 @@ export default function Products({ lang, session, onClose, onPick, onPickMany, e
             ))}
           </div>
           <div style={{ fontSize: 10.5, color: MUTED, fontStyle: "italic", marginBottom: 10 }}>{t("photoTip")}</div>
-          <input ref={photoRef} type="file" accept="image/*" capture="environment" multiple style={{ display: "none" }} onChange={(e) => { addPhotos(e.target.files); e.target.value = ""; }} />
+          <input ref={photoRef} type="file" accept="image/*" multiple style={{ display: "none" }} onChange={(e) => { addPhotos(e.target.files); e.target.value = ""; }} />
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
             {photos.map((src, i) => (
               <div key={i} style={{ position: "relative", width: 64, height: 64, borderRadius: 9, overflow: "hidden", border: `1px solid ${LINE}` }}>
