@@ -100,6 +100,7 @@ const KADER = {
 // Naam is het sterkste signaal (werkt ongeacht categorie).
 const NAME_ROLE = [
   [/honing|honey|siroop|syrup|ketjap|sojasaus|soja|\bsaus\b|sauce|mayo|dressing|\bjam\b|pesto|sambal|mosterd|mustard|hagelslag|\bchoco/i, "accent"],
+  [/\bbes\b|bessen|\bberry|berries|banaan|banana|\bappel|\bapple|\bpeer\b|\bpear|aardbei|strawberry|framboos|raspberry|\bmango|\bdruif|druiven|\bgrape|sinaasappel|\borange|\bkiwi|ananas|pineapple|meloen|\bmelon|perzik|\bpeach|abrikoos|\bpruim|\bvijg|dadel|rozijn|\bfruit\b/i, "fruit"],
   [/aardappel|potato|puree|friet|\bfries\b/i, "potato"],
   [/havermout|oats|oatmeal|muesli|granola|cruesli/i, "oats"],
   [/brood|bread|wrap|tortilla|cracker|beschuit|toast|bagel|pita|crackers|knackebrod/i, "bread"],
@@ -159,13 +160,22 @@ function buildMealMacro(cands, target, dayIdx, label, slot) {
     return assemble([[it, roundG(clampG((K / kc) * 100, r))]], label);
   }
 
-  const prots = of(PROTEIN_ROLES).sort((a, b) => per100(b).p - per100(a).p);
-  const carbs = of(CARB_ROLES);
-  const vegs = of(["veg"]);
-  const fruits = of(["fruit"]);
+  const meatish = of(["protein", "mince", "fish"]).sort((a, b) => per100(b).p - per100(a).p);
+  const eggs = of(["eggs"]);
   const dairy = of(["dairy"]);
+  const vegs = of(["veg"]);
+  // Eiwitkeuze: ontbijt pakt zuivel/ei en NOOIT vlees/vis (tenzij er niets anders is).
+  const protPool = slot === "breakfast"
+    ? ((eggs.length || dairy.length) ? eggs.concat(dairy) : meatish)
+    : meatish.concat(eggs);
+  // Koolhydraatbasis: ontbijt liefst havermout/brood; lunch/diner rijst/pasta/
+  //  aardappel/brood (havermout hoort niet bij een hoofdmaaltijd).
+  const carbsAll = of(CARB_ROLES);
+  const carbs = slot === "breakfast"
+    ? ((of(["oats", "bread"]).length) ? of(["oats", "bread"]) : carbsAll)
+    : ((of(["carbdry", "carbwet", "potato", "bread"]).length) ? of(["carbdry", "carbwet", "potato", "bread"]) : carbsAll);
 
-  const protSrc = pick(prots.slice(0, Math.min(3, prots.length)), dayIdx) || pick(dairy, dayIdx);
+  const protSrc = pick(protPool.slice(0, Math.min(3, protPool.length)), dayIdx) || pick(dairy, dayIdx);
   const carbSrc = pick(carbs.slice(0, Math.min(3, carbs.length)), dayIdx + 1);
   if (!protSrc && !carbSrc) return scaleToKcal(cands, target, dayIdx, label);
 
@@ -177,9 +187,15 @@ function buildMealMacro(cands, target, dayIdx, label, slot) {
   if (protSrc) { const r = classify(protSrc), pp = per100(protSrc).p || 1; add(protSrc, (P * 0.9) / (pp / 100), r); }
   // 2) Koolhydraatbasis op het koolhydraatdoel, binnen kader.
   if (carbSrc) { const r = classify(carbSrc), cc = per100(carbSrc).c || 1; add(carbSrc, C / (cc / 100), r); }
-  // 3) Groente-side (vast volume) bij hoofdmaaltijden; anders een stuk fruit.
-  if (vegs.length) add(pick(vegs, dayIdx + 2), 150, "veg");
-  else if (fruits.length && !carbSrc) add(pick(fruits, dayIdx + 2), 150, "fruit");
+  // 3) Side. Lunch/diner: groente (fruit hoort daar NIET, dat is voor de snacks).
+  //    Ontbijt: liever fruit (havermout + bessen) als dat er is, anders groente.
+  if (slot === "breakfast") {
+    const fr = of(["fruit"]);
+    if (fr.length) add(pick(fr, dayIdx + 2), 150, "fruit");
+    else if (vegs.length) add(pick(vegs, dayIdx + 2), 150, "veg");
+  } else if (vegs.length) {
+    add(pick(vegs, dayIdx + 2), 150, "veg");
+  }
 
   if (!items.length) return scaleToKcal(cands, target, dayIdx, label);
   let meal = assemble(items, label);
