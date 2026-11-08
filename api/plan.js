@@ -357,10 +357,25 @@ function buildPrompt(b, cyc) {
     ? `Recipe ideas below are ONLY inspiration for meal moments that have NO chosen option in the MEAL CHOICES block above. For any moment WITH a chosen option, build the meal from that option and IGNORE this list entirely — do not rename or swap it to a recipe from here. Whatever you use must still fit the day's targets, the diet and the avoid-list, and no novelty/"superfood" ingredients unless preferences mention them:`
     : `Optional recipe ideas that suit this person's taste — use any that fit the day's targets, the diet and the avoid-list, scaling portions to hit the numbers. Otherwise build your own simple, realistic meals around their stated preferences. Do NOT introduce novelty or "superfood" ingredients (matcha, ashwagandha, etc.) unless their preferences above mention them:`;
 
+  // Telbare producten (gram per stuk ingevuld): de AI moet in hele stuks rekenen.
+  const cps = Array.isArray(b.chosenProducts) ? b.chosenProducts : [];
+  const seenC = {};
+  const countU = [];
+  cps.filter((p) => p && p.per_100 && Number(p.per_100.serving_g) > 0).forEach((p) => {
+    const name = cleanStr(p.name, 60); if (!name) return;
+    const key = name.toLowerCase(); if (seenC[key]) return; seenC[key] = true;
+    countU.push({ name, g: Math.round(Number(p.per_100.serving_g)) });
+  });
+  const countBlock = countU.length
+    ? (lang === "en"
+        ? `COUNTABLE PRODUCTS (sold per piece — the person does NOT weigh these). One piece weighs the grams shown. Whenever you use one, use a WHOLE number of pieces: set its grams to a whole multiple of the piece weight and name it per piece (e.g. "2 bread rolls"), never an odd weight like 137 g:\n${countU.map((p) => `- ${p.name}: 1 piece = ${p.g} g`).join("\n")}`
+        : `TELBARE PRODUCTEN (per stuk — de persoon weegt deze NIET). Eén stuk weegt het getal hieronder. Gebruik je zo'n product, reken dan in HELE stuks: zet de grammen op een heel veelvoud van het stukgewicht en benoem het per stuk (bijv. "2 broodjes"), nooit een vreemd gewicht als 137 g:\n${countU.map((p) => `- ${p.name}: 1 stuk = ${p.g} g`).join("\n")}`)
+    : "";
+
   return `You are a sports nutrition coach. Build these meal-days, each hitting ITS OWN targets:
 ${dayLines}
 
-${mealPrefBlock ? mealPrefBlock + "\n\n" : ""}Diet: ${diet}. Avoid: ${avoid}.
+${mealPrefBlock ? mealPrefBlock + "\n\n" : ""}${countBlock ? countBlock + "\n\n" : ""}Diet: ${diet}. Avoid: ${avoid}.
 Preferences: ${prefText}
 ${varietyRule}
 

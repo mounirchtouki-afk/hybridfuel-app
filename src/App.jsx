@@ -525,8 +525,23 @@ const { T, ML, sIn, R, disp, mutDay, patchMeal, scaleMeal, patchIng, addIngr, re
                 <div key={ii} style={{ marginBottom: 6 }}>
                   <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                     <input value={ing.n} onChange={(e) => patchIng(di, mi, ii, { n: e.target.value })} placeholder={T("ingrNamePh")} style={{ ...sIn, flex: 1 }} />
-                    <input value={gShow(ing.g, units)} onChange={(e) => patchIng(di, mi, ii, { g: gStore(e.target.value, units) })} inputMode="numeric" style={{ ...sIn, width: 54, textAlign: "right" }} />
-                    <span style={{ fontSize: 11, color: MUTED }}>{wUnit(units)}</span>
+                    {(() => {
+                      const sg = ing.per100 && num(ing.per100.serving_g) > 0 ? Math.round(num(ing.per100.serving_g)) : 0;
+                      if (sg > 0) {
+                        const pcs = Math.max(1, Math.round(num(ing.g) / sg));
+                        return (
+                          <div style={{ display: "flex", alignItems: "center", border: `1px solid ${LINE}`, borderRadius: 8, overflow: "hidden", flexShrink: 0 }}>
+                            <div onClick={() => patchIng(di, mi, ii, { g: Math.max(sg, (pcs - 1) * sg) })} style={{ width: 28, height: 32, display: "grid", placeItems: "center", color: EMBER, fontSize: 17, fontWeight: 700, cursor: "pointer", background: INK }}>−</div>
+                            <div style={{ minWidth: 44, textAlign: "center", lineHeight: 1 }}><div style={{ fontSize: 12.5, fontWeight: 700, color: PAPER }}>{pcs} {lang === "nl" ? "st" : "pc"}</div><div style={{ fontSize: 9, color: MUTED, marginTop: 1 }}>{gShow(pcs * sg, units)}{wUnit(units)}</div></div>
+                            <div onClick={() => patchIng(di, mi, ii, { g: (pcs + 1) * sg })} style={{ width: 28, height: 32, display: "grid", placeItems: "center", color: EMBER, fontSize: 17, fontWeight: 700, cursor: "pointer", background: INK }}>+</div>
+                          </div>
+                        );
+                      }
+                      return (<>
+                        <input value={gShow(ing.g, units)} onChange={(e) => patchIng(di, mi, ii, { g: gStore(e.target.value, units) })} inputMode="numeric" style={{ ...sIn, width: 54, textAlign: "right" }} />
+                        <span style={{ fontSize: 11, color: MUTED }}>{wUnit(units)}</span>
+                      </>);
+                    })()}
                     {ing.pid && <span style={{ fontSize: 8, color: SAGE, border: `1px solid ${SAGE}`, borderRadius: 4, padding: "1px 4px", letterSpacing: 0.3, fontWeight: 700, ...disp, whiteSpace: "nowrap" }}>{T("linkedTag")}</span>}
                     <div onClick={() => isOpen ? setIngForm(null) : openForm()} title={T("editVals")} style={{ cursor: "pointer", color: isOpen ? EMBER : MUTED, display: "flex", padding: "0 1px" }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z" /></svg></div>
                     <div onClick={() => removeIngr(di, mi, ii)} style={{ cursor: "pointer", color: MUTED, fontSize: 15, padding: "0 2px" }}>×</div>
@@ -1450,7 +1465,7 @@ export default function App() {
   }
   // Snel een (gescand) product aan het Dagboek van vandaag loggen, via de + knop.
   function addTodayProduct(product) {
-    const d = todayISO(), g = 100, p1 = product.per_100 || {};
+    const d = todayISO(), p1 = product.per_100 || {}, g = (num(p1.serving_g) > 0 ? Math.round(num(p1.serving_g)) : 100);
     const calc = (k) => Math.round(num(p1[k]) * g / 100);
     const row = { item: product.name, grams: g, kcal: calc("kcal"), p: calc("p"), c: calc("c"), f: calc("f") };
     if (supabase && session) {
@@ -1494,11 +1509,14 @@ export default function App() {
     });
     return d;
   });
+  // Standaard-hoeveelheid: een product met "gram per stuk" komt binnen op 1 stuk,
+  // anders op 100 g. Zo hoef je stuk-producten (broodje, ei) niet te wegen.
+  function pieceDefaultG(product) { const sg = product && product.per_100 && num(product.per_100.serving_g); return sg > 0 ? Math.round(sg) : 100; }
   function addProductIng(di, mi, product) {
     mutDay(di, (d) => {
       d.m = d.m.map((mm, j) => {
         if (j !== mi) return mm;
-        const ing = { n: product.name, g: 100, per100: product.per_100 || {}, pid: product.id || null };
+        const ing = { n: product.name, g: pieceDefaultG(product), per100: product.per_100 || {}, pid: product.id || null };
         const a = ingMacros(ing) || {};
         return { ...mm, ing: [...(mm.ing || []), ing], kcal: R(num(mm.kcal) + (a.kcal || 0)), p: R(num(mm.p) + (a.p || 0)), c: R(num(mm.c) + (a.c || 0)), f: R(num(mm.f) + (a.f || 0)) };
       });
@@ -1509,7 +1527,7 @@ export default function App() {
   const addMealTo = (di) => mutDay(di, (d) => { d.m = [...d.m, { t: "EXTRA", n: "", kcal: 0, p: 0, c: 0, f: 0, ing: [] }]; return d; });
   // Voeg een product toe als een NIEUWE maaltijd (dag-niveau "Uit producten").
   function addProductAsMeal(di, product) {
-    const ing = { n: product.name, g: 100, per100: product.per_100 || {}, pid: product.id || null };
+    const ing = { n: product.name, g: pieceDefaultG(product), per100: product.per_100 || {}, pid: product.id || null };
     const a = ingMacros(ing) || {};
     const meal = { t: (lang === "nl" ? "PRODUCT" : "PRODUCT"), n: product.name, kcal: R(a.kcal || 0), p: R(a.p || 0), c: R(a.c || 0), f: R(a.f || 0), ing: [ing], src: "product" };
     mutDay(di, (d) => { d.m = [...d.m, meal]; return d; });
@@ -1522,7 +1540,7 @@ export default function App() {
         let kcal = num(mm.kcal), p = num(mm.p), c = num(mm.c), f = num(mm.f);
         const ings = [...(mm.ing || [])];
         (products || []).forEach((product) => {
-          const ing = { n: product.name, g: 100, per100: product.per_100 || {}, pid: product.id || null };
+          const ing = { n: product.name, g: pieceDefaultG(product), per100: product.per_100 || {}, pid: product.id || null };
           const a = ingMacros(ing) || {};
           ings.push(ing); kcal += a.kcal || 0; p += a.p || 0; c += a.c || 0; f += a.f || 0;
         });
@@ -1533,7 +1551,7 @@ export default function App() {
   }
   function addProductsAsMeals(di, products) {
     const meals = (products || []).map((product) => {
-      const ing = { n: product.name, g: 100, per100: product.per_100 || {}, pid: product.id || null };
+      const ing = { n: product.name, g: pieceDefaultG(product), per100: product.per_100 || {}, pid: product.id || null };
       const a = ingMacros(ing) || {};
       return { t: "PRODUCT", n: product.name, kcal: R(a.kcal || 0), p: R(a.p || 0), c: R(a.c || 0), f: R(a.f || 0), ing: [ing], src: "product" };
     });
@@ -1846,7 +1864,7 @@ export default function App() {
                   })()}
                   {m.ing && m.ing.length > 0 && (
                     <div style={{ fontSize: 11.5, color: MUTED, marginTop: 3, lineHeight: 1.5 }}>
-                      {m.ing.map((ing, ii) => <span key={ii}><span style={{ color: PAPER }}>{gShow(ing.g, units)}{wUnit(units)}</span> {ing.n}{ii < m.ing.length - 1 ? " · " : ""}</span>)}
+                      {m.ing.map((ing, ii) => { const sg = ing.per100 && num(ing.per100.serving_g) > 0 ? Math.round(num(ing.per100.serving_g)) : 0; const pcs = sg ? Math.max(1, Math.round(num(ing.g) / sg)) : 0; return <span key={ii}><span style={{ color: PAPER }}>{sg ? `${pcs} ${lang === "nl" ? "st" : "pc"}` : `${gShow(ing.g, units)}${wUnit(units)}`}</span> {ing.n}{ii < m.ing.length - 1 ? " · " : ""}</span>; })}
                     </div>
                   )}
                   {m.steps && String(m.steps).trim() && (
