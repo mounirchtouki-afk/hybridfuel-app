@@ -58,7 +58,7 @@ const T = {
   mealLabel: { nl: "Voor welke maaltijd?", en: "For which meal?" },
   mealHint: { nl: "Kies bij welke maaltijden dit product past. Niets gekozen = overal bruikbaar. Gebruikt bij 'plan uit mijn producten'.", en: "Pick which meals this product suits. Nothing selected = usable anywhere. Used by 'plan from my products'." },
   addToMeal: { nl: "Toevoegen aan maaltijd", en: "Add to meal" },
-  pickHint: { nl: "Tik 'Kies' om een product in je maaltijd te zetten, of maak hieronder een nieuw product — dat gaat meteen in je maaltijd.", en: "Tap 'Pick' to add a product to your meal, or create a new one below — it goes straight into your meal." },
+  pickHint: { nl: "Tik producten aan om te selecteren — tik dan onderaan op Voeg toe. Of maak hieronder een nieuw product, dat gaat meteen in je maaltijd.", en: "Tap products to select them — then tap Add at the bottom. Or create a new one below; it goes straight into your meal." },
   backToPlan: { nl: "Terug naar plan", en: "Back to plan" },
 };
 
@@ -118,7 +118,7 @@ const PlusIcon = ({ c }) => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2.2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
 );
 
-export default function Products({ lang, session, onClose, onPick, embedded, autoScan, onProductChange, momentLabel }) {
+export default function Products({ lang, session, onClose, onPick, onPickMany, embedded, autoScan, onProductChange, momentLabel }) {
   const t = (k) => (T[k] ? T[k][lang] : k);
   const ml = macroLetters(lang);
   const cloud = !!(session && supabase);
@@ -420,9 +420,20 @@ export default function Products({ lang, session, onClose, onPick, embedded, aut
     </div>
   ) : null;
 
+  // Multiselect in kies-modus: tik rijen aan, voeg in één keer toe.
+  const [sel, setSel] = useState([]);
+  const toggleSel = (id) => setSel((s) => s.includes(id) ? s.filter((x) => x !== id) : [...s, id]);
+  function confirmMany() {
+    const byId = {}; items.forEach((x) => { byId[x.id] = x; });
+    const prods = sel.map((id) => byId[id]).filter(Boolean);
+    if (!prods.length) return;
+    if (onPickMany) onPickMany(prods); else if (onPick) prods.forEach((p) => onPick(p));
+    setSel([]);
+  }
+
   const body = (
     <>
-      {propMsg && <div style={{ fontSize: 12, color: "#4ADE80", lineHeight: 1.5, marginBottom: 12, background: "rgba(74,222,128,0.1)", border: `1px solid rgba(74,222,128,0.3)`, borderRadius: 10, padding: "9px 12px" }}>{t("editProp")}</div>}
+      {propMsg &&<div style={{ fontSize: 12, color: "#4ADE80", lineHeight: 1.5, marginBottom: 12, background: "rgba(74,222,128,0.1)", border: `1px solid rgba(74,222,128,0.3)`, borderRadius: 10, padding: "9px 12px" }}>{t("editProp")}</div>}
       <div style={{ fontSize: 12, color: onPick ? PAPER : MUTED, lineHeight: 1.5, marginBottom: 14, ...(onPick ? { background: "rgba(var(--hf-ember-rgb),0.10)", border: `1px solid rgba(var(--hf-ember-rgb),0.30)`, borderRadius: 10, padding: "9px 12px" } : {}) }}>{onPick ? t("pickHint") : t("intro")}</div>
 
       {/* Compacte acties */}
@@ -444,8 +455,10 @@ export default function Products({ lang, session, onClose, onPick, embedded, aut
       {CAT_ORDER.filter((c) => grouped[c] && grouped[c].length).map((c) => (
         <div key={c} style={{ marginBottom: 14 }}>
           <div style={{ ...disp, fontSize: 11.5, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", color: EMBER, marginBottom: 6 }}>{CATS[c][lang]} <span style={{ color: MUTED, fontWeight: 400 }}>· {grouped[c].length}</span></div>
-          {grouped[c].map((it) => (
-            <div key={it.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: `1px solid ${LINE}` }}>
+          {grouped[c].map((it) => {
+            const isSel = onPick && sel.includes(it.id);
+            return (
+            <div key={it.id} onClick={onPick ? () => toggleSel(it.id) : undefined} style={{ display: "flex", alignItems: "center", gap: 10, padding: isSel ? "10px" : "10px 0", margin: isSel ? "0 -10px" : 0, borderRadius: isSel ? 10 : 0, background: isSel ? "rgba(var(--hf-ember-rgb),0.12)" : "transparent", borderBottom: isSel ? "1px solid transparent" : `1px solid ${LINE}`, cursor: onPick ? "pointer" : "default" }}>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 13.5, fontWeight: 600, color: PAPER }}>{it.name}{it.brand ? <span style={{ color: MUTED, fontWeight: 400 }}> · {it.brand}</span> : null}</div>
                 <div style={{ fontSize: 11, color: MUTED, marginTop: 1 }}>{(it.per_100 && it.per_100.kcal) || 0} kcal · {(it.per_100 && it.per_100.p) || 0}{ml.p}/{(it.per_100 && it.per_100.c) || 0}{ml.c}/{(it.per_100 && it.per_100.f) || 0}{ml.f} <span style={{ opacity: 0.6 }}>/100g</span></div>
@@ -453,13 +466,20 @@ export default function Products({ lang, session, onClose, onPick, embedded, aut
               {!onPick && <select value={catFor(it)} onChange={(e) => setCategory(it.id, e.target.value)} title={t("catLabel")} style={{ background: INK, border: `1px solid ${LINE}`, color: MUTED, borderRadius: 7, fontSize: 10.5, padding: "4px 5px", outline: "none", maxWidth: 104, appearance: "auto", WebkitAppearance: "auto", flexShrink: 0 }}>
                 {CAT_ORDER.map((c) => <option key={c} value={c}>{CATS[c][lang]}</option>)}
               </select>}
-              {onPick && <div onClick={() => onPick(it)} style={{ cursor: "pointer", fontSize: 12, fontWeight: 700, color: EMBER, border: `1px solid ${EMBER}`, borderRadius: 7, padding: "5px 11px", ...disp, letterSpacing: 0.3, whiteSpace: "nowrap" }}>{momentLabel ? "+ " + momentLabel : t("pick")}</div>}
+              {onPick && <div style={{ width: 24, height: 24, borderRadius: "50%", flexShrink: 0, border: `2px solid ${isSel ? EMBER : LINE}`, background: isSel ? EMBER : "transparent", display: "flex", alignItems: "center", justifyContent: "center" }}>{isSel && <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>}</div>}
               {!onPick && <div onClick={() => startEdit(it)} title={t("editTitle")} style={{ cursor: "pointer", color: MUTED, display: "flex", padding: "0 3px" }}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z" /></svg></div>}
-              <div onClick={() => del(it.id)} style={{ cursor: "pointer", color: MUTED, fontSize: 16, padding: "0 4px" }}>×</div>
+              {!onPick && <div onClick={() => del(it.id)} style={{ cursor: "pointer", color: MUTED, fontSize: 16, padding: "0 4px" }}>×</div>}
             </div>
-          ))}
+            );
+          })}
         </div>
       ))}
+      {onPick && sel.length > 0 && (
+        <div style={{ position: "sticky", bottom: -22, margin: "8px -22px -22px", padding: "13px 22px calc(16px + env(safe-area-inset-bottom))", background: `linear-gradient(to top, ${INK} 74%, transparent)`, display: "flex", gap: 11, alignItems: "center", zIndex: 4 }}>
+          <div style={{ ...disp, fontSize: 13, fontWeight: 700, color: PAPER, whiteSpace: "nowrap" }}><span style={{ color: EMBER }}>{sel.length}</span> {lang === "nl" ? "geselecteerd" : "selected"}</div>
+          <button onClick={confirmMany} style={{ ...primaryBtn, flex: 1, padding: "14px 0", fontSize: 14.5 }}>{lang === "nl" ? "Voeg toe" : "Add"}</button>
+        </div>
+      )}
     </>
   );
 

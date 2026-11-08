@@ -1514,6 +1514,31 @@ export default function App() {
     const meal = { t: (lang === "nl" ? "PRODUCT" : "PRODUCT"), n: product.name, kcal: R(a.kcal || 0), p: R(a.p || 0), c: R(a.c || 0), f: R(a.f || 0), ing: [ing], src: "product" };
     mutDay(di, (d) => { d.m = [...d.m, meal]; return d; });
   }
+  // Bulk: meerdere producten in één mutDay (anders overschrijft de closure-week elkaar).
+  function addProductIngs(di, mi, products) {
+    mutDay(di, (d) => {
+      d.m = d.m.map((mm, j) => {
+        if (j !== mi) return mm;
+        let kcal = num(mm.kcal), p = num(mm.p), c = num(mm.c), f = num(mm.f);
+        const ings = [...(mm.ing || [])];
+        (products || []).forEach((product) => {
+          const ing = { n: product.name, g: 100, per100: product.per_100 || {}, pid: product.id || null };
+          const a = ingMacros(ing) || {};
+          ings.push(ing); kcal += a.kcal || 0; p += a.p || 0; c += a.c || 0; f += a.f || 0;
+        });
+        return { ...mm, ing: ings, kcal: R(kcal), p: R(p), c: R(c), f: R(f) };
+      });
+      return d;
+    });
+  }
+  function addProductsAsMeals(di, products) {
+    const meals = (products || []).map((product) => {
+      const ing = { n: product.name, g: 100, per100: product.per_100 || {}, pid: product.id || null };
+      const a = ingMacros(ing) || {};
+      return { t: "PRODUCT", n: product.name, kcal: R(a.kcal || 0), p: R(a.p || 0), c: R(a.c || 0), f: R(a.f || 0), ing: [ing], src: "product" };
+    });
+    if (meals.length) mutDay(di, (d) => { d.m = [...d.m, ...meals]; return d; });
+  }
   function toggleEdit() { if (planEdit) { persistPlanCloud(); flashSaved(); } setPlanEdit(!planEdit); }
   // Refs voor de terug-knop up-to-date houden (de popstate-listener leest hieruit).
   navRef.current = { tab, showMore, showReminders, showAuth, showBuilder, showProducts, movePlan, copyPick, recipePick, fab, planEdit, showLogout, authRecovery };
@@ -2514,7 +2539,7 @@ export default function App() {
       {showReminders && <Reminders lang={lang} onClose={() => setShowReminders(false)} />}
       {showAuth && <Auth lang={lang} session={session} tier={subTier} recovery={authRecovery} gym={isGymMember ? gymCtx.org : null} onClose={() => { setShowAuth(false); setAuthRecovery(false); }} onCodeLogin={B2B_OPEN ? (() => { setShowCodeLogin(true); setLoginMsg(""); setLoginCode(""); }) : undefined} />}
       {showAdmin && isAdmin && <AdminDash session={session} lang={lang} onClose={() => setShowAdmin(false)} />}
-      {showProducts && <Products lang={lang} session={session} autoScan={fabScan} momentLabel={momentAdd ? (MEAL_MOMENTS.find((m) => m.id === momentAdd) || {})[lang] : null} onClose={() => { setShowProducts(false); setPickTarget(null); setFabScan(false); setMomentAdd(null); }} onPick={momentAdd ? (prod) => { tagProductToMoment(prod, momentAdd); setShowProducts(false); setMomentAdd(null); } : pickTarget ? (prod) => { if (pickTarget.mi == null) addProductAsMeal(pickTarget.di, prod); else addProductIng(pickTarget.di, pickTarget.mi, prod); setShowProducts(false); setPickTarget(null); } : fabScan ? (prod) => { addTodayProduct(prod); setShowProducts(false); setFabScan(false); } : null} />}
+      {showProducts && <Products lang={lang} session={session} autoScan={fabScan} momentLabel={momentAdd ? (MEAL_MOMENTS.find((m) => m.id === momentAdd) || {})[lang] : null} onClose={() => { setShowProducts(false); setPickTarget(null); setFabScan(false); setMomentAdd(null); }} onPick={momentAdd ? (prod) => { tagProductToMoment(prod, momentAdd); setShowProducts(false); setMomentAdd(null); } : pickTarget ? (prod) => { if (pickTarget.mi == null) addProductAsMeal(pickTarget.di, prod); else addProductIng(pickTarget.di, pickTarget.mi, prod); setShowProducts(false); setPickTarget(null); } : fabScan ? (prod) => { addTodayProduct(prod); setShowProducts(false); setFabScan(false); } : null} onPickMany={momentAdd ? (async (prods) => { for (const p of prods) await tagProductToMoment(p, momentAdd); setShowProducts(false); setMomentAdd(null); }) : pickTarget ? ((prods) => { if (pickTarget.mi == null) addProductsAsMeals(pickTarget.di, prods); else addProductIngs(pickTarget.di, pickTarget.mi, prods); setShowProducts(false); setPickTarget(null); }) : fabScan ? ((prods) => { (prods || []).forEach(addTodayProduct); setShowProducts(false); setFabScan(false); }) : null} />}
       {showBuilder && <RecipeBuilder lang={lang} session={session} units={units} onClose={() => setShowBuilder(false)} onSaved={() => flashSaved()} />}
 
       {copyPick && (
