@@ -71,29 +71,45 @@ const MEALS = {
 const MEAL_ORDER = ["breakfast", "lunch", "dinner", "snack"];
 
 const CATS = {
-  meat: { nl: "Vlees & vis", en: "Meat & fish" },
+  vlees: { nl: "Vlees", en: "Meat" },
+  vis: { nl: "Vis", en: "Fish" },
+  eieren: { nl: "Eieren", en: "Eggs" },
   dairy: { nl: "Zuivel", en: "Dairy" },
-  grain: { nl: "Granen & brood", en: "Grains & bread" },
-  veg: { nl: "Groente & fruit", en: "Veg & fruit" },
+  veg: { nl: "Groente", en: "Vegetables" },
+  fruit: { nl: "Fruit", en: "Fruit" },
+  potato: { nl: "Aardappel", en: "Potato" },
+  grain: { nl: "Rijst, pasta & granen", en: "Rice, pasta & grains" },
+  bread: { nl: "Brood", en: "Bread" },
+  oats: { nl: "Havermout & ontbijt", en: "Oats & breakfast" },
   nuts: { nl: "Noten & zaden", en: "Nuts & seeds" },
+  sauce: { nl: "Sauzen & kruiden", en: "Sauces & spices" },
   snack: { nl: "Snacks & repen", en: "Snacks & bars" },
   drink: { nl: "Dranken", en: "Drinks" },
   supp: { nl: "Supplementen", en: "Supplements" },
-  sauce: { nl: "Sauzen & kruiden", en: "Sauces & spices" },
   other: { nl: "Overig", en: "Other" },
+  meat: { nl: "Vlees & vis", en: "Meat & fish" }, // legacy label voor oude producten
 };
-const CAT_ORDER = ["meat", "dairy", "grain", "veg", "nuts", "snack", "drink", "supp", "sauce", "other"];
+// Fijne categorie-id's (de nieuwe set). Oude/grove id's vallen hierbuiten en
+// worden op naam her-gedetecteerd, zodat bestaande producten netjes landen.
+const FINE_CATS = new Set(["vlees", "vis", "eieren", "dairy", "veg", "fruit", "potato", "grain", "bread", "oats", "nuts", "sauce", "snack", "drink", "supp", "other"]);
+const CAT_ORDER = ["vlees", "vis", "eieren", "dairy", "veg", "fruit", "potato", "grain", "bread", "oats", "nuts", "sauce", "snack", "drink", "supp", "other"];
 function catOf(name) {
   const n = (name || "").toLowerCase();
   if (/\bbar\b|reep|repen|snack|chip|cookie|koek|chocola|candy|crisp|wafer/.test(n)) return "snack";
   if (/whey|protein|cre[a]?tine|eiwitpoeder|supplement|vitamin|collage|pre.?workout|\bgel\b|electrolyte|elektrolyt|bcaa/.test(n)) return "supp";
   if (/water|cola|juice|\bsap\b|drink|coffee|koffie|thee|\btea\b|smoothie|shake|limonade|frisdrank|fris\b/.test(n)) return "drink";
-  if (/milk|yog|yoghurt|yogurt|quark|skyr|cheese|cottage|cream|butter|melk|kwark|kaas|room|boter/.test(n)) return "dairy";
-  if (/chicken|beef|turkey|pork|steak|mince|\begg|tofu|tempeh|salmon|tuna|fish|shrimp|prawn|\bcod\b|\bham\b|bacon|\bkip|rund|gehakt|biefstuk|\bei\b|eieren|zalm|tonijn|\bvis\b|garnaal|worst|kalkoen/.test(n)) return "meat";
-  if (/nut\b|nuts|peanut|almond|cashew|seed|zaden|noot|noten|pinda|amandel|walnoot|\bchia\b|lijnzaad/.test(n)) return "nuts";
-  if (/rice|pasta|bread|\boat|potato|quinoa|couscous|noodle|tortilla|wrap|flour|cereal|cracker|rijst|brood|havermout|aardappel|noedel|meel|ontbijtgran/.test(n)) return "grain";
-  if (/oil|sauce|spice|\bsalt|pepper|honey|vinegar|stock|broth|syrup|\bjam\b|herb|olie|saus|kruid|zout|peper|honing|azijn|bouillon|stroop|specerij/.test(n)) return "sauce";
-  if (/apple|banana|berry|berries|spinach|broccoli|pepper|onion|garlic|tomato|carrot|courgette|zucchini|cucumber|lettuce|avocado|lemon|lime|mushroom|kale|\bveg|fruit|appel|banaan|\bbes|spinazie|paprika|\bui\b|knoflook|tomaat|wortel|komkommer|\bsla\b|citroen|champignon|groente/.test(n)) return "veg";
+  if (/\bei\b|eieren|\beggs?\b|omelet/.test(n)) return "eieren";
+  if (/zalm|salmon|tonijn|tuna|\bvis\b|\bfish\b|kabeljauw|witvis|garnaal|shrimp|prawn|makreel|haring|pangasius|tilapia|\bcod\b/.test(n)) return "vis";
+  if (/chicken|beef|turkey|pork|steak|mince|tofu|tempeh|\bham\b|bacon|\bkip|rund|gehakt|biefstuk|worst|kalkoen|varken|\bspek|shoarma|filet|peulvrucht|linze/.test(n)) return "vlees";
+  if (/milk|yog|yoghurt|yogurt|quark|skyr|cheese|cottage|cream|melk|kwark|kaas|room|\bfeta|mozzarella/.test(n)) return "dairy";
+  if (/nut\b|nuts|peanut|almond|cashew|seed|zaden|noot|noten|pinda|amandel|walnoot|\bchia\b|lijnzaad|pindakaas/.test(n)) return "nuts";
+  if (/aardappel|potato|puree|friet|\bfries\b/.test(n)) return "potato";
+  if (/havermout|\boat|oatmeal|muesli|granola|cruesli|ontbijtgran|cereal/.test(n)) return "oats";
+  if (/bread|brood|tortilla|wrap|cracker|beschuit|toast|bagel|pita|crackers|knackebrod/.test(n)) return "bread";
+  if (/rice|pasta|noodle|quinoa|couscous|rijst|noedel|bulgur|\bmie\b|spaghetti|penne|macaroni|flour|meel/.test(n)) return "grain";
+  if (/oil|sauce|spice|\bsalt|pepper|honey|vinegar|stock|broth|syrup|\bjam\b|herb|olie|saus|kruid|zout|peper|honing|azijn|bouillon|stroop|specerij|ketjap|soja|mayo|dressing|mosterd|pesto|sambal/.test(n)) return "sauce";
+  if (/apple|banana|berry|berries|lemon|lime|mango|grape|orange|kiwi|pineapple|melon|peach|appel|banaan|\bbes|bessen|citroen|druif|sinaasappel|ananas|meloen|perzik|aardbei|framboos|\bpeer|\bpruim|abrikoos|\bfruit\b/.test(n)) return "fruit";
+  if (/spinach|broccoli|pepper|onion|garlic|tomato|carrot|courgette|zucchini|cucumber|lettuce|avocado|mushroom|kale|\bveg|spinazie|paprika|\bui\b|knoflook|tomaat|wortel|komkommer|\bsla\b|champignon|groente|bloemkool|sperzie|\bboon|\berwt|spruit/.test(n)) return "veg";
   return "other";
 }
 
@@ -187,6 +203,7 @@ export default function Products({ lang, session, onClose, onPick, onPickMany, e
       if (p.c != null) setCb(p.c);
       if (p.f != null) setFt(p.f);
       if (res.serving_g != null) setServG(res.serving_g);
+      if (res.category && FINE_CATS.has(res.category)) setCat(res.category);
       if (Array.isArray(res.allergens) && res.allergens.length) setAllerg(res.allergens.join(", "));
       const anyVal = p.kcal != null || p.p != null || p.c != null || p.f != null || res.name;
       const complete = res.confident && p.kcal != null && p.p != null && p.c != null && p.f != null;
@@ -226,7 +243,7 @@ export default function Products({ lang, session, onClose, onPick, onPickMany, e
     setEditId(it.id); setScanning(false); setMsg("");
     setNm(it.name || ""); setBr(it.brand || ""); setBc(it.barcode || "");
     const p = it.per_100 || {}; setKc(p.kcal != null ? p.kcal : ""); setPr(p.p != null ? p.p : ""); setCb(p.c != null ? p.c : ""); setFt(p.f != null ? p.f : ""); setServG(p.serving_g != null ? p.serving_g : ""); setAllerg(Array.isArray(p.allergens) ? p.allergens.join(", ") : "");
-    setCat(it.category || ""); setMt(Array.isArray(it.meal_types) ? it.meal_types : []); setAdding(true);
+    setCat((it.category && FINE_CATS.has(it.category)) ? it.category : catOf(it.name)); setMt(Array.isArray(it.meal_types) ? it.meal_types : []); setAdding(true);
   }
 
   async function startScan() {
@@ -318,7 +335,9 @@ export default function Products({ lang, session, onClose, onPick, onPickMany, e
     if (cloud) { supabase.from("products").update({ category: c }).eq("id", id).then(() => {}, () => {}); }
     else { save("hf_products", next); }
   }
-  const catFor = (it) => it.category || catOf(it.name);
+  // Fijne categorie gebruiken als die is opgeslagen; anders (geen of oude grove
+  // categorie) op naam her-detecteren naar de nieuwe fijne set.
+  const catFor = (it) => (it.category && FINE_CATS.has(it.category)) ? it.category : catOf(it.name);
 
   const macroIn = (val, set, ph) => <input value={val} onChange={(e) => set(e.target.value)} inputMode="decimal" placeholder={ph} style={{ ...input, textAlign: "center", padding: "9px 4px" }} />;
 

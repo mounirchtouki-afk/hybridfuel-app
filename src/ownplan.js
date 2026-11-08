@@ -123,13 +123,22 @@ function classify(p) {
     return role;
   }
   const cat = p && p.category;
+  // Fijne categorieën (nieuw) — de categorie wint.
   if (cat === "sauce") return "accent";
   if (cat === "nuts") return "nuts";
-  if (cat === "meat") return (x.p >= 24 && x.f >= 12) ? "mince" : (x.f >= 8 && x.kcal >= 180 ? "fish" : "protein");
-  if (cat === "dairy") return (x.f * 9 >= x.kcal * 0.5 && x.kcal >= 250) ? "cheese" : "dairy";
+  if (cat === "vis") return "fish";
+  if (cat === "eieren") return "eggs";
+  if (cat === "vlees") return (x.p >= 24 && x.f >= 12) ? "mince" : "protein";
+  if (cat === "fruit") return "fruit";
+  if (cat === "potato") return "potato";
+  if (cat === "bread") return "bread";
+  if (cat === "oats") return "oats";
   if (cat === "grain") return x.kcal >= 250 ? "carbdry" : "carbwet";
-  if (cat === "veg") return (x.c >= 10 && x.kcal >= 50) ? "fruit" : "veg";
+  if (cat === "dairy") return (x.f * 9 >= x.kcal * 0.5 && x.kcal >= 250) ? "cheese" : "dairy";
   if (cat === "snack") return "bar";
+  // Grove/oude categorie "veg" (= groente+fruit) en "meat" (= vlees+vis): op macro splitsen.
+  if (cat === "veg") return (x.c >= 10 && x.kcal >= 50) ? "fruit" : "veg";
+  if (cat === "meat") return (x.p >= 24 && x.f >= 12) ? "mince" : (x.f >= 8 && x.kcal >= 180 ? "fish" : "protein");
   // Laatste redmiddel: macro's + densiteit.
   const ps = x.p * 4, cs = x.c * 4, fs = x.f * 9;
   if (x.kcal < 55) return "veg";
