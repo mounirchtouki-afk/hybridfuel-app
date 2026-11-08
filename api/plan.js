@@ -338,10 +338,10 @@ function buildPrompt(b, cyc) {
   // elke maaltijd van een moment komt uit de lijst van dát moment, nooit verschoven
   // naar een ander moment. Dit veld werd eerder genegeerd -> AI verzon eigen maaltijden.
   const MM = lang === "en"
-    ? { breakfast: "Breakfast", lunch: "Lunch", dinner: "Dinner", snack: "Snack" }
-    : { breakfast: "Ontbijt", lunch: "Lunch", dinner: "Diner", snack: "Tussendoortje" };
+    ? { breakfast: "Breakfast", lunch: "Lunch", dinner: "Dinner", snack: "Afternoon snack", snack2: "Evening snack" }
+    : { breakfast: "Ontbijt", lunch: "Lunch", dinner: "Diner", snack: "Snack (middag)", snack2: "Snack (na diner)" };
   const mp = (b.mealPrefs && typeof b.mealPrefs === "object") ? b.mealPrefs : {};
-  const mealPrefRows = ["breakfast", "lunch", "dinner", "snack"].map((k) => {
+  const mealPrefRows = ["breakfast", "lunch", "dinner", "snack", "snack2"].map((k) => {
     const arr = Array.isArray(mp[k]) ? mp[k].slice(0, 12).map((x) => cleanStr(x, 40)).filter(Boolean) : [];
     return arr.length ? `- ${MM[k]}: ${arr.join(", ")}` : null;
   }).filter(Boolean);

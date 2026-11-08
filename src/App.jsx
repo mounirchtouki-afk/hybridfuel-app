@@ -18,7 +18,7 @@ import WeekReview from "./views/WeekReview.jsx";
 import WeekPlan from "./views/WeekPlan.jsx";
 import { APP_VERSION } from "./version.js";
 import { RECIPES, snackOptions } from "./recipes.js";
-import { buildDaysFromProducts, productPlanReadiness } from "./ownplan.js";
+import { buildDaysFromProducts, productPlanReadiness, productRole } from "./ownplan.js";
 import Reminders, { checkReminders } from "./views/Reminders.jsx";
 import Auth from "./views/Auth.jsx";
 import Join from "./views/Join.jsx";
@@ -129,8 +129,17 @@ const MEAL_MOMENTS = [
   { id: "breakfast", nl: "Ontbijt", en: "Breakfast" },
   { id: "lunch", nl: "Lunch", en: "Lunch" },
   { id: "dinner", nl: "Diner", en: "Dinner" },
-  { id: "snack", nl: "Snack", en: "Snack" },
+  { id: "snack", nl: "Snack (middag)", en: "Snack (afternoon)" },
+  { id: "snack2", nl: "Snack (na diner)", en: "Snack (after dinner)" },
 ];
+// Welke standaardoptie is een compleet gerecht (dish) of een losse bouwsteen.
+const CHIP_KIND = {
+  oats: "carb", gyoghurt: "protein", quarkfruit: "dish", eggs: "protein", omelet: "protein", smoothie: "dish", wholebread: "carb", protpancake: "dish",
+  chickenwrap: "dish", ricechicken: "dish", tunasalad: "dish", sandwich: "dish", soup: "dish", poke: "dish", saladegg: "dish",
+  salmonveg: "dish", pastabol: "dish", chickenrice: "dish", stamppot: "dish", curryrice: "dish", steakpotato: "dish", woknoodles: "dish",
+};
+const PROT_ROLES = new Set(["protein", "mince", "fish", "eggs", "dairy"]);
+const CARBB_ROLES = new Set(["carbdry", "carbwet", "potato", "bread", "oats"]);
 const MEAL_OPTIONS = {
   breakfast: [
     { id: "oats", nl: "Havermout", en: "Oats" }, { id: "gyoghurt", nl: "Griekse yoghurt", en: "Greek yoghurt" },
@@ -151,6 +160,11 @@ const MEAL_OPTIONS = {
     { id: "woknoodles", nl: "Wok + noedels", en: "Wok + noodles" },
   ],
   snack: [
+    { id: "shake", nl: "Eiwitshake", en: "Protein shake" }, { id: "quark", nl: "Kwark/Skyr", en: "Quark/Skyr" },
+    { id: "nuts", nl: "Noten", en: "Nuts" }, { id: "bar", nl: "Proteïnereep", en: "Protein bar" },
+    { id: "fruit", nl: "Fruit", en: "Fruit" }, { id: "ricecakepb", nl: "Rijstwafels + pindakaas", en: "Rice cakes + PB" },
+  ],
+  snack2: [
     { id: "shake", nl: "Eiwitshake", en: "Protein shake" }, { id: "quark", nl: "Kwark/Skyr", en: "Quark/Skyr" },
     { id: "nuts", nl: "Noten", en: "Nuts" }, { id: "bar", nl: "Proteïnereep", en: "Protein bar" },
     { id: "fruit", nl: "Fruit", en: "Fruit" }, { id: "ricecakepb", nl: "Rijstwafels + pindakaas", en: "Rice cakes + PB" },
@@ -667,8 +681,30 @@ export default function App() {
   const [likes, setLikes] = useState("");
   const [cuisines, setCuisines] = useState([]);
   const [proteins, setProteins] = useState([]);
-  const [mealPrefs, setMealPrefs] = useState({ breakfast: [], lunch: [], dinner: [], snack: [] });
+  const [mealPrefs, setMealPrefs] = useState({ breakfast: [], lunch: [], dinner: [], snack: [], snack2: [] });
   const toggleMeal = (moment, id) => setMealPrefs((p) => { const cur = p[moment] || []; return { ...p, [moment]: cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id] }; });
+  // Compleetheids-check per moment: heeft dit moment z'n bouwstenen om een normale
+  // maaltijd te maken? (hoofdmaal: eiwit + koolhydraat + groente; snack: ≥1 keuze).
+  function momentStatus(moId, selIds) {
+    const isSnack = moId === "snack" || moId === "snack2";
+    if (isSnack) return { isSnack: true, complete: (selIds || []).length > 0 };
+    const kinds = new Set(); let hasDish = false;
+    (selIds || []).forEach((id) => {
+      if (typeof id !== "string") return;
+      if (id.indexOf("rec:") === 0) { hasDish = true; return; }
+      if (id.indexOf("prod:") === 0) {
+        const p = userProducts.find((x) => ("prod:" + x.id) === id);
+        if (p) { const r = productRole(p); kinds.add(PROT_ROLES.has(r) ? "protein" : CARBB_ROLES.has(r) ? "carb" : r === "veg" ? "veg" : "other"); }
+        return;
+      }
+      const ck = CHIP_KIND[id]; if (ck === "dish") hasDish = true; else if (ck) kinds.add(ck);
+    });
+    const complete = hasDish || (kinds.has("protein") && kinds.has("carb"));
+    const missing = [];
+    if (!complete) { if (!kinds.has("protein")) missing.push(lang === "nl" ? "eiwit" : "protein"); if (!kinds.has("carb")) missing.push(lang === "nl" ? "koolhydraten" : "carbs"); }
+    const vegMissing = complete && !hasDish && !kinds.has("veg");
+    return { isSnack: false, complete, missing, vegMissing };
+  }
   // Eigen producten voor de eetmoment-kiezer (uitklap + aanvinken + bron).
   const [userProducts, setUserProducts] = useState([]);
   const [userRecipes, setUserRecipes] = useState([]);
@@ -2237,8 +2273,9 @@ export default function App() {
               <div style={{ height: 1, background: LINE, margin: "2px 0 16px" }} />
               <div style={{ ...disp, fontSize: 15, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 4, color: EMBER }}>{lang === "nl" ? "Wat eet je graag?" : "What do you like to eat?"}</div>
               <div style={{ fontSize: 11.5, color: MUTED, lineHeight: 1.5, marginBottom: 14 }}>{lang === "nl" ? "Kies per moment wat je lekker vindt — hieruit bouwen we je plan. Aanvullen/scannen kan altijd bij Producten." : "Pick what you like per moment — we build your plan from this. Add/scan anytime under Products."}</div>
-              {MEAL_MOMENTS.map((mo) => {
+              {MEAL_MOMENTS.filter((mo) => mo.id === "snack" ? snacks >= 1 : mo.id === "snack2" ? snacks >= 2 : true).map((mo) => {
                 const sel = mealPrefs[mo.id] || [];
+                const st = momentStatus(mo.id, sel);
                 const open = openMoment === mo.id;
                 const myProds = userProducts.filter((p) => Array.isArray(p.meal_types) && p.meal_types.includes(mo.id));
                 const myRecs = userRecipes.filter((r) => { const mt = Array.isArray(r.meal_types) && r.meal_types.length ? r.meal_types : (r.type ? [r.type] : []); return mt.includes(mo.id); });
@@ -2264,13 +2301,22 @@ export default function App() {
                     <div onClick={() => setOpenMoment(open ? null : mo.id)} style={{ display: "flex", alignItems: "center", gap: 9, padding: "12px 13px", cursor: "pointer" }}>
                       <span style={{ width: 24, height: 24, borderRadius: 7, background: "rgba(var(--hf-ember-rgb),0.14)", display: "grid", placeItems: "center" }}>{mealIcon(mo.id, EMBER)}</span>
                       <span style={{ ...disp, fontWeight: 800, fontSize: 14, color: PAPER }}>{mo[lang]}</span>
-                      <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10 }}>
-                        <span style={{ fontSize: 11, color: sel.length ? EMBER : MUTED, fontWeight: 700 }}>{sel.length} {lang === "nl" ? "gekozen" : "picked"}</span>
+                      <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 9 }}>
+                        {sel.length > 0 && (st.complete
+                          ? <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 10.5, fontWeight: 700, color: SAGE }}><span style={{ width: 7, height: 7, borderRadius: "50%", background: SAGE }} />{lang === "nl" ? "Compleet" : "Complete"}</span>
+                          : <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 10.5, fontWeight: 700, color: "#E8A33D" }}><span style={{ width: 7, height: 7, borderRadius: "50%", background: "#E8A33D" }} />{lang === "nl" ? "Mist " + (st.missing || []).join(" + ") : "Missing " + (st.missing || []).join(" + ")}</span>)}
+                        {sel.length === 0 && <span style={{ fontSize: 11, color: MUTED, fontWeight: 700 }}>0 {lang === "nl" ? "gekozen" : "picked"}</span>}
                         <span style={{ color: MUTED, fontSize: 10, display: "inline-block", transform: open ? "rotate(180deg)" : "none", transition: "transform .15s" }}>▼</span>
                       </span>
                     </div>
                     {open && (
                       <div style={{ padding: "0 13px 10px" }}>
+                        {!st.isSnack && !st.complete && sel.length > 0 && (
+                          <div style={{ display: "flex", alignItems: "center", gap: 9, background: "rgba(232,163,61,0.08)", border: "1px dashed rgba(232,163,61,0.5)", borderRadius: 10, padding: "9px 11px", margin: "2px 0 10px" }}>
+                            <span style={{ flex: 1, fontSize: 11.5, color: "#f0c58a", lineHeight: 1.4 }}>{lang === "nl" ? `Voor een volwaardige maaltijd mist nog: ${(st.missing || []).join(" + ")}.` : `For a full meal you still need: ${(st.missing || []).join(" + ")}.`}</span>
+                            <span onClick={() => { setMomentAdd(mo.id); setPickTarget(null); setFabScan(false); setShowProducts(true); }} style={{ cursor: "pointer", background: EMBER, color: "#fff", borderRadius: 8, padding: "6px 11px", fontSize: 11.5, fontWeight: 800, whiteSpace: "nowrap" }}>{lang === "nl" ? "+ Toevoegen" : "+ Add"}</span>
+                          </div>
+                        )}
                         {MEAL_OPTIONS[mo.id].map((o) => rowEl(o.id, o[lang], null, "std"))}
                         {myProds.map((p) => rowEl("prod:" + p.id, p.name, p.brand, p.barcode ? "scan" : "eigen"))}
                         {myRecs.map((r) => rowEl("rec:" + r.id, r.name, null, "recept"))}
@@ -2292,7 +2338,7 @@ export default function App() {
 
               <div style={{ marginBottom: snacks > 0 ? 14 : 18 }}>
                 <label style={label}>{T("snacksLbl")}</label>
-                <Dropdown value={snacks} onChange={setSnacks} options={[0, 1, 2, 3].map((n) => ({ id: n, label: String(n) }))} />
+                <Dropdown value={snacks} onChange={setSnacks} options={[0, 1, 2].map((n) => ({ id: n, label: String(n) }))} />
                 <div style={{ fontSize: 11, color: MUTED, lineHeight: 1.5, marginTop: 8 }}>{T("snacksHint")}</div>
               </div>
               <div style={{ marginBottom: 12 }}>

@@ -14,6 +14,7 @@ const SLOT_LABEL = {
   lunch: { nl: "Lunch", en: "Lunch" },
   dinner: { nl: "Diner", en: "Dinner" },
   snack: { nl: "Snack", en: "Snack" },
+  snack2: { nl: "Snack", en: "Snack" },
 };
 
 function num(v) { const n = parseFloat(v); return isNaN(n) ? 0 : n; }
@@ -160,7 +161,7 @@ function buildMealMacro(cands, target, dayIdx, label, slot) {
   const tagged = cands.map((p) => ({ p, role: classify(p) }));
   const of = (roles) => tagged.filter((t) => roles.includes(t.role)).map((t) => t.p);
 
-  if (slot === "snack") {
+  if (slot === "snack" || slot === "snack2") {
     const pools = [of(["fruit"]), of(["dairy"]), of(["bar"]), of(["nuts"])].filter((l) => l.length);
     const pool = pools.length ? pools[((dayIdx % pools.length) + pools.length) % pools.length] : cands;
     const it = pick(pool, dayIdx);
@@ -256,7 +257,7 @@ function buildDay(products, meals, dayMacros, dayIdx, nSnacks, lang, prodByName)
   const mainShare = 1 - snackShare;
   const slots = [["breakfast", 0.3 * mainShare], ["lunch", 0.35 * mainShare], ["dinner", 0.35 * mainShare]];
   const out = [];
-  for (let s = 0; s < nSnacks; s++) slots.push(["snack", snackShare / Math.max(1, nSnacks)]);
+  for (let s = 0; s < nSnacks; s++) slots.push([s === 0 ? "snack" : "snack2", snackShare / Math.max(1, nSnacks)]);
   slots.forEach(([slot, share], idx) => {
     const label = SLOT_LABEL[slot][lang === "nl" ? "nl" : "en"];
     const target = slice(dayMacros, share);
@@ -302,3 +303,6 @@ export function buildDaysFromProducts({ products, meals, targets, intake, WD }) 
   });
   return { days };
 }
+
+// Rol van één product (voor de compleetheids-check in de intake).
+export function productRole(p) { return classify(p); }
