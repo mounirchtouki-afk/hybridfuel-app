@@ -577,6 +577,7 @@ const { T, ML, sIn, R, disp, mutDay, patchMeal, scaleMeal, patchIng, addIngr, re
                 <div onClick={() => scaleMeal(di, mi, 1.1)} style={{ ...sqBtn(false), color: EMBER, fontSize: 18, fontWeight: 700 }}>+</div>
                 <div onClick={() => setOpenMeal(openMeal === mi ? null : mi)} style={sqBtn(openMeal === mi)}><Dots /></div>
               </div>
+              <div style={{ fontSize: 11, color: MUTED, marginBottom: 8 }}><span style={{ color: PAPER, fontWeight: 700 }}>{num(m.kcal)}</span> kcal · {num(m.p)}{ML.p}/{num(m.c)}{ML.c}/{num(m.f)}{ML.f}</div>
               {valMeal === mi && valEditor(mi, m, (k, v) => patchMeal(di, mi, { [k]: num(v) }))}
               {(m.ing || []).map((ing, ii) => {
                 const openForm = () => { const s = seedPer100(m, ing); setIngForm({ mi, ii, name: ing.n || "", kcal: s.kcal, p: s.p, c: s.c, f: s.f }); };
