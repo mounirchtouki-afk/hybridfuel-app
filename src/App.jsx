@@ -545,7 +545,7 @@ const { T, ML, sIn, R, disp, mutDay, patchMeal, scaleMeal, patchIng, addIngr, re
           {!proposal && offTarget && (
             <div style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(232,163,61,0.10)", borderBottom: `1px solid ${LINE}`, padding: "10px 14px" }}>
               <div style={{ flex: 1, fontSize: 12, color: "#f0c58a", lineHeight: 1.4 }}>{lang === "nl" ? `Je dag zit ${delta > 0 ? delta + " kcal boven" : (-delta) + " kcal onder"} je doel.` : `Your day is ${Math.abs(delta)} kcal ${delta > 0 ? "over" : "under"} target.`}</div>
-              <div onClick={startRecalc} style={{ cursor: "pointer", background: EMBER, color: "#fff", borderRadius: 9, padding: "8px 13px", fontSize: 12.5, fontWeight: 800, whiteSpace: "nowrap", ...disp }}>{lang === "nl" ? "Herbereken ⟳" : "Recalc ⟳"}</div>
+              <div onClick={startRecalc} style={{ cursor: "pointer", background: EMBER, color: "#fff", borderRadius: 9, padding: "8px 13px", fontSize: 12.5, fontWeight: 800, whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 6, ...disp }}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 4v6h-6M1 20v-6h6" /><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" /></svg>{lang === "nl" ? "Herbereken" : "Recalc"}</div>
             </div>
           )}
           {proposal && proposal.none && (

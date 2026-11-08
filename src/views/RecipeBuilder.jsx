@@ -138,8 +138,8 @@ export default function RecipeBuilder({ lang, session, units, onClose, onSaved, 
             </div>
           ) : (
             <div style={{ display: "flex", gap: 8 }}>
-              <div onClick={() => camRef.current && camRef.current.click()} style={{ flex: 1, cursor: "pointer", border: `1px dashed ${LINE}`, borderRadius: 12, padding: "18px 0", textAlign: "center", color: EMBER, fontSize: 12.5, fontWeight: 600 }}>{lang === "nl" ? "📷 Foto maken" : "📷 Take photo"}</div>
-              <div onClick={() => fileRef.current && fileRef.current.click()} style={{ flex: 1, cursor: "pointer", border: `1px dashed ${LINE}`, borderRadius: 12, padding: "18px 0", textAlign: "center", color: EMBER, fontSize: 12.5, fontWeight: 600 }}>{lang === "nl" ? "⬆ Uploaden" : "⬆ Upload"}</div>
+              <div onClick={() => camRef.current && camRef.current.click()} style={{ flex: 1, cursor: "pointer", border: `1px dashed ${LINE}`, borderRadius: 12, padding: "18px 0", display: "flex", alignItems: "center", justifyContent: "center", gap: 7, color: EMBER, fontSize: 12.5, fontWeight: 600 }}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h3l2-3h8l2 3h3a2 2 0 0 1 2 2z" /><circle cx="12" cy="13" r="3.5" /></svg>{lang === "nl" ? "Foto maken" : "Take photo"}</div>
+              <div onClick={() => fileRef.current && fileRef.current.click()} style={{ flex: 1, cursor: "pointer", border: `1px dashed ${LINE}`, borderRadius: 12, padding: "18px 0", display: "flex", alignItems: "center", justifyContent: "center", gap: 7, color: EMBER, fontSize: 12.5, fontWeight: 600 }}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="M12 3v13M7 8l5-5 5 5" /></svg>{lang === "nl" ? "Uploaden" : "Upload"}</div>
             </div>
           )}
         </div>
