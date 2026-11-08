@@ -33,17 +33,54 @@ function mealsForSlot(meals, slot) {
   return (meals || []).filter((m) => m && m.macros && num(m.macros.kcal) > 0 && (!m.type || m.type === slot));
 }
 
-// Schaalt een opgeslagen maaltijd naar de doel-kcal (gewichten + macro's mee).
-function scaleSavedMeal(meal, kcalTarget, label) {
-  const base = num(meal.macros.kcal) || 1;
-  const f = Math.max(0.3, Math.min(2.5, kcalTarget / base));
-  const ing = (meal.ing || []).map((x) => ({ n: x.n, g: roundG(num(x.g) * f) }));
-  return {
-    t: label, n: meal.name || label,
-    kcal: Math.round(num(meal.macros.kcal) * f), p: Math.round(num(meal.macros.p) * f),
-    c: Math.round(num(meal.macros.c) * f), f: Math.round(num(meal.macros.f) * f),
-    ing,
-  };
+// Schaalt een opgeslagen recept naar de doel-kcal, MAAR met dezelfde logica als
+// een vers plan: stuk-/portie-producten (serving_g, bv. zalm 150 g) blijven op
+// hele porties, de overige ingrediënten herverdelen binnen hun kader, en
+// sauzen/accenten worden nooit opgeblazen. prodByName koppelt een ingrediënt
+// terug aan het product (voor categorie + portiegewicht).
+function scaleSavedMeal(meal, kcalTarget, label, prodByName) {
+  const pbn = prodByName || {};
+  const rows = (meal.ing || []).map((x) => {
+    const g0 = num(x.g);
+    const prod = pbn[String(x.n || "").toLowerCase().trim()] || null;
+    let p100 = null;
+    if (g0 > 0 && (num(x.kcal) || num(x.p) || num(x.c) || num(x.f))) {
+      p100 = { kcal: num(x.kcal) / g0 * 100, p: num(x.p) / g0 * 100, c: num(x.c) / g0 * 100, f: num(x.f) / g0 * 100 };
+    } else if (prod) { p100 = per100(prod); }
+    const serv = prod && num(prod.per_100 && prod.per_100.serving_g) > 0 ? Math.round(num(prod.per_100.serving_g)) : 0;
+    const role = classify({ name: x.n, category: prod && prod.category, per_100: p100 || {} });
+    return { n: x.n, g: g0, p100, serv, role, locked: false };
+  });
+  const hasData = rows.some((r) => r.p100);
+  if (!hasData) { // geen voedingswaarde per ingrediënt bekend → oude eenvoudige schaling
+    const base = num(meal.macros.kcal) || 1;
+    const f = Math.max(0.3, Math.min(2.5, kcalTarget / base));
+    const ing = rows.map((r) => ({ n: r.n, g: roundG(r.g * f) }));
+    return { t: label, n: meal.name || label, kcal: Math.round(num(meal.macros.kcal) * f), p: Math.round(num(meal.macros.p) * f), c: Math.round(num(meal.macros.c) * f), f: Math.round(num(meal.macros.f) * f), ing };
+  }
+  const kcalOf = (r, g) => (r.p100 ? r.p100.kcal * g / 100 : 0);
+  // Stuk-producten: snap op hele porties en hou ze vast.
+  rows.forEach((r) => { if (r.serv > 0) { const pcs = Math.max(1, Math.round(r.g / r.serv)); r.g = pcs * r.serv; r.locked = true; } });
+  const lockedKcal = rows.filter((r) => r.locked).reduce((a, r) => a + kcalOf(r, r.g), 0);
+  const flex = rows.filter((r) => !r.locked);
+  // De koolhydraatbasis vangt de resterende calorieën op (binnen kader); de rest
+  // (groente/fruit/accent/vet) krijgt een nette vaste portie binnen z'n kader.
+  const flexCarb = flex.find((r) => CARB_ROLES.includes(r.role) && r.p100 && r.p100.kcal > 0);
+  flex.forEach((r) => { if (r === flexCarb) return; const base = r.g > 0 ? r.g : ((KADER[r.role] || KADER.other).min); r.g = roundG(clampG(base, r.role)); });
+  if (flexCarb) {
+    const othersKcal = flex.filter((r) => r !== flexCarb).reduce((a, r) => a + kcalOf(r, r.g), 0);
+    const remK = kcalTarget - lockedKcal - othersKcal;
+    flexCarb.g = roundG(clampG(remK / (flexCarb.p100.kcal / 100), flexCarb.role));
+  } else {
+    // Geen koolhydraatbasis: schaal de flex-items proportioneel, binnen kader.
+    const flexKcal0 = flex.reduce((a, r) => a + kcalOf(r, r.g), 0) || 1;
+    const f = Math.max(0.3, Math.min(3, (kcalTarget - lockedKcal) / flexKcal0));
+    flex.forEach((r) => { r.g = roundG(clampG(r.g * f, r.role)); });
+  }
+  // Totalen herberekenen uit de uiteindelijke grammen.
+  let kcal = 0, p = 0, c = 0, ff = 0; const ing = [];
+  rows.forEach((r) => { if (r.p100) { kcal += r.p100.kcal * r.g / 100; p += r.p100.p * r.g / 100; c += r.p100.c * r.g / 100; ff += r.p100.f * r.g / 100; } ing.push({ n: r.n, g: r.g }); });
+  return { t: label, n: meal.name || label, kcal: Math.round(kcal), p: Math.round(p), c: Math.round(c), f: Math.round(ff), ing };
 }
 
 // Kiest een item uit een lijst, geroteerd per dag/slot voor variatie.
@@ -189,7 +226,7 @@ function slice(dayMacros, share) {
   return { kcal: dayMacros.kcal * share, p: dayMacros.p * share, c: dayMacros.c * share, f: dayMacros.f * share };
 }
 
-function buildDay(products, meals, dayMacros, dayIdx, nSnacks, lang) {
+function buildDay(products, meals, dayMacros, dayIdx, nSnacks, lang, prodByName) {
   const snackShare = Math.min(0.12 * nSnacks, 0.3);
   const mainShare = 1 - snackShare;
   const slots = [["breakfast", 0.3 * mainShare], ["lunch", 0.35 * mainShare], ["dinner", 0.35 * mainShare]];
@@ -201,7 +238,7 @@ function buildDay(products, meals, dayMacros, dayIdx, nSnacks, lang) {
     const savedForSlot = mealsForSlot(meals, slot);
     if (savedForSlot.length) { // eigen opgeslagen maaltijd heeft voorrang
       const meal = pick(savedForSlot, dayIdx + idx);
-      if (meal) { out.push(scaleSavedMeal(meal, target.kcal, label)); return; }
+      if (meal) { out.push(scaleSavedMeal(meal, target.kcal, label, prodByName)); return; }
     }
     const cands = candidatesFor(products, slot);
     const meal = buildMealMacro(cands, target, dayIdx + idx, label, slot);
@@ -229,11 +266,14 @@ export function buildDaysFromProducts({ products, meals, targets, intake, WD }) 
   const macroOf = (dm) => ({ kcal: num(dm && dm.kcal) || 2000, p: num(dm && dm.protein), c: num(dm && dm.carbs), f: num(dm && dm.fat) });
   const trainM = macroOf((targets && targets.train) || targets);
   const restM = macroOf((targets && targets.rest) || targets);
+  // Naam → product, zodat recept-ingrediënten hun categorie + portiegewicht terugvinden.
+  const prodByName = {};
+  list.forEach((p) => { if (p && p.name) prodByName[String(p.name).toLowerCase().trim()] = p; });
 
   const days = names.map((d, i) => {
     const isTrain = nTrain === 7 ? true : nTrain === 0 ? false : td.includes(i);
     const dm = isTrain ? trainM : restM;
-    return { d, train: isTrain, m: buildDay(list, meals, dm, i, nSnacks, lang) };
+    return { d, train: isTrain, m: buildDay(list, meals, dm, i, nSnacks, lang, prodByName) };
   });
   return { days };
 }

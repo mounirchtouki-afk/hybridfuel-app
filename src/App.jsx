@@ -1401,7 +1401,9 @@ export default function App() {
     return (rows || []).map((r) => ({
       name: r.name, type: r.type,
       macros: r.macros || {},
-      ing: (r.ingredients || []).map((i) => ({ n: i.name || i.n || i.nl || i.en || "", g: i.grams != null ? i.grams : (i.g != null ? i.g : 0) })),
+      // Per-ingrediënt macro's meenemen zodat het plan de maaltijd piece-aware
+      // + binnen de kaders kan herverdelen (zie scaleSavedMeal in ownplan.js).
+      ing: (r.ingredients || []).map((i) => ({ n: i.name || i.n || i.nl || i.en || "", g: i.grams != null ? i.grams : (i.g != null ? i.g : 0), kcal: num(i.kcal), p: num(i.p), c: num(i.c), f: num(i.f) })),
     })).filter((m) => m.macros && (m.macros.kcal || 0) > 0 && m.ing.length);
   }
 
