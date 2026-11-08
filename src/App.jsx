@@ -390,6 +390,23 @@ const TXT = {
 const fonts = `@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap');`;
 const num = (v, d = 0) => { const n = parseFloat(v); return isNaN(n) ? d : n; };
 
+// Herbereken één dag naar z'n kcal-doel — maar stuk-producten (gram per stuk)
+// blijven vast (hele stuks), alleen de overige maaltijden schalen mee.
+function mealHasPiece(m) { return (m && m.ing || []).some((ing) => ing.per100 && num(ing.per100.serving_g) > 0); }
+function scaleMealBy(m, f) {
+  return { ...m, kcal: Math.round(num(m.kcal) * f), p: Math.round(num(m.p) * f), c: Math.round(num(m.c) * f), f: Math.round(num(m.f) * f), ing: (m.ing || []).map((x) => ({ ...x, g: Math.round(num(x.g) * f) })) };
+}
+function rescaleDayPieceAware(day, targetKcal) {
+  if (!day || !day.m || !day.m.length || !targetKcal) return null;
+  const fixedK = day.m.filter(mealHasPiece).reduce((a, m) => a + num(m.kcal), 0);
+  const flex = day.m.filter((m) => !mealHasPiece(m));
+  const flexK = flex.reduce((a, m) => a + num(m.kcal), 0);
+  if (!flexK) return null;                 // niks te schalen (alles is stuk-product)
+  let f = (targetKcal - fixedK) / flexK;
+  if (!(f > 0)) return null;               // doel al bereikt/overschreden door stuk-producten
+  f = Math.max(0.4, Math.min(2.5, f));     // redelijke grenzen
+  return { ...day, m: day.m.map((m) => mealHasPiece(m) ? m : scaleMealBy(m, f)) };
+}
 function scaleDayTo(tmpl, targetKcal) {
   if (!tmpl || !tmpl.m || !tmpl.m.length || !targetKcal) return tmpl;
   const actual = tmpl.m.reduce((a, m) => a + num(m.kcal), 0);
@@ -445,13 +462,22 @@ const LockIcon = ({ c, s = 24 }) => (
 );
 
 function EditDayCard({ day, di, api }) {
-const { T, ML, sIn, R, disp, mutDay, patchMeal, scaleMeal, patchIng, addIngr, removeIngr, removeMeal, addMealTo, saveMealAsRecipe, applyIngVals, saveIngProduct, setCopyPick, setMovePlan, setPickTarget, setShowProducts, setRecipePick, savedMsg, units, pro } = api;
+const { T, ML, sIn, R, disp, mutDay, patchMeal, scaleMeal, patchIng, addIngr, removeIngr, removeMeal, addMealTo, saveMealAsRecipe, applyIngVals, saveIngProduct, setCopyPick, setMovePlan, setPickTarget, setShowProducts, setRecipePick, savedMsg, units, pro, targets, onRegenAI, lang } = api;
   const [addOpen, setAddOpen] = useState(false);
   const [openMeal, setOpenMeal] = useState(null);
   const [dayMenu, setDayMenu] = useState(false);
   const [valMeal, setValMeal] = useState(null);
   const [ingForm, setIngForm] = useState(null);
   const tot = day.m.reduce((a, m) => ({ kcal: a.kcal + num(m.kcal), p: a.p + num(m.p), c: a.c + num(m.c), f: a.f + num(m.f) }), { kcal: 0, p: 0, c: 0, f: 0 });
+  // Dagdoel: trainingsdag -> trainingsdoel, rustdag -> rustdoel, anders je gemiddelde.
+  const hasCycle = targets && targets.train && targets.rest && targets.trainingCount > 0 && targets.trainingCount < 7;
+  const dayTarget = targets ? (hasCycle ? (day.train ? targets.train.kcal : targets.rest.kcal) : targets.kcal) : 0;
+  const delta = dayTarget ? tot.kcal - dayTarget : 0;
+  const offTarget = !!dayTarget && Math.abs(delta) > 60;
+  const [proposal, setProposal] = useState(null);
+  const startRecalc = () => { const p = rescaleDayPieceAware(day, dayTarget); setProposal(p === null ? { none: true } : p); };
+  const applyProposal = () => { if (proposal && !proposal.none) mutDay(di, () => proposal); setProposal(null); };
+  const propTot = proposal && !proposal.none ? proposal.m.reduce((a, m) => a + num(m.kcal), 0) : 0;
   const Dots = () => (<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.7" /><circle cx="12" cy="12" r="1.7" /><circle cx="12" cy="19" r="1.7" /></svg>);
   const sqBtn = (on) => ({ cursor: "pointer", width: 30, height: 30, borderRadius: 7, border: `1px solid ${on ? EMBER : LINE}`, color: on ? EMBER : MUTED, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 });
   const miniAct = (icon, txt, onClick, danger) => (
@@ -496,10 +522,44 @@ const { T, ML, sIn, R, disp, mutDay, patchMeal, scaleMeal, patchIng, addIngr, re
           <div onClick={() => mutDay(di, (d) => { d.train = !d.train; return d; })} style={{ cursor: "pointer", fontSize: 9.5, color: day.train ? EMBER : MUTED, border: `1px solid ${day.train ? EMBER : LINE}`, borderRadius: 5, padding: "2px 6px", letterSpacing: 1, fontWeight: 700 }}>{day.train ? T("trainTag") : T("restTag")}</div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ fontSize: 11.5, color: MUTED }}><span style={{ color: PAPER, fontWeight: 600 }}>{tot.kcal}</span> kcal · {tot.p}{ML.p}/{tot.c}{ML.c}/{tot.f}{ML.f}</div>
+          <div style={{ fontSize: 11.5, color: MUTED }}><span style={{ color: PAPER, fontWeight: 600 }}>{tot.kcal}</span>{dayTarget ? <> / {dayTarget}</> : null} kcal{dayTarget ? <span style={{ color: offTarget ? "#E8A33D" : SAGE, fontWeight: 700 }}> · {delta > 0 ? "+" : ""}{delta}</span> : <> · {tot.p}{ML.p}/{tot.c}{ML.c}/{tot.f}{ML.f}</>}</div>
           <div onClick={() => { setDayMenu(!dayMenu); setOpenMeal(null); setAddOpen(false); }} style={{ ...sqBtn(dayMenu), width: 28, height: 28 }}><Dots /></div>
         </div>
       </div>
+      {(offTarget || proposal) && (
+        <div>
+          {!proposal && offTarget && (
+            <div style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(232,163,61,0.10)", borderBottom: `1px solid ${LINE}`, padding: "10px 14px" }}>
+              <div style={{ flex: 1, fontSize: 12, color: "#f0c58a", lineHeight: 1.4 }}>{lang === "nl" ? `Je dag zit ${delta > 0 ? delta + " kcal boven" : (-delta) + " kcal onder"} je doel.` : `Your day is ${Math.abs(delta)} kcal ${delta > 0 ? "over" : "under"} target.`}</div>
+              <div onClick={startRecalc} style={{ cursor: "pointer", background: EMBER, color: "#fff", borderRadius: 9, padding: "8px 13px", fontSize: 12.5, fontWeight: 800, whiteSpace: "nowrap", ...disp }}>{lang === "nl" ? "Herbereken ⟳" : "Recalc ⟳"}</div>
+            </div>
+          )}
+          {proposal && proposal.none && (
+            <div style={{ background: "rgba(232,163,61,0.10)", borderBottom: `1px solid ${LINE}`, padding: "11px 14px", fontSize: 12, color: "#f0c58a", lineHeight: 1.45 }}>
+              {lang === "nl" ? "Kan niet lokaal herberekenen — je stuk-producten vullen je dag al, of er is niks om te schalen. Pas de stuks aan of gebruik Opnieuw met AI." : "Can't rescale locally — your per-piece products already fill the day. Adjust pieces or regenerate with AI."}
+              <div onClick={() => setProposal(null)} style={{ marginTop: 8, cursor: "pointer", color: MUTED, fontSize: 11.5, fontWeight: 700 }}>{lang === "nl" ? "Sluiten" : "Close"}</div>
+            </div>
+          )}
+          {proposal && !proposal.none && (
+            <div style={{ background: INK, borderBottom: `1px solid ${LINE}`, padding: "12px 14px" }}>
+              <div style={{ fontSize: 11.5, color: MUTED, marginBottom: 9 }}>{lang === "nl" ? "Voorstel — porties naar je dagdoel. Stuk-producten blijven hele stuks." : "Proposal — portions to your target. Per-piece products stay whole."}</div>
+              {proposal.m.map((m, i) => { const was = num(day.m[i] && day.m[i].kcal); const now = num(m.kcal); const locked = mealHasPiece(m); return (
+                <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 10, fontSize: 12.5, color: PAPER, padding: "3px 0" }}>
+                  <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.n || m.t}</span>
+                  {locked ? <span style={{ color: SAGE, fontWeight: 600, whiteSpace: "nowrap" }}>{lang === "nl" ? "blijft" : "keep"} {now}</span>
+                    : <span style={{ whiteSpace: "nowrap" }}><span style={{ color: MUTED, textDecoration: "line-through" }}>{was}</span> <span style={{ color: SAGE, fontWeight: 700 }}>→ {now}</span></span>}
+                </div>
+              ); })}
+              <div style={{ fontSize: 12, color: PAPER, fontWeight: 700, marginTop: 8, borderTop: `1px solid ${LINE}`, paddingTop: 8 }}>{lang === "nl" ? "Dag" : "Day"}: <span style={{ color: MUTED, textDecoration: "line-through", fontWeight: 400 }}>{tot.kcal}</span> <span style={{ color: SAGE }}>→ {propTot} kcal</span> <span style={{ color: MUTED, fontWeight: 400 }}>({lang === "nl" ? "doel" : "target"} {dayTarget})</span></div>
+              <div style={{ display: "flex", gap: 9, marginTop: 11 }}>
+                <div onClick={() => setProposal(null)} style={{ flex: 1, textAlign: "center", cursor: "pointer", border: `1px solid ${LINE}`, color: MUTED, borderRadius: 9, padding: "10px 0", fontSize: 12.5, fontWeight: 700 }}>{lang === "nl" ? "Annuleren" : "Cancel"}</div>
+                <div onClick={applyProposal} style={{ flex: 1, textAlign: "center", cursor: "pointer", background: EMBER, color: "#fff", borderRadius: 9, padding: "10px 0", fontSize: 12.5, fontWeight: 800 }}>{lang === "nl" ? "Toepassen" : "Apply"}</div>
+              </div>
+              {onRegenAI && <div onClick={() => { setProposal(null); onRegenAI(); }} style={{ textAlign: "center", cursor: "pointer", color: MUTED, fontSize: 11.5, fontWeight: 700, marginTop: 10 }}>{lang === "nl" ? "Of: hele plan opnieuw met AI" : "Or: regenerate whole plan with AI"}</div>}
+            </div>
+          )}
+        </div>
+      )}
       {dayMenu && (
         <div style={{ background: INK2, borderBottom: `1px solid ${LINE}` }}>
           {miniAct(icCopy, T("copyDay"), () => { setDayMenu(false); setCopyPick({ kind: "day", di }); })}
@@ -2347,7 +2407,7 @@ export default function App() {
 
                       {view === "plan" && planEdit && <div style={{ fontSize: 11.5, color: MUTED, marginBottom: 12, lineHeight: 1.5 }}>{T("editHint")}</div>}
                       {view === "plan" && !planEdit && <PlanExplain />}
-                      {view === "plan" && (<div style={{ display: "grid", gap: 12 }}>{week.days.map((day, di) => planEdit ? <EditDayCard key={di} day={day} di={di} api={{ T, ML, sIn, R, disp, mutDay, patchMeal, scaleMeal, patchIng, addIngr, removeIngr, removeMeal, addMealTo, saveMealAsRecipe, applyIngVals, saveIngProduct, setCopyPick, setMovePlan, setPickTarget, setShowProducts, setRecipePick, savedMsg, units, pro: hasPro || isGymMember }} /> : <DayCard key={di} day={day} />)}</div>)}
+                      {view === "plan" && (<div style={{ display: "grid", gap: 12 }}>{week.days.map((day, di) => planEdit ? <EditDayCard key={di} day={day} di={di} api={{ T, ML, sIn, R, disp, mutDay, patchMeal, scaleMeal, patchIng, addIngr, removeIngr, removeMeal, addMealTo, saveMealAsRecipe, applyIngVals, saveIngProduct, setCopyPick, setMovePlan, setPickTarget, setShowProducts, setRecipePick, savedMsg, units, pro: hasPro || isGymMember, targets, onRegenAI: handleBuild, lang }} /> : <DayCard key={di} day={day} />)}</div>)}
                       {view === "shop" && (
                         <div style={{ display: "grid", gap: 12 }}>
                           <div style={{ fontSize: 12, color: MUTED }}>{T("shopHint")}</div>
