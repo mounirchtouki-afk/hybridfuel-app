@@ -708,7 +708,7 @@ export default function App() {
   // Eigen producten voor de eetmoment-kiezer (uitklap + aanvinken + bron).
   const [userProducts, setUserProducts] = useState([]);
   const [userRecipes, setUserRecipes] = useState([]);
-  const [openMoment, setOpenMoment] = useState("breakfast"); // welke sectie uitgeklapt is
+  const [openMoment, setOpenMoment] = useState(null); // welke sectie uitgeklapt is (standaard alles dicht)
   const [openSub, setOpenSub] = useState({}); // welke subgroep (recepten/producten/suggesties) per moment open is
   const [momentAdd, setMomentAdd] = useState(null); // eetmoment waarvoor we een product toevoegen/scannen
   const [trainingDays, setTrainingDays] = useState([0, 2, 4]);
