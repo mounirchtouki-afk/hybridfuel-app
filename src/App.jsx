@@ -938,6 +938,17 @@ export default function App() {
   const basicsFilled = numOk(age) && numOk(height) && numOk(weight) && (sex === "male" || sex === "female");
   const hasBasis = devMode || isGymMember || subTier === "basis" || subTier === "pro";
   const hasPro = devMode || gymPro || subTier === "pro";
+  // AI-tegoed (zichtbaar saldo). Geladen uit het 'balance'-antwoord van /api/plan.
+  const [aiBalance, setAiBalance] = useState(() => { try { return JSON.parse(localStorage.getItem("hf_ai_balance") || "null"); } catch (e) { return null; } });
+  async function fetchBalance() {
+    const tok = session && session.access_token; if (!tok) return;
+    try {
+      const r = await fetch(apiUrl("/api/plan"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ mode: "balance", authToken: tok, lang }) });
+      const d = await r.json().catch(() => ({}));
+      if (d && d.balance) { setAiBalance(d.balance); try { localStorage.setItem("hf_ai_balance", JSON.stringify(d.balance)); } catch (e) {} }
+    } catch (e) {}
+  }
+  useEffect(() => { if (showMore && hasBasis) fetchBalance(); }, [showMore]);
   const hasPlus = devMode || gymPro || subTier === "pro"; // Race Protocol, later evt. eigen Plus-laag
   // Demo telt alleen voor niet-ingelogde bezoekers; het geeft GEEN echte toegang
   // (opslaan/genereren blijft achter de paywall), het laat alleen de schermen zien.
@@ -2430,6 +2441,36 @@ export default function App() {
               {isGymMember && moreTile(<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="10" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>, lang === "nl" ? "Mijn code" : "My code", () => { setShowMore(false); setShowCodeChange(true); setCodeMsg(""); setCodeNew(""); })}
               {isAdmin && moreTile(<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6z" /><path d="M9 12l2 2 4-4" /></svg>, "Admin", () => { setShowMore(false); setShowAdmin(true); })}
             </div>
+            {hasBasis && aiBalance && (() => {
+              const b = aiBalance;
+              const rd = (() => { try { const d = new Date(b.resetAt); return d.toLocaleDateString(lang === "nl" ? "nl-NL" : "en-GB", { day: "numeric", month: "short" }); } catch (e) { return ""; } })();
+              const tierLbl = b.tier === "pro" ? (lang === "nl" ? "Pro-abonnement" : "Pro plan") : (lang === "nl" ? "Basis-abonnement" : "Basic plan");
+              const rows = [
+                [lang === "nl" ? "Mealplans" : "Meal plans", b.mealplans],
+                [lang === "nl" ? "Foto-scans" : "Photo scans", b.scans],
+                [lang === "nl" ? "Weekreviews" : "Week reviews", b.reviews],
+              ];
+              return (
+                <div style={{ marginTop: 16, borderTop: `1px solid ${LINE}`, paddingTop: 14 }}>
+                  <div style={{ fontSize: 10.5, letterSpacing: 1, textTransform: "uppercase", color: EMBER, fontWeight: 700, marginBottom: 3 }}>{lang === "nl" ? "AI-tegoed · deze maand" : "AI credits · this month"}</div>
+                  <div style={{ fontSize: 11, color: MUTED, marginBottom: 13 }}>{tierLbl}{rd ? (lang === "nl" ? ` · reset op ${rd}` : ` · resets ${rd}`) : ""}</div>
+                  {rows.map(([lbl, f], i) => {
+                    const pct = f.cap > 0 ? Math.min(100, Math.round((f.used / f.cap) * 100)) : 0;
+                    const op = f.left <= 0;
+                    return (
+                      <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: i < 2 ? 13 : 2 }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ ...disp, fontSize: 13, fontWeight: 600, color: PAPER }}>{lbl}{op && <span style={{ display: "inline-block", fontSize: 9, color: "#fff", background: EMBER, borderRadius: 4, padding: "1px 6px", fontWeight: 700, marginLeft: 6, verticalAlign: "middle", letterSpacing: 0.4 }}>{lang === "nl" ? "OP" : "USED"}</span>}</div>
+                          <div style={{ height: 7, background: INK2, borderRadius: 4, overflow: "hidden", marginTop: 6 }}><div style={{ height: "100%", width: pct + "%", background: EMBER, borderRadius: 4, transition: "width .2s" }} /></div>
+                        </div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: PAPER, whiteSpace: "nowrap" }}>{f.used}<span style={{ color: MUTED, fontWeight: 600 }}>/{f.cap}</span></div>
+                      </div>
+                    );
+                  })}
+                  <div style={{ fontSize: 10.5, color: MUTED, lineHeight: 1.5, marginTop: 10 }}>{lang === "nl" ? "Op = geen muur: mealplans lopen door op je eigen receptenbasis; scans en reviews komen terug bij de reset." : "Used up is no wall: meal plans keep running on your own recipe base; scans and reviews return at the reset."}</div>
+                </div>
+              );
+            })()}
             <div style={{ marginTop: 16, borderTop: `1px solid ${LINE}`, paddingTop: 14 }}>
               <div style={{ fontSize: 10.5, letterSpacing: 1, textTransform: "uppercase", color: MUTED, fontWeight: 700, marginBottom: 8 }}>{lang === "nl" ? "Eenheden" : "Units"}</div>
               <div style={{ display: "flex", gap: 6, background: INK2, border: `1px solid ${LINE}`, borderRadius: 10, padding: 4 }}>

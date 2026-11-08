@@ -933,6 +933,11 @@ export default async function handler(req, res) {
     const mbud = (trusted || access) ? await aiBudget(body.authToken, "mealplans", mtier) : { ok: true, balance: null, commit: async () => {} };
     const mBal = () => { if (mbud.balance && mbud.balance.mealplans) { mbud.balance.mealplans.used += 1; mbud.balance.mealplans.left = Math.max(0, mbud.balance.mealplans.left - 1); } return mbud.balance; };
 
+    // ALLEEN-LEZEN: het AI-tegoed ophalen voor het paneel (geen generatie, geen kosten).
+    if (body.mode === "balance") {
+      return res.status(200).json({ balance: mbud.balance });
+    }
+
     // WEEKREVIEW: korte AI-coaching op de 7-daagse logging, binnen de kaders.
     // Alleen voor abonnees/leden; eigen (goedkope) Haiku-call, met rate-limit-backstop.
     if (body.mode === "weekreview") {
