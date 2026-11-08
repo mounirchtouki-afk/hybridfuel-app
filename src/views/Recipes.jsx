@@ -96,7 +96,7 @@ export default function Recipes({ lang, session, units }) {
                       <div style={{ position: "absolute", inset: 0, background: r.image_url ? "linear-gradient(180deg, transparent 45%, rgba(10,10,10,0.9) 100%)" : "linear-gradient(180deg, transparent 62%, rgba(255,255,255,0.92) 100%)" }} />
                       <div style={{ position: "absolute", left: 14, right: 14, bottom: 12 }}>
                         <div style={{ display: "inline-block", fontSize: 9.5, color: "#fff", background: EMBER, borderRadius: 5, padding: "2px 7px", letterSpacing: 0.5, fontWeight: 700, ...disp, marginBottom: 6 }}>{TYPE_LBL[r.type] ? TYPE_LBL[r.type][lang] : r.type}</div>
-                        <div style={{ ...disp, fontWeight: 600, fontSize: 19, letterSpacing: 0.3, color: r.image_url ? PAPER : INK, textShadow: r.image_url ? "0 2px 8px rgba(0,0,0,.6)" : "none" }}>{r.name}</div>
+                        <div style={{ ...disp, fontWeight: 600, fontSize: 19, letterSpacing: 0.3, color: r.image_url ? PAPER : "#111", textShadow: r.image_url ? "0 2px 8px rgba(0,0,0,.6)" : "none" }}>{r.name}</div>
                       </div>
                     </div>
                     {macroBar(m)}
