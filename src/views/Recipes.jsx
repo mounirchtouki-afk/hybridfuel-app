@@ -87,13 +87,16 @@ export default function Recipes({ lang, session, units }) {
               return (
                 <div key={r.id} style={{ background: INK2, border: `1px solid ${LINE}`, borderRadius: 14, overflow: "hidden" }}>
                   <div onClick={() => setOpen(isOpen ? null : r.id)} style={{ cursor: "pointer" }}>
-                    <div style={{ position: "relative", width: "100%", aspectRatio: "16 / 9", background: INK }}>
+                    <div style={{ position: "relative", width: "100%", aspectRatio: "16 / 9", background: r.image_url ? INK : "#FFFFFF" }}>
                       {r.image_url ? <img src={r.image_url} alt={r.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-                        : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: LINE, ...disp, fontSize: 40 }}>{(r.name || "?").slice(0, 1).toUpperCase()}</div>}
-                      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, transparent 45%, rgba(10,10,10,0.9) 100%)" }} />
+                        : <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10 }}>
+                            <img src="/icon-192.png" alt="HybridFuelCo" style={{ width: 74, height: 74, borderRadius: 17, boxShadow: "0 8px 22px rgba(225,29,72,.28)" }} />
+                            <div style={{ ...disp, fontWeight: 800, letterSpacing: 0.5, fontSize: 14, color: "#111" }}>Hybrid<span style={{ color: EMBER }}>Fuel</span>Co</div>
+                          </div>}
+                      <div style={{ position: "absolute", inset: 0, background: r.image_url ? "linear-gradient(180deg, transparent 45%, rgba(10,10,10,0.9) 100%)" : "linear-gradient(180deg, transparent 62%, rgba(255,255,255,0.92) 100%)" }} />
                       <div style={{ position: "absolute", left: 14, right: 14, bottom: 12 }}>
                         <div style={{ display: "inline-block", fontSize: 9.5, color: "#fff", background: EMBER, borderRadius: 5, padding: "2px 7px", letterSpacing: 0.5, fontWeight: 700, ...disp, marginBottom: 6 }}>{TYPE_LBL[r.type] ? TYPE_LBL[r.type][lang] : r.type}</div>
-                        <div style={{ ...disp, fontWeight: 600, fontSize: 19, letterSpacing: 0.3, color: PAPER, textShadow: "0 2px 8px rgba(0,0,0,.6)" }}>{r.name}</div>
+                        <div style={{ ...disp, fontWeight: 600, fontSize: 19, letterSpacing: 0.3, color: r.image_url ? PAPER : INK, textShadow: r.image_url ? "0 2px 8px rgba(0,0,0,.6)" : "none" }}>{r.name}</div>
                       </div>
                     </div>
                     {macroBar(m)}
