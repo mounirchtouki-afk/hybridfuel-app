@@ -160,6 +160,7 @@ export default function Products({ lang, session, onClose, onPick, onPickMany, e
   const videoRef = useRef(null);
   const readerRef = useRef(null);
   const photoRef = useRef(null);
+  const cameraRef = useRef(null);
 
   // Verklein client-side (max 1000px, jpeg) zodat de upload licht blijft.
   function addPhotos(fileList) {
@@ -368,6 +369,7 @@ export default function Products({ lang, session, onClose, onPick, onPickMany, e
             ))}
           </div>
           <div style={{ fontSize: 10.5, color: MUTED, fontStyle: "italic", marginBottom: 10 }}>{t("photoTip")}</div>
+          <input ref={cameraRef} type="file" accept="image/*" capture="environment" multiple style={{ display: "none" }} onChange={(e) => { addPhotos(e.target.files); e.target.value = ""; }} />
           <input ref={photoRef} type="file" accept="image/*" multiple style={{ display: "none" }} onChange={(e) => { addPhotos(e.target.files); e.target.value = ""; }} />
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
             {photos.map((src, i) => (
@@ -376,10 +378,13 @@ export default function Products({ lang, session, onClose, onPick, onPickMany, e
                 <div onClick={() => delPhoto(i)} style={{ position: "absolute", top: 2, right: 2, width: 18, height: 18, borderRadius: "50%", background: "rgba(10,10,10,0.8)", color: "#fff", fontSize: 12, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>×</div>
               </div>
             ))}
-            {photos.length < 4 && (
-              <div onClick={() => photoRef.current && photoRef.current.click()} style={{ width: 64, height: 64, borderRadius: 9, border: `1px dashed ${EMBER}`, color: EMBER, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, cursor: "pointer" }}>+</div>
-            )}
           </div>
+          {photos.length < 4 && (
+            <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+              <button onClick={() => cameraRef.current && cameraRef.current.click()} style={{ ...ghostBtn, flex: 1, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 7, padding: "10px 0" }}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h3l2-3h8l2 3h3a2 2 0 0 1 2 2z" /><circle cx="12" cy="13" r="3.5" /></svg>{lang === "nl" ? "Foto maken" : "Take photo"}</button>
+              <button onClick={() => photoRef.current && photoRef.current.click()} style={{ ...ghostBtn, flex: 1, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 7, padding: "10px 0" }}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="M12 3v13M7 8l5-5 5 5" /></svg>{lang === "nl" ? "Uploaden" : "Upload"}</button>
+            </div>
+          )}
           <button onClick={runPhotoScan} disabled={aiBusy || !photos.length} style={{ ...primaryBtn, width: "100%", opacity: (aiBusy || !photos.length) ? 0.6 : 1 }}>{aiBusy ? t("photoRecognizing") : t("photoRecognize")}</button>
         </div>
       )}

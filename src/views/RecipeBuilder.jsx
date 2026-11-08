@@ -49,6 +49,7 @@ export default function RecipeBuilder({ lang, session, units, onClose, onSaved, 
   const [showPick, setShowPick] = useState(false);
   const [busy, setBusy] = useState(false);
   const fileRef = useRef(null);
+  const camRef = useRef(null);
 
   function handlePhoto(file) {
     if (!file) return;
@@ -129,13 +130,17 @@ export default function RecipeBuilder({ lang, session, units, onClose, onSaved, 
         {/* Foto */}
         <div style={{ marginBottom: 14 }}>
           <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => handlePhoto(e.target.files && e.target.files[0])} />
+          <input ref={camRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={(e) => handlePhoto(e.target.files && e.target.files[0])} />
           {photo ? (
             <div style={{ position: "relative", borderRadius: 12, overflow: "hidden" }}>
               <img src={photo} alt="" style={{ width: "100%", aspectRatio: "16/9", objectFit: "cover", display: "block" }} />
               <div onClick={() => fileRef.current && fileRef.current.click()} style={{ position: "absolute", right: 10, bottom: 10, cursor: "pointer", background: "rgba(10,10,10,0.75)", border: `1px solid ${LINE}`, borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 600, color: PAPER }}>{t("changePhoto")}</div>
             </div>
           ) : (
-            <div onClick={() => fileRef.current && fileRef.current.click()} style={{ cursor: "pointer", border: `1px dashed ${LINE}`, borderRadius: 12, padding: "22px 0", textAlign: "center", color: EMBER, fontSize: 13, fontWeight: 600 }}>{t("addPhoto")}</div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <div onClick={() => camRef.current && camRef.current.click()} style={{ flex: 1, cursor: "pointer", border: `1px dashed ${LINE}`, borderRadius: 12, padding: "18px 0", textAlign: "center", color: EMBER, fontSize: 12.5, fontWeight: 600 }}>{lang === "nl" ? "📷 Foto maken" : "📷 Take photo"}</div>
+              <div onClick={() => fileRef.current && fileRef.current.click()} style={{ flex: 1, cursor: "pointer", border: `1px dashed ${LINE}`, borderRadius: 12, padding: "18px 0", textAlign: "center", color: EMBER, fontSize: 12.5, fontWeight: 600 }}>{lang === "nl" ? "⬆ Uploaden" : "⬆ Upload"}</div>
+            </div>
           )}
         </div>
 
