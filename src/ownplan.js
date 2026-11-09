@@ -86,9 +86,9 @@ function scaleSavedMeal(meal, kcalTarget, label, prodByName) {
   let kcal = 0, p = 0, c = 0, ff = 0; const ing = [];
   rows.forEach((r) => {
     if (r.p100) { kcal += r.p100.kcal * r.g / 100; p += r.p100.p * r.g / 100; c += r.p100.c * r.g / 100; ff += r.p100.f * r.g / 100; }
-    const per100 = r.p100 ? { kcal: R1(r.p100.kcal), p: R1(r.p100.p), c: R1(r.p100.c), f: R1(r.p100.f) } : null;
-    if (per100 && r.serv > 0) per100.serving_g = r.serv;
-    ing.push(per100 ? { n: r.n, g: r.g, per100 } : { n: r.n, g: r.g });
+    const pr = r.p100 ? { kcal: R1(r.p100.kcal), p: R1(r.p100.p), c: R1(r.p100.c), f: R1(r.p100.f) } : null;
+    if (pr && r.serv > 0) pr.serving_g = r.serv;
+    ing.push(pr ? { n: r.n, g: r.g, per100: pr } : { n: r.n, g: r.g });
   });
   return { t: label, n: meal.name || label, kcal: Math.round(kcal), p: Math.round(p), c: Math.round(c), f: Math.round(ff), ing };
 }
@@ -249,9 +249,9 @@ function assemble(items, label) {
     const pc = per100(prod);
     kcal += pc.kcal * g / 100; p += pc.p * g / 100; c += pc.c * g / 100; f += pc.f * g / 100;
     const sg = num(prod.per_100 && prod.per_100.serving_g);
-    const per100 = { kcal: R1(pc.kcal), p: R1(pc.p), c: R1(pc.c), f: R1(pc.f) };
-    if (sg > 0) per100.serving_g = Math.round(sg);
-    ing.push({ n: productName(prod), g, per100 });
+    const pr = { kcal: R1(pc.kcal), p: R1(pc.p), c: R1(pc.c), f: R1(pc.f) };
+    if (sg > 0) pr.serving_g = Math.round(sg);
+    ing.push({ n: productName(prod), g, per100: pr });
   }
   if (!ing.length) return null;
   return {
