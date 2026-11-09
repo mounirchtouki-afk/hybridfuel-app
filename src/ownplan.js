@@ -41,46 +41,55 @@ function mealsForSlot(meals, slot) {
 // terug aan het product (voor categorie + portiegewicht).
 function scaleSavedMeal(meal, kcalTarget, label, prodByName) {
   const pbn = prodByName || {};
+  const R1 = (x) => Math.round(num(x) * 10) / 10;
   const rows = (meal.ing || []).map((x) => {
     const g0 = num(x.g);
     const prod = pbn[String(x.n || "").toLowerCase().trim()] || null;
+    // per-100 uit eigen macro's, anders uit het gekoppelde product, anders uit een
+    // per100 die het ingrediënt zelf meedraagt.
     let p100 = null;
     if (g0 > 0 && (num(x.kcal) || num(x.p) || num(x.c) || num(x.f))) {
       p100 = { kcal: num(x.kcal) / g0 * 100, p: num(x.p) / g0 * 100, c: num(x.c) / g0 * 100, f: num(x.f) / g0 * 100 };
     } else if (prod) { p100 = per100(prod); }
-    const serv = prod && num(prod.per_100 && prod.per_100.serving_g) > 0 ? Math.round(num(prod.per_100.serving_g)) : 0;
+    else if (x.per100) { p100 = { kcal: num(x.per100.kcal), p: num(x.per100.p), c: num(x.per100.c), f: num(x.per100.f) }; }
+    const serv = (prod && num(prod.per_100 && prod.per_100.serving_g) > 0) ? Math.round(num(prod.per_100.serving_g))
+      : (x.per100 && num(x.per100.serving_g) > 0) ? Math.round(num(x.per100.serving_g)) : 0;
     const role = classify({ name: x.n, category: prod && prod.category, per_100: p100 || {} });
-    return { n: x.n, g: g0, p100, serv, role, locked: false };
+    return { n: x.n, g: g0, p100, serv, role };
   });
-  const hasData = rows.some((r) => r.p100);
-  if (!hasData) { // geen voedingswaarde per ingrediënt bekend → oude eenvoudige schaling
-    const base = num(meal.macros.kcal) || 1;
-    const f = Math.max(0.3, Math.min(2.5, kcalTarget / base));
-    const ing = rows.map((r) => ({ n: r.n, g: roundG(r.g * f) }));
-    return { t: label, n: meal.name || label, kcal: Math.round(num(meal.macros.kcal) * f), p: Math.round(num(meal.macros.p) * f), c: Math.round(num(meal.macros.c) * f), f: Math.round(num(meal.macros.f) * f), ing };
-  }
   const kcalOf = (r, g) => (r.p100 ? r.p100.kcal * g / 100 : 0);
-  // Stuk-producten: snap op hele porties en hou ze vast.
-  rows.forEach((r) => { if (r.serv > 0) { const pcs = Math.max(1, Math.round(r.g / r.serv)); r.g = pcs * r.serv; r.locked = true; } });
-  const lockedKcal = rows.filter((r) => r.locked).reduce((a, r) => a + kcalOf(r, r.g), 0);
-  const flex = rows.filter((r) => !r.locked);
-  // De koolhydraatbasis vangt de resterende calorieën op (binnen kader); de rest
-  // (groente/fruit/accent/vet) krijgt een nette vaste portie binnen z'n kader.
-  const flexCarb = flex.find((r) => CARB_ROLES.includes(r.role) && r.p100 && r.p100.kcal > 0);
-  flex.forEach((r) => { if (r === flexCarb) return; const base = r.g > 0 ? r.g : ((KADER[r.role] || KADER.other).min); r.g = roundG(clampG(base, r.role)); });
-  if (flexCarb) {
-    const othersKcal = flex.filter((r) => r !== flexCarb).reduce((a, r) => a + kcalOf(r, r.g), 0);
-    const remK = kcalTarget - lockedKcal - othersKcal;
-    flexCarb.g = roundG(clampG(remK / (flexCarb.p100.kcal / 100), flexCarb.role));
-  } else {
-    // Geen koolhydraatbasis: schaal de flex-items proportioneel, binnen kader.
-    const flexKcal0 = flex.reduce((a, r) => a + kcalOf(r, r.g), 0) || 1;
-    const f = Math.max(0.3, Math.min(3, (kcalTarget - lockedKcal) / flexKcal0));
-    flex.forEach((r) => { r.g = roundG(clampG(r.g * f, r.role)); });
+  // Basis = werkelijke kcal UIT de ingrediënten (nooit de mogelijk foute opgeslagen totalen).
+  const base = rows.reduce((a, r) => a + kcalOf(r, r.g), 0);
+  if (base <= 0) { // geen voedingswaarde bekend → eenvoudige schaling op opgeslagen macro's
+    const b = num(meal.macros.kcal) || 1;
+    const f0 = Math.max(0.3, Math.min(2.5, kcalTarget / b));
+    const ing = rows.map((r) => ({ n: r.n, g: roundG(r.g * f0) }));
+    return { t: label, n: meal.name || label, kcal: Math.round(num(meal.macros.kcal) * f0), p: Math.round(num(meal.macros.p) * f0), c: Math.round(num(meal.macros.c) * f0), f: Math.round(num(meal.macros.f) * f0), ing };
   }
-  // Totalen herberekenen uit de uiteindelijke grammen.
+  const f = Math.max(0.3, Math.min(2.5, kcalTarget / base));
+  // 1) Alles proportioneel richting doel: stuk-producten in HELE stuks (min 1),
+  //    de rest binnen z'n portie-kader.
+  rows.forEach((r) => {
+    let g = r.g * f;
+    if (r.serv > 0) g = Math.max(1, Math.round(g / r.serv)) * r.serv;
+    else g = roundG(clampG(g, r.role));
+    r.g = g;
+  });
+  // 2) De koolhydraatbasis (geen stuk-product) vangt het restant op zodat de dag klopt.
+  const carb = rows.find((r) => CARB_ROLES.includes(r.role) && !r.serv && r.p100 && r.p100.kcal > 0);
+  if (carb) {
+    const othersKcal = rows.filter((r) => r !== carb).reduce((a, r) => a + kcalOf(r, r.g), 0);
+    carb.g = roundG(clampG((kcalTarget - othersKcal) / (carb.p100.kcal / 100), carb.role));
+  }
+  // 3) Totalen + per100 (incl. portiegewicht) uit de uiteindelijke grammen — zodat het
+  //    plan stuk-producten als stuks toont en het totaal altijd klopt met de ingrediënten.
   let kcal = 0, p = 0, c = 0, ff = 0; const ing = [];
-  rows.forEach((r) => { if (r.p100) { kcal += r.p100.kcal * r.g / 100; p += r.p100.p * r.g / 100; c += r.p100.c * r.g / 100; ff += r.p100.f * r.g / 100; } ing.push({ n: r.n, g: r.g }); });
+  rows.forEach((r) => {
+    if (r.p100) { kcal += r.p100.kcal * r.g / 100; p += r.p100.p * r.g / 100; c += r.p100.c * r.g / 100; ff += r.p100.f * r.g / 100; }
+    const per100 = r.p100 ? { kcal: R1(r.p100.kcal), p: R1(r.p100.p), c: R1(r.p100.c), f: R1(r.p100.f) } : null;
+    if (per100 && r.serv > 0) per100.serving_g = r.serv;
+    ing.push(per100 ? { n: r.n, g: r.g, per100 } : { n: r.n, g: r.g });
+  });
   return { t: label, n: meal.name || label, kcal: Math.round(kcal), p: Math.round(p), c: Math.round(c), f: Math.round(ff), ing };
 }
 
@@ -234,11 +243,15 @@ function scaleToKcal(cands, target, dayIdx, label) {
 
 // Zet gekozen [product, grammen] om naar een maaltijd-object.
 function assemble(items, label) {
+  const R1 = (x) => Math.round(num(x) * 10) / 10;
   let kcal = 0, p = 0, c = 0, f = 0; const ing = [];
   for (const [prod, g] of items) {
     const pc = per100(prod);
     kcal += pc.kcal * g / 100; p += pc.p * g / 100; c += pc.c * g / 100; f += pc.f * g / 100;
-    ing.push({ n: productName(prod), g });
+    const sg = num(prod.per_100 && prod.per_100.serving_g);
+    const per100 = { kcal: R1(pc.kcal), p: R1(pc.p), c: R1(pc.c), f: R1(pc.f) };
+    if (sg > 0) per100.serving_g = Math.round(sg);
+    ing.push({ n: productName(prod), g, per100 });
   }
   if (!ing.length) return null;
   return {

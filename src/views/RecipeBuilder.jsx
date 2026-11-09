@@ -94,7 +94,7 @@ export default function RecipeBuilder({ lang, session, units, onClose, onSaved, 
   async function doSave() {
     if (!name.trim() || !ings.length) return;
     setBusy(true);
-    const ingredients = ings.map((x) => ({ name: x.name, grams: num(x.grams), kcal: num(x.kcal), p: num(x.p), c: num(x.c), f: num(x.f) }));
+    const ingredients = ings.map((x) => ({ name: x.name, grams: num(x.grams), kcal: num(x.kcal), p: num(x.p), c: num(x.c), f: num(x.f), per100: x.per100 || null }));
     const mt = (mealTypes && mealTypes.length ? mealTypes : [type]);
     const rec = { name: name.trim(), type, ingredients, macros, image_url: photo || null, steps: steps.trim() || null };
     const localId = isEdit ? edit.id : "l" + Date.now();
@@ -173,8 +173,20 @@ export default function RecipeBuilder({ lang, session, units, onClose, onSaved, 
               <div style={{ fontSize: 13, fontWeight: 600, color: PAPER }}>{x.name}</div>
               <div style={{ fontSize: 10.5, color: MUTED }}>{x.kcal} kcal · {x.p}{ml.p}/{x.c}{ml.c}/{x.f}{ml.f}</div>
             </div>
-            <input value={gShow(x.grams, units)} onChange={(e) => setGrams(i, gStore(e.target.value, units))} inputMode="numeric" style={{ width: 56, textAlign: "right", background: INK, border: `1px solid ${LINE}`, color: PAPER, padding: "6px 7px", borderRadius: 7, fontSize: 12.5, outline: "none" }} />
-            <span style={{ fontSize: 11, color: MUTED }}>{wUnit(units)}</span>
+            {(x.per100 && num(x.per100.serving_g) > 0) ? (() => {
+              const sg = Math.round(num(x.per100.serving_g));
+              const pcs = Math.max(1, Math.round(num(x.grams) / sg));
+              return (
+                <div style={{ display: "flex", alignItems: "center", border: `1px solid ${LINE}`, borderRadius: 8, overflow: "hidden", flexShrink: 0 }}>
+                  <div onClick={() => setGrams(i, Math.max(sg, (pcs - 1) * sg))} style={{ width: 28, height: 32, display: "grid", placeItems: "center", color: EMBER, fontSize: 17, fontWeight: 700, cursor: "pointer", background: INK }}>−</div>
+                  <div style={{ minWidth: 42, textAlign: "center", lineHeight: 1 }}><div style={{ fontSize: 12.5, fontWeight: 700, color: PAPER }}>{pcs} {lang === "nl" ? "st" : "pc"}</div><div style={{ fontSize: 9, color: MUTED, marginTop: 1 }}>{pcs * sg} g</div></div>
+                  <div onClick={() => setGrams(i, (pcs + 1) * sg)} style={{ width: 28, height: 32, display: "grid", placeItems: "center", color: EMBER, fontSize: 17, fontWeight: 700, cursor: "pointer", background: INK }}>+</div>
+                </div>
+              );
+            })() : (<>
+              <input value={gShow(x.grams, units)} onChange={(e) => setGrams(i, gStore(e.target.value, units))} inputMode="numeric" style={{ width: 56, textAlign: "right", background: INK, border: `1px solid ${LINE}`, color: PAPER, padding: "6px 7px", borderRadius: 7, fontSize: 12.5, outline: "none" }} />
+              <span style={{ fontSize: 11, color: MUTED }}>{wUnit(units)}</span>
+            </>)}
             <div onClick={() => delIng(i)} style={{ cursor: "pointer", color: MUTED, fontSize: 15, padding: "0 2px" }}>×</div>
           </div>
         ))}
