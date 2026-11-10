@@ -418,7 +418,7 @@ function rescaleDayPieceAware(day, targetKcal) {
   if (!flexK) return null;                 // niks te schalen (alles is stuk-product)
   let f = (targetKcal - fixedK) / flexK;
   if (!(f > 0)) return null;               // doel al bereikt/overschreden door stuk-producten
-  f = Math.max(0.4, Math.min(2.5, f));     // redelijke grenzen
+  f = Math.max(0.4, Math.min(1, f));       // trim-only: nooit omhoog opvullen, alleen bijsnijden
   return { ...day, m: day.m.map((m) => mealHasPiece(m) ? m : scaleMealBy(m, f)) };
 }
 function scaleDayTo(tmpl, targetKcal) {
@@ -476,7 +476,7 @@ const LockIcon = ({ c, s = 24 }) => (
 );
 
 function EditDayCard({ day, di, api }) {
-const { T, ML, sIn, R, disp, mutDay, patchMeal, scaleMeal, patchIng, addIngr, removeIngr, removeMeal, addMealTo, saveMealAsRecipe, applyIngVals, saveIngProduct, setCopyPick, setMovePlan, setPickTarget, setShowProducts, setRecipePick, savedMsg, units, pro, targets, onRegenAI, lang } = api;
+const { T, ML, sIn, R, disp, mutDay, patchMeal, scaleMeal, patchIng, addIngr, removeIngr, removeMeal, addMealTo, saveMealAsRecipe, applyIngVals, saveIngProduct, setCopyPick, setMovePlan, setPickTarget, setShowProducts, setRecipePick, savedMsg, units, pro, targets, onRegenAI, onTrimWeek, lang } = api;
   const [addOpen, setAddOpen] = useState(false);
   const [openMeal, setOpenMeal] = useState(null);
   const [dayMenu, setDayMenu] = useState(false);
@@ -487,9 +487,16 @@ const { T, ML, sIn, R, disp, mutDay, patchMeal, scaleMeal, patchIng, addIngr, re
   const hasCycle = targets && targets.train && targets.rest && targets.trainingCount > 0 && targets.trainingCount < 7;
   const dayTarget = targets ? (hasCycle ? (day.train ? targets.train.kcal : targets.rest.kcal) : targets.kcal) : 0;
   const delta = dayTarget ? tot.kcal - dayTarget : 0;
-  const offTarget = !!dayTarget && Math.abs(delta) > 60;
+  const over = !!dayTarget && delta > 75;              // alleen bijsnijden als de dag te HOOG zit
   const [proposal, setProposal] = useState(null);
-  const startRecalc = () => { const p = rescaleDayPieceAware(day, dayTarget); setProposal(p === null ? { none: true } : p); };
+  const [recalcOpen, setRecalcOpen] = useState(false); // scope-keuze open?
+  const [scope, setScope] = useState("week");          // standaard: hele week
+  const [weekDone, setWeekDone] = useState(null);       // resultaat hele-week-trim
+  const startRecalc = () => { const p = rescaleDayPieceAware(day, dayTarget); setProposal(p === null ? { none: true } : p); setRecalcOpen(false); };
+  const runScope = () => {
+    if (scope === "week") { setWeekDone(onTrimWeek ? onTrimWeek() : 0); setRecalcOpen(false); }
+    else startRecalc();
+  };
   const applyProposal = () => { if (proposal && !proposal.none) mutDay(di, () => proposal); setProposal(null); };
   const propTot = proposal && !proposal.none ? proposal.m.reduce((a, m) => a + num(m.kcal), 0) : 0;
   const Dots = () => (<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.7" /><circle cx="12" cy="12" r="1.7" /><circle cx="12" cy="19" r="1.7" /></svg>);
@@ -540,12 +547,41 @@ const { T, ML, sIn, R, disp, mutDay, patchMeal, scaleMeal, patchIng, addIngr, re
           <div onClick={() => { setDayMenu(!dayMenu); setOpenMeal(null); setAddOpen(false); }} style={{ ...sqBtn(dayMenu), width: 28, height: 28 }}><Dots /></div>
         </div>
       </div>
-      {(offTarget || proposal) && (
+      {(over || proposal || recalcOpen || weekDone != null) && (
         <div>
-          {!proposal && offTarget && (
+          {over && !proposal && !recalcOpen && weekDone == null && (
             <div style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(232,163,61,0.10)", borderBottom: `1px solid ${LINE}`, padding: "10px 14px" }}>
-              <div style={{ flex: 1, fontSize: 12, color: "#f0c58a", lineHeight: 1.4 }}>{lang === "nl" ? `Je dag zit ${delta > 0 ? delta + " kcal boven" : (-delta) + " kcal onder"} je doel.` : `Your day is ${Math.abs(delta)} kcal ${delta > 0 ? "over" : "under"} target.`}</div>
-              <div onClick={startRecalc} style={{ cursor: "pointer", background: EMBER, color: "#fff", borderRadius: 9, padding: "8px 13px", fontSize: 12.5, fontWeight: 800, whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 6, ...disp }}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 4v6h-6M1 20v-6h6" /><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" /></svg>{lang === "nl" ? "Herbereken" : "Recalc"}</div>
+              <div style={{ flex: 1, fontSize: 12, color: "#f0c58a", lineHeight: 1.4 }}>{lang === "nl" ? `Je dag zit ${delta} kcal boven je doel.` : `Your day is ${delta} kcal over target.`}</div>
+              <div onClick={() => { setWeekDone(null); setRecalcOpen(true); }} style={{ cursor: "pointer", background: EMBER, color: "#fff", borderRadius: 9, padding: "8px 13px", fontSize: 12.5, fontWeight: 800, whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 6, ...disp }}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 4v6h-6M1 20v-6h6" /><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" /></svg>{lang === "nl" ? "Herbereken" : "Recalc"}</div>
+            </div>
+          )}
+          {recalcOpen && (() => {
+            const choice = (id, titNl, titEn, subNl, subEn, icon) => (
+              <div onClick={() => setScope(id)} style={{ flex: 1, display: "flex", alignItems: "center", gap: 8, cursor: "pointer", border: `1px solid ${scope === id ? EMBER : LINE}`, background: scope === id ? "rgba(225,29,72,0.10)" : "transparent", borderRadius: 9, padding: "9px 11px" }}>
+                {icon(scope === id ? EMBER : MUTED)}
+                <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}><span style={{ fontSize: 12.5, fontWeight: 800, color: PAPER }}>{lang === "nl" ? titNl : titEn}</span><span style={{ fontSize: 10, color: MUTED, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{lang === "nl" ? subNl : subEn}</span></div>
+              </div>
+            );
+            const calIcon = (c) => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><rect x="3" y="4" width="18" height="17" rx="2" /><path d="M3 9h18M8 2v4M16 2v4" /></svg>;
+            const dayIcon = (c) => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><rect x="4" y="4" width="16" height="16" rx="2" /><path d="M12 9v6M9 12h6" /></svg>;
+            return (
+              <div style={{ background: INK, borderBottom: `1px solid ${LINE}`, padding: "12px 14px" }}>
+                <div style={{ fontSize: 11, color: MUTED, fontWeight: 700, marginBottom: 8 }}>{lang === "nl" ? "Herbereken — wat wil je bijsnijden?" : "Recalc — what to trim?"}</div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  {choice("week", "Hele week", "Whole week", "elke te hoge dag naar doel", "every over-target day", calIcon)}
+                  {choice("day", "Deze dag", "This day", "alleen " + (day.d || ""), "only " + (day.d || "today"), dayIcon)}
+                </div>
+                <div onClick={runScope} style={{ marginTop: 10, textAlign: "center", cursor: "pointer", background: EMBER, color: "#fff", borderRadius: 9, padding: "10px 0", fontSize: 12.5, fontWeight: 800 }}>{lang === "nl" ? "Bijsnijden naar doel" : "Trim to target"}</div>
+                <div onClick={() => setRecalcOpen(false)} style={{ marginTop: 8, textAlign: "center", cursor: "pointer", color: MUTED, fontSize: 11.5, fontWeight: 700 }}>{lang === "nl" ? "Annuleren" : "Cancel"}</div>
+              </div>
+            );
+          })()}
+          {weekDone != null && (
+            <div style={{ background: "rgba(232,163,61,0.10)", borderBottom: `1px solid ${LINE}`, padding: "11px 14px", fontSize: 12, color: "#f0c58a", lineHeight: 1.45 }}>
+              {weekDone > 0
+                ? (lang === "nl" ? `${weekDone} te hoge dag${weekDone > 1 ? "en" : ""} bijgesneden naar doel. Stuk-producten bleven staan.` : `Trimmed ${weekDone} over-target day${weekDone > 1 ? "s" : ""} to target.`)
+                : (lang === "nl" ? "Geen dag zat te hoog om te snijden — niks aangepast." : "No day was over target — nothing changed.")}
+              <div onClick={() => setWeekDone(null)} style={{ marginTop: 8, cursor: "pointer", color: MUTED, fontSize: 11.5, fontWeight: 700 }}>{lang === "nl" ? "Sluiten" : "Close"}</div>
             </div>
           )}
           {proposal && proposal.none && (
@@ -1593,6 +1629,29 @@ export default function App() {
   const R = (x) => Math.round(num(x));
   function applyWeek(nw) { setWeek(nw); try { localStorage.setItem("hf_lastplan", JSON.stringify({ targets, week: nw })); } catch (e) {} }
   function persistPlanCloud() { if (supabase && session && week && week.days) supabase.from("plans").insert({ user_id: session.user.id, targets, week, is_active: true }).then(() => {}, () => {}); }
+  // Dagdoel voor één dag (trainingsdag -> trainingsdoel, rustdag -> rustdoel, anders gemiddelde).
+  function dayTargetFor(day) {
+    if (!targets) return 0;
+    const hasCycle = targets.train && targets.rest && targets.trainingCount > 0 && targets.trainingCount < 7;
+    return hasCycle ? (day.train ? targets.train.kcal : targets.rest.kcal) : (targets.kcal || 0);
+  }
+  // Snijd elke dag die >75 kcal boven z'n doel zit terug naar doel. Dagen op/onder
+  // doel blijven met rust. Geeft het aantal bijgesneden dagen terug.
+  function trimWeek() {
+    if (!week || !week.days) return 0;
+    let changed = 0;
+    const days = week.days.map((d) => {
+      const dt = dayTargetFor(d);
+      const tot = d.m.reduce((a, m) => a + num(m.kcal), 0);
+      if (!dt || (tot - dt) <= 75) return d;     // niet te hoog -> met rust
+      const r = rescaleDayPieceAware(d, dt);
+      if (!r) return d;                          // niks te schalen (alles stuk-product)
+      changed++;
+      return r;
+    });
+    if (changed) { applyWeek({ ...week, days }); persistPlanCloud(); }
+    return changed;
+  }
   function rebalanceDay(di, newMeals, goal) {
     if (!week || !week.days) return;
     const nw = { ...week, days: week.days.map((dd, i) => i === di ? { ...dd, m: newMeals, goal: goal || dd.goal } : dd) };
@@ -2516,7 +2575,7 @@ export default function App() {
 
                       {view === "plan" && planEdit && <div style={{ fontSize: 11.5, color: MUTED, marginBottom: 12, lineHeight: 1.5 }}>{T("editHint")}</div>}
                       {view === "plan" && !planEdit && <PlanExplain />}
-                      {view === "plan" && (<div style={{ display: "grid", gap: 12 }}>{week.days.map((day, di) => planEdit ? <EditDayCard key={di} day={day} di={di} api={{ T, ML, sIn, R, disp, mutDay, patchMeal, scaleMeal, patchIng, addIngr, removeIngr, removeMeal, addMealTo, saveMealAsRecipe, applyIngVals, saveIngProduct, setCopyPick, setMovePlan, setPickTarget, setShowProducts, setRecipePick, savedMsg, units, pro: hasPro || isGymMember, targets, onRegenAI: handleBuild, lang }} /> : <DayCard key={di} day={day} />)}</div>)}
+                      {view === "plan" && (<div style={{ display: "grid", gap: 12 }}>{week.days.map((day, di) => planEdit ? <EditDayCard key={di} day={day} di={di} api={{ T, ML, sIn, R, disp, mutDay, patchMeal, scaleMeal, patchIng, addIngr, removeIngr, removeMeal, addMealTo, saveMealAsRecipe, applyIngVals, saveIngProduct, setCopyPick, setMovePlan, setPickTarget, setShowProducts, setRecipePick, savedMsg, units, pro: hasPro || isGymMember, targets, onRegenAI: handleBuild, onTrimWeek: trimWeek, lang }} /> : <DayCard key={di} day={day} />)}</div>)}
                       {view === "shop" && (
                         <div style={{ display: "grid", gap: 12 }}>
                           <div style={{ fontSize: 12, color: MUTED }}>{T("shopHint")}</div>
