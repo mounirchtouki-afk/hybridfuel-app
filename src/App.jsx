@@ -218,6 +218,11 @@ const TXT = {
   build: { nl: "Maak mijn plan", en: "Build my plan" },
   building: { nl: "Bezig…", en: "Building…" },
   fillBasics: { nl: "Vul eerst leeftijd, geslacht, gewicht en lengte in", en: "Fill in age, sex, weight and height first" },
+  ageRange: { nl: "18–100 jaar", en: "18–100 years" },
+  ageUnder18: { nl: "Vanaf 18 jaar — overleg anders met een arts of diëtist.", en: "18 and over — otherwise consult a doctor or dietitian." },
+  heightRange: { nl: "120–230 cm", en: "120–230 cm" },
+  weightRange: { nl: "35–300 kg", en: "35–300 kg" },
+  fixInputs: { nl: "Controleer de rood gemarkeerde velden om verder te gaan.", en: "Check the fields marked in red to continue." },
   planSourceLbl: { nl: "Hoe wil je je plan?", en: "How do you want your plan?" },
   planAi: { nl: "AI stelt samen", en: "AI builds it" },
   planProducts: { nl: "Mijn producten", en: "My products" },
@@ -543,7 +548,7 @@ const { T, ML, sIn, R, disp, mutDay, patchMeal, scaleMeal, patchIng, addIngr, re
           <div onClick={() => mutDay(di, (d) => { d.train = !d.train; return d; })} style={{ cursor: "pointer", fontSize: 9.5, color: day.train ? EMBER : MUTED, border: `1px solid ${day.train ? EMBER : LINE}`, borderRadius: 5, padding: "2px 6px", letterSpacing: 1, fontWeight: 700 }}>{day.train ? T("trainTag") : T("restTag")}</div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ fontSize: 11.5, color: MUTED }}><span style={{ color: PAPER, fontWeight: 600 }}>{tot.kcal}</span>{dayTarget ? <> / {dayTarget}</> : null} kcal{dayTarget ? <span style={{ color: offTarget ? "#E8A33D" : SAGE, fontWeight: 700 }}> · {delta > 0 ? "+" : ""}{delta}</span> : <> · {tot.p}{ML.p}/{tot.c}{ML.c}/{tot.f}{ML.f}</>}</div>
+          <div style={{ fontSize: 11.5, color: MUTED }}><span style={{ color: PAPER, fontWeight: 600 }}>{tot.kcal}</span>{dayTarget ? <> / {dayTarget}</> : null} kcal{dayTarget ? <span style={{ color: over ? "#E8A33D" : SAGE, fontWeight: 700 }}> · {delta > 0 ? "+" : ""}{delta}</span> : <> · {tot.p}{ML.p}/{tot.c}{ML.c}/{tot.f}{ML.f}</>}</div>
           <div onClick={() => { setDayMenu(!dayMenu); setOpenMeal(null); setAddOpen(false); }} style={{ ...sqBtn(dayMenu), width: 28, height: 28 }}><Dots /></div>
         </div>
       </div>
@@ -1085,7 +1090,17 @@ export default function App() {
   const gymPro = isGymMember && (gymPlan ? gymPlan.pt_included : (gymCtx.tier || "pro") === "pro");
   // Harde kader: geen plan (en geen targets) zonder leeftijd, gewicht én lengte.
   const numOk = (v) => { const n = parseFloat(String(v == null ? "" : v).replace(",", ".")); return isFinite(n) && n > 0; };
-  const basicsFilled = numOk(age) && numOk(height) && numOk(weight) && (sex === "male" || sex === "female");
+  // Invoervalidatie: realistische grenzen, onder 18 wordt geweigerd (Mifflin = volwassenen,
+  // 18+ staat ook in de Voorwaarden). Geen stille klem meer — fout veld = rood + melding.
+  const numVal = (v) => { const n = parseFloat(String(v == null ? "" : v).replace(",", ".")); return isFinite(n) ? n : null; };
+  const ageN = numVal(age), heightN = numVal(height), weightN = numVal(weight);
+  const ageOk = ageN != null && ageN >= 18 && ageN <= 100;
+  const heightOk = heightN != null && heightN >= 120 && heightN <= 230;
+  const weightOk = weightN != null && weightN >= 35 && weightN <= 300;
+  const ageUnder = ageN != null && ageN < 18;
+  const basicsFilled = ageOk && heightOk && weightOk && (sex === "male" || sex === "female");
+  const errBord = { borderColor: EMBER, background: "rgba(225,29,72,0.07)" };
+  const fieldMsg = { fontSize: 10, color: "#ff7a97", marginTop: 4, fontWeight: 600, lineHeight: 1.35 };
   const hasBasis = devMode || isGymMember || subTier === "basis" || subTier === "pro";
   const hasPro = devMode || gymPro || subTier === "pro";
   // AI-tegoed (zichtbaar saldo). Geladen uit het 'balance'-antwoord van /api/plan.
@@ -2308,11 +2323,11 @@ export default function App() {
                 <Dropdown value={sex} onChange={setSex} options={[{ id: "", label: "—" }, { id: "male", label: T("man") }, { id: "female", label: T("woman") }]} />
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 14 }}>
-                <div><label style={label}>{T("age")}</label><input style={input} value={age} onChange={(e) => setAge(e.target.value)} inputMode="numeric" /></div>
+                <div><label style={label}>{T("age")}</label><input style={{ ...input, ...(age !== "" && !ageOk ? errBord : {}) }} value={age} onChange={(e) => setAge(e.target.value)} inputMode="numeric" />{age !== "" && !ageOk && <div style={fieldMsg}>{ageUnder ? T("ageUnder18") : T("ageRange")}</div>}</div>
                 <div><label style={label}>{T("height")} ({units === "imperial" ? "ft/in" : "cm"})</label>{units === "imperial"
-                  ? (() => { const fi = cmToFtIn(height); return (<div style={{ display: "flex", gap: 4 }}><input style={{ ...input, textAlign: "center", padding: "11px 4px" }} value={fi.ft} onChange={(e) => setHeight(String(ftInToCm(e.target.value, fi.in)))} inputMode="numeric" /><input style={{ ...input, textAlign: "center", padding: "11px 4px" }} value={fi.in} onChange={(e) => setHeight(String(ftInToCm(fi.ft, e.target.value)))} inputMode="numeric" /></div>); })()
-                  : <input style={input} value={height} onChange={(e) => setHeight(e.target.value)} inputMode="numeric" />}</div>
-                <div><label style={label}>{T("weight")} ({bUnit(units)})</label><input style={input} value={kgShow(weight, units)} onChange={(e) => setWeight(String(kgStore(e.target.value, units)))} inputMode="numeric" /></div>
+                  ? (() => { const fi = cmToFtIn(height); return (<div style={{ display: "flex", gap: 4 }}><input style={{ ...input, textAlign: "center", padding: "11px 4px", ...(height !== "" && !heightOk ? errBord : {}) }} value={fi.ft} onChange={(e) => setHeight(String(ftInToCm(e.target.value, fi.in)))} inputMode="numeric" /><input style={{ ...input, textAlign: "center", padding: "11px 4px", ...(height !== "" && !heightOk ? errBord : {}) }} value={fi.in} onChange={(e) => setHeight(String(ftInToCm(fi.ft, e.target.value)))} inputMode="numeric" /></div>); })()
+                  : <input style={{ ...input, ...(height !== "" && !heightOk ? errBord : {}) }} value={height} onChange={(e) => setHeight(e.target.value)} inputMode="numeric" />}{height !== "" && !heightOk && <div style={fieldMsg}>{T("heightRange")}</div>}</div>
+                <div><label style={label}>{T("weight")} ({bUnit(units)})</label><input style={{ ...input, ...(weight !== "" && !weightOk ? errBord : {}) }} value={kgShow(weight, units)} onChange={(e) => setWeight(String(kgStore(e.target.value, units)))} inputMode="numeric" />{weight !== "" && !weightOk && <div style={fieldMsg}>{T("weightRange")}</div>}</div>
               </div>
               <div style={{ marginBottom: 14 }}>
                 <label style={label}>{T("trainingLoad")}</label>
@@ -2463,7 +2478,7 @@ export default function App() {
               <button onClick={handleBuild} disabled={loading || !basicsFilled} style={{ width: "100%", background: basicsFilled ? EMBER : "#2a2a2a", color: basicsFilled ? "#fff" : "#5a5a5a", border: "none", padding: "14px 0", borderRadius: 10, ...disp, fontWeight: 700, fontSize: 16, letterSpacing: 1, textTransform: "uppercase", cursor: (loading || !basicsFilled) ? "default" : "pointer", opacity: loading ? 0.7 : 1 }}>
                 {loading ? T("building") : T("build")}
               </button>
-              {!basicsFilled && <div style={{ fontSize: 11.5, color: EMBER, textAlign: "center", marginTop: 8, fontWeight: 600, ...disp }}>{T("fillBasics")}</div>}
+              {!basicsFilled && <div style={{ fontSize: 11.5, color: EMBER, textAlign: "center", marginTop: 8, fontWeight: 600, ...disp }}>{((age !== "" && !ageOk) || (height !== "" && !heightOk) || (weight !== "" && !weightOk)) ? T("fixInputs") : T("fillBasics")}</div>}
               <div onClick={() => { if (!loading && basicsFilled) buildOwnPlan(); }} style={{ cursor: (loading || !basicsFilled) ? "default" : "pointer", textAlign: "center", marginTop: 10, color: basicsFilled ? EMBER : "#5a5a5a", fontSize: 13, fontWeight: 700, ...disp, letterSpacing: 0.3, opacity: basicsFilled ? 1 : 0.6 }}>{T("buildOwn")}</div>
               <div style={{ fontSize: 10.5, color: MUTED, textAlign: "center", marginTop: 4, lineHeight: 1.4 }}>{T("ownPlanHint")}</div>
             </div>

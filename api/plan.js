@@ -138,9 +138,10 @@ function computeBase(b, p) {
   let floored = false;
   if (kcal < safeFloor) { kcal = safeFloor; floored = true; }
   const protein = Math.round(kg * pPerKg);
-  const fat = Math.round(kg * fPerKg);
-  const carbs = Math.max(40, Math.round((kcal - protein * 4 - fat * 9) / 4));
-  return { kcal, protein, carbs, fat, maintenance, kg, bmi: Math.round(bmi * 10) / 10, lowBmi, floored };
+  const fatDefault = Math.round(kg * fPerKg);
+  const fatFloor = Math.round(kg * 0.4);                         // essentieel vet — gezonde ondergrens
+  const bal = balanceMacros(kcal, protein, fatDefault, fatFloor);
+  return { kcal, protein: bal.protein, carbs: bal.carbs, fat: bal.fat, fatDefault, fatFloor, maintenance, kg, bmi: Math.round(bmi * 10) / 10, lowBmi, floored };
 }
 
 // Is de ingelogde gebruiker een gym-lid/coach, en zo ja: welke tier (basis/pro)?
@@ -202,12 +203,29 @@ async function orgCalcProfile(authToken) {
   } catch (e) { return null; }
 }
 
-// Houd eiwit en vet gelijk; de calorie-swing gaat naar koolhydraten (carb cycling).
+// Verdeel kcal over macro's zodat de SOM altijd = kcal (geen 40 g-bodem die eroverheen plakt).
+// Eiwit blijft vast (sporter). Koolhydraten krijgen een bodem (MIN_C); dreigen ze eronder te
+// zakken, dan wijkt eerst het vet terug — tot de gezonde ondergrens (fatFloor). Lukt het dan nog
+// niet, dan accepteren we minder kh, maar nooit een som boven de kcal.
+const MIN_C = 50;
+function balanceMacros(kcal, protein, fatDefault, fatFloor) {
+  let fat = fatDefault;
+  let carbs = Math.round((kcal - protein * 4 - fat * 9) / 4);
+  if (carbs < MIN_C) {
+    const needKcal = (MIN_C - carbs) * 4;                       // extra kcal die kh nodig heeft
+    const reduceFat = Math.min(Math.max(0, fat - fatFloor), needKcal / 9);
+    fat = Math.round(fat - reduceFat);
+    carbs = Math.round((kcal - protein * 4 - fat * 9) / 4);
+  }
+  if (carbs < 0) carbs = 0;                                      // nooit negatief
+  return { protein, carbs, fat };
+}
+
+// Trainings-/rustdag: eiwit vast, kcal-swing primair naar koolhydraten (carb cycling),
+// vet wijkt alleen als de kh anders onder de bodem zakken. Som blijft = kcal.
 function dayMacros(kcal, base) {
-  const protein = base.protein;
-  const fat = base.fat;
-  const carbs = Math.max(40, Math.round((kcal - protein * 4 - fat * 9) / 4));
-  return { kcal, protein, carbs, fat };
+  const b = balanceMacros(kcal, base.protein, base.fatDefault, base.fatFloor);
+  return { kcal, protein: b.protein, carbs: b.carbs, fat: b.fat };
 }
 
 // Verdeel de week: trainingsdagen omhoog, rustdagen omlaag, weekgemiddelde = basis.
