@@ -480,6 +480,29 @@ const LockIcon = ({ c, s = 24 }) => (
   <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={{ display: "block" }}><rect x="5" y="11" width="14" height="9" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg>
 );
 
+// Rustige dagtotaal-rij: eiwit / koolhydraten / vet met subtiel accentstipje en doel eronder.
+function DayMacroRow({ tot, goal, lang }) {
+  const items = [
+    { k: "p", lbl: lang === "nl" ? "Eiwit" : "Protein", dot: EMBER, val: Math.round(num(tot.p)), g: goal ? Math.round(num(goal.protein)) : null },
+    { k: "c", lbl: lang === "nl" ? "Koolh." : "Carbs", dot: "#E8A33D", val: Math.round(num(tot.c)), g: goal ? Math.round(num(goal.carbs)) : null },
+    { k: "f", lbl: lang === "nl" ? "Vet" : "Fat", dot: "#4C8DFF", val: Math.round(num(tot.f)), g: goal ? Math.round(num(goal.fat)) : null },
+  ];
+  return (
+    <div style={{ display: "flex", borderTop: `1px solid ${LINE}`, padding: "11px 14px 12px" }}>
+      {items.map((it, i) => (
+        <div key={it.k} style={{ flex: 1, paddingLeft: i ? 14 : 2, borderLeft: i ? `1px solid ${LINE}` : "none" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 5 }}>
+            <span style={{ width: 6, height: 6, borderRadius: "50%", background: it.dot, flexShrink: 0 }} />
+            <span style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: 0.5, textTransform: "uppercase", color: MUTED }}>{it.lbl}</span>
+          </div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: PAPER }}>{it.val}<span style={{ fontSize: 11, color: MUTED, fontWeight: 600 }}> g</span></div>
+          {it.g != null && <div style={{ fontSize: 9.5, color: MUTED, opacity: 0.75, marginTop: 2 }}>{lang === "nl" ? "van" : "of"} {it.g}</div>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function EditDayCard({ day, di, api }) {
 const { T, ML, sIn, R, disp, mutDay, patchMeal, scaleMeal, patchIng, addIngr, removeIngr, removeMeal, addMealTo, saveMealAsRecipe, applyIngVals, saveIngProduct, setCopyPick, setMovePlan, setPickTarget, setShowProducts, setRecipePick, savedMsg, units, pro, targets, onRegenAI, onTrimWeek, lang } = api;
   const [addOpen, setAddOpen] = useState(false);
@@ -491,6 +514,7 @@ const { T, ML, sIn, R, disp, mutDay, patchMeal, scaleMeal, patchIng, addIngr, re
   // Dagdoel: trainingsdag -> trainingsdoel, rustdag -> rustdoel, anders je gemiddelde.
   const hasCycle = targets && targets.train && targets.rest && targets.trainingCount > 0 && targets.trainingCount < 7;
   const dayTarget = targets ? (hasCycle ? (day.train ? targets.train.kcal : targets.rest.kcal) : targets.kcal) : 0;
+  const dgoal = targets ? (hasCycle ? (day.train ? targets.train : targets.rest) : targets) : null;
   const delta = dayTarget ? tot.kcal - dayTarget : 0;
   const over = !!dayTarget && delta > 75;              // alleen bijsnijden als de dag te HOOG zit
   const [proposal, setProposal] = useState(null);
@@ -548,10 +572,11 @@ const { T, ML, sIn, R, disp, mutDay, patchMeal, scaleMeal, patchIng, addIngr, re
           <div onClick={() => mutDay(di, (d) => { d.train = !d.train; return d; })} style={{ cursor: "pointer", fontSize: 9.5, color: day.train ? EMBER : MUTED, border: `1px solid ${day.train ? EMBER : LINE}`, borderRadius: 5, padding: "2px 6px", letterSpacing: 1, fontWeight: 700 }}>{day.train ? T("trainTag") : T("restTag")}</div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ fontSize: 11.5, color: MUTED }}><span style={{ color: PAPER, fontWeight: 600 }}>{tot.kcal}</span>{dayTarget ? <> / {dayTarget}</> : null} kcal{dayTarget ? <span style={{ color: over ? "#E8A33D" : SAGE, fontWeight: 700 }}> · {delta > 0 ? "+" : ""}{delta}</span> : <> · {tot.p}{ML.p}/{tot.c}{ML.c}/{tot.f}{ML.f}</>}</div>
+          <div style={{ fontSize: 11.5, color: MUTED }}><span style={{ color: PAPER, fontWeight: 600 }}>{tot.kcal}</span>{dayTarget ? <> / {dayTarget}</> : null} kcal{dayTarget ? <span style={{ color: over ? "#E8A33D" : SAGE, fontWeight: 700 }}> · {delta > 0 ? "+" : ""}{delta}</span> : null}</div>
           <div onClick={() => { setDayMenu(!dayMenu); setOpenMeal(null); setAddOpen(false); }} style={{ ...sqBtn(dayMenu), width: 28, height: 28 }}><Dots /></div>
         </div>
       </div>
+      <DayMacroRow tot={tot} goal={dgoal} lang={lang} />
       {(over || proposal || recalcOpen || weekDone != null) && (
         <div>
           {over && !proposal && !recalcOpen && weekDone == null && (
@@ -625,7 +650,7 @@ const { T, ML, sIn, R, disp, mutDay, patchMeal, scaleMeal, patchIng, addIngr, re
         {day.m.map((m, mi) => (
           <div key={mi} style={{ borderBottom: `1px solid ${LINE}` }}>
             <div style={{ padding: "11px 14px" }}>
-              {m.src && <div style={{ display: "inline-block", fontSize: 8.5, color: PAPER, background: m.src === "product" ? SAGE : EMBER, borderRadius: 4, padding: "1px 6px", letterSpacing: 0.5, fontWeight: 700, ...disp, marginBottom: 6, textTransform: "uppercase" }}>{m.src === "product" ? "product" : T("fromDb")}</div>}
+              {m.src && <div style={{ display: "inline-block", fontSize: 8.5, color: "#fff", background: m.src === "product" ? SAGE : EMBER, borderRadius: 4, padding: "1px 6px", letterSpacing: 0.5, fontWeight: 700, ...disp, marginBottom: 6, textTransform: "uppercase" }}>{m.src === "product" ? "product" : T("fromDb")}</div>}
               <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8 }}>
                 <input value={m.n} onChange={(e) => patchMeal(di, mi, { n: e.target.value })} placeholder={T("mealNamePh")} style={{ ...sIn, flex: 1 }} />
                 <div onClick={() => scaleMeal(di, mi, 0.9)} style={{ ...sqBtn(false), color: EMBER, fontSize: 18, fontWeight: 700 }}>−</div>
@@ -2027,6 +2052,10 @@ export default function App() {
   function DayCard({ day, sample }) {
     const [stepsOpen, setStepsOpen] = useState(null);
     const tot = day.m.reduce((a, m) => ({ kcal: a.kcal + num(m.kcal), p: a.p + num(m.p), c: a.c + num(m.c), f: a.f + num(m.f) }), { kcal: 0, p: 0, c: 0, f: 0 });
+    const hasCycle = targets && targets.train && targets.rest && targets.trainingCount > 0 && targets.trainingCount < 7;
+    const dayTarget = targets ? (hasCycle ? (day.train ? targets.train.kcal : targets.rest.kcal) : targets.kcal) : 0;
+    const dgoal = targets ? (hasCycle ? (day.train ? targets.train : targets.rest) : targets) : null;
+    const delta = dayTarget ? tot.kcal - dayTarget : 0;
     return (
       <div style={{ background: INK2, border: `1px solid ${LINE}`, borderRadius: 12, overflow: "hidden" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "11px 14px", background: INK, borderBottom: `1px solid ${LINE}` }}>
@@ -2035,8 +2064,9 @@ export default function App() {
             <div style={{ fontSize: 9.5, color: day.train ? EMBER : MUTED, border: `1px solid ${day.train ? EMBER : LINE}`, borderRadius: 5, padding: "2px 6px", letterSpacing: 1, fontWeight: 700 }}>{day.train ? T("trainTag") : T("restTag")}</div>
             {sample && <div style={{ fontSize: 9.5, color: "#fff", background: EMBER, borderRadius: 5, padding: "2px 7px", letterSpacing: 0.5, fontWeight: 700, ...disp }}>{T("freeSample")}</div>}
           </div>
-          <div style={{ fontSize: 11.5, color: MUTED }}><span style={{ color: PAPER, fontWeight: 600 }}>{tot.kcal}</span> kcal · {tot.p}{ML.p}/{tot.c}{ML.c}/{tot.f}{ML.f}</div>
+          <div style={{ fontSize: 11.5, color: MUTED }}><span style={{ color: PAPER, fontWeight: 600 }}>{tot.kcal}</span>{dayTarget ? <> / {dayTarget}</> : null} kcal{dayTarget ? <span style={{ color: Math.abs(delta) > 75 ? "#E8A33D" : SAGE, fontWeight: 700 }}> · {delta > 0 ? "+" : ""}{delta}</span> : null}</div>
         </div>
+        <DayMacroRow tot={tot} goal={dgoal} lang={lang} />
         <div>
           {day.m.map((m, mi) => (
             <div key={mi} style={{ padding: "10px 14px", borderBottom: mi < day.m.length - 1 ? `1px solid ${LINE}` : "none" }}>
