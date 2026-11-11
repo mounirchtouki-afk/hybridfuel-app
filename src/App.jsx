@@ -18,7 +18,7 @@ import WeekReview from "./views/WeekReview.jsx";
 import WeekPlan from "./views/WeekPlan.jsx";
 import { APP_VERSION } from "./version.js";
 import { RECIPES, snackOptions } from "./recipes.js";
-import { buildDaysFromProducts, productPlanReadiness, productRole, overlayChosenRecipes } from "./ownplan.js";
+import { buildDaysFromProducts, productPlanReadiness, productRole, overlayChosenRecipes, enforceMacros } from "./ownplan.js";
 import Reminders, { checkReminders } from "./views/Reminders.jsx";
 import Auth from "./views/Auth.jsx";
 import Join from "./views/Join.jsx";
@@ -482,23 +482,32 @@ const LockIcon = ({ c, s = 24 }) => (
 
 // Rustige dagtotaal-rij: eiwit / koolhydraten / vet met subtiel accentstipje en doel eronder.
 function DayMacroRow({ tot, goal, lang }) {
+  const AMBER = "#E8A33D";
   const items = [
-    { k: "p", lbl: lang === "nl" ? "Eiwit" : "Protein", dot: EMBER, val: Math.round(num(tot.p)), g: goal ? Math.round(num(goal.protein)) : null },
-    { k: "c", lbl: lang === "nl" ? "Koolh." : "Carbs", dot: "#E8A33D", val: Math.round(num(tot.c)), g: goal ? Math.round(num(goal.carbs)) : null },
-    { k: "f", lbl: lang === "nl" ? "Vet" : "Fat", dot: "#4C8DFF", val: Math.round(num(tot.f)), g: goal ? Math.round(num(goal.fat)) : null },
+    { k: "p", lbl: lang === "nl" ? "Eiwit" : "Protein", dot: EMBER, val: Math.round(num(tot.p)), g: goal ? Math.round(num(goal.protein)) : null, tol: 15, dir: "under" },
+    { k: "c", lbl: lang === "nl" ? "Koolh." : "Carbs", dot: AMBER, val: Math.round(num(tot.c)), g: goal ? Math.round(num(goal.carbs)) : null, tol: 20, dir: "both" },
+    { k: "f", lbl: lang === "nl" ? "Vet" : "Fat", dot: "#4C8DFF", val: Math.round(num(tot.f)), g: goal ? Math.round(num(goal.fat)) : null, tol: 18, dir: "both" },
   ];
+  const isOff = (it) => it.g != null && (it.dir === "under" ? (it.g - it.val) > it.tol : Math.abs(it.val - it.g) > it.tol);
+  const protLow = goal && (Math.round(num(goal.protein)) - Math.round(num(tot.p))) > 15;
   return (
-    <div style={{ display: "flex", borderTop: `1px solid ${LINE}`, padding: "11px 14px 12px" }}>
-      {items.map((it, i) => (
-        <div key={it.k} style={{ flex: 1, paddingLeft: i ? 14 : 2, borderLeft: i ? `1px solid ${LINE}` : "none" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 5 }}>
-            <span style={{ width: 6, height: 6, borderRadius: "50%", background: it.dot, flexShrink: 0 }} />
-            <span style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: 0.5, textTransform: "uppercase", color: MUTED }}>{it.lbl}</span>
-          </div>
-          <div style={{ fontSize: 15, fontWeight: 700, color: PAPER }}>{it.val}<span style={{ fontSize: 11, color: MUTED, fontWeight: 600 }}> g</span></div>
-          {it.g != null && <div style={{ fontSize: 9.5, color: MUTED, opacity: 0.75, marginTop: 2 }}>{lang === "nl" ? "van" : "of"} {it.g}</div>}
-        </div>
-      ))}
+    <div style={{ borderTop: `1px solid ${LINE}` }}>
+      <div style={{ display: "flex", padding: "11px 14px 12px" }}>
+        {items.map((it, i) => {
+          const off = isOff(it);
+          return (
+            <div key={it.k} style={{ flex: 1, paddingLeft: i ? 14 : 2, borderLeft: i ? `1px solid ${LINE}` : "none" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 5 }}>
+                <span style={{ width: 6, height: 6, borderRadius: "50%", background: it.dot, flexShrink: 0 }} />
+                <span style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: 0.5, textTransform: "uppercase", color: MUTED }}>{it.lbl}</span>
+              </div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: off ? AMBER : PAPER }}>{it.val}<span style={{ fontSize: 11, color: MUTED, fontWeight: 600 }}> g</span></div>
+              {it.g != null && <div style={{ fontSize: 9.5, color: MUTED, opacity: 0.75, marginTop: 2 }}>{lang === "nl" ? "van" : "of"} {it.g}</div>}
+            </div>
+          );
+        })}
+      </div>
+      {protLow && <div style={{ fontSize: 10.5, color: "#f0c58a", background: "rgba(232,163,61,0.10)", padding: "7px 14px", lineHeight: 1.4 }}>{lang === "nl" ? "Eiwit onder doel — voeg een magere eiwitbron toe (kwark, kip, eiwitshake)." : "Protein below target — add a lean protein (quark, chicken, protein shake)."}</div>}
     </div>
   );
 }
@@ -1525,11 +1534,18 @@ export default function App() {
   // HARDE overschrijving: zet voor elk moment met gekozen recept(en) die recepten
   // op dat moment (afgewisseld, geschaald). Momenten zonder keuze blijven zoals ze zijn.
   function overlayWeek(week, tgts, meals, products) {
+    let wk = week;
+    const prods = products || userProducts;
     try {
       const byId = {}; (meals || []).forEach((r) => { if (r && r.id != null) byId[String(r.id)] = r; });
-      if (!Object.keys(byId).length) return week;
-      return overlayChosenRecipes(week, { mealPrefs, recipesById: byId, targets: tgts, trainingDays, nSnacks: snacks, products: products || userProducts, lang });
-    } catch (e) { return week; }
+      if (Object.keys(byId).length) wk = overlayChosenRecipes(week, { mealPrefs, recipesById: byId, targets: tgts, trainingDays, nSnacks: snacks, products: prods, lang });
+    } catch (e) {}
+    // Macro-herbalans: elke dag op kcal/eiwit/koolhydraten/vet, eiwit bijvullen, markeren.
+    try {
+      const prodByName = {}; (prods || []).forEach((p) => { if (p && p.name) prodByName[String(p.name).toLowerCase().trim()] = p; });
+      wk = enforceMacros(wk, { targets: tgts, prodByName, products: prods, lang });
+    } catch (e) {}
+    return wk;
   }
 
   // AI-tegoed op → bouw de week softwarematig uit eigen/gym-producten (geen AI, geen kosten).
