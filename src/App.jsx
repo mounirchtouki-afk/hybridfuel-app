@@ -18,7 +18,7 @@ import WeekReview from "./views/WeekReview.jsx";
 import WeekPlan from "./views/WeekPlan.jsx";
 import { APP_VERSION } from "./version.js";
 import { RECIPES, snackOptions } from "./recipes.js";
-import { buildDaysFromProducts, productPlanReadiness, productRole, overlayChosenRecipes, enforceMacros } from "./ownplan.js";
+import { buildDaysFromProducts, productPlanReadiness, productRole, overlayChosenRecipes } from "./ownplan.js";
 import Reminders, { checkReminders } from "./views/Reminders.jsx";
 import Auth from "./views/Auth.jsx";
 import Join from "./views/Join.jsx";
@@ -1534,18 +1534,11 @@ export default function App() {
   // HARDE overschrijving: zet voor elk moment met gekozen recept(en) die recepten
   // op dat moment (afgewisseld, geschaald). Momenten zonder keuze blijven zoals ze zijn.
   function overlayWeek(week, tgts, meals, products) {
-    let wk = week;
-    const prods = products || userProducts;
     try {
       const byId = {}; (meals || []).forEach((r) => { if (r && r.id != null) byId[String(r.id)] = r; });
-      if (Object.keys(byId).length) wk = overlayChosenRecipes(week, { mealPrefs, recipesById: byId, targets: tgts, trainingDays, nSnacks: snacks, products: prods, lang });
-    } catch (e) {}
-    // Macro-herbalans: elke dag op kcal/eiwit/koolhydraten/vet, eiwit bijvullen, markeren.
-    try {
-      const prodByName = {}; (prods || []).forEach((p) => { if (p && p.name) prodByName[String(p.name).toLowerCase().trim()] = p; });
-      wk = enforceMacros(wk, { targets: tgts, prodByName, products: prods, lang });
-    } catch (e) {}
-    return wk;
+      if (!Object.keys(byId).length) return week;
+      return overlayChosenRecipes(week, { mealPrefs, recipesById: byId, targets: tgts, trainingDays, nSnacks: snacks, products: products || userProducts, lang });
+    } catch (e) { return week; }
   }
 
   // AI-tegoed op → bouw de week softwarematig uit eigen/gym-producten (geen AI, geen kosten).
