@@ -1565,6 +1565,15 @@ export default function App() {
     } catch (e) {}
     // Alles consistent maken: elke maaltijd = som van z'n ingrediënten (kcal én macro's kloppen).
     try { wk = { ...wk, days: (wk.days || []).map((dd) => ({ ...dd, m: (dd.m || []).map((mm) => recalcMeal(mm)) })) }; } catch (e) {}
+    // STRAK: solver draait automatisch -> elke dag meteen zo dicht mogelijk op doel met
+    // de eigen foods (geen foods toevoegen; het tekort blijft eerlijk zichtbaar). Alleen
+    // dagen waarvan we de ingredient-macro's kennen worden bijgesteld; de rest blijft intact.
+    try {
+      const pbn = {}; (products || userProducts || []).forEach((p) => { if (p && p.name) pbn[String(p.name).toLowerCase().trim()] = p; });
+      const hasCycle = tgts && tgts.train && tgts.rest && tgts.trainingCount > 0 && tgts.trainingCount < 7;
+      const goalOf = (day) => { const g = hasCycle ? (day.train ? tgts.train : tgts.rest) : tgts; return g ? { kcal: num(g.kcal), p: num(g.protein != null ? g.protein : g.p), c: num(g.carbs != null ? g.carbs : g.c), f: num(g.fat != null ? g.fat : g.f) } : null; };
+      wk = { ...wk, days: (wk.days || []).map((d) => { const goal = goalOf(d); if (!goal || !(goal.kcal > 0)) return d; try { return solveDayToTargets(d, goal, pbn).day; } catch (e) { return d; } }) };
+    } catch (e) {}
     return wk;
   }
 
