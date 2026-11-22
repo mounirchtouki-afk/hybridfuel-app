@@ -1202,9 +1202,10 @@ export default function App() {
       setUnlocked(true);
       try { const t = localStorage.getItem("hf_tier"); if (t === "bundle" || t === "week") setTier(t); } catch (e) {}
     }
-    // Opgeslagen plan laden voor de Vandaag-tab (zonder het startscherm van Plan te overschrijven).
+    // Opgeslagen plan laden én tonen: is er een bewaard weekplan, dan blijft dat staan
+    // (de Plan-tab toont de week i.p.v. het maak-scherm). Geen plan? Dan blijft het intro.
     const saved = load("hf_lastplan", null);
-    if (saved && saved.week && saved.week.days) { setWeek(saved.week); if (saved.targets) setTargets(saved.targets); }
+    if (saved && saved.week && saved.week.days) { setWeek(saved.week); if (saved.targets) setTargets(saved.targets); setStarted(true); }
   }, []);
 
   // PWA install-prompt opvangen
@@ -1270,7 +1271,7 @@ export default function App() {
       .then(({ data }) => {
         if (!active || !data || !data.length) return;
         const p = data[0];
-        if (p.week && p.week.days) { setWeek(p.week); if (p.targets) setTargets(p.targets); }
+        if (p.week && p.week.days) { setWeek(p.week); if (p.targets) setTargets(p.targets); setStarted(true); }
       }).catch(() => {});
     return () => { active = false; };
   }, [session]);
