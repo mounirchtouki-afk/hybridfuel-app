@@ -243,28 +243,77 @@ export function solveDayToTargets(day, target, prodByName) {
 // Basis-foods: kleine gecureerde set kwaliteits-staples waaruit we mogen aanvullen
 // als de eigen voorraad een macro niet haalt. per_100 = per 100 g; serving_g waar telbaar.
 export const BASE_FOODS = [
+  // --- Eiwit: zuivel ---
   { name: "Magere kwark", category: "dairy", per_100: { kcal: 57, p: 10, c: 4, f: 0.2 } },
+  { name: "Magere kwark naturel 0%", category: "dairy", per_100: { kcal: 47, p: 10, c: 4, f: 0 } },
   { name: "Magere Griekse yoghurt", category: "dairy", per_100: { kcal: 59, p: 10, c: 4, f: 0.4 } },
+  { name: "Skyr", category: "dairy", per_100: { kcal: 63, p: 11, c: 4, f: 0.2 } },
+  { name: "Hüttenkäse (cottage cheese)", category: "dairy", per_100: { kcal: 98, p: 11, c: 3, f: 4.3 } },
+  { name: "Magere melk", category: "dairy", per_100: { kcal: 42, p: 3.4, c: 5, f: 1 } },
+  // --- Eiwit: vlees & gevogelte ---
   { name: "Kipfilet", category: "vlees", per_100: { kcal: 110, p: 23, c: 0, f: 1.5 } },
+  { name: "Kipdijfilet", category: "vlees", per_100: { kcal: 170, p: 19, c: 0, f: 10 } },
   { name: "Kalkoenfilet (gebraden)", category: "vlees", per_100: { kcal: 110, p: 22, c: 1, f: 2 } },
   { name: "Magere runderbiefstuk", category: "vlees", per_100: { kcal: 150, p: 26, c: 0, f: 5 } },
+  { name: "Mager rundergehakt 5%", category: "vlees", per_100: { kcal: 137, p: 21, c: 0, f: 6 } },
+  { name: "Varkenshaas", category: "vlees", per_100: { kcal: 143, p: 21, c: 0, f: 6 } },
+  // --- Eiwit: vis ---
   { name: "Witvis (kabeljauw)", category: "vis", per_100: { kcal: 82, p: 18, c: 0, f: 0.7 } },
   { name: "Tonijn in water", category: "vis", per_100: { kcal: 103, p: 24, c: 0, f: 1 } },
+  { name: "Zalmfilet", category: "vis", per_100: { kcal: 208, p: 20, c: 0, f: 13, serving_g: 150 } },
+  { name: "Garnalen", category: "vis", per_100: { kcal: 85, p: 20, c: 0, f: 0.5 } },
+  // --- Eiwit: ei, plant & supp ---
   { name: "Eieren", category: "eieren", per_100: { kcal: 143, p: 13, c: 1, f: 10, serving_g: 55 } },
+  { name: "Eiwit (eiwitten los)", category: "eieren", per_100: { kcal: 52, p: 11, c: 0.7, f: 0.2 } },
+  { name: "Tofu", category: "vlees", per_100: { kcal: 144, p: 17, c: 3, f: 9 } },
+  { name: "Tempeh", category: "vlees", per_100: { kcal: 192, p: 20, c: 8, f: 11 } },
+  { name: "Kidneybonen (gekookt)", category: "grain", per_100: { kcal: 127, p: 8.7, c: 20, f: 0.5 } },
+  { name: "Kikkererwten (gekookt)", category: "grain", per_100: { kcal: 164, p: 9, c: 27, f: 2.6 } },
+  { name: "Linzen (gekookt)", category: "grain", per_100: { kcal: 116, p: 9, c: 20, f: 0.4 } },
   { name: "Whey proteïne", category: "supp", per_100: { kcal: 375, p: 75, c: 10, f: 5, serving_g: 30 } },
-  { name: "Magere kwark naturel 0%", category: "dairy", per_100: { kcal: 47, p: 10, c: 4, f: 0 } },
+  { name: "Erwtenproteïne", category: "supp", per_100: { kcal: 360, p: 80, c: 5, f: 6, serving_g: 30 } },
+  // --- Koolhydraten: granen & zetmeel ---
   { name: "Witte rijst (droog)", category: "grain", per_100: { kcal: 355, p: 7, c: 78, f: 1 } },
+  { name: "Zilvervliesrijst (droog)", category: "grain", per_100: { kcal: 360, p: 8, c: 76, f: 3 } },
   { name: "Volkoren pasta (droog)", category: "grain", per_100: { kcal: 350, p: 13, c: 64, f: 2.5 } },
+  { name: "Pasta wit (droog)", category: "grain", per_100: { kcal: 371, p: 13, c: 75, f: 1.5 } },
+  { name: "Quinoa (droog)", category: "grain", per_100: { kcal: 368, p: 14, c: 64, f: 6 } },
+  { name: "Couscous (droog)", category: "grain", per_100: { kcal: 376, p: 13, c: 77, f: 0.6 } },
   { name: "Havermout", category: "oats", per_100: { kcal: 370, p: 13, c: 60, f: 7 } },
   { name: "Aardappel", category: "potato", per_100: { kcal: 77, p: 2, c: 17, f: 0.1 } },
   { name: "Zoete aardappel", category: "potato", per_100: { kcal: 86, p: 1.6, c: 20, f: 0.1 } },
+  // --- Koolhydraten: brood ---
   { name: "Volkorenbrood", category: "bread", per_100: { kcal: 247, p: 9, c: 42, f: 3, serving_g: 35 } },
+  { name: "Bruin brood", category: "bread", per_100: { kcal: 245, p: 9, c: 45, f: 2.5, serving_g: 35 } },
+  { name: "Proteïne knäckebröd", category: "bread", per_100: { kcal: 350, p: 22, c: 60, f: 5, serving_g: 16 } },
+  { name: "Volkoren wrap", category: "bread", per_100: { kcal: 297, p: 9, c: 49, f: 6, serving_g: 60 } },
+  // --- Fruit ---
   { name: "Banaan", category: "fruit", per_100: { kcal: 89, p: 1.1, c: 23, f: 0.3, serving_g: 120 } },
-  { name: "Broccoli", category: "veg", per_100: { kcal: 34, p: 2.8, c: 7, f: 0.4 } },
+  { name: "Appel", category: "fruit", per_100: { kcal: 52, p: 0.3, c: 14, f: 0.2, serving_g: 150 } },
+  { name: "Blauwe bessen", category: "fruit", per_100: { kcal: 57, p: 0.7, c: 14, f: 0.3 } },
+  { name: "Aardbeien", category: "fruit", per_100: { kcal: 32, p: 0.7, c: 8, f: 0.3 } },
+  { name: "Sinaasappel", category: "fruit", per_100: { kcal: 47, p: 0.9, c: 12, f: 0.1, serving_g: 130 } },
+  { name: "Mango", category: "fruit", per_100: { kcal: 60, p: 0.8, c: 15, f: 0.4 } },
+  { name: "Rozijnen", category: "fruit", per_100: { kcal: 299, p: 3, c: 79, f: 0.5 } },
+  // --- Vet: olie, noten, zaden ---
   { name: "Olijfolie", category: "sauce", per_100: { kcal: 884, p: 0, c: 0, f: 100 } },
+  { name: "Roomboter", category: "sauce", per_100: { kcal: 717, p: 0.9, c: 0.1, f: 81 } },
   { name: "Amandelen", category: "nuts", per_100: { kcal: 579, p: 21, c: 22, f: 50 } },
+  { name: "Walnoten", category: "nuts", per_100: { kcal: 654, p: 15, c: 14, f: 65 } },
+  { name: "Cashewnoten", category: "nuts", per_100: { kcal: 553, p: 18, c: 30, f: 44 } },
   { name: "Pindakaas", category: "nuts", per_100: { kcal: 588, p: 25, c: 20, f: 50 } },
+  { name: "Chiazaad", category: "nuts", per_100: { kcal: 486, p: 17, c: 42, f: 31 } },
+  { name: "Lijnzaad", category: "nuts", per_100: { kcal: 534, p: 18, c: 29, f: 42 } },
+  { name: "Pompoenpitten", category: "nuts", per_100: { kcal: 559, p: 30, c: 11, f: 49 } },
   { name: "Avocado", category: "fruit", per_100: { kcal: 160, p: 2, c: 9, f: 15 } },
+  // --- Groente ---
+  { name: "Broccoli", category: "veg", per_100: { kcal: 34, p: 2.8, c: 7, f: 0.4 } },
+  { name: "Spinazie", category: "veg", per_100: { kcal: 23, p: 2.9, c: 3.6, f: 0.4 } },
+  { name: "Courgette", category: "veg", per_100: { kcal: 17, p: 1.2, c: 3.1, f: 0.3 } },
+  { name: "Paprika", category: "veg", per_100: { kcal: 31, p: 1, c: 6, f: 0.3 } },
+  { name: "Wortel", category: "veg", per_100: { kcal: 41, p: 0.9, c: 10, f: 0.2 } },
+  { name: "Groene boontjes", category: "veg", per_100: { kcal: 31, p: 1.8, c: 7, f: 0.1 } },
+  { name: "Tomaat", category: "veg", per_100: { kcal: 18, p: 0.9, c: 3.9, f: 0.2 } },
 ];
 // Kies een basis-food om het grootste tekort te dichten na het solven. Geeft
 // { food, grams } of null. protein-gat -> magere eiwitbron; koolh-gat -> zetmeel;
@@ -279,9 +328,9 @@ export function suggestGapFood(dev, exclude) {
   if (!order.length) return null;
   const macro = order[0][0];
   const pref = {
-    p: ["Magere kwark", "Kipfilet", "Whey proteïne", "Magere Griekse yoghurt", "Tonijn in water"],
-    c: ["Witte rijst (droog)", "Havermout", "Aardappel", "Banaan", "Volkorenbrood"],
-    f: ["Olijfolie", "Amandelen", "Pindakaas", "Avocado"],
+    p: ["Magere kwark", "Kipfilet", "Skyr", "Magere Griekse yoghurt", "Kalkoenfilet (gebraden)", "Hüttenkäse (cottage cheese)", "Tonijn in water", "Whey proteïne"],
+    c: ["Witte rijst (droog)", "Havermout", "Zoete aardappel", "Aardappel", "Banaan", "Volkoren pasta (droog)", "Volkorenbrood", "Quinoa (droog)"],
+    f: ["Avocado", "Amandelen", "Walnoten", "Pindakaas", "Olijfolie"],
   }[macro];
   const food = BASE_FOODS.find((b) => pref.includes(b.name) && !ex.includes(b.name));  // sla al toegevoegde over
   if (!food) return null;
