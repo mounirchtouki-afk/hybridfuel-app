@@ -1755,15 +1755,17 @@ export default function App() {
   // Geen enkel ingrediënt met voedingswaarde? -> null, dan houden we het opgeslagen totaal
   // (kale AI-maaltijd zonder ingredient-macro's wordt niet op 0 gezet).
   const sumMeal = (ingList) => {
-    let kcal = 0, p = 0, c = 0, f = 0, any = false, allOk = true;
+    let kcal = 0, p = 0, c = 0, f = 0, any = false;
     (ingList || []).forEach((x) => {
       const b = backfillPer100(x), pr = b && b.per100;
       if (pr && (num(pr.kcal) || num(pr.p) || num(pr.c) || num(pr.f))) {
         const fac = num(b.g) / 100;
         kcal += num(pr.kcal) * fac; p += num(pr.p) * fac; c += num(pr.c) * fac; f += num(pr.f) * fac; any = true;
-      } else if (num(x.g) > 0) { allOk = false; }   // gewicht zonder voedingswaarde -> niet volledig op te tellen
+      }
     });
-    return (any && allOk) ? { kcal: R(kcal), p: R(p), c: R(c), f: R(f) } : null;
+    // Herbereken zodra minstens één ingrediënt voedingswaarde heeft (gemengd recept telt dus mee).
+    // Geen enkel ingrediënt met waarde? -> null, dan houden we het opgeslagen maaltijd-totaal.
+    return any ? { kcal: R(kcal), p: R(p), c: R(c), f: R(f) } : null;
   };
   const recalcMeal = (mm) => { const s = sumMeal(mm && mm.ing); return s ? { ...mm, kcal: s.kcal, p: s.p, c: s.c, f: s.f } : mm; };
   const patchIng = (di, mi, ii, patch) => mutDay(di, (d) => {
