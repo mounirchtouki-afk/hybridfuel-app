@@ -161,6 +161,173 @@ const PROTEIN_ROLES = ["protein", "mince", "fish", "eggs"];
 const CARB_ROLES = ["carbdry", "carbwet", "potato", "bread", "oats"];
 const clampG = (g, role) => { const k = KADER[role] || KADER.other; return Math.max(k.min, Math.min(k.max, g)); };
 
+// ===========================================================================
+// SOLVER — "Herbereken naar doel" (goal programming)
+// Stelt de porties van de flexibele ingrediënten zó bij dat kcal/eiwit/koolh/vet
+// zo dicht mogelijk bij het dagdoel komen, binnen realistische kaders en met hele
+// stuks waar serving_g is ingevuld. Eiwit weegt zwaarder (herstel). Altijd een
+// oplossing; geeft terug hoever elke macro nog mist (eerlijk tekort-signaal).
+// Accenten/sauzen (honing, choco, olie-accent) blijven vast — nooit opschalen.
+// ===========================================================================
+function resolveP100(ing, pbn) {
+  if (ing && ing.per100 && (num(ing.per100.kcal) || num(ing.per100.p) || num(ing.per100.c) || num(ing.per100.f)))
+    return { kcal: num(ing.per100.kcal), p: num(ing.per100.p), c: num(ing.per100.c), f: num(ing.per100.f), serving_g: num(ing.per100.serving_g) };
+  const g = num(ing && ing.g);
+  if (g > 0 && (num(ing.kcal) || num(ing.p) || num(ing.c) || num(ing.f)))
+    return { kcal: num(ing.kcal) / g * 100, p: num(ing.p) / g * 100, c: num(ing.c) / g * 100, f: num(ing.f) / g * 100, serving_g: 0 };
+  const prod = pbn && pbn[String((ing && ing.n) || "").toLowerCase().trim()];
+  if (prod) { const x = per100(prod); return { ...x, serving_g: num(prod.per_100 && prod.per_100.serving_g) }; }
+  return null;
+}
+export function solveDayToTargets(day, target, prodByName) {
+  const pbn = prodByName || {};
+  const T = { kcal: num(target && target.kcal), p: num(target && target.p), c: num(target && target.c), f: num(target && target.f) };
+  if (!(T.kcal > 0) || !day || !day.m) return { day, dev: null, off: [] };
+  const W = { kcal: 1 / Math.max(T.kcal, 1), p: 1.6 / Math.max(T.p, 1), c: 1 / Math.max(T.c, 1), f: 1 / Math.max(T.f, 1) };
+  const levers = []; const fixed = { kcal: 0, p: 0, c: 0, f: 0 };
+  (day.m || []).forEach((m, mi) => {
+    (m.ing || []).forEach((ing, ii) => {
+      const p100 = resolveP100(ing, pbn), g = num(ing.g);
+      if (!p100) return;                                   // onbekend ingrediënt -> schaalt niet mee
+      const role = classify({ name: ing.n, category: null, per_100: p100 });
+      const serv = num(p100.serving_g) > 0 ? Math.round(num(p100.serving_g)) : 0;
+      if (role === "accent") { fixed.kcal += p100.kcal * g / 100; fixed.p += p100.p * g / 100; fixed.c += p100.c * g / 100; fixed.f += p100.f * g / 100; return; }
+      const k = KADER[role] || KADER.other;
+      let lo, hi, step;
+      if (serv > 0) { const pmax = Math.max(1, Math.min(Math.floor(k.max / serv), serv <= 25 ? 6 : 4)); lo = serv; hi = pmax * serv; step = serv; }  // realistische stuks: kleine plakjes max 6, grotere max 4
+      else { lo = k.min; hi = k.max; step = 0; }
+      levers.push({ mi, ii, p100, g: Math.min(hi, Math.max(lo, g)), lo, hi, step });
+    });
+  });
+  const totals = () => { const t = { ...fixed }; levers.forEach((L) => { t.kcal += L.p100.kcal * L.g / 100; t.p += L.p100.p * L.g / 100; t.c += L.p100.c * L.g / 100; t.f += L.p100.f * L.g / 100; }); return t; };
+  const obj = (t) => W.kcal * Math.abs(t.kcal - T.kcal) + W.p * Math.abs(t.p - T.p) + W.c * Math.abs(t.c - T.c) + W.f * Math.abs(t.f - T.f);
+  for (let sweep = 0; sweep < 12; sweep++) {
+    let improved = false;
+    for (const L of levers) {
+      const t = totals();
+      const base = { kcal: t.kcal - L.p100.kcal * L.g / 100, p: t.p - L.p100.p * L.g / 100, c: t.c - L.p100.c * L.g / 100, f: t.f - L.p100.f * L.g / 100 };
+      const at = (g) => obj({ kcal: base.kcal + L.p100.kcal * g / 100, p: base.p + L.p100.p * g / 100, c: base.c + L.p100.c * g / 100, f: base.f + L.p100.f * g / 100 });
+      let cands;
+      if (L.step > 0) { cands = []; for (let p = 1; p <= Math.floor(L.hi / L.step); p++) cands.push(p * L.step); }
+      else {
+        cands = [L.lo, L.hi];
+        [["kcal", L.p100.kcal], ["p", L.p100.p], ["c", L.p100.c], ["f", L.p100.f]].forEach(([m, dens]) => { if (dens > 0) { const x = (T[m] - base[m]) / (dens / 100); if (x >= L.lo && x <= L.hi) cands.push(Math.round(x)); } });
+      }
+      let bestG = L.g, bestO = at(L.g);
+      for (const g of cands) { const o = at(g); if (o < bestO - 1e-9) { bestO = o; bestG = g; } }
+      if (bestG !== L.g) { L.g = bestG; improved = true; }
+    }
+    if (!improved) break;
+  }
+  const R1 = (x) => Math.round(x * 10) / 10;
+  const gByKey = {}; levers.forEach((L) => { gByKey[L.mi + "_" + L.ii] = L.g; });
+  const newM = (day.m || []).map((m, mi) => {
+    let kcal = 0, p = 0, c = 0, f = 0;
+    const ing = (m.ing || []).map((x, ii) => {
+      const ng = gByKey[mi + "_" + ii] != null ? gByKey[mi + "_" + ii] : num(x.g), p100 = resolveP100(x, pbn);
+      if (p100) { kcal += p100.kcal * ng / 100; p += p100.p * ng / 100; c += p100.c * ng / 100; f += p100.f * ng / 100; const pr = { kcal: R1(p100.kcal), p: R1(p100.p), c: R1(p100.c), f: R1(p100.f) }; if (num(p100.serving_g) > 0) pr.serving_g = Math.round(num(p100.serving_g)); return { ...x, g: ng, per100: pr }; }
+      return { ...x, g: ng };
+    });
+    return { ...m, kcal: Math.round(kcal), p: Math.round(p), c: Math.round(c), f: Math.round(f), ing };
+  });
+  const fin = totals();
+  const dev = { kcal: Math.round(fin.kcal - T.kcal), p: Math.round(fin.p - T.p), c: Math.round(fin.c - T.c), f: Math.round(fin.f - T.f) };
+  const off = [];
+  if (T.p - fin.p > 12) off.push("p");
+  if (Math.abs(dev.c) > 25) off.push("c");
+  if (Math.abs(dev.f) > 18) off.push("f");
+  if (Math.abs(dev.kcal) > 120) off.push("kcal");
+  return { day: { ...day, m: newM }, dev, off };
+}
+
+// Basis-foods: kleine gecureerde set kwaliteits-staples waaruit we mogen aanvullen
+// als de eigen voorraad een macro niet haalt. per_100 = per 100 g; serving_g waar telbaar.
+export const BASE_FOODS = [
+  { name: "Magere kwark", category: "dairy", per_100: { kcal: 57, p: 10, c: 4, f: 0.2 } },
+  { name: "Magere Griekse yoghurt", category: "dairy", per_100: { kcal: 59, p: 10, c: 4, f: 0.4 } },
+  { name: "Kipfilet", category: "vlees", per_100: { kcal: 110, p: 23, c: 0, f: 1.5 } },
+  { name: "Kalkoenfilet (gebraden)", category: "vlees", per_100: { kcal: 110, p: 22, c: 1, f: 2 } },
+  { name: "Magere runderbiefstuk", category: "vlees", per_100: { kcal: 150, p: 26, c: 0, f: 5 } },
+  { name: "Witvis (kabeljauw)", category: "vis", per_100: { kcal: 82, p: 18, c: 0, f: 0.7 } },
+  { name: "Tonijn in water", category: "vis", per_100: { kcal: 103, p: 24, c: 0, f: 1 } },
+  { name: "Eieren", category: "eieren", per_100: { kcal: 143, p: 13, c: 1, f: 10, serving_g: 55 } },
+  { name: "Whey proteïne", category: "supp", per_100: { kcal: 375, p: 75, c: 10, f: 5, serving_g: 30 } },
+  { name: "Magere kwark naturel 0%", category: "dairy", per_100: { kcal: 47, p: 10, c: 4, f: 0 } },
+  { name: "Witte rijst (droog)", category: "grain", per_100: { kcal: 355, p: 7, c: 78, f: 1 } },
+  { name: "Volkoren pasta (droog)", category: "grain", per_100: { kcal: 350, p: 13, c: 64, f: 2.5 } },
+  { name: "Havermout", category: "oats", per_100: { kcal: 370, p: 13, c: 60, f: 7 } },
+  { name: "Aardappel", category: "potato", per_100: { kcal: 77, p: 2, c: 17, f: 0.1 } },
+  { name: "Zoete aardappel", category: "potato", per_100: { kcal: 86, p: 1.6, c: 20, f: 0.1 } },
+  { name: "Volkorenbrood", category: "bread", per_100: { kcal: 247, p: 9, c: 42, f: 3, serving_g: 35 } },
+  { name: "Banaan", category: "fruit", per_100: { kcal: 89, p: 1.1, c: 23, f: 0.3, serving_g: 120 } },
+  { name: "Broccoli", category: "veg", per_100: { kcal: 34, p: 2.8, c: 7, f: 0.4 } },
+  { name: "Olijfolie", category: "sauce", per_100: { kcal: 884, p: 0, c: 0, f: 100 } },
+  { name: "Amandelen", category: "nuts", per_100: { kcal: 579, p: 21, c: 22, f: 50 } },
+  { name: "Pindakaas", category: "nuts", per_100: { kcal: 588, p: 25, c: 20, f: 50 } },
+  { name: "Avocado", category: "fruit", per_100: { kcal: 160, p: 2, c: 9, f: 15 } },
+];
+// Kies een basis-food om het grootste tekort te dichten na het solven. Geeft
+// { food, grams } of null. protein-gat -> magere eiwitbron; koolh-gat -> zetmeel;
+// vet-gat -> gezond vet. Nooit voor een overschot.
+export function suggestGapFood(dev, exclude) {
+  if (!dev) return null;
+  const ex = exclude || [];
+  const need = { p: -dev.p, c: -dev.c, f: -dev.f };          // positief = tekort
+  // Grootste tekort eerst (eiwit telt zwaarder voor herstel), met drempels.
+  const order = [["p", need.p, 12, 1.4], ["c", need.c, 20, 1], ["f", need.f, 12, 1]]
+    .filter(([, v, thr]) => v > thr).sort((a, b) => (b[1] * b[3]) - (a[1] * a[3]));
+  if (!order.length) return null;
+  const macro = order[0][0];
+  const pref = {
+    p: ["Magere kwark", "Kipfilet", "Whey proteïne", "Magere Griekse yoghurt", "Tonijn in water"],
+    c: ["Witte rijst (droog)", "Havermout", "Aardappel", "Banaan", "Volkorenbrood"],
+    f: ["Olijfolie", "Amandelen", "Pindakaas", "Avocado"],
+  }[macro];
+  const food = BASE_FOODS.find((b) => pref.includes(b.name) && !ex.includes(b.name));  // sla al toegevoegde over
+  if (!food) return null;
+  const dens = num(food.per_100[macro]) / 100;                // gram-macro per gram food
+  if (dens <= 0) return null;
+  let grams = need[macro] / dens;
+  const serv = num(food.per_100.serving_g);
+  if (serv > 0) grams = Math.max(serv, Math.round(grams / serv) * serv);
+  else grams = Math.max(20, Math.round(grams / 10) * 10);
+  grams = Math.min(grams, 400);
+  return { food, grams };
+}
+
+// Rolfamilie van een rol (voor coherente plaatsing van een aanvulling).
+function roleFamily(role) {
+  if (["protein", "mince", "fish", "eggs", "dairy"].includes(role)) return "p";
+  if (["carbdry", "carbwet", "potato", "bread", "oats", "fruit"].includes(role)) return "c";
+  if (["nuts", "oil", "cheese"].includes(role)) return "f";
+  return "x";
+}
+// Solve + (indien nodig) aanvullen uit de basis-foods, max een paar keer. Plaatst een
+// aanvulling in de maaltijd met dezelfde rolfamilie (kwark bij zuivel, kip bij hartig),
+// en laat de solver 'm daarna mee-portioneren. Geeft de opgeloste dag + wat is toegevoegd.
+export function solveDayWithFill(day, target, prodByName, maxAdds) {
+  const pbn = prodByName || {}, cap = maxAdds == null ? 2 : maxAdds;
+  let cur = solveDayToTargets(day, target, pbn);
+  const added = [];
+  for (let i = 0; i < cap; i++) {
+    const sug = suggestGapFood(cur.dev, added);
+    if (!sug) break;
+    const fam = roleFamily(classify(sug.food));
+    let mi = 0, best = -1;
+    (cur.day.m || []).forEach((m, idx) => {
+      let score = 0;
+      (m.ing || []).forEach((x) => { const p100 = resolveP100(x, pbn); if (p100 && roleFamily(classify({ name: x.n, category: null, per_100: p100 })) === fam) score++; });
+      if (score > best) { best = score; mi = idx; }
+    });
+    const per100 = { kcal: sug.food.per_100.kcal, p: sug.food.per_100.p, c: sug.food.per_100.c, f: sug.food.per_100.f };
+    if (num(sug.food.per_100.serving_g) > 0) per100.serving_g = Math.round(num(sug.food.per_100.serving_g));
+    const nd = { ...cur.day, m: cur.day.m.map((m, idx) => idx === mi ? { ...m, ing: [...(m.ing || []), { n: sug.food.name, g: sug.grams, per100, base: true }] } : m) };
+    cur = solveDayToTargets(nd, target, pbn);
+    added.push(sug.food.name);
+  }
+  return { ...cur, added };
+}
+
 // Bouwt één maaltijd BINNEN de kaders: 1 eiwitbron + 1 koolhydraatbasis + groente,
 // elk op z'n macro-doel maar geklemd op een realistische portie. Accenten/sauzen
 // worden NOOIT opgeschaald om macro's te halen. Snacks = één logisch tussendoortje.
