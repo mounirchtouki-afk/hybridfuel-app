@@ -1535,11 +1535,14 @@ export default function App() {
   // HARDE overschrijving: zet voor elk moment met gekozen recept(en) die recepten
   // op dat moment (afgewisseld, geschaald). Momenten zonder keuze blijven zoals ze zijn.
   function overlayWeek(week, tgts, meals, products) {
+    let wk = week;
     try {
       const byId = {}; (meals || []).forEach((r) => { if (r && r.id != null) byId[String(r.id)] = r; });
-      if (!Object.keys(byId).length) return week;
-      return overlayChosenRecipes(week, { mealPrefs, recipesById: byId, targets: tgts, trainingDays, nSnacks: snacks, products: products || userProducts, lang });
-    } catch (e) { return week; }
+      if (Object.keys(byId).length) wk = overlayChosenRecipes(week, { mealPrefs, recipesById: byId, targets: tgts, trainingDays, nSnacks: snacks, products: products || userProducts, lang });
+    } catch (e) {}
+    // Alles consistent maken: elke maaltijd = som van z'n ingrediënten (kcal én macro's kloppen).
+    try { wk = { ...wk, days: (wk.days || []).map((dd) => ({ ...dd, m: (dd.m || []).map((mm) => recalcMeal(mm)) })) }; } catch (e) {}
+    return wk;
   }
 
   // AI-tegoed op → bouw de week softwarematig uit eigen/gym-producten (geen AI, geen kosten).
@@ -1724,7 +1727,17 @@ export default function App() {
     applyWeek(nw);
   }
   const patchMeal = (di, mi, patch) => mutDay(di, (d) => { d.m = d.m.map((mm, j) => j === mi ? { ...mm, ...patch } : mm); return d; });
-  const scaleMeal = (di, mi, fac) => mutDay(di, (d) => { d.m = d.m.map((mm, j) => j === mi ? { ...mm, kcal: R(num(mm.kcal) * fac), p: R(num(mm.p) * fac), c: R(num(mm.c) * fac), f: R(num(mm.f) * fac), ing: (mm.ing || []).map((g) => ({ ...g, g: R(num(g.g) * fac) })) } : mm); return d; });
+  const scaleMeal = (di, mi, fac) => mutDay(di, (d) => {
+    d.m = d.m.map((mm, j) => {
+      if (j !== mi) return mm;
+      // per100 vastleggen op de huidige grammen, dán schalen, dán uit de ingrediënten herrekenen.
+      const ing = (mm.ing || []).map((g) => { const b = backfillPer100(g); return { ...b, g: R(num(b.g) * fac) }; });
+      const s = sumMeal(ing);
+      return s ? { ...mm, ing, kcal: s.kcal, p: s.p, c: s.c, f: s.f }
+               : { ...mm, ing, kcal: R(num(mm.kcal) * fac), p: R(num(mm.p) * fac), c: R(num(mm.c) * fac), f: R(num(mm.f) * fac) };
+    });
+    return d;
+  });
   const ingMacros = (ing) => { const p = ing && ing.per100; if (!p) return null; const fac = num(ing.g) / 100; return { kcal: R(num(p.kcal) * fac), p: R(num(p.p) * fac), c: R(num(p.c) * fac), f: R(num(p.f) * fac) }; };
   // Leid per100 af uit de absolute macro's bij de huidige grammen, als per100 ontbreekt.
   // Zo bewegen grammen-aanpassingen de totalen óók voor oudere recepten / AI-ingrediënten
@@ -1738,30 +1751,33 @@ export default function App() {
     }
     return ing;
   };
+  // Som van een maaltijd uit de ingrediënten (per100 × gram), per100 afgeleid waar nodig.
+  // Geen enkel ingrediënt met voedingswaarde? -> null, dan houden we het opgeslagen totaal
+  // (kale AI-maaltijd zonder ingredient-macro's wordt niet op 0 gezet).
+  const sumMeal = (ingList) => {
+    let kcal = 0, p = 0, c = 0, f = 0, any = false, allOk = true;
+    (ingList || []).forEach((x) => {
+      const b = backfillPer100(x), pr = b && b.per100;
+      if (pr && (num(pr.kcal) || num(pr.p) || num(pr.c) || num(pr.f))) {
+        const fac = num(b.g) / 100;
+        kcal += num(pr.kcal) * fac; p += num(pr.p) * fac; c += num(pr.c) * fac; f += num(pr.f) * fac; any = true;
+      } else if (num(x.g) > 0) { allOk = false; }   // gewicht zonder voedingswaarde -> niet volledig op te tellen
+    });
+    return (any && allOk) ? { kcal: R(kcal), p: R(p), c: R(c), f: R(f) } : null;
+  };
+  const recalcMeal = (mm) => { const s = sumMeal(mm && mm.ing); return s ? { ...mm, kcal: s.kcal, p: s.p, c: s.c, f: s.f } : mm; };
   const patchIng = (di, mi, ii, patch) => mutDay(di, (d) => {
     d.m = d.m.map((mm, j) => {
       if (j !== mi) return mm;
-      const ing = mm.ing || [], old = backfillPer100(ing[ii]), next = { ...old, ...patch };
-      const na = { ...mm, ing: ing.map((g, k) => k === ii ? next : g) };
-      // Herbereken het maaltijd-totaal met het verschil. per100 is nu afgeleid waar nodig,
-      // dus grammen-tweaks tellen; alleen een naamloze invoer zonder macro's blijft inert.
-      if (old && old.per100 && next && next.per100) {
-        const a = ingMacros(old) || {}, b = ingMacros(next) || {};
-        na.kcal = R(num(mm.kcal) + (b.kcal || 0) - (a.kcal || 0)); na.p = R(num(mm.p) + (b.p || 0) - (a.p || 0)); na.c = R(num(mm.c) + (b.c || 0) - (a.c || 0)); na.f = R(num(mm.f) + (b.f || 0) - (a.f || 0));
-      }
-      return na;
+      const ing = mm.ing || [], next = { ...backfillPer100(ing[ii]), ...patch };
+      // Hele maaltijd opnieuw optellen uit de ingrediënten -> kcal én macro's kloppen altijd.
+      return recalcMeal({ ...mm, ing: ing.map((g, k) => k === ii ? next : g) });
     });
     return d;
   });
   const addIngr = (di, mi) => mutDay(di, (d) => { d.m = d.m.map((mm, j) => j === mi ? { ...mm, ing: [...(mm.ing || []), { n: "", g: 0 }] } : mm); return d; });
   const removeIngr = (di, mi, ii) => mutDay(di, (d) => {
-    d.m = d.m.map((mm, j) => {
-      if (j !== mi) return mm;
-      const ing = mm.ing || [], old = backfillPer100(ing[ii]);
-      const na = { ...mm, ing: ing.filter((_, k) => k !== ii) };
-      if (old && old.per100) { const a = ingMacros(old) || {}; na.kcal = R(num(mm.kcal) - (a.kcal || 0)); na.p = R(num(mm.p) - (a.p || 0)); na.c = R(num(mm.c) - (a.c || 0)); na.f = R(num(mm.f) - (a.f || 0)); }
-      return na;
-    });
+    d.m = d.m.map((mm, j) => j === mi ? recalcMeal({ ...mm, ing: (mm.ing || []).filter((_, k) => k !== ii) }) : mm);
     return d;
   });
   // Standaard-hoeveelheid: een product met "gram per stuk" komt binnen op 1 stuk,
