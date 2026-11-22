@@ -1725,14 +1725,25 @@ export default function App() {
   const patchMeal = (di, mi, patch) => mutDay(di, (d) => { d.m = d.m.map((mm, j) => j === mi ? { ...mm, ...patch } : mm); return d; });
   const scaleMeal = (di, mi, fac) => mutDay(di, (d) => { d.m = d.m.map((mm, j) => j === mi ? { ...mm, kcal: R(num(mm.kcal) * fac), p: R(num(mm.p) * fac), c: R(num(mm.c) * fac), f: R(num(mm.f) * fac), ing: (mm.ing || []).map((g) => ({ ...g, g: R(num(g.g) * fac) })) } : mm); return d; });
   const ingMacros = (ing) => { const p = ing && ing.per100; if (!p) return null; const fac = num(ing.g) / 100; return { kcal: R(num(p.kcal) * fac), p: R(num(p.p) * fac), c: R(num(p.c) * fac), f: R(num(p.f) * fac) }; };
+  // Leid per100 af uit de absolute macro's bij de huidige grammen, als per100 ontbreekt.
+  // Zo bewegen grammen-aanpassingen de totalen óók voor oudere recepten / AI-ingrediënten
+  // die alleen absolute macro's dragen. Zonder énige voedingswaarde: null (blijft inert).
+  const backfillPer100 = (ing) => {
+    if (!ing) return ing;
+    if (ing.per100 && (num(ing.per100.kcal) || num(ing.per100.p) || num(ing.per100.c) || num(ing.per100.f))) return ing;
+    const g = num(ing.g);
+    if (g > 0 && (num(ing.kcal) || num(ing.p) || num(ing.c) || num(ing.f))) {
+      return { ...ing, per100: { kcal: R(num(ing.kcal) / g * 100), p: R(num(ing.p) / g * 100), c: R(num(ing.c) / g * 100), f: R(num(ing.f) / g * 100) } };
+    }
+    return ing;
+  };
   const patchIng = (di, mi, ii, patch) => mutDay(di, (d) => {
     d.m = d.m.map((mm, j) => {
       if (j !== mi) return mm;
-      const ing = mm.ing || [], old = ing[ii], next = { ...old, ...patch };
+      const ing = mm.ing || [], old = backfillPer100(ing[ii]), next = { ...old, ...patch };
       const na = { ...mm, ing: ing.map((g, k) => k === ii ? next : g) };
-      // Alleen bijstellen als het ingrediënt al gekoppeld was (per100). De EERSTE
-      // keer per100 toekennen (bv. "bewaar in producten") laat het dagtotaal
-      // ongemoeid: je legt alleen vast wat er al in de maaltijd zat.
+      // Herbereken het maaltijd-totaal met het verschil. per100 is nu afgeleid waar nodig,
+      // dus grammen-tweaks tellen; alleen een naamloze invoer zonder macro's blijft inert.
       if (old && old.per100 && next && next.per100) {
         const a = ingMacros(old) || {}, b = ingMacros(next) || {};
         na.kcal = R(num(mm.kcal) + (b.kcal || 0) - (a.kcal || 0)); na.p = R(num(mm.p) + (b.p || 0) - (a.p || 0)); na.c = R(num(mm.c) + (b.c || 0) - (a.c || 0)); na.f = R(num(mm.f) + (b.f || 0) - (a.f || 0));
@@ -1745,7 +1756,7 @@ export default function App() {
   const removeIngr = (di, mi, ii) => mutDay(di, (d) => {
     d.m = d.m.map((mm, j) => {
       if (j !== mi) return mm;
-      const ing = mm.ing || [], old = ing[ii];
+      const ing = mm.ing || [], old = backfillPer100(ing[ii]);
       const na = { ...mm, ing: ing.filter((_, k) => k !== ii) };
       if (old && old.per100) { const a = ingMacros(old) || {}; na.kcal = R(num(mm.kcal) - (a.kcal || 0)); na.p = R(num(mm.p) - (a.p || 0)); na.c = R(num(mm.c) - (a.c || 0)); na.f = R(num(mm.f) - (a.f || 0)); }
       return na;
