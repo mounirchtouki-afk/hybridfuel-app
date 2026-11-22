@@ -514,7 +514,7 @@ function DayMacroRow({ tot, goal, lang }) {
 }
 
 function EditDayCard({ day, di, api }) {
-const { T, ML, sIn, R, disp, mutDay, patchMeal, scaleMeal, patchIng, addIngr, removeIngr, removeMeal, addMealTo, saveMealAsRecipe, applyIngVals, saveIngProduct, setCopyPick, setMovePlan, setPickTarget, setShowProducts, setRecipePick, savedMsg, units, pro, targets, onRegenAI, onTrimWeek, onSolveDay, onAddGapFood, lang } = api;
+const { T, ML, sIn, R, disp, mutDay, patchMeal, scaleMeal, patchIng, addIngr, removeIngr, removeMeal, addMealTo, saveMealAsRecipe, applyIngVals, saveIngProduct, setCopyPick, setMovePlan, setPickTarget, setShowProducts, setRecipePick, savedMsg, units, pro, targets, onRegenAI, onTrimWeek, onSolveDay, onAddGapFood, onRestoreDay, lang } = api;
   const [addOpen, setAddOpen] = useState(false);
   const [openMeal, setOpenMeal] = useState(null);
   const [dayMenu, setDayMenu] = useState(false);
@@ -531,9 +531,10 @@ const { T, ML, sIn, R, disp, mutDay, patchMeal, scaleMeal, patchIng, addIngr, re
   const [recalcOpen, setRecalcOpen] = useState(false); // scope-keuze open?
   const [scope, setScope] = useState("week");          // standaard: hele week
   const [weekDone, setWeekDone] = useState(null);       // resultaat hele-week-trim
-  const [solveRes, setSolveRes] = useState(null);       // { dev, off, suggestion } na "Herbereken naar doel"
+  const [solveRes, setSolveRes] = useState(null);       // { dev, off, suggestion, prev, before, after } na "Herbereken naar doel"
   const doSolve = () => { setSolveRes(onSolveDay ? onSolveDay(di) : null); };
-  const doAddGap = () => { if (solveRes && solveRes.suggestion) setSolveRes(onAddGapFood ? onAddGapFood(di, solveRes.suggestion.food, solveRes.suggestion.grams) : null); };
+  const doAddGap = () => { if (!solveRes || !solveRes.suggestion) return; const r = onAddGapFood ? onAddGapFood(di, solveRes.suggestion.food, solveRes.suggestion.grams) : null; setSolveRes(r ? { ...r, prev: solveRes.prev, before: solveRes.before } : r); };
+  const doUndo = () => { if (solveRes && solveRes.prev && onRestoreDay) onRestoreDay(di, solveRes.prev); setSolveRes(null); };
   const startRecalc = () => { const p = rescaleDayPieceAware(day, dayTarget); setProposal(p === null ? { none: true } : p); setRecalcOpen(false); };
   const runScope = () => {
     if (scope === "week") { setWeekDone(onTrimWeek ? onTrimWeek() : 0); setRecalcOpen(false); }
@@ -597,14 +598,26 @@ const { T, ML, sIn, R, disp, mutDay, patchMeal, scaleMeal, patchIng, addIngr, re
             {lang === "nl" ? "Herbereken naar doel" : "Recalc to target"}
           </div>
           {solveRes && (() => {
-            const off = solveRes.off || [], dev = solveRes.dev || {};
+            const off = solveRes.off || [], dev = solveRes.dev || {}, b = solveRes.before, a = solveRes.after;
             const lbl = { p: lang === "nl" ? "eiwit" : "protein", c: lang === "nl" ? "koolhydraten" : "carbs", f: lang === "nl" ? "vet" : "fat", kcal: "kcal" };
-            if (!off.length) return <div style={{ marginTop: 9, fontSize: 11.5, color: SAGE, fontWeight: 700, textAlign: "center" }}>{lang === "nl" ? "Op doel gezet met jouw foods." : "Set to target with your foods."}</div>;
+            const ba = (b && a) ? <div style={{ marginTop: 8, fontSize: 10.5, color: MUTED }}>{Math.round(b.kcal)} → <b style={{ color: PAPER }}>{Math.round(a.kcal)}</b> kcal · {Math.round(b.p)}→{Math.round(a.p)}{ML.p} · {Math.round(b.c)}→{Math.round(a.c)}{ML.c} · {Math.round(b.f)}→{Math.round(a.f)}{ML.f}</div> : null;
+            const undo = <span onClick={doUndo} style={{ cursor: "pointer", color: MUTED, fontWeight: 700, textDecoration: "underline" }}>{lang === "nl" ? "Ongedaan maken" : "Undo"}</span>;
+            if (!off.length) return (
+              <div style={{ marginTop: 9 }}>
+                <div style={{ fontSize: 11.5, color: SAGE, fontWeight: 700, textAlign: "center" }}>{lang === "nl" ? "Op doel gezet met jouw foods." : "Set to target with your foods."}</div>
+                {ba}
+                <div style={{ marginTop: 7, textAlign: "center", fontSize: 11 }}>{undo}</div>
+              </div>
+            );
             const txt = off.map((k) => `${lbl[k]} ${dev[k] > 0 ? "+" : ""}${dev[k]}${k === "kcal" ? "" : " g"}`).join(" · ");
             return (
               <div style={{ marginTop: 9, background: "rgba(232,163,61,0.10)", border: "1px solid rgba(232,163,61,0.3)", borderRadius: 10, padding: "10px 12px", fontSize: 11, color: "#f0c58a", lineHeight: 1.45 }}>
                 {lang === "nl" ? "Zo dicht mogelijk met jouw foods — " : "As close as possible with your foods — "}{txt}.
-                {solveRes.suggestion && <div onClick={doAddGap} style={{ marginTop: 9, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6, background: EMBER, color: "#fff", borderRadius: 8, padding: "7px 11px", fontSize: 11.5, fontWeight: 800 }}>+ {solveRes.suggestion.grams} g {solveRes.suggestion.food.name}</div>}
+                {ba}
+                <div style={{ marginTop: 9, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                  {solveRes.suggestion && <div onClick={doAddGap} style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6, background: EMBER, color: "#fff", borderRadius: 8, padding: "7px 11px", fontSize: 11.5, fontWeight: 800 }}>+ {solveRes.suggestion.grams} g {solveRes.suggestion.food.name}</div>}
+                  <span style={{ fontSize: 11 }}>{undo}</span>
+                </div>
               </div>
             );
           })()}
@@ -1772,10 +1785,13 @@ export default function App() {
     if (!week || !week.days[di]) return null;
     const day = week.days[di], goal = dayGoalMacro(day);
     if (!goal || !(goal.kcal > 0)) return null;
+    const totOf = (d) => (d.m || []).reduce((a, m) => ({ kcal: a.kcal + num(m.kcal), p: a.p + num(m.p), c: a.c + num(m.c), f: a.f + num(m.f) }), { kcal: 0, p: 0, c: 0, f: 0 });
+    const before = totOf(day), prev = day;
     const res = solveDayToTargets(day, goal, prodByNameMap());
     mutDay(di, () => res.day);
-    return { dev: res.dev, off: res.off, suggestion: suggestGapFood(res.dev, []) };
+    return { dev: res.dev, off: res.off, suggestion: suggestGapFood(res.dev, []), prev, before, after: totOf(res.day) };
   }
+  function restoreDay(di, d) { if (d) mutDay(di, () => d); }
   // Voeg een basis-food toe aan een passende maaltijd en los opnieuw op (de "+ toevoegen"-chip).
   function addGapFood(di, food, grams) {
     if (!week || !week.days[di] || !food) return null;
@@ -1787,10 +1803,12 @@ export default function App() {
     (day.m || []).forEach((m, idx) => { let s = 0; (m.ing || []).forEach((x) => { if (x.per100 && famOf(productRole({ name: x.n, per_100: x.per100 })) === wantFam) s++; }); if (s > best) { best = s; mi = idx; } });
     const per100 = { kcal: num(food.per_100.kcal), p: num(food.per_100.p), c: num(food.per_100.c), f: num(food.per_100.f) };
     if (num(food.per_100.serving_g) > 0) per100.serving_g = Math.round(num(food.per_100.serving_g));
+    const totOf = (d) => (d.m || []).reduce((a, m) => ({ kcal: a.kcal + num(m.kcal), p: a.p + num(m.p), c: a.c + num(m.c), f: a.f + num(m.f) }), { kcal: 0, p: 0, c: 0, f: 0 });
+    const prev = day, before = totOf(day);
     const nd = { ...day, m: day.m.map((m, idx) => idx === mi ? { ...m, ing: [...(m.ing || []), { n: food.name, g: grams, per100 }] } : m) };
     const res = solveDayToTargets(nd, goal, pbn);
     mutDay(di, () => res.day);
-    return { dev: res.dev, off: res.off, suggestion: suggestGapFood(res.dev, [food.name]) };
+    return { dev: res.dev, off: res.off, suggestion: suggestGapFood(res.dev, [food.name]), prev, before, after: totOf(res.day) };
   }
   const patchMeal = (di, mi, patch) => mutDay(di, (d) => { d.m = d.m.map((mm, j) => j === mi ? { ...mm, ...patch } : mm); return d; });
   const scaleMeal = (di, mi, fac) => mutDay(di, (d) => {
@@ -2726,7 +2744,7 @@ export default function App() {
 
                       {view === "plan" && planEdit && <div style={{ fontSize: 11.5, color: MUTED, marginBottom: 12, lineHeight: 1.5 }}>{T("editHint")}</div>}
                       {view === "plan" && !planEdit && <PlanExplain />}
-                      {view === "plan" && (<div style={{ display: "grid", gap: 12 }}>{week.days.map((day, di) => planEdit ? <EditDayCard key={di} day={day} di={di} api={{ T, ML, sIn, R, disp, mutDay, patchMeal, scaleMeal, patchIng, addIngr, removeIngr, removeMeal, addMealTo, saveMealAsRecipe, applyIngVals, saveIngProduct, setCopyPick, setMovePlan, setPickTarget, setShowProducts, setRecipePick, savedMsg, units, pro: hasPro || isGymMember, targets, onRegenAI: handleBuild, onTrimWeek: trimWeek, onSolveDay: solveDay, onAddGapFood: addGapFood, lang }} /> : <DayCard key={di} day={day} />)}</div>)}
+                      {view === "plan" && (<div style={{ display: "grid", gap: 12 }}>{week.days.map((day, di) => planEdit ? <EditDayCard key={di} day={day} di={di} api={{ T, ML, sIn, R, disp, mutDay, patchMeal, scaleMeal, patchIng, addIngr, removeIngr, removeMeal, addMealTo, saveMealAsRecipe, applyIngVals, saveIngProduct, setCopyPick, setMovePlan, setPickTarget, setShowProducts, setRecipePick, savedMsg, units, pro: hasPro || isGymMember, targets, onRegenAI: handleBuild, onTrimWeek: trimWeek, onSolveDay: solveDay, onAddGapFood: addGapFood, onRestoreDay: restoreDay, lang }} /> : <DayCard key={di} day={day} />)}</div>)}
                       {view === "shop" && (
                         <div style={{ display: "grid", gap: 12 }}>
                           <div style={{ fontSize: 12, color: MUTED }}>{T("shopHint")}</div>
