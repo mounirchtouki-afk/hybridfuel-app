@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, disp, num, input, label, sectionTitle, primaryBtn, ghostBtn, load, save, macroLetters } from "../shared.js";
 import { supabase } from "../supabaseClient.js";
 import { apiUrl } from "../apiBase";
+import { BASE_FOODS } from "../ownplan.js";
 
 const T = {
   title: { nl: "Mijn producten", en: "My products" },
@@ -152,6 +153,7 @@ export default function Products({ lang, session, onClose, onPick, onPickMany, e
   const [looking, setLooking] = useState(false);
   const [manualBc, setManualBc] = useState("");
   const [q, setQ] = useState("");
+  const [libTab, setLibTab] = useState("mine");      // "mine" (eigen producten) | "lib" (bibliotheek)
   const [photoMode, setPhotoMode] = useState(false); // foto-AI toevoegflow
   const [photos, setPhotos] = useState([]);          // data-URLs, max 4
   const [aiBusy, setAiBusy] = useState(false);
@@ -347,6 +349,10 @@ export default function Products({ lang, session, onClose, onPick, onPickMany, e
   const filtered = items.filter((x) => !needle || (x.name && x.name.toLowerCase().includes(needle)) || (x.brand && x.brand.toLowerCase().includes(needle)));
   const grouped = {};
   filtered.forEach((it) => { const c = catFor(it); (grouped[c] = grouped[c] || []).push(it); });
+  // Bibliotheek (gecureerde basis-foods) — doorzoekbaar + per categorie.
+  const libFiltered = BASE_FOODS.filter((x) => !needle || x.name.toLowerCase().includes(needle));
+  const libGrouped = {};
+  libFiltered.forEach((f) => { const c = (f.category && FINE_CATS.has(f.category)) ? f.category : catOf(f.name); (libGrouped[c] = libGrouped[c] || []).push(f); });
 
   const addCard = adding ? (
     <div style={{ background: INK2, border: `1px solid ${LINE}`, borderRadius: 14, padding: 14, marginBottom: 14 }}>
@@ -470,13 +476,46 @@ export default function Products({ lang, session, onClose, onPick, onPickMany, e
       )}
       {addCard}
 
-      {/* Zoeken */}
-      {items.length > 0 && <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("searchPh")} style={{ ...input, marginBottom: 14 }} />}
+      {/* Tabs: eigen producten | bibliotheek (alleen in picker-modus) */}
+      {onPick && (
+        <div style={{ display: "flex", gap: 7, marginBottom: 13 }}>
+          {[["mine", lang === "nl" ? "Mijn producten" : "My products", items.length], ["lib", lang === "nl" ? "Bibliotheek" : "Library", BASE_FOODS.length]].map(([id, lbl, n]) => (
+            <div key={id} onClick={() => setLibTab(id)} style={{ flex: 1, textAlign: "center", padding: "9px 0", borderRadius: 9, fontSize: 12.5, fontWeight: 800, cursor: "pointer", color: libTab === id ? "#fff" : MUTED, background: libTab === id ? EMBER : INK2, border: `1px solid ${libTab === id ? EMBER : LINE}` }}>{lbl}<span style={{ fontSize: 9.5, fontWeight: 600, opacity: 0.8, marginLeft: 4 }}>{n}</span></div>
+          ))}
+        </div>
+      )}
 
-      {/* Lijst per categorie */}
-      {!items.length && <div style={{ fontSize: 12.5, color: MUTED, lineHeight: 1.6 }}>{t("empty")}</div>}
-      {items.length > 0 && !filtered.length && <div style={{ fontSize: 12.5, color: MUTED, lineHeight: 1.6 }}>{t("noResult")}</div>}
-      {CAT_ORDER.filter((c) => grouped[c] && grouped[c].length).map((c) => (
+      {/* Zoeken */}
+      {((onPick && libTab === "lib") || items.length > 0) && <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={onPick && libTab === "lib" ? (lang === "nl" ? "Zoek in bibliotheek…" : "Search the library…") : t("searchPh")} style={{ ...input, marginBottom: 14 }} />}
+
+      {/* Bibliotheek-lijst */}
+      {onPick && libTab === "lib" && (
+        <>
+          {!libFiltered.length && <div style={{ fontSize: 12.5, color: MUTED, lineHeight: 1.6 }}>{t("noResult")}</div>}
+          {CAT_ORDER.filter((c) => libGrouped[c] && libGrouped[c].length).map((c) => (
+            <div key={c} style={{ marginBottom: 14 }}>
+              <div style={{ ...disp, fontSize: 11.5, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", color: EMBER, marginBottom: 6 }}>{CATS[c][lang]} <span style={{ color: MUTED, fontWeight: 400 }}>· {libGrouped[c].length}</span></div>
+              {libGrouped[c].map((f) => {
+                const sg = f.per_100 && f.per_100.serving_g;
+                return (
+                  <div key={f.name} onClick={() => onPick({ name: f.name, per_100: f.per_100, category: f.category })} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: `1px solid ${LINE}`, cursor: "pointer" }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13.5, fontWeight: 600, color: PAPER }}>{f.name}{sg ? <span style={{ fontSize: 8.5, fontWeight: 800, letterSpacing: 0.3, textTransform: "uppercase", color: "#4C8DFF", background: "rgba(76,141,255,0.12)", borderRadius: 4, padding: "1px 6px", marginLeft: 7 }}>{(lang === "nl" ? "per stuk " : "per unit ") + sg + "g"}</span> : null}</div>
+                      <div style={{ fontSize: 11, color: MUTED, marginTop: 1 }}>{f.per_100.kcal} kcal · {f.per_100.p}{ml.p}/{f.per_100.c}{ml.c}/{f.per_100.f}{ml.f} <span style={{ opacity: 0.6 }}>/100g</span></div>
+                    </div>
+                    <div style={{ width: 30, height: 30, borderRadius: 8, flexShrink: 0, border: `1px solid ${EMBER}`, color: EMBER, display: "grid", placeItems: "center", fontSize: 19, fontWeight: 700 }}>+</div>
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </>
+      )}
+
+      {/* Eigen producten per categorie */}
+      {(!onPick || libTab === "mine") && !items.length && <div style={{ fontSize: 12.5, color: MUTED, lineHeight: 1.6 }}>{t("empty")}</div>}
+      {(!onPick || libTab === "mine") && items.length > 0 && !filtered.length && <div style={{ fontSize: 12.5, color: MUTED, lineHeight: 1.6 }}>{t("noResult")}</div>}
+      {(!onPick || libTab === "mine") && CAT_ORDER.filter((c) => grouped[c] && grouped[c].length).map((c) => (
         <div key={c} style={{ marginBottom: 14 }}>
           <div style={{ ...disp, fontSize: 11.5, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", color: EMBER, marginBottom: 6 }}>{CATS[c][lang]} <span style={{ color: MUTED, fontWeight: 400 }}>· {grouped[c].length}</span></div>
           {grouped[c].map((it) => {
