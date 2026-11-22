@@ -212,6 +212,7 @@ const TXT = {
   varietyHint: { nl: "Wil je elke dag andere maaltijden, of juist je vaste patroon (bijv. elke ochtend hetzelfde ontbijt)? Bij vaste patronen herhalen we je maaltijden en passen we alleen de porties aan.", en: "Do you want different meals each day, or your fixed routine (e.g. the same breakfast every morning)? With fixed patterns we repeat your meals and only adjust the portions." },
   snacksLbl: { nl: "Tussendoortjes per dag", en: "Snacks per day" },
   snacksHint: { nl: "Verdeelt de dag beter, je krijgt 3 hoofdmaaltijden + dit aantal tussendoortjes.", en: "Spreads the day better, you get 3 main meals + this many snacks." },
+  snacksZero: { nl: "Zonder snacks is je eiwitdoel lastiger te halen uit 3 maaltijden — 1 of 2 snacks geeft meer ruimte.", en: "Without snacks your protein target is harder to hit from 3 meals — 1 or 2 snacks give more room." },
   snackLikesLbl: { nl: "Wat voor tussendoortjes?", en: "What kind of snacks?" },
   trainingDays: { nl: "Trainingsdagen", en: "Training days" },
   trainingDaysHint: { nl: "Welke dagen train je? Die dagen krijgen meer calorieën (koolhydraten), rustdagen minder, je weekgemiddelde blijft op je doel.", en: "Which days do you train? Those days get more calories (carbs), rest days fewer, your weekly average stays on your goal." },
@@ -2584,6 +2585,7 @@ export default function App() {
                 <label style={label}>{T("snacksLbl")}</label>
                 <Dropdown value={snacks} onChange={setSnacks} options={[0, 1, 2].map((n) => ({ id: n, label: String(n) }))} />
                 <div style={{ fontSize: 11, color: MUTED, lineHeight: 1.5, marginTop: 8 }}>{T("snacksHint")}</div>
+                {snacks === 0 && <div style={{ fontSize: 11, color: "#f0c58a", lineHeight: 1.5, marginTop: 7, background: "rgba(232,163,61,0.10)", borderRadius: 8, padding: "8px 10px" }}>{T("snacksZero")}</div>}
               </div>
               <div style={{ marginBottom: 12 }}>
                 <label style={label}>{T("planSourceLbl")}</label>
