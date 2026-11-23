@@ -113,6 +113,22 @@ const PROTEINS = [
   { id: "beans", nl: "Bonen", en: "Beans" },
 ];
 const WD = { nl: ["Ma", "Di", "Wo", "Do", "Vr", "Za", "Zo"], en: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] };
+// Maaltijdtypes voor het plan-scherm: zelfde labels als het dagboek toont, zodat
+// plan en dagboek altijd gelijk lopen. Aantikbaar om te wisselen.
+const PLAN_MEAL_TYPES = [
+  { slot: "breakfast", nl: "Ontbijt", en: "Breakfast" },
+  { slot: "lunch", nl: "Lunch", en: "Lunch" },
+  { slot: "dinner", nl: "Diner", en: "Dinner" },
+  { slot: "snack", nl: "Tussendoortje", en: "Snack" },
+];
+function mealTypeIdx(t) {
+  const s = String(t || "").toLowerCase().trim();
+  if (/tussen|snack/.test(s)) return 3;
+  if (/ontbijt|break/.test(s)) return 0;
+  if (/lunch/.test(s)) return 1;
+  if (/diner|dinner/.test(s)) return 2;
+  return -1;
+}
 const SNACKS = [
   { id: "fruit", nl: "Fruit", en: "Fruit" },
   { id: "nuts", nl: "Noten", en: "Nuts" },
@@ -696,7 +712,20 @@ const { T, ML, sIn, R, disp, mutDay, patchMeal, scaleMeal, patchIng, addIngr, re
         {day.m.map((m, mi) => (
           <div key={mi} style={{ borderBottom: `1px solid ${LINE}` }}>
             <div style={{ padding: "11px 14px" }}>
-              {m.src && <div style={{ display: "inline-block", fontSize: 8.5, color: "#fff", background: m.src === "product" ? SAGE : EMBER, borderRadius: 4, padding: "1px 6px", letterSpacing: 0.5, fontWeight: 700, ...disp, marginBottom: 6, textTransform: "uppercase" }}>{m.src === "product" ? "product" : T("fromDb")}</div>}
+              <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap", marginBottom: 6 }}>
+                {m.src && <div style={{ fontSize: 8.5, color: "#fff", background: m.src === "product" ? SAGE : EMBER, borderRadius: 4, padding: "1px 6px", letterSpacing: 0.5, fontWeight: 700, ...disp, textTransform: "uppercase" }}>{m.src === "product" ? "product" : T("fromDb")}</div>}
+                {(() => {
+                  const ti = mealTypeIdx(m.t);
+                  const tl = ti >= 0 ? PLAN_MEAL_TYPES[ti][lang === "nl" ? "nl" : "en"] : (m.t || "—");
+                  const cycle = () => { const ni = ((ti < 0 ? -1 : ti) + 1) % PLAN_MEAL_TYPES.length; patchMeal(di, mi, { t: PLAN_MEAL_TYPES[ni][lang === "nl" ? "nl" : "en"] }); };
+                  return (
+                    <div onClick={cycle} style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 5, fontSize: 9.5, color: EMBER, border: `1px solid ${EMBER}`, borderRadius: 6, padding: "3px 9px", letterSpacing: 1, fontWeight: 700, ...disp, textTransform: "uppercase", background: "rgba(var(--hf-ember-rgb),0.06)" }}>
+                      {tl}
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={EMBER} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6" /></svg>
+                    </div>
+                  );
+                })()}
+              </div>
               <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8 }}>
                 <input value={m.n} onChange={(e) => patchMeal(di, mi, { n: e.target.value })} placeholder={T("mealNamePh")} style={{ ...sIn, flex: 1 }} />
                 <div onClick={() => scaleMeal(di, mi, 0.9)} style={{ ...sqBtn(false), color: EMBER, fontSize: 18, fontWeight: 700 }}>−</div>
