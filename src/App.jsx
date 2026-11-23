@@ -2,7 +2,7 @@ import { apiUrl, API_BASE } from "./apiBase";
 import { initPush } from "./push";
 import { initNative } from "./native";
 import React, { useState, useEffect, useRef } from "react";
-import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, SAGE, load, save, genSteps, todayISO, macroLetters, wUnit, bUnit, gShow, gStore, kgShow, kgStore, cmToFtIn, ftInToCm, applyOrgTheme, applyOrgAccent } from "./shared.js";
+import { INK, INK2, EMBER, EMBER_SOFT, PAPER, MUTED, LINE, SAGE, load, save, genSteps, todayISO, jsDayToIdx, macroLetters, wUnit, bUnit, gShow, gStore, kgShow, kgStore, cmToFtIn, ftInToCm, applyOrgTheme, applyOrgAccent } from "./shared.js";
 import Today from "./views/Today.jsx";
 import Dashboard from "./views/Dashboard.jsx";
 import AdminDash from "./views/AdminDash.jsx";
@@ -1727,6 +1727,30 @@ export default function App() {
   // ====== DAG-EDITOR (Pro) ======
   const R = (x) => Math.round(num(x));
   function applyWeek(nw) { setWeek(nw); try { localStorage.setItem("hf_lastplan", JSON.stringify({ targets, week: nw })); } catch (e) {} }
+  // Plan is leidend: na een planwijziging lopen de dagboek-dagen die je nog NIET
+  // hebt gelogd mee met het nieuwe plan. Reeds afgevinkte/gegeten dagen, dagen in
+  // het verleden en race-/laaddagen blijven staan.
+  function syncDiaryToPlan(nw) {
+    if (!nw || !nw.days || !nw.days.length) return;
+    const today = todayISO();
+    let i = 0, key;
+    try { for (i = 0; i < localStorage.length; i++) {
+      key = localStorage.key(i);
+      if (!key || key.indexOf("hf_dayover_") !== 0) continue;
+      const iso = key.slice("hf_dayover_".length);
+      if (iso < today) continue;                        // verleden = geschiedenis
+      const ov = load(key, null);
+      if (!ov || ov.race) continue;                     // race-/laaddag niet aanraken
+      const eaten = load("hf_eaten_" + iso, {});
+      if (eaten && Object.keys(eaten).length) continue; // al aan het loggen op die dag
+      const di = jsDayToIdx(new Date(iso + "T12:00:00").getDay());
+      const src = nw.days[di] || nw.days[0];
+      if (src) save(key, dayToOverride(src));
+    } } catch (e) {}
+  }
+  // Houd het dagboek in sync met het plan bij elke planwijziging (ook verse
+  // generatie, die niet via applyWeek loopt).
+  useEffect(() => { if (week && week.days && week.days.length) { try { syncDiaryToPlan(week); } catch (e) {} } }, [week]);
   function persistPlanCloud() { if (supabase && session && week && week.days) supabase.from("plans").insert({ user_id: session.user.id, targets, week, is_active: true }).then(() => {}, () => {}); }
   // Dagdoel voor één dag (trainingsdag -> trainingsdoel, rustdag -> rustdoel, anders gemiddelde).
   function dayTargetFor(day) {
