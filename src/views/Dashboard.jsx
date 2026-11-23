@@ -112,7 +112,11 @@ export default function Dashboard({ lang, session, week, targets, units, onGo })
   const name = savedName || (session && session.user && session.user.email ? session.user.email.split("@")[0] : t("athlete"));
 
   const idx = jsDayToIdx(new Date(d + "T12:00:00").getDay());
-  const day = week && week.days && week.days.length ? (week.days[idx] || week.days[0]) : null;
+  // Toon dezelfde dag als het dagboek: de geplaatste dag-overlay heeft voorrang
+  // op het rauwe weekschema, zodat "Vandaag op het menu" nooit afwijkt van je plan.
+  const tmpl = week && week.days && week.days.length ? (week.days[idx] || week.days[0]) : null;
+  const over = load("hf_dayover_" + d, null);
+  const day = (over && Array.isArray(over.m) && over.m.length) ? over : tmpl;
   const goalKcal = day ? day.m.reduce((a, m) => a + num(m.kcal), 0) : (targets && targets.kcal) || 0;
   const eatenPlanned = day ? day.m.reduce((a, m, i) => a + (eaten[i] ? num(m.kcal) : 0), 0) : 0;
   const consumed = eatenPlanned + extras.reduce((a, x) => a + num(x.kcal), 0);
