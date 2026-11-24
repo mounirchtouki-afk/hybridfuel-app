@@ -584,10 +584,18 @@ const { T, ML, sIn, R, disp, mutDay, patchMeal, scaleMeal, patchIng, addIngr, re
   const icEdit = <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z" /></svg>;
   const miniIn = { background: INK, border: `1px solid ${LINE}`, color: PAPER, padding: "7px 6px", borderRadius: 7, fontSize: 12, outline: "none", width: "100%", textAlign: "center" };
   const seedPer100 = (m, ing) => {
-    if (ing.per100) return { kcal: ing.per100.kcal || "", p: ing.per100.p || "", c: ing.per100.c || "", f: ing.per100.f || "" };
-    const totG = (m.ing || []).reduce((a, x) => a + num(x.g), 0) || 1;
-    const per = (v) => R(num(v) * 100 / totG);
-    return { kcal: per(m.kcal), p: per(m.p), c: per(m.c), f: per(m.f) };
+    // Per-100g van DIT ingrediënt. Voorkeur: opgeslagen per100.
+    if (ing.per100 && (num(ing.per100.kcal) || num(ing.per100.p) || num(ing.per100.c) || num(ing.per100.f)))
+      return { kcal: ing.per100.kcal || "", p: ing.per100.p || "", c: ing.per100.c || "", f: ing.per100.f || "" };
+    // Anders afleiden uit de eigen absolute macro's bij de eigen grammen —
+    // NOOIT uit het maaltijdtotaal (dat gaf voor elk ingrediënt hetzelfde gemiddelde).
+    const g = num(ing.g);
+    if (g > 0 && (num(ing.kcal) || num(ing.p) || num(ing.c) || num(ing.f))) {
+      const per = (v) => R(num(v) * 100 / g);
+      return { kcal: per(ing.kcal), p: per(ing.p), c: per(ing.c), f: per(ing.f) };
+    }
+    // Geen eigen gegevens: leeg laten i.p.v. een misleidend getal tonen.
+    return { kcal: "", p: "", c: "", f: "" };
   };
   const valEditor = (mi, obj, onPatch) => (
     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 6, marginBottom: 8 }}>
