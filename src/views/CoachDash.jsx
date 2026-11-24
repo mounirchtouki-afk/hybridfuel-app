@@ -885,7 +885,7 @@ export default function CoachDash({ session, org, isOwner, perms, lang, isAdmin,
       {!isWide && navOpen && (
         <>
           <div onClick={() => setNavOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 40 }} />
-          <div style={{ position: "fixed", top: 0, left: 0, bottom: 0, width: 252, background: INK, borderRight: `1px solid ${LINE}`, zIndex: 41, padding: "18px 14px", display: "flex", flexDirection: "column", boxSizing: "border-box" }}>
+          <div style={{ position: "fixed", top: 0, left: 0, bottom: 0, width: 252, background: INK, borderRight: `1px solid ${LINE}`, zIndex: 41, padding: "calc(18px + env(safe-area-inset-top)) 14px calc(18px + env(safe-area-inset-bottom))", display: "flex", flexDirection: "column", boxSizing: "border-box", overflowY: "auto" }}>
             {navBrand}
             <div style={{ flex: 1, overflowY: "auto" }}>{renderNav(true)}</div>
             {navFooter}
@@ -932,7 +932,7 @@ export default function CoachDash({ session, org, isOwner, perms, lang, isAdmin,
           </div>
         )}
         {!isWide && (
-          <div style={{ borderBottom: `1px solid ${LINE}`, padding: "12px 14px", display: "flex", alignItems: "center", gap: 10, position: "sticky", top: 0, background: INK, zIndex: 20 }}>
+          <div style={{ borderBottom: `1px solid ${LINE}`, padding: "calc(12px + env(safe-area-inset-top)) 14px 12px", display: "flex", alignItems: "center", gap: 10, position: "sticky", top: 0, background: INK, zIndex: 20 }}>
             <div onClick={() => setNavOpen(true)} style={{ cursor: "pointer", color: PAPER, border: `1px solid ${LINE}`, borderRadius: 8, padding: "7px 10px", display: "flex" }}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M3 12h18M3 6h18M3 18h18" /></svg>
             </div>
