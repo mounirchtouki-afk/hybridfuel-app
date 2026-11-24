@@ -146,7 +146,7 @@ export const ftInToCm = (ft, inch) => Math.round((num(ft) * 12 + num(inch)) * IN
 // Volume (water): ml <-> fl oz (imperial) of L (metrisch). Intern altijd ml.
 export const FLOZ_ML = 29.5735;
 export const vUnit = (u) => (u === "imperial" ? "fl oz" : "L");
-export const mlShow = (ml, u) => (u === "imperial" ? Math.round(num(ml) / FLOZ_ML) : Math.round(num(ml) / 100) / 10); // L op 0,1
+export const mlShow = (ml, u) => (u === "imperial" ? Math.round(num(ml) / FLOZ_ML) : Math.round(num(ml) / 10) / 100); // L op 0,01 (250 ml = 0,25 L, niet afgerond)
 export const mlStore = (v, u) => (u === "imperial" ? Math.round(num(v) * FLOZ_ML) : Math.round(num(v) * 1000));
 // Eén "glas" per eenheidssysteem (voor snelle water-knoppen): 250 ml of 8 fl oz.
 export const glassMl = (u) => (u === "imperial" ? Math.round(8 * FLOZ_ML) : 250);
