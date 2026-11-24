@@ -584,14 +584,23 @@ const { T, ML, sIn, R, disp, mutDay, patchMeal, scaleMeal, patchIng, addIngr, re
   const icEdit = <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z" /></svg>;
   const miniIn = { background: INK, border: `1px solid ${LINE}`, color: PAPER, padding: "7px 6px", borderRadius: 7, fontSize: 12, outline: "none", width: "100%", textAlign: "center" };
   const seedPer100 = (m, ing) => {
-    // Per-100g van DIT ingrediënt via dezelfde resolutie als de rekenmotor:
-    // opgeslagen per100 → eigen macro's/grammen → MATCH op productnaam uit je
-    // gescande producten. NOOIT het maaltijdgemiddelde (dat gaf voor elk
-    // ingrediënt hetzelfde getal).
-    const r = resolveP100(ing, prodByName || {});
-    if (r && (num(r.kcal) || num(r.p) || num(r.c) || num(r.f)))
-      return { kcal: R(num(r.kcal)), p: R(num(r.p)), c: R(num(r.c)), f: R(num(r.f)) };
-    // Geen eigen gegevens en geen productmatch: leeg laten i.p.v. een misleidend getal.
+    const pbn = prodByName || {};
+    // 1) Eigen opgeslagen per100 (betrouwbaar als het er echt staat).
+    if (ing.per100 && (num(ing.per100.kcal) || num(ing.per100.p) || num(ing.per100.c) || num(ing.per100.f)))
+      return { kcal: ing.per100.kcal || "", p: ing.per100.p || "", c: ing.per100.c || "", f: ing.per100.f || "" };
+    // 2) Gescand product op naam — de bron die jij verwacht. Gaat VÓÓR de eigen
+    //    macro's, want oude recepten smeerden het maaltijdtotaal gram-proportioneel
+    //    over de ingrediënten uit (dat gaf voor elk ingrediënt hetzelfde getal).
+    const prod = pbn[String(ing.n || "").toLowerCase().trim()];
+    if (prod && prod.per_100) {
+      const x = prod.per_100;
+      if (num(x.kcal) || num(x.p) || num(x.c) || num(x.f))
+        return { kcal: R(num(x.kcal)), p: R(num(x.p)), c: R(num(x.c)), f: R(num(x.f)) };
+    }
+    // 3) Laatste redmiddel: eigen absolute macro's bij eigen grammen (kan uitgesmeerd zijn).
+    const g = num(ing.g);
+    if (g > 0 && (num(ing.kcal) || num(ing.p) || num(ing.c) || num(ing.f)))
+      return { kcal: R(num(ing.kcal) * 100 / g), p: R(num(ing.p) * 100 / g), c: R(num(ing.c) * 100 / g), f: R(num(ing.f) * 100 / g) };
     return { kcal: "", p: "", c: "", f: "" };
   };
   const valEditor = (mi, obj, onPatch) => (
