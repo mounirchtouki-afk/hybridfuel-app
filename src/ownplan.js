@@ -315,6 +315,51 @@ export const BASE_FOODS = [
   { name: "Groene boontjes", category: "veg", per_100: { kcal: 31, p: 1.8, c: 7, f: 0.1 } },
   { name: "Tomaat", category: "veg", per_100: { kcal: 18, p: 0.9, c: 3.9, f: 0.2 } },
 ];
+
+// --- Ingrediënt-voedingswaarde invullen (AI-plan heeft alleen naam + grammen) ---
+// Een AI-maaltijd levert per ingrediënt alleen {n, g}; geen per-100g. Deze
+// resolver vult die per100 op NAAM uit (1) je gescande producten en (2) de
+// basistabel hierboven. Ingrediënten die al een echte per100 dragen (zelf
+// samengesteld / gekoppeld) blijven ongemoeid. Geen match -> leeg laten
+// (nooit verzinnen). Zo worden de maaltijdtotalen daarna uit échte
+// ingrediënt-data herrekend.
+const BASE_BY_NAME = {};
+BASE_FOODS.forEach((f) => { BASE_BY_NAME[String(f.name).toLowerCase().trim()] = f; });
+const normName = (s) => String(s || "").toLowerCase().trim().replace(/\s+/g, " ");
+function matchProduct(nm, pbn) {
+  if (!nm) return null;
+  if (pbn[nm]) return pbn[nm];
+  // Zuinige deel-match op je eigen producten: ingrediëntnaam zit in de
+  // productnaam of andersom (min. 5 tekens, zodat korte woorden niet vals matchen).
+  if (nm.length >= 5) {
+    for (const k in pbn) { if (k.length >= 5 && (k.indexOf(nm) >= 0 || nm.indexOf(k) >= 0)) return pbn[k]; }
+  }
+  return null;
+}
+function per100From(src) {
+  const x = (src && (src.per_100 || src)) || {};
+  if (!(num(x.kcal) || num(x.p) || num(x.c) || num(x.f))) return null;
+  const p = { kcal: num(x.kcal), p: num(x.p), c: num(x.c), f: num(x.f) };
+  if (num(x.serving_g) > 0) p.serving_g = Math.round(num(x.serving_g));
+  return p;
+}
+export function fillIngredientPer100(meal, prodByName) {
+  if (!meal || !Array.isArray(meal.ing) || !meal.ing.length) return meal;
+  const pbn = prodByName || {};
+  let changed = false;
+  const ing = meal.ing.map((x) => {
+    if (x && x.per100 && (num(x.per100.kcal) || num(x.per100.p) || num(x.per100.c) || num(x.per100.f))) return x; // al echt
+    const nm = normName(x && x.n);
+    if (!nm) return x;
+    const prod = matchProduct(nm, pbn);
+    if (prod) { const p = per100From(prod); if (p) { changed = true; return { ...x, per100: p, pid: prod.id != null ? prod.id : x.pid }; } }
+    const base = BASE_BY_NAME[nm];
+    if (base) { const p = per100From(base); if (p) { changed = true; return { ...x, per100: p }; } }
+    return x; // geen match -> leeg laten
+  });
+  return changed ? { ...meal, ing } : meal;
+}
+
 // Kies een basis-food om het grootste tekort te dichten na het solven. Geeft
 // { food, grams } of null. protein-gat -> magere eiwitbron; koolh-gat -> zetmeel;
 // vet-gat -> gezond vet. Nooit voor een overschot.

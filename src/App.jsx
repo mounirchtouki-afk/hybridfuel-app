@@ -18,7 +18,7 @@ import WeekReview from "./views/WeekReview.jsx";
 import WeekPlan from "./views/WeekPlan.jsx";
 import { APP_VERSION } from "./version.js";
 import { RECIPES, snackOptions } from "./recipes.js";
-import { buildDaysFromProducts, productPlanReadiness, productRole, overlayChosenRecipes, solveDayToTargets, suggestGapFood } from "./ownplan.js";
+import { buildDaysFromProducts, productPlanReadiness, productRole, overlayChosenRecipes, solveDayToTargets, suggestGapFood, fillIngredientPer100 } from "./ownplan.js";
 import Reminders, { checkReminders } from "./views/Reminders.jsx";
 import Auth from "./views/Auth.jsx";
 import Join from "./views/Join.jsx";
@@ -1621,8 +1621,21 @@ export default function App() {
       const byId = {}; (meals || []).forEach((r) => { if (r && r.id != null) byId[String(r.id)] = r; });
       if (Object.keys(byId).length) wk = overlayChosenRecipes(week, { mealPrefs, recipesById: byId, targets: tgts, trainingDays, nSnacks: snacks, products: products || userProducts, lang });
     } catch (e) {}
-    // Alles consistent maken: elke maaltijd = som van z'n ingrediënten (kcal én macro's kloppen).
-    try { wk = { ...wk, days: (wk.days || []).map((dd) => ({ ...dd, m: (dd.m || []).map((mm) => recalcMeal(mm)) })) }; } catch (e) {}
+    // Eerst per-ingrediënt voedingswaarde invullen waar die ontbreekt (AI levert
+    // alleen naam + grammen) op naam uit je producten + de basistabel; zelf
+    // gekoppelde ingrediënten blijven ongemoeid. DAARNA elke maaltijd = som van
+    // z'n ingrediënten, zodat kcal én macro's op echte data kloppen.
+    try {
+      const pbnFill = {}; (products || userProducts || []).forEach((p) => { if (p && p.name) pbnFill[String(p.name).toLowerCase().trim()] = p; });
+      const ingHasVal = (x) => { const b = backfillPer100(x), pr = b && b.per100; return !!(pr && (num(pr.kcal) || num(pr.p) || num(pr.c) || num(pr.f))); };
+      wk = { ...wk, days: (wk.days || []).map((dd) => ({ ...dd, m: (dd.m || []).map((mm) => {
+        const filled = fillIngredientPer100(mm, pbnFill);
+        // Alleen uit de ingrediënten herrekenen als ELK ingrediënt een waarde heeft —
+        // anders zou een gedeeltelijke match het maaltijdtotaal laten zakken.
+        const all = Array.isArray(filled.ing) && filled.ing.length > 0 && filled.ing.every(ingHasVal);
+        return all ? recalcMeal(filled) : filled;
+      }) })) };
+    } catch (e) {}
     // STRAK: solver draait automatisch -> elke dag meteen zo dicht mogelijk op doel met
     // de eigen foods (geen foods toevoegen; het tekort blijft eerlijk zichtbaar). Alleen
     // dagen waarvan we de ingredient-macro's kennen worden bijgesteld; de rest blijft intact.
