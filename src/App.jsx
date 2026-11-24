@@ -505,8 +505,10 @@ function DayMacroRow({ tot, goal, lang }) {
     { k: "c", lbl: lang === "nl" ? "Koolh." : "Carbs", dot: AMBER, val: Math.round(num(tot.c)), g: goal ? Math.round(num(goal.carbs)) : null, tol: 20, dir: "both" },
     { k: "f", lbl: lang === "nl" ? "Vet" : "Fat", dot: "#4C8DFF", val: Math.round(num(tot.f)), g: goal ? Math.round(num(goal.fat)) : null, tol: 18, dir: "both" },
   ];
-  const isOff = (it) => it.g != null && (it.dir === "under" ? (it.g - it.val) > it.tol : Math.abs(it.val - it.g) > it.tol);
-  const protLow = goal && (Math.round(num(goal.protein)) - Math.round(num(tot.p))) > 15;
+  // Lege dag (niks ingevuld) = geen waarschuwingen; die hebben alleen zin zodra er eten staat.
+  const empty = !(num(tot.kcal) > 0 || num(tot.p) > 0 || num(tot.c) > 0 || num(tot.f) > 0);
+  const isOff = (it) => !empty && it.g != null && (it.dir === "under" ? (it.g - it.val) > it.tol : Math.abs(it.val - it.g) > it.tol);
+  const protLow = !empty && goal && (Math.round(num(goal.protein)) - Math.round(num(tot.p))) > 15;
   return (
     <div style={{ borderTop: `1px solid ${LINE}` }}>
       <div style={{ display: "flex", padding: "11px 14px 12px" }}>
@@ -607,7 +609,7 @@ const { T, ML, sIn, R, disp, mutDay, patchMeal, scaleMeal, patchIng, addIngr, re
         </div>
       </div>
       <DayMacroRow tot={tot} goal={dgoal} lang={lang} />
-      {dgoal && (dgoal.kcal > 0) && (
+      {dgoal && (dgoal.kcal > 0) && (num(tot.kcal) > 0 || num(tot.p) > 0 || num(tot.c) > 0 || num(tot.f) > 0) && (
         <div style={{ padding: "11px 14px 12px", borderTop: `1px solid ${LINE}` }}>
           <div onClick={doSolve} style={{ cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: EMBER, color: "#fff", borderRadius: 10, padding: "11px 0", fontSize: 13, fontWeight: 800, letterSpacing: 0.2, ...disp }}>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 4v6h-6M1 20v-6h6" /><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" /></svg>
