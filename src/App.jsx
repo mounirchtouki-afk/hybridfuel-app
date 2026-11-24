@@ -18,7 +18,7 @@ import WeekReview from "./views/WeekReview.jsx";
 import WeekPlan from "./views/WeekPlan.jsx";
 import { APP_VERSION } from "./version.js";
 import { RECIPES, snackOptions } from "./recipes.js";
-import { buildDaysFromProducts, productPlanReadiness, productRole, overlayChosenRecipes, solveDayToTargets, suggestGapFood, resolveP100 } from "./ownplan.js";
+import { buildDaysFromProducts, productPlanReadiness, productRole, overlayChosenRecipes, solveDayToTargets, suggestGapFood } from "./ownplan.js";
 import Reminders, { checkReminders } from "./views/Reminders.jsx";
 import Auth from "./views/Auth.jsx";
 import Join from "./views/Join.jsx";
@@ -597,10 +597,9 @@ const { T, ML, sIn, R, disp, mutDay, patchMeal, scaleMeal, patchIng, addIngr, re
       if (num(x.kcal) || num(x.p) || num(x.c) || num(x.f))
         return { kcal: R(num(x.kcal)), p: R(num(x.p)), c: R(num(x.c)), f: R(num(x.f)) };
     }
-    // 3) Laatste redmiddel: eigen absolute macro's bij eigen grammen (kan uitgesmeerd zijn).
-    const g = num(ing.g);
-    if (g > 0 && (num(ing.kcal) || num(ing.p) || num(ing.c) || num(ing.f)))
-      return { kcal: R(num(ing.kcal) * 100 / g), p: R(num(ing.p) * 100 / g), c: R(num(ing.c) * 100 / g), f: R(num(ing.f) * 100 / g) };
+    // Geen eigen per100 en geen gescand product → NIKS verzinnen. Leeg laten,
+    // zodat je de echte waarde invult en koppelt ("Bewaar in producten").
+    // (De oude fallback op eigen macro's smeerde het maaltijdtotaal uit.)
     return { kcal: "", p: "", c: "", f: "" };
   };
   const valEditor = (mi, obj, onPatch) => (
