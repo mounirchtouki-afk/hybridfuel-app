@@ -113,7 +113,15 @@ export default function Dashboard({ lang, session, week, targets, units, onGo })
 
   const idx = jsDayToIdx(new Date(d + "T12:00:00").getDay());
   const day = week && week.days && week.days.length ? (week.days[idx] || week.days[0]) : null;
-  const goalKcal = day ? day.m.reduce((a, m) => a + num(m.kcal), 0) : (targets && targets.kcal) || 0;
+  // Dagdoel = je echte kcal-doel (zelfde als het plan), niet de som van de
+  // geplande maaltijden. Rust/training-cyclus net als dayGoalMacro.
+  const dayGoalKcal = (() => {
+    if (!targets) return 0;
+    const hasCycle = targets.train && targets.rest && num(targets.trainingCount) > 0 && num(targets.trainingCount) < 7;
+    const g = hasCycle ? (day && day.train ? targets.train : targets.rest) : targets;
+    return g ? num(g.kcal) : 0;
+  })();
+  const goalKcal = dayGoalKcal > 0 ? dayGoalKcal : (day ? day.m.reduce((a, m) => a + num(m.kcal), 0) : 0);
   const eatenPlanned = day ? day.m.reduce((a, m, i) => a + (eaten[i] ? num(m.kcal) : 0), 0) : 0;
   const consumed = eatenPlanned + extras.reduce((a, x) => a + num(x.kcal), 0);
   const pct = goalKcal ? consumed / goalKcal : 0;
