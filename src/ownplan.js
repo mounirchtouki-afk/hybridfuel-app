@@ -169,7 +169,7 @@ const clampG = (g, role) => { const k = KADER[role] || KADER.other; return Math.
 // oplossing; geeft terug hoever elke macro nog mist (eerlijk tekort-signaal).
 // Accenten/sauzen (honing, choco, olie-accent) blijven vast — nooit opschalen.
 // ===========================================================================
-function resolveP100(ing, pbn) {
+export function resolveP100(ing, pbn) {
   if (ing && ing.per100 && (num(ing.per100.kcal) || num(ing.per100.p) || num(ing.per100.c) || num(ing.per100.f)))
     return { kcal: num(ing.per100.kcal), p: num(ing.per100.p), c: num(ing.per100.c), f: num(ing.per100.f), serving_g: num(ing.per100.serving_g) };
   const g = num(ing && ing.g);
