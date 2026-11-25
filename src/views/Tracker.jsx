@@ -11,6 +11,12 @@ const T = {
   logTitle: { nl: "Weging toevoegen", en: "Add weigh-in" },
   date: { nl: "Datum", en: "Date" },
   weightKg: { nl: "Gewicht (kg)", en: "Weight (kg)" },
+  gwTitle: { nl: "Streefgewicht", en: "Target weight" },
+  gwStart: { nl: "gestart op", en: "started at" },
+  gwToGo: { nl: "nog", en: "to go" },
+  gwReached: { nl: "doel bereikt", en: "target reached" },
+  gwStartLbl: { nl: "start", en: "start" },
+  gwGoalLbl: { nl: "doel", en: "target" },
   heightCm: { nl: "Lengte (cm)", en: "Height (cm)" },
   logBtn: { nl: "Loggen", en: "Log" },
   history: { nl: "Historie", en: "History" },
@@ -118,6 +124,40 @@ export default function Tracker({ lang, height: appHeight, session, units }) {
         {stat(t("change"), change == null ? "—" : (change > 0 ? "+" : "") + kgShow(change, units) + " " + bu, null, change == null ? MUTED : change <= 0 ? "#4ADE80" : EMBER_SOFT)}
         {stat(t("bmiLbl"), bmi == null ? "—" : bmi, bmiCat, bmiColor)}
       </div>
+
+      {/* Streefgewicht-voortgang (alleen als er een doel is gezet) */}
+      {(() => {
+        const gw = load("hf_goalweight", null);
+        if (!gw || !(num(gw.target) > 0) || !(num(gw.start) > 0)) return null;
+        const target = num(gw.target), start = num(gw.start);
+        const cur = latest ? latest.kg : start;
+        const losing = start >= target;
+        const total = Math.abs(start - target) || 1;
+        const done = losing ? (start - cur) : (cur - start);
+        const frac = Math.max(0, Math.min(1, done / total));
+        const toGo = Math.round(Math.abs(cur - target) * 10) / 10;
+        const reached = losing ? cur <= target + 0.05 : cur >= target - 0.05;
+        return (
+          <div style={{ background: INK, border: `1px solid ${LINE}`, borderRadius: 12, padding: "14px 16px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 4 }}>
+              <div style={{ ...disp, fontWeight: 700, fontSize: 13, letterSpacing: 0.6, textTransform: "uppercase", color: PAPER }}>{t("gwTitle")}</div>
+              <div style={{ fontSize: 11, color: MUTED }}>{t("gwStart")} {kgShow(start, units)} {bu}</div>
+            </div>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 7 }}>
+              <span style={{ ...disp, fontSize: 26, fontWeight: 700, color: PAPER }}>{kgShow(cur, units)}</span>
+              <span style={{ color: MUTED, fontSize: 14 }}>/ {kgShow(target, units)} {bu}</span>
+            </div>
+            <div style={{ position: "relative", height: 11, borderRadius: 99, background: "rgba(255,255,255,0.1)", margin: "12px 0 7px", overflow: "hidden" }}>
+              <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${Math.round(frac * 100)}%`, borderRadius: 99, background: `linear-gradient(90deg, ${EMBER}, ${EMBER_SOFT})` }} />
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: MUTED, fontWeight: 600 }}>
+              <span>{kgShow(start, units)} {t("gwStartLbl")}</span>
+              <span style={{ color: EMBER_SOFT, fontWeight: 700 }}>{reached ? t("gwReached") : `${t("gwToGo")} ${kgShow(toGo, units)} ${bu}`}</span>
+              <span>{kgShow(target, units)} {t("gwGoalLbl")}</span>
+            </div>
+          </div>
+        );
+      })()}
 
       {sorted.length >= 2 && (
         <div style={card}>
