@@ -216,6 +216,16 @@ const TXT = {
   weight: { nl: "Gewicht", en: "Weight" },
   trainingLoad: { nl: "Trainingsbelasting", en: "Training load" },
   goal: { nl: "Doel", en: "Goal" },
+  targetWeight: { nl: "Streefgewicht", en: "Target weight" },
+  optionalLbl: { nl: "optioneel", en: "optional" },
+  targetWeightPh: { nl: "bijv. 90", en: "e.g. 90" },
+  targetDir: { nl: "Richting", en: "Direction" },
+  goalWeightTitle: { nl: "Streefgewicht", en: "Target weight" },
+  goalWeightStart: { nl: "gestart op", en: "started at" },
+  goalWeightToGo: { nl: "nog", en: "to go" },
+  goalWeightReached: { nl: "doel bereikt", en: "target reached" },
+  goalWeightStartLbl: { nl: "start", en: "start" },
+  goalWeightGoalLbl: { nl: "doel", en: "target" },
   diet: { nl: "Dieet", en: "Diet" },
   avoid: { nl: "Vermijden / allergieën", en: "Avoid / allergies" },
   avoidPh: { nl: "bijv. pinda's, schaaldieren", en: "e.g. peanuts, shellfish" },
@@ -832,6 +842,9 @@ export default function App() {
   const [weight, setWeight] = useState("");
   const [activity, setActivity] = useState("moderate");
   const [goal, setGoal] = useState("maintain");
+  const [targetWeight, setTargetWeight] = useState(""); // streefgewicht (kg, opgeslagen als kg); leeg = richting zelf kiezen
+  // Afgeleide doel-richting uit streefgewicht vs huidig gewicht (±1 kg marge = onderhoud).
+  const derivedGoal = (() => { const tw = num(targetWeight), cw = num(weight); if (!(tw > 0) || !(cw > 0)) return null; return tw < cw - 1 ? "cut" : tw > cw + 1 ? "gain" : "maintain"; })();
   const [diet, setDiet] = useState("highprotein");
   const [avoid, setAvoid] = useState("");
   const [likes, setLikes] = useState("");
@@ -1212,6 +1225,8 @@ export default function App() {
   const ageOk = ageN != null && ageN >= 18 && ageN <= 100;
   const heightOk = heightN != null && heightN >= 120 && heightN <= 230;
   const weightOk = weightN != null && weightN >= 35 && weightN <= 300;
+  const targetWeightN = numVal(targetWeight);
+  const targetWeightOk = targetWeight === "" || (targetWeightN != null && targetWeightN >= 35 && targetWeightN <= 300);
   const ageUnder = ageN != null && ageN < 18;
   const basicsFilled = ageOk && heightOk && weightOk && (sex === "male" || sex === "female");
   const errBord = { borderColor: EMBER, background: "rgba(225,29,72,0.07)" };
@@ -1247,6 +1262,9 @@ export default function App() {
       try { intake = JSON.parse(localStorage.getItem("hf_intake") || "null"); } catch (e) {}
       if (saved && saved.week && saved.week.days) { setTargets(saved.targets); setWeek(saved.week); setStarted(true); }
       else if (intake) { setStarted(true); generatePaid(intake); }
+      // Streefgewicht terugzetten in het veld (als eerder ingesteld).
+      try { const gw = JSON.parse(localStorage.getItem("hf_goalweight") || "null"); if (gw && num(gw.target) > 0) setTargetWeight(String(num(gw.target))); } catch (e) {}
+      try { if (intake && num(intake.weight) > 0 && !weight) setWeight(String(num(intake.weight))); } catch (e) {}
     }
 
     let params = null;
@@ -1420,15 +1438,30 @@ export default function App() {
     // Gekozen eigen producten (met macro's) zodat de server er direct een maaltijd van maakt.
     const chosenProducts = [];
     MEAL_MOMENTS.forEach((mo) => (mealPrefs[mo.id] || []).forEach((id) => { if (typeof id === "string" && id.indexOf("prod:") === 0) { const p = userProducts.find((x) => ("prod:" + x.id) === id); if (p) chosenProducts.push({ moment: mo.id, name: p.name, per_100: p.per_100 || {} }); } }));
-    return { sex, age, height, weight, activity, goal, diet: dietObj ? dietObj[lang] : diet, avoid, likes, cuisines: labelsOf(cuisines, CUISINES), proteins: labelsOf(proteins, PROTEINS), proteinIds: proteins.slice(), snacks, snackLikes, snackLikeLabels: labelsOf(snackLikes, SNACKS), mealPrefs: mealPrefLabels, mealPrefIds, chosenProducts, variety, lang };
+    // Streefgewicht gezet? Dan bepaalt dat de richting (afvallen/onderhoud/aankomen).
+    const effGoal = derivedGoal || goal;
+    return { sex, age, height, weight, activity, goal: effGoal, targetWeight: num(targetWeight) > 0 ? num(targetWeight) : null, diet: dietObj ? dietObj[lang] : diet, avoid, likes, cuisines: labelsOf(cuisines, CUISINES), proteins: labelsOf(proteins, PROTEINS), proteinIds: proteins.slice(), snacks, snackLikes, snackLikeLabels: labelsOf(snackLikes, SNACKS), mealPrefs: mealPrefLabels, mealPrefIds, chosenProducts, variety, lang };
   }
   function currentIntake() { return { ...common(), trainingDays: [...trainingDays] }; }
+
+  // Streefgewicht-record voor de voortgangskaart: bewaart doel + startgewicht.
+  // Nieuw of gewijzigd doel -> start = huidig gewicht; zelfde doel -> start blijft staan.
+  function persistGoalWeight() {
+    try {
+      const tw = num(targetWeight), cw = num(weight);
+      if (!(tw > 0) || !(cw > 0)) { localStorage.removeItem("hf_goalweight"); return; }
+      let rec = null; try { rec = JSON.parse(localStorage.getItem("hf_goalweight") || "null"); } catch (e) {}
+      if (!rec || num(rec.target) !== tw || !(num(rec.start) > 0)) rec = { target: tw, start: cw };
+      else rec = { ...rec, target: tw };
+      localStorage.setItem("hf_goalweight", JSON.stringify(rec));
+    } catch (e) {}
+  }
 
   async function handleBuild() {
     if (!basicsFilled) { setError(T("fillBasics")); return; } // kader: eerst leeftijd/gewicht/lengte
     if (inDemo) { setShowAuth(true); return; } // demo: 'jouw' plan is het betaalde moment
     setError(""); setStarted(true); setView("plan"); setChecked({}); setWeek(null); setLockReason(""); setSoftwareNote(false); setAiPlanNote(false); setPlanEmail("");
-    const intake = currentIntake();
+    const intake = currentIntake(); persistGoalWeight();
     try { localStorage.setItem("hf_intake", JSON.stringify(intake)); } catch (e) {}
     if (planSource === "products") { await buildFromProducts(intake); return; }
     if (devMode) { // dev: demo-maaltijden, maar wél geschaald naar je echte berekende targets
@@ -1448,7 +1481,7 @@ export default function App() {
     if (!basicsFilled) { setError(T("fillBasics")); return; } // kader: eerst leeftijd/gewicht/lengte
     if (inDemo) { setShowAuth(true); return; } // demo: zelf samenstellen is betaald
     setError(""); setStarted(true); setView("plan"); setChecked({}); setWeek(null); setLockReason(""); setSoftwareNote(false); setAiPlanNote(false); setPlanEmail("");
-    const intake = currentIntake();
+    const intake = currentIntake(); persistGoalWeight();
     try { localStorage.setItem("hf_intake", JSON.stringify(intake)); } catch (e) {}
     await computeFree(intake); // altijd de targets berekenen zodat je weet waar je naartoe werkt
     if (hasBasis) { // leeg schema + direct in bewerkmodus; zonder abo zie je de targets + de paywall
@@ -2562,6 +2595,12 @@ export default function App() {
                   ? (() => { const fi = cmToFtIn(height); return (<div style={{ display: "flex", gap: 4 }}><input style={{ ...input, textAlign: "center", padding: "11px 4px", ...(height !== "" && !heightOk ? errBord : {}) }} value={fi.ft} onChange={(e) => setHeight(String(ftInToCm(e.target.value, fi.in)))} inputMode="numeric" /><input style={{ ...input, textAlign: "center", padding: "11px 4px", ...(height !== "" && !heightOk ? errBord : {}) }} value={fi.in} onChange={(e) => setHeight(String(ftInToCm(fi.ft, e.target.value)))} inputMode="numeric" /></div>); })()
                   : <input style={{ ...input, ...(height !== "" && !heightOk ? errBord : {}) }} value={height} onChange={(e) => setHeight(e.target.value)} inputMode="numeric" />}{height !== "" && !heightOk && <div style={fieldMsg}>{T("heightRange")}</div>}</div>
                 <div><label style={label}>{T("weight")} ({bUnit(units)})</label><input style={{ ...input, ...(weight !== "" && !weightOk ? errBord : {}) }} value={kgShow(weight, units)} onChange={(e) => setWeight(String(kgStore(e.target.value, units)))} inputMode="numeric" />{weight !== "" && !weightOk && <div style={fieldMsg}>{T("weightRange")}</div>}</div>
+              </div>
+              <div style={{ marginBottom: 14 }}>
+                <label style={label}>{T("targetWeight")} ({bUnit(units)}) <span style={{ color: MUTED, fontWeight: 500 }}>· {T("optionalLbl")}</span></label>
+                <input style={{ ...input, ...(targetWeight !== "" && !targetWeightOk ? errBord : {}) }} value={kgShow(targetWeight, units)} onChange={(e) => setTargetWeight(String(kgStore(e.target.value, units)))} inputMode="numeric" placeholder={T("targetWeightPh")} />
+                {targetWeight !== "" && !targetWeightOk && <div style={fieldMsg}>{T("weightRange")}</div>}
+                {derivedGoal && targetWeightOk && <div style={{ fontSize: 11.5, color: MUTED, marginTop: 6 }}>{T("targetDir")}: <b style={{ color: EMBER }}>{(GOALS.find((g) => g.id === derivedGoal) || {})[lang]}</b></div>}
               </div>
               <div style={{ marginBottom: 14 }}>
                 <label style={label}>{T("trainingLoad")}</label>
