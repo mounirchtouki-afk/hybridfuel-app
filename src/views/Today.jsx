@@ -56,7 +56,7 @@ function Ring({ pct }) {
   );
 }
 
-export default function Today({ lang, week, onGoPlan, session, plus, units, onRebalance, demo, onUnlock }) {
+export default function Today({ lang, week, targets, onGoPlan, session, plus, units, onRebalance, demo, onUnlock }) {
   const t = (k) => (T[k] ? T[k][lang] : k);
   const ml = macroLetters(lang);
   const cloud = !!(session && supabase);
@@ -149,13 +149,25 @@ export default function Today({ lang, week, onGoPlan, session, plus, units, onRe
   const eatenPlanned = day ? day.m.reduce((a, m, i) => a + (eaten[i] ? num(m.kcal) : 0), 0) : 0;
   const extrasKcal = extras.reduce((a, x) => a + num(x.kcal), 0);
   const consumed = eatenPlanned + extrasKcal;
-  const goal = plannedTotal;
+  // Echt dagdoel (kcal + macro's): day.goal als die er is, anders uit je targets
+  // (rust/training-cyclus) — NOOIT het plantotaal, want dan is alles per definitie
+  // "100% on point". Plantotaal blijft alleen de laatste fallback.
+  const dayGoal = (() => {
+    if (day && day.goal && num(day.goal.kcal) > 0) return day.goal;
+    if (!targets) return null;
+    const hasCycle = targets.train && targets.rest && num(targets.trainingCount) > 0 && num(targets.trainingCount) < 7;
+    const g = hasCycle ? (day && day.train ? targets.train : targets.rest) : targets;
+    if (!g || !(num(g.kcal) > 0)) return null;
+    return { kcal: num(g.kcal), p: num(g.protein != null ? g.protein : g.p), c: num(g.carbs != null ? g.carbs : g.c), f: num(g.fat != null ? g.fat : g.f) };
+  })();
+  const goal = dayGoal && num(dayGoal.kcal) > 0 ? num(dayGoal.kcal) : plannedTotal;
   const pct = goal ? consumed / goal : 0;
   const allDone = day && day.m.length > 0 && day.m.every((_, i) => eaten[i]);
   const wd = WD[lang === "nl" ? "nl" : "en"][idx];
 
-  // Macro-doel = dagplan-totaal; gegeten = afgevinkte maaltijden + extra's.
+  // Macro-doel = echt dagdoel (dayGoal), anders plan-totaal; gegeten = afgevinkt + extra's.
   const sumPlan = (k) => (day ? day.m.reduce((a, m) => a + num(m[k]), 0) : 0);
+  const macroGoal = (k) => (dayGoal && num(dayGoal[k]) > 0 ? num(dayGoal[k]) : sumPlan(k));
   const sumEatenPlan = (k) => (day ? day.m.reduce((a, m, i) => a + (eaten[i] ? num(m[k]) : 0), 0) : 0);
   const sumExtra = (k) => extras.reduce((a, x) => a + num(x[k]), 0);
   const cons = (k) => sumEatenPlan(k) + sumExtra(k);
@@ -254,9 +266,9 @@ export default function Today({ lang, week, onGoPlan, session, plus, units, onRe
             {block(t("kcalLbl"), consumed, goal, "")}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 8 }}>
               {units === "imperial" ? block(t("waterLbl"), mlShow(waterMl, units), mlShow(waterGoal, units), " fl oz") : block(t("waterLbl"), waterMl, waterGoal, " ml")}
-              {block(t("protLbl"), cons("p"), sumPlan("p"), "g")}
-              {block(t("carbLbl"), cons("c"), sumPlan("c"), "g")}
-              {block(t("fatLbl"), cons("f"), sumPlan("f"), "g")}
+              {block(t("protLbl"), cons("p"), macroGoal("p"), "g")}
+              {block(t("carbLbl"), cons("c"), macroGoal("c"), "g")}
+              {block(t("fatLbl"), cons("f"), macroGoal("f"), "g")}
             </div>
             <div style={{ fontSize: 11.5, color: allDone ? "#4ADE80" : MUTED, marginTop: 10 }}>{allDone ? t("done") : t("tapHint")}</div>
           </div>
