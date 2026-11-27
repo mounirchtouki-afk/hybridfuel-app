@@ -241,40 +241,6 @@ export default function Dashboard({ lang, session, week, targets, units, onGo })
         </div>
       )}
 
-      {/* Streefgewicht-voortgang (alleen als er een doel is gezet) */}
-      {(() => {
-        const gw = load("hf_goalweight", null);
-        if (!gw || !(num(gw.target) > 0) || !(num(gw.start) > 0)) return null;
-        const target = num(gw.target), start = num(gw.start);
-        const cur = weightKg > 0 ? weightKg : (num(targets && targets.kg) > 0 ? num(targets.kg) : start);
-        const losing = start >= target;
-        const total = Math.abs(start - target) || 1;
-        const done = losing ? (start - cur) : (cur - start);
-        const frac = Math.max(0, Math.min(1, done / total));
-        const toGo = Math.abs(cur - target);
-        const reached = losing ? cur <= target + 0.05 : cur >= target - 0.05;
-        return (
-          <div className="hf-tap" onClick={() => onGo("tracker")} style={{ cursor: "pointer", background: INK2, border: `1px solid ${LINE}`, borderRadius: 14, padding: "14px 16px", boxShadow: SHADOW }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 2 }}>
-              <div style={{ ...disp, fontWeight: 700, fontSize: 14, letterSpacing: 0.6, textTransform: "uppercase" }}>{t("goalWeightTitle")}</div>
-              <div style={{ fontSize: 11.5, color: MUTED }}>{t("goalWeightStart")} {kgShow(start, units)} {bUnit(units)}</div>
-            </div>
-            <div style={{ display: "flex", alignItems: "baseline", gap: 7 }}>
-              <span style={{ ...disp, fontSize: 26, fontWeight: 800, letterSpacing: -0.5 }}>{kgShow(cur, units)}</span>
-              <span style={{ color: MUTED, fontSize: 14 }}>/ {kgShow(target, units)} {bUnit(units)}</span>
-            </div>
-            <div style={{ position: "relative", height: 11, borderRadius: 99, background: TRACK, margin: "12px 0 7px", overflow: "hidden" }}>
-              <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${Math.round(frac * 100)}%`, borderRadius: 99, background: `linear-gradient(90deg, ${EMBER}, ${EMBER_SOFT})` }} />
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: MUTED, fontWeight: 600 }}>
-              <span>{kgShow(start, units)} {t("goalWeightStartLbl")}</span>
-              <span style={{ color: EMBER, fontWeight: 700 }}>{reached ? t("goalWeightReached") : `${t("goalWeightToGo")} ${kgShow(toGo, units)} ${bUnit(units)}`}</span>
-              <span>{kgShow(target, units)} {t("goalWeightGoalLbl")}</span>
-            </div>
-          </div>
-        );
-      })()}
-
       {/* Training vandaag */}
       {prefs.train && (
         <div className="hf-tap" onClick={() => onGo("training")} style={{ cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", background: INK2, border: `1px solid ${LINE}`, borderRadius: 14, padding: "13px 16px", boxShadow: SHADOW }}>
